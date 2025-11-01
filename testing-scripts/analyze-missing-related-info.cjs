@@ -6,7 +6,14 @@
 const fs = require('fs');
 const path = require('path');
 
-const testResultsFile = path.join(__dirname, 'test results', 'deployed-430-analytics-test-2025-11-01T20-06-42-591Z.json');
+// Find the latest test results file
+const testResultsDir = path.join(__dirname, 'test results');
+const files = fs.readdirSync(testResultsDir)
+  .filter(f => f.startsWith('deployed-430-analytics-test-') && f.endsWith('.json'))
+  .sort()
+  .reverse();
+const testResultsFile = path.join(testResultsDir, files[0]);
+console.log(`📄 Using test results file: ${files[0]}`);
 
 const data = JSON.parse(fs.readFileSync(testResultsFile, 'utf8'));
 const results = data.results || [];
@@ -115,4 +122,5 @@ console.log(`  WITHOUT related info: ${Math.round(avgAnswerLengthWithout)} chars
 
 console.log('\n' + '='.repeat(80));
 console.log('✅ Analysis complete!');
+
 

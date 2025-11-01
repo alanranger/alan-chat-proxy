@@ -8651,20 +8651,27 @@ function buildRagResponse(context) {
   const hasAnswer = context.finalAnswer && context.finalAnswer.length > 0;
   const success = hasConfidence || hasAnswer;
   
+  // Extract articles and services from results, ensuring they're arrays of objects
+  const articles = Array.isArray(context.results?.articles) ? context.results.articles : [];
+  const services = Array.isArray(context.results?.services) ? context.results.services : [];
+  const events = Array.isArray(context.results?.events) ? context.results.events : [];
+  
+  // Build structured response without sources array (sources is deprecated in structured)
+  const structured = {
+    intent: context.finalType || 'advice',
+    articles: articles,
+    services: services,
+    events: events,
+    products: []
+  };
+  
   return {
     success: success,
     confidence: context.results && context.results.confidence >= 0.3 ? context.results.confidence : 0.1,
     answer: context.finalAnswer || '',
     type: context.finalType || 'advice',
     sources: context.finalSources || [],
-    structured: {
-      intent: context.finalType || 'advice',
-      sources: context.finalSources || [],
-      events: [],
-      products: [],
-      articles: context.results && context.results.articles || [],
-      services: context.results && context.results.services || []
-    },
+    structured: structured,
     totalMatches: context.results && context.results.totalMatches || 0,
     chunksFound: context.results && context.results.chunks ? context.results.chunks.length : 0,
     entitiesFound: context.results && context.results.entities ? context.results.entities.length : 0,
@@ -9868,6 +9875,8 @@ function needsEnrichment(structured) {
 
 // Helper: Add articles for enrichment (Complexity: Low)
 async function addArticlesForEnrichment(client, keywords, enriched, businessCategory) {
+  // Add articles for most categories (except pure event queries)
+  // This improves diversity and quality of related information
   if (businessCategory !== 'Event Queries') {
     const articles = await findArticles(client, { keywords, limit: 12 });
     if (articles && articles.length > 0) {
@@ -9878,33 +9887,50 @@ async function addArticlesForEnrichment(client, keywords, enriched, businessCate
 }
 
 // Helper: Add services for enrichment (Complexity: Low)
-async function addServicesForEnrichment(client, keywords, enriched, businessCategory) {
-  if (businessCategory === 'Business Information' || businessCategory === 'Course/Workshop Logistics') {
+async function addServicesForEnrichment(client, keywords, enriched, businessCategory, query) {
+  const lc = (query || '').toLowerCase();
+  
+  // Expanded logic: Add services for more categories and keyword-based matching
+  const shouldAddServices = 
+    businessCategory === 'Business Information' ||
+    businessCategory === 'Course/Workshop Logistics' ||
+    businessCategory === 'General Queries' ||
+    // Keyword-based matching for common service queries
+    /\b(gift|voucher|certificate|booking|book|contact|service|course|workshop|lesson|mentoring|tutoring|tutorial|training|help|support|assistance)\b/i.test(query || '');
+  
+  if (shouldAddServices) {
     const services = await findServices(client, { keywords, limit: 6 });
     if (services && services.length > 0) {
       enriched.services = (enriched.services || []).concat(services).slice(0, 6);
-      console.log(`[ENRICH] Added ${services.length} services`);
+      console.log(`[ENRICH] Added ${services.length} services for ${businessCategory}`);
     }
   }
 }
 
 // Helper: Add events for enrichment (Complexity: Low)
-async function addEventsForEnrichment(client, keywords, enriched, businessCategory) {
-  if (businessCategory === 'Course/Workshop Logistics' || businessCategory === 'Event Queries') {
+async function addEventsForEnrichment(client, keywords, enriched, businessCategory, query) {
+  const lc = (query || '').toLowerCase();
+  
+  // Expanded logic: Add events for course/workshop queries and keyword matching
+  const shouldAddEvents = 
+    businessCategory === 'Course/Workshop Logistics' ||
+    businessCategory === 'Event Queries' ||
+    // Keyword-based matching for event-related queries
+    /\b(workshop|course|class|event|session|training|field trip|residential|day trip|photography walk|photo walk)\b/i.test(query || '');
+  
+  if (shouldAddEvents) {
     const events = await findEvents(client, { keywords, limit: 6 });
     if (events && events.length > 0) {
       enriched.events = (enriched.events || []).concat(events).slice(0, 6);
-      console.log(`[ENRICH] Added ${events.length} events`);
+      console.log(`[ENRICH] Added ${events.length} events for ${businessCategory}`);
     }
   }
 }
 
 // Helper: Enrich advice responses with related information (Complexity: Low)
 async function enrichAdviceWithRelatedInfo(client, query, structured) {
-  if (!needsEnrichment(structured)) {
-    console.log(`[ENRICH] Response already has related info, skipping enrichment`);
-    return structured;
-  }
+  // Always enrich to improve diversity - even if some related info exists
+  // This ensures responses have multiple types of related information
   
   const businessCategory = detectBusinessCategory(query);
   const keywords = extractKeywords(query);
@@ -9912,11 +9938,43 @@ async function enrichAdviceWithRelatedInfo(client, query, structured) {
   console.log(`[ENRICH] Adding related info for ${businessCategory} query: "${query}"`);
   
   try {
-    const enriched = { ...structured };
+    const enriched = { 
+      ...structured,
+      articles: structured.articles || [],
+      services: structured.services || [],
+      events: structured.events || [],
+      products: structured.products || []
+    };
     
-    await addArticlesForEnrichment(client, keywords, enriched, businessCategory);
-    await addServicesForEnrichment(client, keywords, enriched, businessCategory);
-    await addEventsForEnrichment(client, keywords, enriched, businessCategory);
+    // Always try to add articles (unless pure event query)
+    await addArticlesForEnrichment(client, keywords, enriched, businessCategory, query);
+    
+    // Add services if missing or query suggests services
+    if (!enriched.services || enriched.services.length === 0) {
+      await addServicesForEnrichment(client, keywords, enriched, businessCategory, query);
+    }
+    
+    // Add events if missing or query suggests events
+    if (!enriched.events || enriched.events.length === 0) {
+      await addEventsForEnrichment(client, keywords, enriched, businessCategory, query);
+    }
+    
+    // Ensure we have at least one type of related info
+    const hasAnyRelatedInfo = 
+      (enriched.articles && enriched.articles.length > 0) ||
+      (enriched.services && enriched.services.length > 0) ||
+      (enriched.events && enriched.events.length > 0) ||
+      (enriched.products && enriched.products.length > 0);
+    
+    if (!hasAnyRelatedInfo) {
+      console.log(`[ENRICH] No related info found, trying broader article search`);
+      // Fallback: try broader article search
+      const articles = await findArticles(client, { keywords, limit: 8 });
+      if (articles && articles.length > 0) {
+        enriched.articles = articles;
+        console.log(`[ENRICH] Added ${articles.length} articles as fallback`);
+      }
+    }
     
     return enriched;
   } catch (error) {
@@ -9928,9 +9986,38 @@ async function enrichAdviceWithRelatedInfo(client, query, structured) {
 async function sendRagSuccessResponse(res, ragResult, context) {
   console.log(`[SUCCESS] RAG-First success: ${ragResult.confidence} confidence, ${ragResult.answerLength} chars`);
   
-  // Enrich structured data with related information if missing
+  // Ensure structured object exists with proper format
+  if (!ragResult.structured) {
+    ragResult.structured = {
+      intent: ragResult.type || 'advice',
+      articles: [],
+      services: [],
+      events: [],
+      products: []
+    };
+  }
+  
+  // Ensure arrays exist
+  if (!Array.isArray(ragResult.structured.articles)) ragResult.structured.articles = [];
+  if (!Array.isArray(ragResult.structured.services)) ragResult.structured.services = [];
+  if (!Array.isArray(ragResult.structured.events)) ragResult.structured.events = [];
+  if (!Array.isArray(ragResult.structured.products)) ragResult.structured.products = [];
+  
+  // Convert sources array to structured format if sources is an array of URLs
+  if (Array.isArray(ragResult.sources) && ragResult.sources.length > 0 && ragResult.structured.articles.length === 0) {
+    // If we have sources URLs but no articles, try to find articles by URL
+    try {
+      // Note: This is a fallback - ideally sources should already be objects
+      // For now, we'll rely on enrichment to add proper articles
+      console.log(`[ENRICH] Found ${ragResult.sources.length} source URLs, will enrich with proper objects`);
+    } catch (e) {
+      console.warn(`[ENRICH] Could not convert sources: ${e.message}`);
+    }
+  }
+  
+  // Enrich structured data with related information (always enrich for better diversity)
   const client = supabaseAdmin();
-  if (ragResult.structured && context.query) {
+  if (context.query) {
     ragResult.structured = await enrichAdviceWithRelatedInfo(client, context.query, ragResult.structured);
   }
   
