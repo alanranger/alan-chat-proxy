@@ -453,12 +453,6 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
       box-sizing: border-box;
     }
 
-    @media (min-width: 1000px) {
-      .articles-grid, .services-grid, .events-grid {
-        grid-template-columns: repeat(3, 1fr);
-      }
-    }
-
     .article-card, .service-card, .event-card {
       background: #1a1f2e;
       border: 1px solid #2a3441;
@@ -555,9 +549,10 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
     .modal-content {
       background: #1f2937;
       border-radius: 8px;
-      max-width: 1400px;
+      max-width: 100%;
       max-height: 95vh;
       width: 98%;
+      margin: 0 auto;
       overflow: hidden;
       display: flex;
       flex-direction: column;
