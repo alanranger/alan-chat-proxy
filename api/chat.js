@@ -10041,7 +10041,7 @@ async function enrichAdviceWithRelatedInfo(client, query, structured) {
     };
     
     // Always try to add articles (unless pure event query)
-    await addArticlesForEnrichment(client, keywords, enriched, businessCategory, query);
+    await addArticlesForEnrichment(client, keywords, enriched, businessCategory);
     
     // Add services if missing or query suggests services
     if (!enriched.services || enriched.services.length === 0) {
