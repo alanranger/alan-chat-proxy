@@ -1,5 +1,5 @@
 # 🧠 AI_TODO_LIST_CURRENT.md  
-_Last updated: 1 Nov 2025 21:05_  
+_Last updated: 1 Nov 2025 22:15_  
 _Alan Ranger — Chat AI Bot / alan-chat-proxy_
 
 ---
@@ -28,6 +28,7 @@ All older references or notes can be found inside `/Archive/AI_TODO_LIST_2025-01
 ## ✅ Recently Completed (Last 2 Weeks)
 | Date | Completed Item | Notes |
 |------|-----------------|-------|
+| 1 Nov 2025 | **SonarQube Refactoring Issues Fixed** | ✅ Fixed 2 SonarQube refactoring issues: (1) Removed extra argument from `addArticlesForEnrichment()` call, (2) Reduced cognitive complexity of `sendRagSuccessResponse()` from 20 to ≤15 by extracting 4 helper functions: `initializeStructuredObject()`, `handleSourcesConversion()`, `performQualityAnalysis()`, `buildDebugInfo()`. Verified with 40Q test: 100% success (40/40) - no regressions |
 | 1 Nov 2025 | **Server Crash Fix & Response Quality Improvements** | ✅ Fixed server crash after ~19 requests: Added singleton Supabase client, global error handlers, HTTP timeouts. Fixed 6 specific questions (astrophotography, 14yr old, gear equipment, certificate, cancellation policy, hire photographer) with proper answers. Added `enrichAdviceWithRelatedInfo()` to automatically add related content. 430Q test: 100% success (430/430), deployed to production |
 | 1 Nov 2025 | **430Q Baseline Test Complete** | ✅ Established comprehensive baseline: 430/430 questions passing (100% success), average confidence 76.8%, all query types verified. Test script improved with HTTP timeouts and better error messages |
 | 1 Nov 2025 | **8 HTTP 500 Failures Fixed** | ✅ All 8 questions consistently returning HTTP 500 errors now fixed - 100% success rate achieved (40/40 questions passing). Fixed: services query, equipment comparison, free course queries (2), gallery/feedback queries (2), location-based person queries (2). Verified with test-40q-deployed.cjs |

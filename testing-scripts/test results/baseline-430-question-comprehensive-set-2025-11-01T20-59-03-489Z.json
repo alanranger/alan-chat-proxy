@@ -1,0 +1,4313 @@
+{
+  "testName": "430-question-comprehensive-set",
+  "description": "430 questions from comprehensive test set (all sources combined)",
+  "timestamp": "2025-11-01T20:59:03.489Z",
+  "duration": "0.3s",
+  "totalQuestions": 430,
+  "successfulTests": 0,
+  "failedTests": 430,
+  "successRate": "0.0%",
+  "averageConfidence": "0.0%",
+  "results": [
+    {
+      "query": "whens the next bluebell workshops and whats the cost",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.201Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "when is the next devon workshop",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.203Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "what is your next workshop date and where is it",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.205Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "when are your next Autumn workshops and where are they?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.206Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "How much is a residential photography course and does it include B&B",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.207Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What tripod do you recommend",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.208Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Do you I get a certificate with the photography course",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.209Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What sort of camera do I need for your camera course",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.209Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Do I need a laptop for the lightroom course",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.211Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Do you do astrophotography workshops",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.211Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "How do I get personalised feedback on my images",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.212Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Is the online photography course really free",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.213Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Can my 14yr old attend your workshop",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.214Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What is long exposure and how can I find out more about it",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.215Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "My pictures never seem sharp.  Can you advise on what I am doing wrong",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.216Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Who is Alan Ranger and what is his photographic background?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.217Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Where is Alan Ranger based?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.217Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What types of photography services do you offer?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.218Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What is “Pick N Mix” in the payment plans?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.219Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "How can I contact you or book a discovery call?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.220Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Do you offer gift vouchers?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.220Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What is your cancellation or refund policy for courses/workshops?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.221Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "How do I subscribe to the free online photography course?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.222Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Where is your gallery and can I submit my images for feedback?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.223Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What ethical guidelines do you follow as a photography tutor?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.224Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What courses do you offer for complete beginners?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.225Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Do you run evening classes in Coventry?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.225Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "How many weeks is the beginners’ photography course?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.226Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Can I just take the “Get Off Auto” class as a standalone?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.227Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What topics are covered in the 5-week beginner course?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.227Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What if I miss one of the weekly classes—can I make it up?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.228Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Do you offer online or Zoom lessons / mentoring?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.229Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "How much do 1-2-1 private lessons cost?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.229Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Do you offer residential workshops or multi-day field trips?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.230Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "How many students per workshop / class?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.231Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What gear or equipment do I need to bring to a workshop?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.231Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Can I sign up to monthly mentoring assignments?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.232Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Do you offer Lightroom / post-processing courses?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.233Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "\"What is RPS Mentoring, and can you help me with that?\"",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.234Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Are there any prerequisites for advanced courses?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.235Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Do you do property photography / real estate photography?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.235Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Can you do product photography for my e-commerce store?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.236Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What is your pricing structure for portrait / headshot work?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.237Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Do you train staff in corporate photography for businesses?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.238Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "How far will you travel for a shoot (within UK / internationally)?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.239Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Do you provide retouching / editing services?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.240Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Can I order fine art prints from you?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.240Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What is your turnaround time for delivering images?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.241Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Do you provide usage rights or licensing for your photos?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.242Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Can I commission you for a commercial photography project?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.242Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "How do I book a course or workshop?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.243Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What payment options are available?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.243Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Do you offer payment plans or spreading the cost?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.244Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What happens if a course is canceled due to low enrolment or weather?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.245Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "\"What are the location details for your courses (venues, parking etc.)?\"",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.245Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Are there discounts for multiple bookings (e.g. bundle deals)?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.246Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "\"If a workshop is outdoors, what happens in bad weather?\"",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.247Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Can I change the date of my booking?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.247Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "How early should I arrive before a class or workshop begins?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.248Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "\"Do you require a deposit, and when is full payment due?\"",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.249Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "How do I choose between shooting JPEG vs RAW?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.249Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "\"What is the exposure triangle (aperture, shutter, ISO)?\"",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.250Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "How do I improve my composition and storytelling in photos?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.250Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "When should I use ND filters or graduated filters?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.251Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "\"What is depth of field, and how do I control it?\"",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.252Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What is white balance and how do I use it?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.252Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "How do I focus manually vs autofocus?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.253Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What is the difference between prime and zoom lenses?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.253Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "How do I use flash photography?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.255Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What is HDR photography?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.256Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "How do I shoot in low light?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.257Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What memory card should I buy?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.258Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Do I need a camera bag?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.259Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What is the best lens for portraits?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.260Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Should I buy a full-frame or crop sensor camera?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.260Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What accessories do I need for landscape photography?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.261Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What is Lightroom vs Photoshop?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.262Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "How do I edit RAW files?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.263Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What is color grading?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.263Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "How do I remove unwanted objects from photos?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.264Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What are presets and how do I use them?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.265Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "How much do you charge for headshots?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.266Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Do you travel for photography sessions?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.266Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What is your turnaround time?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.267Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Do you offer group discounts?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.267Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Can you teach my staff photography?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.268Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What is included in the beginner course?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.269Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "How long are your workshops?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.270Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Do you provide course materials?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.270Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Can I get a refund if I can't attend?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.271Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What happens if it rains during outdoor workshops?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.272Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "How do I improve my photography skills?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.273Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What makes a good photograph?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.273Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "How do I find my photography style?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.274Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What are common photography mistakes?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.274Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "How do I build a photography portfolio?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.275Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What landscape photography workshops do you run near me?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.275Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "How do I book a one-day workshop?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.276Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Do you run workshops in the Lake District or Wales?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.277Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What's included in your photography workshops?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.277Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Are your workshops suitable for beginners?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.278Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "How many people are in each workshop group?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.278Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Do I need my own camera and tripod?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.279Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What happens if it rains during a workshop?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.279Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Can I get a private workshop for my photography club?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.280Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Do you offer weekend or evening workshops?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.281Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "How do I join the beginners' photography lessons in Coventry?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.282Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "\"What will I learn in the \"\"Get Off Auto\"\" course?\"",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.282Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Are the beginners' classes suitable for DSLR and mirrorless users?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.283Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Can I attend online instead of in person?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.284Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "How long does the beginners' course last?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.284Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Do I get feedback or assignments during the course?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.285Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Can I repeat a class if I miss one?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.286Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What's the difference between the lessons and workshops?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.286Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What level should I be before taking the intermediate course?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.287Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Is there a certificate at the end?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.288Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Can I buy a photography gift voucher online?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.289Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "How long are the vouchers valid for?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.290Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Can the gift voucher be used for any workshop or course?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.290Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Do you offer physical gift cards or only digital?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.291Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "\"How does the \"\"Pick N Mix\"\" payment plan work?\"",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.292Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Can I pay for a course in instalments?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.292Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Do you accept PayPal or credit cards?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.293Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What happens if I cancel after paying with a plan?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.293Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Can I transfer a booking paid via Pick N Mix to someone else?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.294Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Do vouchers cover private lessons too?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.295Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What's included in your photography mentoring program?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.295Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "How do monthly assignments work in mentoring?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.296Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Can I book one-to-one photography tuition near Coventry?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.297Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Do you mentor RPS distinction candidates?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.297Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "How often do private lessons run?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.298Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Is mentoring done via Zoom or in person?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.298Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Can I book an ongoing coaching package?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.299Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What's the difference between mentoring and private tuition?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.300Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Do you give portfolio feedback or image critiques?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.300Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Can I pause or resume mentoring later?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.301Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Where can I find your terms and conditions?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.301Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What's your refund policy for workshops or lessons?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.302Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Do you have a privacy policy about newsletter sign-ups?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.302Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "How do I subscribe to your newsletter?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.303Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "How do I contact Alan directly?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.303Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Where are your photography sessions held?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.304Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Do you offer corporate training or team photography days?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.305Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Can I see your awards and qualifications?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.306Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Where can I read your photography blog and tips?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.307Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "How do I know which course or workshop is best for me?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.307Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What is exposure and how do I control it?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.308Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "How does aperture affect exposure and depth of field?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.309Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What does shutter speed do in photography?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.309Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "How does ISO sensitivity influence image brightness?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.310Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What are the relationships between aperture",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.310Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "How do I use manual mode effectively?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.311Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What is the exposure triangle?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.312Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "How do camera metering modes work?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.312Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "When should I use spot vs evaluative metering?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.313Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What is exposure bracketing and when should I use it?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.313Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "How do I ensure my focus is sharp in every shot?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.314Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What causes out-of-focus images and how can I prevent it?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.314Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "How do I control depth of field for portraits vs landscapes?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.315Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What is dynamic range and how do I maximise it?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.316Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "How do I balance highlights and shadows in-camera?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.316Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What is white balance and how do I set it correctly?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.317Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What's the difference between auto and manual white balance?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.317Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "How do drive modes work on my camera?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.318Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "When should I use continuous shooting vs single shot?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.319Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What are the pros and cons of shooting JPEG vs RAW?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.319Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "When should I shoot RAW instead of JPEG?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.320Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What is the difference between full-frame and cropped sensors?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.321Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "How does sensor size affect field of view and image quality?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.322Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What is focal length and how does it change perspective?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.323Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "How does focal length affect compression in portraits and landscapes?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.324Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What are the 10 most essential camera accessories?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.324Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "How do I choose my first camera bag?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.325Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What's the difference between prime and zoom lenses?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.326Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Should I buy new",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.326Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "How do I clean my camera sensor safely?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.327Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What filters should I own as a beginner?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.328Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What do ND filters do and when should I use them?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.328Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Are UV filters necessary for lens protection?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.329Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "How do I choose the right tripod?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.329Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "How do I stabilise my tripod on uneven ground?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.330Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What are mirrorless cameras and are they better than DSLRs?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.330Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "How do I select the best editing software in 2025?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.331Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What's the difference between Lightroom and Photoshop?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.332Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "How do I import and organise photos for editing?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.332Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What's the best workflow for editing RAW images?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.333Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What is framing and how do I use it in composition?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.333Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "How do I develop my own photography style?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.334Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What makes a photo tell a story?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.335Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What is visual storytelling in photography?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.335Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "How do I find compositional balance in an image?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.336Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What is contrast and how does it affect composition?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.337Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "How do I improve my photography composition overall?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.337Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What is negative space and how can I use it creatively?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.338Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What are the main composition rules in photography?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.339Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "How do I use the rule of thirds effectively?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.340Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What are leading lines and how do they guide the viewer's eye?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.340Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "How can I break composition rules intentionally?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.341Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What's the difference between balance and symmetry?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.342Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "How do light and colour affect composition?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.342Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What are the best compositional tips for landscapes?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.343Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "How do I photograph architecture effectively?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.343Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What is minimalist photography and how can I try it?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.344Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "How do I take great portrait photos?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.345Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What are the key settings for street photography?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.345Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "How do I shoot product photos with simple setups?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.346Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What is still life photography and what gear do I need?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.347Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "How do I capture long exposure photos at night?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.347Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What are the best techniques for macro photography?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.348Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "How can I improve my landscape photography?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.348Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "How do I shoot effective black and white images?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.349Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "How do lighting conditions change across genres?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.350Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What camera mode should I use for portraits?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.350Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What's the best lens for street photography?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.351Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "How do I control reflections in product photography?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.351Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "How can I photograph architecture with straight lines?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.352Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "How can I practice depth of field control?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.353Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What exercises help me understand movement blur?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.353Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What is a triptych and how do I create one?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.354Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "How can I experiment with minimalism in photography?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.355Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "How do I photograph dice or still objects creatively?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.356Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "How do I shoot portraits using natural light?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.357Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What makes a strong landscape composition?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.357Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "How do I photograph macro subjects like flowers or insects?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.358Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "How do I plan an architecture photography shoot?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.359Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "How do I capture the essence of street life?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.359Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "How do I photograph still life with interesting shadows?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.360Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What's the best approach to black and white assignments?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.360Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "How do I use the seasons to influence my photography?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.361Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "\"What are creative ways to interpret \"\"shadow photography\"\"?\"",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.361Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "How can I combine multiple assignments into one creative project?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.362Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "How do I print photos in the correct size and resolution?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.363Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What DPI should I use for printing high-quality images?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.363Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "How do I resize images for web vs print?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.364Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What is the history of photography from film to digital?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.364Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "How can I test my colour vision accuracy?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.365Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "How do I back up my photos safely using the 3-2-1 method?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.365Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What's the best way to store and organise digital files?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.366Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "How can I use the exposure calculator tool on the site?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.366Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "How does light change throughout the seasons?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.367Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What are key tips for shooting in different seasonal conditions?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.367Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What defines abstract photography and how do I approach it?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.368Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "How do I photograph shadows effectively?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.369Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What's the difference between DSLR and point-and-shoot cameras?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.369Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "How can I improve my technical control while keeping creativity?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.370Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "How can I combine all modules to build a strong photography portfolio?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.370Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What does the �Blog on Photography� page cover?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.372Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "How often is the blog updated?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.373Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What topics are featured in your photography news blog?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.374Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "How can I use your blog to improve my photography skills?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.374Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "How do I purchase photography gift vouchers?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.375Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What can I use a gift voucher for?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.376Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Are your gift vouchers digital or physical?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.376Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "How do I sign up to your photography newsletter?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.377Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What benefits do I get from subscribing to the newsletter?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.377Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Can I unsubscribe from the newsletter easily?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.378Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What does private photography lessons include?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.379Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Do you offer face-to-face and online private lessons?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.379Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "How do the online mentoring assignments work?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.380Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "How often will I receive assignments in mentoring?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.380Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Can I submit my photos for review in mentoring?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.381Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What is your photography payment plan (�Pick N Mix�)?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.381Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "How do I sign up for the payment plan?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.382Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What are your awards and qualifications?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.382Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "How do your certificates or qualifications support student progress?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.383Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What are your terms and conditions for courses?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.384Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What is your refund and cancellation policy?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.384Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What is your cookie policy and how does it affect my privacy?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.385Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "How is my data used and stored (privacy policy)?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.385Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What is your copyright policy for images and content?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.386Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Where can I read customer reviews or testimonials?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.386Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Do you showcase portfolios or galleries of previous students?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.387Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Can I find landscape workshops on your workshops page?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.388Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "How do I find a workshop near me?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.389Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Do you offer one-day landscape photography workshops?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.390Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "How do I book a course via the �Course Finder� page?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.390Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What beginner photography courses do you run in Coventry?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.391Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Do you run portrait photography courses for beginners?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.392Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What is included in your photo editing / Lightroom course page?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.392Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Do you run a �6-month intentions� photography project?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.393Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "How does your RPS mentoring / distinction program work?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.394Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Do you run online masterclasses?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.394Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What is covered in your equipment recommendations page?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.395Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "\"Which tripod, lens, or filter do you recommend there?\"",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.396Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "How does your �free photography tips� page work?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.396Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Can I hire you as a professional photographer in Coventry?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.397Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "\"What subjects do you photograph commercially (e.g. property, product)?\"",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.397Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What ethical policy do you follow as a photography tutor?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.398Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "How do I schedule an appointment via the site?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.398Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Do you offer corporate photography training?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.399Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "How far will you travel for commercial or commissioned work?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.399Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "\"What is your shop or services section about (e.g. prints, equipment)?\"",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.400Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Can I buy or order fine art prints from you?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.400Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "How do I find workshops in Bluebell Woods or Batsford Arboretum?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.401Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What is your �Help / Site Map� used for?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.402Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "How can I contact you directly via the �Contact Us� page?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.402Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What is included in the Premium Photography Academy membership?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.403Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "How do I join the Premium Photography Academy?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.403Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What is the Photography Foundation Course eBook?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.404Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "How do I use the foundation course eBook to improve my skills?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.405Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What camera settings checklists are provided on your field checklists page?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.406Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What composition settings checklists do you offer?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.407Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Do you have genre-specific photography field checklists?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.407Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What is the �35 bundle� in your photography checklists offering?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.408Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "How do viewing frames help in composition?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.408Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What does the beginner portrait photography course cover?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.409Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Do you offer framed fine art prints?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.410Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Do you offer unframed fine art photography prints?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.410Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Do you offer canvas fine art prints?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.411Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What is the intermediates intentions photography project course?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.411Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What is your beginners photography course?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.412Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Do you offer monthly online photography mentoring?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.413Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "How does your annual Pick N Mix subscription work?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.413Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "How does the quarterly Pick N Mix subscription differ?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.414Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "How does the monthly Pick N Mix subscription work?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.414Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What do the �four private photography classes� include?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.415Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What is included in private online photography classes via Zoom?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.416Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Can I use gift vouchers for these photography services?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.416Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What is the photography tips pocket guide series?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.417Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Do you offer camera sensor cleaning service?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.417Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What is your photo print preparation service (30 min)?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.418Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "How does your RPS mentoring photography course work?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.419Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Do you offer Lightroom courses for beginners in Coventry?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.419Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Do you offer a black and white photography course?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.420Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What landscape workshops do you run in Wales?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.421Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Do you offer garden photography workshops?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.422Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Where do you run Somerset landscape photography workshops?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.423Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "When is your long exposure photography workshop in Kenilworth?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.424Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Do you run urban architecture photography workshops in Coventry?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.424Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "When is the Dorset landscape photography workshop?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.425Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Do you offer Snowdonia landscape photography workshops?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.425Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "When is the Dartmoor landscape workshop?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.426Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Do you run photography workshops in Wales (Pistyll Rhaeadr)?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.426Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Do you offer North Yorkshire photography workshops?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.427Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Do you run workshops in Suffolk?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.428Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What photography workshops do you run in the Yorkshire Dales?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.428Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Do you offer abstract and macro photography workshops?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.429Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "When is the Sezincote Garden photography workshop?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.429Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Do you run Ireland workshops in Dingle?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.430Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Do you have a landscape workshop in Norfolk?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.430Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Where is the Nant Mill photography workshop held?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.431Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Do you offer coastal Northumberland photography workshops?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.431Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Do you run workshops in Anglesey?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.432Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What peak district photography workshops do you run in Derbyshire?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.433Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "When is the Peak District heather photography workshop?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.433Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Do you run Lake District photography workshops?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.434Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Do you host photography workshops in lavender fields?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.434Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Do you offer long exposure workshops in Burnham?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.435Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "When is your long exposure workshop at Fairy Glen?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.435Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Do you run Devon / Hartland Quay landscape workshops?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.436Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Do you run Exmoor / Lynmouth photography workshops?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.437Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Are there workshops at Chesterton Windmill?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.439Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "When are Bluebell woodlands photography workshops held?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.440Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "Do you offer Batsford Arboretum photography workshops?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.440Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What woodland photography walks do you run in Warwickshire?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.441Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "What is your �Secrets of Woodland Photography� workshop?",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.442Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "what is exposure",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.442Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "what is exposure triangle",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.443Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "what is iso",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.443Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "what is aperture",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.444Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "what is shutter speed",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.444Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "what is depth of field",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.445Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "what is white balance",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.446Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "what is raw format",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.446Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "what is histogram",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.447Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "what is composition",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.448Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "why are my photos blurry",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.448Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "why do I need a good camera",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.449Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "why is composition important",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.449Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "why do you teach photography",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.450Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "why should I take your course",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.450Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "why is lighting important",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.451Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "why do photos look different on camera vs computer",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.452Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "why is post-processing necessary",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.452Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "why do you recommend certain cameras",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.453Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "why is practice important in photography",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.454Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "when is the best time to take photos",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.455Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "when should I use a tripod",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.456Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "when do you run photography courses",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.457Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "when is golden hour",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.458Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "when should I use flash",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.458Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "when is the best time for landscape photography",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.459Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "when do you have workshops",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.460Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "when should I use manual mode",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.460Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "when is blue hour",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.461Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "when should I use a polarizing filter",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.461Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "how do I take sharp photos",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.462Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "how do I improve my photography",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.463Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "how do I choose the right camera",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.463Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "how do I understand camera settings",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.464Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "how do I learn photography",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.464Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "how do I take better portraits",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.465Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "how do I photograph landscapes",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.465Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "how do I use lighting effectively",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.466Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "how do I edit photos",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.466Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "how do I develop my photography skills",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.467Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "do I need a DSLR camera",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.468Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "do I need to understand technical settings",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.468Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "do I need expensive equipment",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.469Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "do I need to know about lighting",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.470Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "do I need to edit my photos",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.470Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "do I need to understand composition",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.471Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "do I need to practice regularly",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.472Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "do I need to understand the exposure triangle",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.473Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "do I need to know about different lenses",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.474Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "do I need to understand camera settings",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.474Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "peter orton",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.475Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "who is alan ranger",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.475Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "when is your next devon workshop",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.476Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "when is your next photography course",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.477Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "when are your next bluebell workshops",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.477Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "do you have autumn workshops",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.478Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "how to take sharp photos",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.478Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "what is long exposure photography",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.479Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "why are my images always grainy and noisy",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.479Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "why arent my images sharp",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.480Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "do I need a laptop for lightroom course",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.480Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "do you provide photography courses",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.481Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "do you have online lessons",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.481Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "do you have a lightroom course",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.482Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "whats your online photography course",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.482Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "where i can see your terms and conditions",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.483Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "tell me about rps mentoring",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.483Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "do you do commercial photography",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.484Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "do you do portrait photography",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.485Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "is your photography academy really free",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.486Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "what tripod do you recommend",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.486Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "what camera should I buy",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.487Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "what camera do you recommend for a beginner",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.488Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    },
+    {
+      "query": "what camera do i need for your courses and workshops",
+      "category": "Comprehensive",
+      "focus": "Full test set",
+      "status": "ERROR",
+      "timestamp": "2025-11-01T20:59:03.489Z",
+      "error": "Request failed: ",
+      "response": null,
+      "analysis": null
+    }
+  ]
+}

@@ -1,49 +1,82 @@
-const http = require('http');
+#!/usr/bin/env node
+/**
+ * Test a specific query to verify fixes
+ */
 
-async function testSingleQuery() {
-  return new Promise((resolve, reject) => {
-    const data = JSON.stringify({query: "what is exposure triangle", sessionId: 'test'});
-    const options = {
-      hostname: 'localhost',
-      port: 3001,
-      path: '/api/chat',
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Content-Length': data.length
-      }
-    };
+const https = require('https');
 
-    const req = http.request(options, (res) => {
-      let body = '';
-      res.on('data', (chunk) => body += chunk);
-      res.on('end', () => {
-        try {
-          const result = JSON.parse(body);
-          console.log('✅ ORIGINAL SERVER RESPONSE:');
-          console.log('Status:', res.statusCode);
-          console.log('Confidence:', result.confidence);
-          console.log('Answer length:', result.answer?.length || 0);
-          console.log('Answer preview:', result.answer?.substring(0, 200) || 'No answer');
-          resolve(result);
-        } catch (e) {
-          console.log('❌ Parse error:', e.message);
-          console.log('Raw response:', body);
-          reject(e);
-        }
-      });
-    });
+const query = process.argv[2] || 'when is golden hour';
+const sessionId = `test-${Date.now()}`;
 
-    req.on('error', (err) => {
-      console.log('❌ Connection error:', err.message);
-      reject(err);
-    });
+const postData = JSON.stringify({
+  query: query,
+  sessionId: sessionId
+});
 
-    req.write(data);
-    req.end();
+const options = {
+  hostname: 'alan-chat-proxy.vercel.app',
+  path: '/api/chat',
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'Content-Length': postData.length
+  }
+};
+
+console.log(`\n🔍 Testing query: "${query}"`);
+console.log('='.repeat(80));
+
+const req = https.request(options, (res) => {
+  let data = '';
+  
+  res.on('data', (chunk) => {
+    data += chunk;
   });
-}
+  
+  res.on('end', () => {
+    try {
+      const response = JSON.parse(data);
+      
+      console.log(`\n✅ Status: ${res.statusCode}`);
+      console.log(`\n📝 Answer:`);
+      console.log(response.answer || response.answer_markdown || 'No answer');
+      console.log(`\n🎯 Type: ${response.type || 'unknown'}`);
+      console.log(`📊 Confidence: ${response.confidence ? (response.confidence * 100).toFixed(1) + '%' : 'unknown'}`);
+      
+      if (response.sources) {
+        console.log(`\n📚 Sources: ${Array.isArray(response.sources) ? response.sources.length : 'object'}`);
+      }
+      
+      if (response.structured) {
+        const s = response.structured;
+        console.log(`\n📋 Structured Response:`);
+        console.log(`  Articles: ${s.articles?.length || 0}`);
+        console.log(`  Services: ${s.services?.length || 0}`);
+        console.log(`  Events: ${s.events?.length || 0}`);
+        console.log(`  Products: ${s.products?.length || 0}`);
+      }
+      
+      // Check for wrong content
+      const answer = response.answer || response.answer_markdown || '';
+      if (answer.includes('Q7') || answer.includes('Q8') || answer.includes('dynamic range')) {
+        console.log(`\n❌ ERROR: Answer contains wrong content (Q7/Q8/dynamic range)!`);
+        console.log(`   This indicates FAQ matching is still broken.`);
+      } else if (answer.toLowerCase().includes('golden hour')) {
+        console.log(`\n✅ SUCCESS: Answer contains "golden hour" - looks correct!`);
+      } else {
+        console.log(`\n⚠️  WARNING: Answer doesn't mention "golden hour"`);
+      }
+      
+    } catch (e) {
+      console.error('Error parsing response:', e.message);
+      console.log('Raw response:', data.substring(0, 500));
+    }
+  });
+});
 
-testSingleQuery().catch(console.error);
+req.on('error', (e) => {
+  console.error(`Error: ${e.message}`);
+});
 
-
+req.write(postData);
+req.end();

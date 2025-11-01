@@ -23,3 +23,4 @@ console.log('\n' + (same ? '✅ IDENTICAL - Same 8 questions failed both times' 
 console.log('\n💡 Conclusion: These are consistent failures, not intermittent issues.');
 console.log('   This indicates a bug in the code for these specific query types.');
 
+
