@@ -1571,54 +1571,54 @@ function getPrivacyDataProtectionAnswer(lc) {
 const SERVICE_PATTERNS = [
  {
  matcher: (lc) => lc.includes("rps mentoring") || lc.includes("rps course") || lc.includes("rps distinctions"),
- answer: `**RPS Mentoring Course**: Alan provides independent mentoring for RPS (Royal Photographic Society) Distinction qualifications. He holds both Licentiate and Associate Distinctions and offers personalized online mentoring via Zoom to help you achieve success. Sessions are flexible and can be taken within 12 months of booking. [Learn More](https://www.alanranger.com/rps-courses-mentoring-distinctions)\n\n`
+ answer: `**RPS Mentoring Course**: Alan provides independent mentoring for RPS (Royal Photographic Society) Distinction qualifications. He holds both Licentiate and Associate Distinctions and offers personalized online mentoring via Zoom to help you achieve success. Sessions are flexible and can be taken within 12 months of booking.\n\n`
  },
  {
  matcher: (lc) => lc.includes("private photography lessons") || lc.includes("private lessons") || lc.includes("1-2-1") || lc.includes("face-to-face"),
- answer: `**Private Photography Lessons**: Alan offers bespoke face-to-face private photography lessons in Coventry (CV4 9HW) or at a location of your choice. Lessons are tailored to your specific needs and delivered at times that suit your availability. [Book Private Lessons](https://www.alanranger.com/private-photography-lessons)\n\n`
+ answer: `**Private Photography Lessons**: Alan offers bespoke face-to-face private photography lessons in Coventry (CV4 9HW) or at a location of your choice. Lessons are tailored to your specific needs and delivered at times that suit your availability.\n\n`
  },
   {
     matcher: (lc) => (lc.includes("personalised feedback") || lc.includes("personalized feedback")) && (lc.includes("image") || lc.includes("photo") || lc.includes("get") || lc.includes("how")),
-    answer: `**Personalised Feedback**: Alan offers 1-2-1 private photography lessons (face-to-face in Coventry or online via Zoom) where you can get personalised feedback on your images. These sessions are tailored to your specific needs and help you improve your photography skills through direct critique and guidance. [Book Private Lessons for Feedback](https://www.alanranger.com/private-photography-lessons)\n\n`
+    answer: `**Personalised Feedback**: Alan offers 1-2-1 private photography lessons (face-to-face in Coventry or online via Zoom) where you can get personalised feedback on your images. These sessions are tailored to your specific needs and help you improve your photography skills through direct critique and guidance.\n\n`
   },
   {
     matcher: (lc) => lc.includes("private") || lc.includes("mentoring") || lc.includes("tuition"),
-    answer: `**Private Lessons & Mentoring**: Alan offers face-to-face private photography lessons in Coventry (CV4 9HW) or at a location of your choice. Lessons are bespoke to your needs and available at times that suit you. Also available: RPS mentoring for distinctions, monthly mentoring assignments, and 1-2-1 Zoom support. Visit [Private Lessons](https://www.alanranger.com/private-photography-lessons) for details.\n\n`
+    answer: `**Private Lessons & Mentoring**: Alan offers face-to-face private photography lessons in Coventry (CV4 9HW) or at a location of your choice. Lessons are bespoke to your needs and available at times that suit you. Also available: RPS mentoring for distinctions, monthly mentoring assignments, and 1-2-1 Zoom support.\n\n`
   },
  {
  matcher: (lc) => lc.includes("voucher") || lc.includes("gift") || lc.includes("present"),
- answer: `**Gift Vouchers**: Digital photography gift vouchers are available from Â£5-Â£600, perfect for any photography enthusiast. Vouchers can be used for workshops, courses, private lessons, or any photography tuition event. They expire 12 months from purchase date and can be split across multiple purchases. [Buy Gift Vouchers](https://www.alanranger.com/photography-gift-vouchers)\n\n`
+ answer: `**Gift Vouchers**: Digital photography gift vouchers are available from £5-£600, perfect for any photography enthusiast. Vouchers can be used for workshops, courses, private lessons, or any photography tuition event. They expire 12 months from purchase date and can be split across multiple purchases.\n\n`
  },
  {
   matcher: (lc) => (lc.includes("what do you offer") && !lc.includes("courses") && !lc.includes("types")) || (lc.includes("what services") && !lc.includes("types")),
- answer: `**Services Available**: Alan Ranger Photography offers comprehensive photography services including workshops, courses, private lessons, mentoring, gift vouchers, gear checks, fine art prints, and payment plans. Services include face-to-face and online options, with locations in Coventry and various UK destinations. [View All Services](https://www.alanranger.com/photography-tuition-services)\n\n`
+ answer: `**Services Available**: Alan Ranger Photography offers comprehensive photography services including workshops, courses, private lessons, mentoring, gift vouchers, gear checks, fine art prints, and payment plans. Services include face-to-face and online options, with locations in Coventry and various UK destinations.\n\n`
  },
  {
  matcher: (lc) => lc.includes("commercial photography") || lc.includes("do you do commercial"),
- answer: `**Commercial Photography**: Alan Ranger offers commercial photography services in addition to photography education. He provides workshops, courses, private lessons, and commercial photography services. To discuss your commercial photography needs, please contact Alan directly using the contact form or WhatsApp in the header section of this chat. [View Alan's Services](https://www.alanranger.com/photography-tuition-services)\n\n`
+ answer: `**Commercial Photography**: Alan Ranger offers commercial photography services in addition to photography education. He provides workshops, courses, private lessons, and commercial photography services. To discuss your commercial photography needs, please contact Alan directly using the contact form or WhatsApp in the header section of this chat.\n\n`
  },
          {
            matcher: (lc) => lc.includes("portrait photography") || lc.includes("do you do portrait"),
-           answer: `**Portrait Photography**: Alan focuses on photography education rather than portrait photography services. His expertise is in teaching photography through courses, workshops, and private lessons. For portrait photography needs, he can recommend other professional photographers in his network. [View Alan's Services](https://www.alanranger.com/photography-tuition-services)\n\n`
+           answer: `**Portrait Photography**: Alan focuses on photography education rather than portrait photography services. His expertise is in teaching photography through courses, workshops, and private lessons. For portrait photography needs, he can recommend other professional photographers in his network.\n\n`
          },
          {
            matcher: (lc) => (lc.includes("hire") || lc.includes("can i hire")) && (lc.includes("photographer") || lc.includes("professional")) && lc.includes("coventry"),
-           answer: `**Hiring a Professional Photographer in Coventry**: Alan Ranger offers professional photography services in Coventry and the surrounding areas, in addition to his photography education services. He provides workshops, courses, and private lessons, as well as commercial photography services. To discuss your photography needs, please contact Alan directly using the contact form or WhatsApp in the header section of this chat. [View Alan's Photography Services](https://www.alanranger.com/photography-tuition-services)\n\n`
+           answer: `**Hiring a Professional Photographer in Coventry**: Alan Ranger offers professional photography services in Coventry and the surrounding areas, in addition to his photography education services. He provides workshops, courses, and private lessons, as well as commercial photography services. To discuss your photography needs, please contact Alan directly using the contact form or WhatsApp in the header section of this chat.\n\n`
          },
          {
            matcher: (lc) => (lc.includes("hire") || lc.includes("can i hire")) && lc.includes("photographer"),
-           answer: `**Hiring a Professional Photographer**: Alan Ranger offers professional photography services in addition to photography education. He provides workshops, courses, private lessons, and commercial photography services. To discuss your photography needs or requirements, please contact Alan directly using the contact form or WhatsApp in the header section of this chat. [View Alan's Photography Services](https://www.alanranger.com/photography-tuition-services)\n\n`
+           answer: `**Hiring a Professional Photographer**: Alan Ranger offers professional photography services in addition to photography education. He provides workshops, courses, private lessons, and commercial photography services. To discuss your photography needs or requirements, please contact Alan directly using the contact form or WhatsApp in the header section of this chat.\n\n`
          },
-  {
+ {
     matcher: (lc) => lc.includes("photography academy") && lc.includes("free"),
-    answer: `**Free Photography Academy**: Yes! Alan offers a completely free online photography course that you can subscribe to. It's designed to help beginners learn photography fundamentals at their own pace. The course covers essential topics like exposure, composition, and camera settings. [Subscribe to Free Course](https://www.alanranger.com/free-online-photography-course)\n\n`
+    answer: `**Free Photography Academy**: Yes! Alan offers a completely free online photography course that you can subscribe to. It's designed to help beginners learn photography fundamentals at their own pace. The course covers essential topics like exposure, composition, and camera settings.\n\n`
   },
   {
     matcher: (lc) => (lc.includes("is the online photography course really free") || 
                       lc.includes("is the free course really free") || 
                       (lc.includes("really free") && lc.includes("online photography course")) ||
                       (lc.includes("really free") && lc.includes("photography course"))),
-    answer: `**Is the Online Photography Course Really Free?** Yes, the full course is completely free to access — no credit card required. It's a 60-module Foundation Course with instant access once you sign up. Optional paid services (like 1-to-1 help) are available, but not needed to complete the course. [Sign up for Free Course](https://www.alanranger.com/free-online-photography-course)\n\n`
+    answer: `**Is the Online Photography Course Really Free?** Yes, the full course is completely free to access — no credit card required. It's a 60-module Foundation Course with instant access once you sign up. Optional paid services (like 1-to-1 help) are available, but not needed to complete the course.\n\n`
   },
   {
     // Subscribe/signup queries for free course - must come before generic free course pattern
@@ -1627,12 +1627,12 @@ const SERVICE_PATTERNS = [
               (lc.includes("photography academy") && lc.includes("free")) || 
               lc.includes("free photography course") || lc.includes("free academy") ||
               (lc.includes("online photography course") && lc.includes("free"))),
-    answer: `**How to Subscribe to the Free Online Photography Course**: Click the "Sign up — Free Online Course" button on the course page to register instantly with your email address. You'll receive an email to verify and confirm your subscription. Once verified, you'll gain instant access to all 60 free modules. [Sign up for Free Course](https://www.alanranger.com/free-online-photography-course)\n\n`
+    answer: `**How to Subscribe to the Free Online Photography Course**: Click the "Sign up — Free Online Course" button on the course page to register instantly with your email address. You'll receive an email to verify and confirm your subscription. Once verified, you'll gain instant access to all 60 free modules.\n\n`
   },
   {
     matcher: (lc) => (lc.includes("certificate") || lc.includes("certification") || lc.includes("exams and certification")) && 
                       (lc.includes("photography course") || lc.includes("course") || lc.includes("online course")),
-    answer: `**Certificates**: The free online photography course provides free access to 60 modules of content, but I don't have specific information about certificates for this course. For details about certificates, qualifications, or course completion credentials, please contact Alan directly using the contact form or WhatsApp in the header section of this chat. [View Free Course](https://www.alanranger.com/free-online-photography-course)\n\n`
+    answer: `**Certificates**: The free online photography course provides free access to 60 modules of content, but I don't have specific information about certificates for this course. For details about certificates, qualifications, or course completion credentials, please contact Alan directly using the contact form or WhatsApp in the header section of this chat.\n\n`
   },
   {
     matcher: (lc) => (lc.includes("online photography course") && !lc.includes("beginners") && !lc.includes("lightroom")) ||
@@ -1641,22 +1641,22 @@ const SERVICE_PATTERNS = [
                       (lc.includes("photography academy") && !lc.includes("beginners")) ||
                       (lc.includes("free academy") && lc.includes("photography")) ||
                       (lc.includes("course add-ons") || lc.includes("course addons")),
-    answer: `**Free Online Photography Course**: Alan offers a completely free 60-module Foundation Course in photography. It's designed to help beginners learn photography fundamentals at their own pace. The course covers essential topics like exposure, composition, camera settings, gear guides, composition techniques, and practical assignments. It's completely free with no credit card required. [Sign up for Free Course](https://www.alanranger.com/free-online-photography-course)\n\n`
+    answer: `**Free Online Photography Course**: Alan offers a completely free 60-module Foundation Course in photography. It's designed to help beginners learn photography fundamentals at their own pace. The course covers essential topics like exposure, composition, camera settings, gear guides, composition techniques, and practical assignments. It's completely free with no credit card required.\n\n`
   },
   {
     // Most specific: gallery + feedback/image submission combined query
     matcher: (lc) => (lc.includes("gallery") || lc.includes("submit")) && (lc.includes("feedback") || lc.includes("image")),
-    answer: `**Gallery and Image Feedback**: Alan's photography gallery is available on his website at [www.alanranger.com/gallery](https://www.alanranger.com/gallery). For personalized feedback on your images, Alan offers 1-2-1 private photography lessons and mentoring services. You can submit your images for detailed, personalized feedback during these sessions. [Book Private Lessons for Feedback](https://www.alanranger.com/private-photography-lessons)\n\n`
+    answer: `**Gallery and Image Feedback**: Alan's photography gallery is available on his website. For personalized feedback on your images, Alan offers 1-2-1 private photography lessons and mentoring services. You can submit your images for detailed, personalized feedback during these sessions.\n\n`
   },
   {
     // Image submission for feedback (without gallery)
     matcher: (lc) => (lc.includes("submit") || lc.includes("send")) && (lc.includes("image") || lc.includes("photo")) && (lc.includes("feedback") || lc.includes("review")),
-    answer: `**Image Feedback**: For personalized feedback on your images, Alan offers 1-2-1 private photography lessons and mentoring services. During these sessions, you can submit your images for detailed, personalized feedback tailored to your specific needs and photography goals. [Book Private Lessons for Feedback](https://www.alanranger.com/private-photography-lessons)\n\n`
+    answer: `**Image Feedback**: For personalized feedback on your images, Alan offers 1-2-1 private photography lessons and mentoring services. During these sessions, you can submit your images for detailed, personalized feedback tailored to your specific needs and photography goals.\n\n`
   },
   {
     // Gallery-only query (least specific, comes last)
     matcher: (lc) => lc.includes("gallery"),
-    answer: `**Gallery**: Alan's photography gallery is available on his website showcasing his portfolio of landscape, portrait, and fine art photography. You can view his work at [www.alanranger.com/gallery](https://www.alanranger.com/gallery).\n\n`
+    answer: `**Gallery**: Alan's photography gallery is available on his website showcasing his portfolio of landscape, portrait, and fine art photography.\n\n`
   }
 ];
 
@@ -1700,11 +1700,11 @@ function isEthicalQuery(lc) {
 }
 
 function getAlanRangerBio() {
- return `**About Alan Ranger**: Alan is a highly qualified professional photographer and photography tutor based in the Midlands, UK, with over 20 years of experience. He is a qualified Associate of the British Institute of Professional Photographers (BIPP) and holds ARPS (Associate of the Royal Photographic Society) distinctions. Alan offers personalised photography courses and workshops tailored to all skill levels, spanning various genres from portraits to landscape and black and white photography. He has led over 30 educational lectures at the Xposure International Photography Festival in UAE and has won multiple awards including Landscape Photographer of the Year (7 awards) and International Landscape Photographer of the Year. [Learn more about Alan](https://www.alanranger.com/about-alan-ranger)\n\n`;
+ return `**About Alan Ranger**: Alan is a highly qualified professional photographer and photography tutor based in the Midlands, UK, with over 20 years of experience. He is a qualified Associate of the British Institute of Professional Photographers (BIPP) and holds ARPS (Associate of the Royal Photographic Society) distinctions. Alan offers personalised photography courses and workshops tailored to all skill levels, spanning various genres from portraits to landscape and black and white photography. He has led over 30 educational lectures at the Xposure International Photography Festival in UAE and has won multiple awards including Landscape Photographer of the Year (7 awards) and International Landscape Photographer of the Year.\n\n`;
 }
 
 function getEthicalGuidelines() {
- return `**Ethical Guidelines**: Alan Ranger Photography follows strict ethical policies focused on environmental consciousness and responsible education. The business maintains a carbon-neutral footprint through annual carbon impact assessments and offsetting projects. A tree is planted for every workshop place sold to help offset travel carbon footprint. Alan practices the Nature First code of ethics to ensure responsible custodianship of nature. Workshops are limited to 6 or fewer participants for personalised 1-2-1 time, with detailed itineraries including weather backups and health and safety prioritised. [View Ethical Policy](https://www.alanranger.com/my-ethical-policy)\n\n`;
+ return `**Ethical Guidelines**: Alan Ranger Photography follows strict ethical policies focused on environmental consciousness and responsible education. The business maintains a carbon-neutral footprint through annual carbon impact assessments and offsetting projects. A tree is planted for every workshop place sold to help offset travel carbon footprint. Alan practices the Nature First code of ethics to ensure responsible custodianship of nature. Workshops are limited to 6 or fewer participants for personalised 1-2-1 time, with detailed itineraries including weather backups and health and safety prioritised.\n\n`;
 }
 
 function getHardcodedAnswer(lc) {
