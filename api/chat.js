@@ -10067,6 +10067,15 @@ async function enrichAdviceWithRelatedInfo(client, query, structured) {
       if (articles && articles.length > 0) {
         enriched.articles = articles;
         console.log(`[ENRICH] Added ${articles.length} articles as fallback`);
+      } else {
+        // Last resort: try even broader search with single keyword
+        if (keywords.length > 0) {
+          const broadArticles = await findArticles(client, { keywords: [keywords[0]], limit: 6 });
+          if (broadArticles && broadArticles.length > 0) {
+            enriched.articles = broadArticles;
+            console.log(`[ENRICH] Added ${broadArticles.length} articles from broad search`);
+          }
+        }
       }
     }
     
