@@ -10042,87 +10042,94 @@ function composeFinalResponse(response, query, context = {}) {
   };
 }
 
-// Detect business category from query using business logic
-function detectBusinessCategory(query) {
-  const lc = query.toLowerCase();
-  
-  // 1. TECHNICAL PHOTOGRAPHY CONCEPTS - "What is..." questions about photography fundamentals
-  if (lc.includes('what is') && (
+// Helper: Check if query is technical photography concept (Complexity: Low)
+function isTechnicalPhotographyConcept(lc) {
+  return lc.includes('what is') && (
     lc.includes('exposure') || lc.includes('iso') || lc.includes('aperture') || 
     lc.includes('shutter') || lc.includes('raw') || lc.includes('white balance') ||
     lc.includes('depth of field') || lc.includes('histogram') || lc.includes('composition') ||
     lc.includes('metering') || lc.includes('focal length') || lc.includes('hdr') ||
     lc.includes('long exposure') || (lc.includes('flash') && lc.includes('photography'))
-  )) {
-    return 'Technical Photography Concepts';
-  }
-  
-  // 2. EQUIPMENT RECOMMENDATIONS - Questions about what equipment to buy/use
-  if ((lc.includes('what') || lc.includes('which') || lc.includes('recommend')) && (
+  );
+}
+
+// Helper: Check if query is equipment recommendation (Complexity: Low)
+function isEquipmentRecommendation(lc) {
+  return (lc.includes('what') || lc.includes('which') || lc.includes('recommend')) && (
     lc.includes('camera') || lc.includes('tripod') || lc.includes('lens') || 
     lc.includes('filter') || lc.includes('flash') || lc.includes('equipment') ||
     lc.includes('gear') || lc.includes('need for') || lc.includes('should i buy')
-  )) {
-    return 'Equipment Recommendations';
-  }
-  
-  // 3. PERSON QUERIES - Questions about specific people
-  if (lc.includes('who is') || lc.includes('peter orton') || lc.includes('alan ranger') ||
-      lc.includes('background') || lc.includes('based') || lc.includes('photographer')) {
-    return 'Person Queries';
-  }
-  
-  // 4. EVENT QUERIES - Questions about workshops, courses, events, schedules
-  if ((lc.includes('when') || lc.includes('next') || lc.includes('do you have') || 
-       lc.includes('are your') || lc.includes('schedule') || lc.includes('how long')) && (
+  );
+}
+
+// Helper: Check if query is person query (Complexity: Low)
+function isPersonQuery(lc) {
+  return lc.includes('who is') || lc.includes('peter orton') || lc.includes('alan ranger') ||
+         lc.includes('background') || lc.includes('based') || lc.includes('photographer');
+}
+
+// Helper: Check if query is event query (Complexity: Low)
+function isEventQuery(lc) {
+  return (lc.includes('when') || lc.includes('next') || lc.includes('do you have') || 
+          lc.includes('are your') || lc.includes('schedule') || lc.includes('how long')) && (
     lc.includes('workshop') || lc.includes('course') || lc.includes('class') || 
     lc.includes('lesson') || lc.includes('training') || lc.includes('event') ||
     lc.includes('devon') || lc.includes('bluebell') || lc.includes('autumn') ||
     lc.includes('spring') || lc.includes('summer') || lc.includes('winter')
-  )) {
-    return 'Event Queries';
-  }
-  
-  // 5. TECHNICAL ADVICE - How/Why or troubleshooting phrases (incl. sharp/blurry without explicit how/why)
-  if ((lc.includes('how to') || lc.includes('how do i') || lc.includes('why') ||
-       lc.includes('why are') || lc.includes('why do') || lc.includes('why is') ||
-       lc.includes('sharp') || lc.includes('blurry') || lc.includes('out of focus') || lc.includes('soft focus')) && (
+  );
+}
+
+// Helper: Check if query is technical advice (Complexity: Low)
+function isTechnicalAdvice(lc) {
+  return (lc.includes('how to') || lc.includes('how do i') || lc.includes('why') ||
+          lc.includes('why are') || lc.includes('why do') || lc.includes('why is') ||
+          lc.includes('sharp') || lc.includes('blurry') || lc.includes('out of focus') || lc.includes('soft focus')) && (
     lc.includes('take') || lc.includes('improve') || lc.includes('photograph') ||
     lc.includes('sharp') || lc.includes('blurry') || lc.includes('grainy') ||
     lc.includes('noisy') || lc.includes('lighting') || lc.includes('edit') ||
     lc.includes('compose') || lc.includes('exposure') || lc.includes('settings') || lc.includes('focus') ||
     lc.includes('flash') || lc.includes('use flash')
-  )) {
-    return 'Technical Advice';
-  }
-  
-  // 6. COURSE/WORKSHOP LOGISTICS - Questions about course details, requirements, logistics
-  if ((lc.includes('do i need') || lc.includes('do you provide') || lc.includes('do you have') ||
-       lc.includes('what courses') || lc.includes('course') || lc.includes('workshop')) && (
+  );
+}
+
+// Helper: Check if query is course/workshop logistics (Complexity: Low)
+function isCourseWorkshopLogistics(lc) {
+  return (lc.includes('do i need') || lc.includes('do you provide') || lc.includes('do you have') ||
+          lc.includes('what courses') || lc.includes('course') || lc.includes('workshop')) && (
     lc.includes('laptop') || lc.includes('equipment') || lc.includes('requirements') ||
     lc.includes('online') || lc.includes('zoom') || lc.includes('private') ||
     lc.includes('beginner') || lc.includes('advanced') || lc.includes('certificate') ||
     lc.includes('cost') || lc.includes('price') || lc.includes('booking')
-  )) {
-    return 'Course/Workshop Logistics';
-  }
+  );
+}
+
+// Helper: Check if query is business information (Complexity: Low)
+function isBusinessInformation(lc) {
+  return lc.includes('terms and conditions') || lc.includes('cancellation') || lc.includes('refund') ||
+         lc.includes('contact') || lc.includes('book') || lc.includes('discovery call') ||
+         lc.includes('gift voucher') || lc.includes('commercial photography') ||
+         lc.includes('portrait photography') || lc.includes('property photography') ||
+         lc.includes('product photography') || lc.includes('retouching') ||
+         lc.includes('fine art prints') || lc.includes('turnaround') ||
+         lc.includes('usage rights') || lc.includes('licensing') ||
+         lc.includes('rps mentoring') || lc.includes('photography academy') ||
+         lc.includes('free') || lc.includes('complimentary') ||
+         lc.includes('ethical guidelines') || lc.includes('gallery') ||
+         lc.includes('feedback') || lc.includes('subscribe');
+}
+
+// Detect business category from query using business logic (Complexity: Low)
+function detectBusinessCategory(query) {
+  const lc = query.toLowerCase();
   
-  // 7. BUSINESS INFORMATION - Questions about services, policies, contact, business details
-  if (lc.includes('terms and conditions') || lc.includes('cancellation') || lc.includes('refund') ||
-      lc.includes('contact') || lc.includes('book') || lc.includes('discovery call') ||
-      lc.includes('gift voucher') || lc.includes('commercial photography') ||
-      lc.includes('portrait photography') || lc.includes('property photography') ||
-      lc.includes('product photography') || lc.includes('retouching') ||
-      lc.includes('fine art prints') || lc.includes('turnaround') ||
-      lc.includes('usage rights') || lc.includes('licensing') ||
-      lc.includes('rps mentoring') || lc.includes('photography academy') ||
-      lc.includes('free') || lc.includes('complimentary') ||
-      lc.includes('ethical guidelines') || lc.includes('gallery') ||
-      lc.includes('feedback') || lc.includes('subscribe')) {
-    return 'Business Information';
-  }
+  if (isTechnicalPhotographyConcept(lc)) return 'Technical Photography Concepts';
+  if (isEquipmentRecommendation(lc)) return 'Equipment Recommendations';
+  if (isPersonQuery(lc)) return 'Person Queries';
+  if (isEventQuery(lc)) return 'Event Queries';
+  if (isTechnicalAdvice(lc)) return 'Technical Advice';
+  if (isCourseWorkshopLogistics(lc)) return 'Course/Workshop Logistics';
+  if (isBusinessInformation(lc)) return 'Business Information';
   
-  // Default fallback
   return 'General Queries';
 }
 
