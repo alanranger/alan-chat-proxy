@@ -10172,9 +10172,11 @@ async function sendRagSuccessResponse(res, ragResult, context) {
     ragResult.structured = await enrichAdviceWithRelatedInfo(client, context.query, ragResult.structured);
   }
   
-  // Apply Response Composer Layer - Convert any response to conversational format
+  // Apply Response Composer Layer
   const composedResponse = composeFinalResponse(ragResult, context.query, context);
   console.log(`🎭 Response Composer: Converted ${ragResult.type} response to conversational format`);
+  
+  performQualityAnalysis(ragResult, context);
  console.log(`ðŸ” Context exists: ${!!context}`);
  console.log(`ðŸ” Answer exists: ${!!ragResult.answer}`);
  console.log(`ðŸ” Context query: ${context?.query}`);
