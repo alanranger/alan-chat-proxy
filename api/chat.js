@@ -9060,8 +9060,93 @@ async function handleServiceQueries(client, query) {
 }
 
 // Helper: Handle technical queries with article enrichment (Complexity: Low)
+// Helper: Check if query has specific hardcoded answer (Complexity: Low)
+function hasSpecificHardcodedAnswer(qlc) {
+  return qlc.includes('long exposure') ||
+    qlc.includes('exposure triangle') ||
+    qlc.includes('depth of field') ||
+    qlc.includes('white balance') ||
+    qlc.includes('hdr') ||
+    qlc.includes('flash photography') ||
+    qlc.includes('low light') ||
+    qlc.includes('shoot in low light') ||
+    qlc.includes('edit raw') ||
+    qlc.includes('photography skills');
+}
+
+// Helper: Check if article answer is relevant to query (Complexity: Low)
+function isArticleAnswerRelevant(articleAnswer, query, normalizedQuery) {
+  const queryKeywords = normalizedQuery.toLowerCase().split(/\s+/);
+  const articleLower = articleAnswer.toLowerCase();
+  return queryKeywords.some(keyword => keyword.length > 3 && articleLower.includes(keyword));
+}
+
+// Helper: Enrich technical answer with article content (Complexity: Low)
+function enrichTechnicalAnswerWithArticles(articles, normalizedQuery, technicalResponse, qlc) {
+  if (!articles || articles.length === 0 || (!qlc.includes('what is') && !qlc.includes('what\'s'))) {
+    return technicalResponse;
+  }
+  
+  const hasSpecific = hasSpecificHardcodedAnswer(qlc);
+  
+  if (hasSpecific && technicalResponse.length >= 100) {
+    console.log(`[SKIP] Keeping hardcoded technical answer for specific concept query`);
+    return technicalResponse;
+  }
+  
+  const articleAnswer = generateArticleAnswer(articles, normalizedQuery);
+  if (!articleAnswer || articleAnswer.trim().length <= technicalResponse.length ||
+      articleAnswer.includes("Based on Alan Ranger's expertise, here's what you need to know")) {
+    return technicalResponse;
+  }
+  
+  if (hasSpecific) {
+    if (isArticleAnswerRelevant(articleAnswer, normalizedQuery, normalizedQuery)) {
+      console.log(`[SUCCESS] Enriched technical answer with relevant article content`);
+      return articleAnswer;
+    } else {
+      console.log(`[SKIP] Article content doesn't match query topic, keeping hardcoded answer`);
+      return technicalResponse;
+    }
+  }
+  
+  console.log(`[SUCCESS] Enriched technical answer with article content`);
+  return articleAnswer;
+}
+
+// Helper: Handle sharpness intent and enrich keywords (Complexity: Low)
+function handleSharpnessIntent(qlc, keywords) {
+  const sharpIntent = qlc.includes('sharp') || qlc.includes('soft') || qlc.includes('blurry') || 
+    qlc.includes('blur') || qlc.includes('out of focus') || qlc.includes('focus');
+  
+  if (!sharpIntent) return { enriched: keywords, sharpIntent: false };
+  
+  const enriched = Array.from(new Set([
+    ...keywords,
+    'sharp', 'sharpness', 'focus', 'focusing', 'blur', 'blurry',
+    'camera shake', 'tripod', 'shutter speed', 'stabilization', 'ibis', 'vr'
+  ]));
+  
+  return { enriched, sharpIntent: true };
+}
+
+// Helper: Filter and limit articles for sharpness queries (Complexity: Low)
+function filterArticlesForSharpness(articles, sharpIntent) {
+  if (!sharpIntent) return articles.slice(0, 12);
+  
+  const filtered = filterArticlesByKeywords(articles, [
+    'sharp', 'focus', 'focusing', 'blur', 'blurry', 'camera shake',
+    'handheld', 'stabilization', 'ibis', 'vr', 'tripod'
+  ]);
+  
+  if (filtered.length < 6 && articles.length > filtered.length) {
+    return [...filtered, ...articles.filter(a => !filtered.includes(a))].slice(0, 12);
+  }
+  
+  return filtered.slice(0, 12);
+}
+
 async function handleTechnicalQueries(client, query) {
-  // Normalize query to handle quotes/parentheses
   const normalizedQuery = query.replace(/["""]/g, '').trim();
   const qlc = normalizedQuery.toLowerCase();
   const technicalResponse = getTechnicalAnswers(qlc);
@@ -9070,71 +9155,13 @@ async function handleTechnicalQueries(client, query) {
   
   console.log(`[TARGET] Technical pattern matched for: "${query}"`);
   const keywords = extractKeywords(normalizedQuery);
-  const sharpIntent = qlc.includes('sharp') || qlc.includes('soft') || qlc.includes('blurry') || qlc.includes('blur') || qlc.includes('out of focus') || qlc.includes('focus');
-  const enriched = sharpIntent
-    ? Array.from(new Set([...keywords, 'sharp', 'sharpness', 'focus', 'focusing', 'blur', 'blurry', 'camera shake', 'tripod', 'shutter speed', 'stabilization', 'ibis', 'vr']))
-    : keywords;
+  const { enriched, sharpIntent } = handleSharpnessIntent(qlc, keywords);
   
   let articles = await findArticles(client, { keywords: enriched, limit: sharpIntent ? 25 : 12 });
-  if (sharpIntent) {
-    const filtered = filterArticlesByKeywords(articles, ['sharp', 'focus', 'focusing', 'blur', 'blurry', 'camera shake', 'handheld', 'stabilization', 'ibis', 'vr', 'tripod']);
-    if (filtered.length < 6 && articles.length > filtered.length) {
-      articles = [...filtered, ...articles.filter(a => !filtered.includes(a))].slice(0, 12);
-    } else {
-      articles = filtered.slice(0, 12);
-    }
-  }
-
-  // If we have articles and the technical response seems short, try to enrich it
-  // BUT: Don't override hardcoded technical answers with potentially wrong article content
-  // Only enrich if the hardcoded answer is very short (likely incomplete) or if articles are clearly relevant
-  let finalAnswer = technicalResponse;
-  if (articles && articles.length > 0 && (qlc.includes('what is') || qlc.includes('what\'s'))) {
-    // Check if this is a query we have a specific hardcoded answer for
-    // These should NOT be overridden by article content unless article is clearly better and relevant
-    const hasSpecificHardcodedAnswer = 
-      qlc.includes('long exposure') ||
-      qlc.includes('exposure triangle') ||
-      qlc.includes('depth of field') ||
-      qlc.includes('white balance') ||
-      qlc.includes('hdr') ||
-      qlc.includes('flash photography') ||
-      qlc.includes('low light') ||
-      qlc.includes('shoot in low light') ||
-      qlc.includes('edit raw') ||
-      qlc.includes('photography skills');
-    
-    if (!hasSpecificHardcodedAnswer || technicalResponse.length < 100) {
-      // Only try enrichment for queries without specific hardcoded answers, or if answer is very short
-      const articleAnswer = generateArticleAnswer(articles, normalizedQuery);
-      // Only use article answer if it's better (longer and more specific, not generic)
-      // AND if it doesn't contradict the hardcoded answer (check for topic mismatch)
-      if (articleAnswer && articleAnswer.trim().length > technicalResponse.length && 
-          !articleAnswer.includes("Based on Alan Ranger's expertise, here's what you need to know")) {
-        // For specific technical concepts, verify article is actually about the same topic
-        if (hasSpecificHardcodedAnswer) {
-          const queryKeywords = normalizedQuery.toLowerCase().split(/\s+/);
-          const articleLower = articleAnswer.toLowerCase();
-          // Check if article answer contains the key terms from the query
-          const hasRelevantKeywords = queryKeywords.some(keyword => 
-            keyword.length > 3 && articleLower.includes(keyword)
-          );
-          if (hasRelevantKeywords) {
-            console.log(`[SUCCESS] Enriched technical answer with relevant article content`);
-            finalAnswer = articleAnswer;
-          } else {
-            console.log(`[SKIP] Article content doesn't match query topic, keeping hardcoded answer`);
-          }
-        } else {
-          console.log(`[SUCCESS] Enriched technical answer with article content`);
-          finalAnswer = articleAnswer;
-        }
-      }
-    } else {
-      console.log(`[SKIP] Keeping hardcoded technical answer for specific concept query`);
-    }
-  }
-
+  articles = filterArticlesForSharpness(articles, sharpIntent);
+  
+  const finalAnswer = enrichTechnicalAnswerWithArticles(articles, normalizedQuery, technicalResponse, qlc);
+  
   return {
     success: true,
     confidence: 0.8,
