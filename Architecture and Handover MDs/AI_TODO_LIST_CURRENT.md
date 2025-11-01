@@ -20,6 +20,9 @@ All older references or notes can be found inside `/Archive/AI_TODO_LIST_2025-01
 |------|-----------------|-------|
 | 1 Nov 2025 | **Complexity Refactoring Complete** | ✅ 5 high-complexity functions refactored: detectBusinessCategory (120→≤15), tryRagFirst (42→≤15), handleTechnicalQueries (28→≤15), generateEventAnswerMarkdown (30→≤15), generateArticleAnswer (30→≤15) - all verified with 40Q tests, no regressions |
 | 1 Nov 2025 | **Helper Functions Extracted** | ✅ 28 helper functions extracted across 5 refactored functions - all maintain ≤15 complexity |
+| 1 Nov 2025 | **Remove Article Cap** | ✅ Removed 6-article limit for equipment/technical questions - Q7 (tripod) now shows all related articles |
+| 1 Nov 2025 | **Add Missing Hardcoded Answers** | ✅ Added histogram answer function - queries now return proper technical answer |
+| 1 Nov 2025 | **Remove URLs from Responses** | ✅ Cleaned up all hardcoded answers - removed inline URLs from SERVICE_PATTERNS, policy answers, and About Alan functions |
 | 1 Nov 2025 | **Analytics Dashboard Updates** | Updated analytics.html structure to match chat.html (meta tags, fonts, CSS variables, JSON-LD, GA4), all tabs verified working |
 | 1 Nov 2025 | **Insights Tab Fixed** | Created /api/chat-improvement.js endpoint, refactored to meet complexity rules, all 8 endpoints tested and working |
 | 1 Nov 2025 | **Light-Refresh Modernization** | Refactored light-refresh.js to use supabaseAdmin() pattern, improved error handling, updated schedule to every 8 hours |

@@ -1,6 +1,7 @@
 # PROJECT_PROGRESS_MASTER.md
 
 ## Latest Snapshot
+- **1 Nov 2025** — Feature improvements complete: Removed article cap for equipment/technical questions, added histogram answer, removed URLs from all hardcoded answers
 - **1 Nov 2025** — Complexity refactoring complete: 5 high-complexity functions reduced from 42-120 to ≤15 complexity, all verified with 40Q tests (100% pass rate, no regressions)
 - **1 Nov 2025** — Helper functions extracted: 28 helper functions created across 5 refactored functions maintaining ≤15 complexity
 - **1 Nov 2025** — Analytics dashboard updated: structure aligned with chat.html, Insights tab fixed, all tabs verified working
@@ -21,6 +22,7 @@
 - **Quality Pass Rate**: 92.5% (3 routing issues, 5 generic fallbacks expected)
 - **Complexity Refactoring**: ✅ 5 high-complexity functions refactored to ≤15 complexity (detectBusinessCategory, tryRagFirst, handleTechnicalQueries, generateEventAnswerMarkdown, generateArticleAnswer)
 - **Helper Functions**: ✅ 28 helper functions extracted, all maintaining ≤15 complexity
+- **Feature Improvements**: ✅ Article cap removed for equipment/technical questions, histogram answer added, URLs removed from all hardcoded answers
 - **Code Quality**: All future changes must maintain ≤15 complexity - no increases allowed
 - **Baseline**: Updated to `baseline-40-question-interactive-subset-2025-11-01T13-32-45-780Z.json`
 - **Analytics Dashboard**: Fully functional with all tabs working (Overview, Questions, Sessions, Performance, Insights, Feedback, Admin)
@@ -29,6 +31,9 @@
   - High-complexity functions still need refactoring: sendEventsResponse (28), handleEventsPipeline (15), handleServiceQueries (55), etc.
   - Helper functions exceeding limits: hasSpecificHardcodedAnswer (10), enrichTechnicalAnswerWithArticles (12), isCourseContentQuery (11), etc.
   - Q7, Q8, Q13, Q16, Q24: Generic fallbacks (expected - information not in knowledge base)
+  - Article relevance improvements needed
+  - Course vs workshop distinction needed
+  - Answer quality improvements needed
 
 ## Milestone Tracking
 - System Performance Excellence achieved (per README)
