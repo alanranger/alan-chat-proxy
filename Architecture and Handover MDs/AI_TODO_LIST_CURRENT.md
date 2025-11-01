@@ -1,5 +1,5 @@
 # 🧠 AI_TODO_LIST_CURRENT.md  
-_Last updated: 1 Nov 2025 22:15_  
+_Last updated: 1 Nov 2025 23:15_  
 _Alan Ranger — Chat AI Bot / alan-chat-proxy_
 
 ---
@@ -28,6 +28,7 @@ All older references or notes can be found inside `/Archive/AI_TODO_LIST_2025-01
 ## ✅ Recently Completed (Last 2 Weeks)
 | Date | Completed Item | Notes |
 |------|-----------------|-------|
+| 1 Nov 2025 | **Priority 1 Low-Hanging Fruit Fixes Complete** | ✅ All 4 Priority 1 fixes implemented and verified: (1) Convert sources URLs to article objects - Coverage 97% → 100%, (2) Remove URLs from generic fallbacks - Cleaner UX, (3) Add product enrichment - Products 0% → 10%, (4) Improve service intent matching - Expanded keywords. Quality Score improved from 78.3% → 80.6% (+2.3 points). Verified with 430Q test: 100% success (430/430), no regressions. Coverage: 100%, Diversity: 64%, Products: 10%, Completeness: 45.3% |
 | 1 Nov 2025 | **SonarQube Refactoring Issues Fixed** | ✅ Fixed 2 SonarQube refactoring issues: (1) Removed extra argument from `addArticlesForEnrichment()` call, (2) Reduced cognitive complexity of `sendRagSuccessResponse()` from 20 to ≤15 by extracting 4 helper functions: `initializeStructuredObject()`, `handleSourcesConversion()`, `performQualityAnalysis()`, `buildDebugInfo()`. Verified with 40Q test: 100% success (40/40) - no regressions |
 | 1 Nov 2025 | **Server Crash Fix & Response Quality Improvements** | ✅ Fixed server crash after ~19 requests: Added singleton Supabase client, global error handlers, HTTP timeouts. Fixed 6 specific questions (astrophotography, 14yr old, gear equipment, certificate, cancellation policy, hire photographer) with proper answers. Added `enrichAdviceWithRelatedInfo()` to automatically add related content. 430Q test: 100% success (430/430), deployed to production |
 | 1 Nov 2025 | **430Q Baseline Test Complete** | ✅ Established comprehensive baseline: 430/430 questions passing (100% success), average confidence 76.8%, all query types verified. Test script improved with HTTP timeouts and better error messages |
