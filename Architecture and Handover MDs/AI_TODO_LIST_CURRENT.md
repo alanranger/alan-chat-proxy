@@ -18,6 +18,10 @@ All older references or notes can be found inside `/Archive/AI_TODO_LIST_2025-01
 ## ✅ Recently Completed (Last 2 Weeks)
 | Date | Completed Item | Notes |
 |------|-----------------|-------|
+| 1 Nov 2025 | **8 HTTP 500 Failures Fixed** | ✅ All 8 questions consistently returning HTTP 500 errors now fixed - 100% success rate achieved (40/40 questions passing). Fixed: services query, equipment comparison, free course queries (2), gallery/feedback queries (2), location-based person queries (2). Verified with test-40q-deployed.cjs |
+| 1 Nov 2025 | **Analytics Event Tiles Display Fix** | ✅ Updated analytics.html event tiles to match live chat display - now shows full event details (time, participants, fitness level, experience, equipment, More Info button) instead of simplified version |
+| 1 Nov 2025 | **Analytics Complexity Refactoring** | ✅ Refactored analytics.html to reduce cognitive complexity: loadInsights (25→≤15), implementTopImprovements (24→≤15), viewQuestion (17→≤15) - all functions now meet complexity standards |
+| 1 Nov 2025 | **Structured Response Display** | ✅ Analytics dashboard now displays related information tiles (articles, services, events) from structured_response field in database |
 | 1 Nov 2025 | **Complexity Refactoring Complete** | ✅ 5 high-complexity functions refactored: detectBusinessCategory (120→≤15), tryRagFirst (42→≤15), handleTechnicalQueries (28→≤15), generateEventAnswerMarkdown (30→≤15), generateArticleAnswer (30→≤15) - all verified with 40Q tests, no regressions |
 | 1 Nov 2025 | **Helper Functions Extracted** | ✅ 28 helper functions extracted across 5 refactored functions - all maintain ≤15 complexity |
 | 1 Nov 2025 | **Remove Article Cap** | ✅ Removed 6-article limit for equipment/technical questions - Q7 (tripod) now shows all related articles |
@@ -105,6 +109,7 @@ All older references or notes can be found inside `/Archive/AI_TODO_LIST_2025-01
 | ⚙️ Medium | **Interactive Testing Check** | Verify if interactive-testing.html has dual scoring system (Bot Response + Related) | Cursor | ✅ Complete |
 | ⚙️ Medium | **Review Debug Scripts** | Identify duplicates and propose merges where safe. | Cursor | Pending |
 | 🔸 High | **Store Structured Response in Analytics** | ✅ Update logAnswer calls to pass structured_response data so analytics dashboard can display related information tiles | Cursor | ✅ Complete |
+| 🔴 P1 | **Fix 8 Consistent HTTP 500 Failures** | ✅ Fix 8 questions consistently returning HTTP 500: services query, equipment comparison, free course queries (2), gallery/feedback queries (2), location-based person queries (2). All 8 questions now return HTTP 200 (100% success rate). See `40Q-FAILURE-ANALYSIS-2025-11-01.md` for details | Other Agent | ✅ Complete |
 
 ---
 
@@ -174,6 +179,70 @@ All older references or notes can be found inside `/Archive/AI_TODO_LIST_2025-01
   pills: [...]
 }
 ```
+
+---
+
+### **Fix 8 Consistent HTTP 500 Failures** (P1 - Critical)
+
+**Objective**: Fix 8 questions that consistently return HTTP 500 errors in the 40Q test suite.
+
+**Current Status**: 
+- ✅ Identified 8 questions failing consistently across multiple test runs
+- ✅ Created failure analysis document: `40Q-FAILURE-ANALYSIS-2025-11-01.md`
+- ✅ **FIXED**: All 8 questions now return HTTP 200 (verified Nov 1, 2025 - 100% success rate)
+
+**Failed Questions**:
+
+1. `"What types of photography services do you offer?"` - Services query
+2. `"What is the difference between prime and zoom lenses?"` - Equipment comparison
+3. `"Is the online photography course really free"` - Free course query
+4. `"How do I get personalised feedback on my images"` - Gallery/feedback query
+5. `"Where is your gallery and can I submit my images for feedback?"` - Gallery/feedback query
+6. `"Can I hire you as a professional photographer in Coventry?"` - Location-based person query
+7. `"peter orton"` - Person name search
+8. `"How do I subscribe to the free online photography course?"` - Free course query
+
+**Root Cause**: Unhandled exceptions in query handlers causing HTTP 500 errors.
+
+**Required Changes**:
+
+1. **Add Error Handling to `enrichFreeCourseAnswer()` (line ~8865)**:
+   - Wrap database queries in try-catch blocks
+   - Handle `findServices()` and `findArticles()` failures gracefully
+   - Return fallback response if enrichment fails
+
+2. **Add Error Handling to `handleServiceQueries()` (line ~8931)**:
+   - Wrap `findServices()` calls in try-catch
+   - Handle `buildPrimaryServicesQuery()` and `buildFallbackServicesQuery()` failures
+   - Return proper error response instead of throwing
+
+3. **Create Missing Handlers**:
+   - Gallery/feedback query handler (questions 4-5)
+   - Person name search handler (question 7)
+   - Location-based person query handler (question 6)
+
+4. **Fix Equipment Comparison Query Routing**:
+   - Ensure lens comparison queries route to correct handler
+   - May need to add specific handler for equipment comparisons
+
+5. **Improve Error Logging**:
+   - Add detailed error logging with query context
+   - Log full error stack traces for debugging
+
+**Testing**:
+- ✅ Run `node testing-scripts/test-40q-deployed.cjs` - COMPLETED
+- ✅ Verify all 8 questions now return HTTP 200 - VERIFIED (100% success rate)
+- ✅ Check that responses contain valid content - VERIFIED
+- ✅ Verify analytics dashboard shows these questions correctly - VERIFIED
+
+**Reference**: See `Architecture and Handover MDs/40Q-FAILURE-ANALYSIS-2025-11-01.md` for full analysis and code locations.
+
+**Completion Notes**: 
+- ✅ All 8 questions fixed and verified on Nov 1, 2025
+- ✅ Test run completed with 40/40 questions passing (100% success rate)
+- ✅ All questions now return HTTP 200 with valid responses
+- ✅ Average confidence: 82.8%
+- ✅ Fixes implemented by other agent working on `api/chat.js`
 
 ---
 
