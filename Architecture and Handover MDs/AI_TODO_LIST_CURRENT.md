@@ -1,5 +1,5 @@
 # 🧠 AI_TODO_LIST_CURRENT.md  
-_Last updated: 1 Nov 2025_  
+_Last updated: 1 Nov 2025 21:05_  
 _Alan Ranger — Chat AI Bot / alan-chat-proxy_
 
 ---
@@ -28,6 +28,8 @@ All older references or notes can be found inside `/Archive/AI_TODO_LIST_2025-01
 ## ✅ Recently Completed (Last 2 Weeks)
 | Date | Completed Item | Notes |
 |------|-----------------|-------|
+| 1 Nov 2025 | **Server Crash Fix & Response Quality Improvements** | ✅ Fixed server crash after ~19 requests: Added singleton Supabase client, global error handlers, HTTP timeouts. Fixed 6 specific questions (astrophotography, 14yr old, gear equipment, certificate, cancellation policy, hire photographer) with proper answers. Added `enrichAdviceWithRelatedInfo()` to automatically add related content. 430Q test: 100% success (430/430), deployed to production |
+| 1 Nov 2025 | **430Q Baseline Test Complete** | ✅ Established comprehensive baseline: 430/430 questions passing (100% success), average confidence 76.8%, all query types verified. Test script improved with HTTP timeouts and better error messages |
 | 1 Nov 2025 | **8 HTTP 500 Failures Fixed** | ✅ All 8 questions consistently returning HTTP 500 errors now fixed - 100% success rate achieved (40/40 questions passing). Fixed: services query, equipment comparison, free course queries (2), gallery/feedback queries (2), location-based person queries (2). Verified with test-40q-deployed.cjs |
 | 1 Nov 2025 | **Analytics Event Tiles Display Fix** | ✅ Updated analytics.html event tiles to match live chat display - now shows full event details (time, participants, fitness level, experience, equipment, More Info button) instead of simplified version |
 | 1 Nov 2025 | **Analytics Complexity Refactoring** | ✅ Refactored analytics.html to reduce cognitive complexity: loadInsights (25→≤15), implementTopImprovements (24→≤15), viewQuestion (17→≤15) - all functions now meet complexity standards |
@@ -79,6 +81,9 @@ All older references or notes can be found inside `/Archive/AI_TODO_LIST_2025-01
 | Priority | Task | Description | Owner | Status |
 |-----------|------|--------------|-------|--------|
 | 🔴 P1 | **Complexity Refactoring** | ✅ 5 high-complexity functions refactored to ≤15 complexity - all verified with 40Q tests | Cursor | ✅ Complete |
+| 🔴 P1 | **Fix Server Crash After ~19 Requests** | ✅ Fixed: Added singleton Supabase client, global error handlers, HTTP timeouts. 430Q test: 100% success (430/430) | Cursor | ✅ Complete |
+| 🔴 P1 | **Fix 6 Specific Question Responses** | ✅ Fixed: astrophotography, 14yr old, gear equipment, certificate, cancellation policy, hire photographer - now return specific answers instead of generic fallbacks | Cursor | ✅ Complete |
+| 🔴 P1 | **Add Related Information Enrichment** | ✅ Added `enrichAdviceWithRelatedInfo()` to automatically add related articles/services/events to responses that lack them | Cursor | ✅ Complete |
 | 🔴 P1 | **Fix Course Logistics Routing** | ✅ Q17 (laptop for lightroom course), Q20 (weeks for beginners course) - route to events not services | Cursor | ✅ Complete |
 | 🔴 P1 | **Fix Missing Initial Responses** | ✅ Q27 (exposure triangle) - FIXED | Cursor | ✅ Complete |
 | 🔴 P1 | **Fix Missing Initial Responses** | ✅ Q36 (free course subscribe) - FIXED | Cursor | ✅ Complete |
@@ -102,6 +107,8 @@ All older references or notes can be found inside `/Archive/AI_TODO_LIST_2025-01
 | 🔸 High | **Service Rendering Fix** | Interactive testing now matches live chat service tile display | Cursor | ✅ Complete |
 | 🔸 High | **Add Missing Hardcoded Answers** | Add hardcoded answers for 'what is histogram' and 'what is long exposure photography' | Cursor | Pending |
 | 🔸 High | **System Stability Achieved** | 430-question test completed with 100% success rate - no more 500 errors or timeouts | Cursor | ✅ Complete |
+| 🔸 High | **Server Crash Fix Deployed** | Singleton Supabase client prevents connection exhaustion, global error handlers catch unhandled rejections - deployed Nov 1, 2025 | Cursor | ✅ Complete |
+| 🔸 High | **430Q Baseline Established** | Comprehensive baseline test: 430/430 questions passing (100%), avg confidence 76.8%, all fixes verified | Cursor | ✅ Complete |
 | 🔸 High | **Response Composer Layer** | Intelligent wrapper implemented for all 8 business logic categories | Cursor | ✅ Complete |
 | 🔸 High | **Interactive Testing Updates** | Updated HTML with 40-question subset, business logic categories, copy buttons | Cursor | ✅ Complete |
 | 🔸 High | **Comprehensive Test Set** | Created 430-question test set from 356 CSV + 50 baseline + 28 interactive | Cursor | ✅ Complete |
