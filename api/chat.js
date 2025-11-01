@@ -3851,102 +3851,93 @@ function generateServiceAnswer(services, query) {
   return `I offer a range of photography services${list}`.trim();
 }
 
-async function findServices(client, { keywords, limit = 50 }) {
- console.log(`🔧 findServices called with keywords: ${keywords?.join(', ') || 'none'}`);
- // Treat generic service-intent queries as broad: avoid over-filtering by keywords
- const genericServiceIntent = Array.isArray(keywords) && keywords.length > 0 && keywords.every(k => /^(service|services|type|types|offer|offers|photography|photographic|what|do|you)$/i.test(String(k||'').trim()));
+// Helper: Normalize service title
+function normalizeServiceTitle(record) {
+  const csvTitle = record.csv_metadata?.title;
+  const jsonName = record.json_ld_data?.name;
+  let title = record.title || csvTitle || jsonName || record.norm_title || '';
+  if (/\balan\s+ranger\b/i.test(title)) {
+    const u = (record.page_url || record.url || '').split('?')[0].replace(/\/$/, '');
+    const slug = u.split('/').filter(Boolean).pop() || '';
+    const fromSlug = slug.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+    if (fromSlug) title = fromSlug;
+  }
+  return { ...record, title };
+}
 
-// 1) Primary: prefer landing/service pages imported via CSV
-try {
-  // Primary: only rows from 08 CSV that are flagged as service in csv_metadata
-  // Use inner join on csv_metadata to enforce per-row flag regardless of page_entities.kind
-  let qPrimary = client
+// Helper: Deduplicate services by URL
+function deduplicateServices(services) {
+  const seen = new Set();
+  const uniq = [];
+  for (const item of services) {
+    const k = (item.page_url || item.url || '').replace(/\/$/, '');
+    if (!k || seen.has(k)) continue;
+    seen.add(k);
+    uniq.push(item);
+  }
+  return uniq;
+}
+
+// Helper: Build primary services query
+function buildPrimaryServicesQuery(client, genericServiceIntent, keywords, limit) {
+  let q = client
     .from('page_entities')
     .select('*, csv_metadata!inner(kind, title)')
     .eq('csv_type', 'landing_service_pages')
     .eq('csv_metadata.kind', 'service')
     .order('last_seen', { ascending: false });
   if (!genericServiceIntent) {
-    qPrimary = applyServicesKeywordFiltering(qPrimary, keywords);
+    q = applyServicesKeywordFiltering(q, keywords);
   }
-  qPrimary = qPrimary.range(0, Math.max(0, (limit || 24) - 1));
-  const { data: primary, error: errPrimary } = await qPrimary;
-  if (!errPrimary && Array.isArray(primary) && primary.length > 0) {
-    const normalized = primary.map(r => {
-      const csvTitle = r.csv_metadata && r.csv_metadata.title;
-      const jsonName = r.json_ld_data && r.json_ld_data.name;
-      // Prefer DB title first (post-ingest corrected), then CSV, then JSON-LD
-      let title = r.title || csvTitle || jsonName || r.norm_title || '';
-      if (/\balan\s+ranger\b/i.test(title)) {
-        const u = (r.page_url || r.url || '').split('?')[0].replace(/\/$/, '');
-        const slug = u.split('/').filter(Boolean).pop() || '';
-        const fromSlug = slug.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-        if (fromSlug) title = fromSlug;
-      }
-      return { ...r, title };
-    });
-    if (genericServiceIntent) {
-      const seen = new Set();
-      const uniq = [];
-      for (const it of normalized) {
-        const k = (it.page_url || it.url || '').replace(/\/$/, '');
-        if (!k || seen.has(k)) continue;
-        seen.add(k);
-        uniq.push(it);
-      }
-      logServicesResults(uniq);
-      return uniq;
-    }
-    logServicesResults(normalized);
-    return normalized;
-  }
-} catch (e) {
-  console.warn('findServices primary query failed, attempting fallback', e);
+  return q.range(0, Math.max(0, (limit || 24) - 1));
 }
 
- // 2) Fallback: enforce csv_metadata.kind='service' as well to avoid landing bleed-through
- let q = client
-   .from('page_entities')
-   .select('*, csv_metadata!inner(title, kind)')
-   .eq('kind', 'service')
-   .eq('csv_metadata.kind', 'service')
-   .order('last_seen', { ascending: false });
- if (!genericServiceIntent) {
-   q = applyServicesKeywordFiltering(q, keywords);
+// Helper: Build fallback services query
+function buildFallbackServicesQuery(client, genericServiceIntent, keywords, limit) {
+  let q = client
+    .from('page_entities')
+    .select('*, csv_metadata!inner(title, kind)')
+    .eq('kind', 'service')
+    .eq('csv_metadata.kind', 'service')
+    .order('last_seen', { ascending: false });
+  if (!genericServiceIntent) {
+    q = applyServicesKeywordFiltering(q, keywords);
+  }
+  return q.range(0, Math.max(0, (limit || 24) - 1));
+}
+
+// Helper: Process and return services
+function processAndReturnServices(data, genericServiceIntent) {
+  const normalized = data.map(normalizeServiceTitle);
+  const result = genericServiceIntent ? deduplicateServices(normalized) : normalized;
+  logServicesResults(result);
+  return result;
+}
+
+async function findServices(client, { keywords, limit = 50 }) {
+ console.log(`🔧 findServices called with keywords: ${keywords?.join(', ') || 'none'}`);
+ const genericServiceIntent = Array.isArray(keywords) && keywords.length > 0 && 
+   keywords.every(k => /^(service|services|type|types|offer|offers|photography|photographic|what|do|you)$/i.test(String(k||'').trim()));
+
+ // 1) Primary: prefer landing/service pages imported via CSV
+ try {
+   const qPrimary = buildPrimaryServicesQuery(client, genericServiceIntent, keywords, limit);
+   const { data: primary, error: errPrimary } = await qPrimary;
+   if (!errPrimary && Array.isArray(primary) && primary.length > 0) {
+     return processAndReturnServices(primary, genericServiceIntent);
+   }
+ } catch (e) {
+   console.warn('findServices primary query failed, attempting fallback', e);
  }
- q = q.range(0, Math.max(0, (limit || 24) - 1));
+
+ // 2) Fallback: enforce csv_metadata.kind='service'
+ const q = buildFallbackServicesQuery(client, genericServiceIntent, keywords, limit);
  const { data, error } = await q;
  if (error) {
    console.error('findServices fallback error:', error);
    return [];
  }
-  const fixed = (data || []).map(r => {
-    const csvTitle = r.csv_metadata && r.csv_metadata.title;
-    const jsonName = r.json_ld_data && r.json_ld_data.name;
-    // Prefer DB title first
-    let title = r.title || csvTitle || jsonName || r.norm_title || '';
-    if (/\balan\s+ranger\b/i.test(title)) {
-      const u = (r.page_url || r.url || '').split('?')[0].replace(/\/$/, '');
-      const slug = u.split('/').filter(Boolean).pop() || '';
-      const fromSlug = slug.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-      if (fromSlug) title = fromSlug;
-    }
-    return { ...r, title };
-  });
- if (genericServiceIntent) {
-   const seen = new Set();
-   const uniq = [];
-   for (const it of fixed) {
-     const k = (it.page_url || it.url || '').replace(/\/$/, '');
-     if (!k || seen.has(k)) continue;
-     seen.add(k);
-     uniq.push(it);
-   }
-   logServicesResults(uniq);
-   return uniq;
- }
- logServicesResults(fixed);
- return fixed;
+ return processAndReturnServices(data || [], genericServiceIntent);
 }
 
 // Helper functions for findArticles scoring
@@ -8138,22 +8129,9 @@ async function processRagSearchResults(context) {
  return results;
 }
 
-async function tryRagFirst(client, query) {
- console.log(`ðŸ” RAG-First attempt for: "${query}"`);
- 
- // Check for contact Alan queries first
- const contactResponse = checkContactAlanQuery(query);
- if (contactResponse) {
- return contactResponse;
- }
- 
-  // PRIORITY: Hardcoded answers for specific questions (restore baseline behavior)
+// Helper: Handle contact information queries (Complexity: Low)
+function handleContactInfoQuery(query) {
   const qlc = query.toLowerCase();
-  
-  // Declare equipment check early for use in event routing
-  const isEquipmentQuestion = /\b(what\s+(sort\s+of\s+)?camera|what\s+(gear|equipment)|tripod|lens|memory\s+card)\b/i.test(query || '');
-  
-  // Q22: Contact information queries - explicit pattern match with hardcoded answer
   if (qlc.includes("contact") || qlc.includes("phone") || qlc.includes("address") || qlc.includes("email") || qlc.includes("book a discovery call")) {
     console.log(`✅ Contact information query detected, returning contact details: "${query}"`);
     return {
@@ -8171,8 +8149,12 @@ async function tryRagFirst(client, query) {
       }
     };
   }
-  
-  // Q23: Gift vouchers - explicit pattern match with hardcoded answer
+  return null;
+}
+
+// Helper: Handle gift voucher queries (Complexity: Low)
+function handleGiftVoucherQuery(query) {
+  const qlc = query.toLowerCase();
   if (qlc.includes("voucher") || (qlc.includes("gift") && qlc.includes("offer"))) {
     console.log(`✅ Gift voucher query detected, returning voucher answer as advice: "${query}"`);
     return {
@@ -8190,8 +8172,12 @@ async function tryRagFirst(client, query) {
       }
     };
   }
-  
-  // Q31: "Who is Alan Ranger" queries - explicit pattern match with hardcoded answer
+  return null;
+}
+
+// Helper: Handle about Alan queries (Complexity: Low)
+async function handleAboutAlanQuery(client, query) {
+  const qlc = query.toLowerCase();
   if ((qlc.includes("alan ranger") || qlc.includes("who is")) && (qlc.includes("who") || qlc.includes("background") || qlc.includes("about") || qlc.includes("photographic background"))) {
     console.log(`✅ About Alan query detected, returning bio as advice: "${query}"`);
     const keywords = extractKeywords(query);
@@ -8211,117 +8197,125 @@ async function tryRagFirst(client, query) {
       }
     };
   }
- 
-  // Q12: Equipment questions - MUST be before event routing
-  if (isEquipmentQuestion) {
-    console.log(`✅ Equipment question detected, routing to articles/advice: "${query}"`);
-    const keywords = extractKeywords(query);
-    const articles = await findArticles(client, { keywords, limit: 25 });
-    if (articles && articles.length > 0) {
-      const articleAnswer = generateArticleAnswer(articles, query);
-      if (articleAnswer && articleAnswer.trim().length > 0) {
-        return {
-          success: true,
-          confidence: 0.8,
-          answer: articleAnswer,
-          type: "advice",
-          sources: { articles: articles },
-          structured: {
-            intent: "advice",
-            articles: articles,
-            events: [],
-            products: [],
-            services: []
-          }
-        };
-      }
+  return null;
+}
+
+// Helper: Handle equipment questions (Complexity: Low)
+async function handleEquipmentQuery(client, query) {
+  const isEquipmentQuestion = /\b(what\s+(sort\s+of\s+)?camera|what\s+(gear|equipment)|tripod|lens|memory\s+card)\b/i.test(query || '');
+  if (!isEquipmentQuestion) return null;
+  
+  console.log(`✅ Equipment question detected, routing to articles/advice: "${query}"`);
+  const keywords = extractKeywords(query);
+  const articles = await findArticles(client, { keywords, limit: 25 });
+  if (articles && articles.length > 0) {
+    const articleAnswer = generateArticleAnswer(articles, query);
+    if (articleAnswer && articleAnswer.trim().length > 0) {
+      return {
+        success: true,
+        confidence: 0.8,
+        answer: articleAnswer,
+        type: "advice",
+        sources: { articles: articles },
+        structured: {
+          intent: "advice",
+          articles: articles,
+          events: [],
+          products: [],
+          services: []
+        }
+      };
     }
-    // Fallback answer for equipment questions
-    const genericEquipmentAnswer = qlc.includes("camera") 
-      ? "For my courses and workshops, any DSLR or mirrorless camera with manual controls will work perfectly. The key is having aperture, shutter speed, and ISO control. I have detailed guides covering specific recommendations and technical details."
-      : "I can help you choose the right photography equipment. I have detailed guides covering specific recommendations and technical details for various photography gear.";
-    return {
-      success: true,
-      confidence: 0.8,
-      answer: genericEquipmentAnswer,
-      type: "advice",
-      sources: { articles: [] },
-      structured: {
-        intent: "advice",
-        articles: [],
-        events: [],
-        products: [],
-        services: []
-      }
-    };
   }
- 
-  // Event routing - MUST be before service lookup
+  
+  const qlc = query.toLowerCase();
+  const genericEquipmentAnswer = qlc.includes("camera") 
+    ? "For my courses and workshops, any DSLR or mirrorless camera with manual controls will work perfectly. The key is having aperture, shutter speed, and ISO control. I have detailed guides covering specific recommendations and technical details."
+    : "I can help you choose the right photography equipment. I have detailed guides covering specific recommendations and technical details for various photography gear.";
+  return {
+    success: true,
+    confidence: 0.8,
+    answer: genericEquipmentAnswer,
+    type: "advice",
+    sources: { articles: [] },
+    structured: {
+      intent: "advice",
+      articles: [],
+      events: [],
+      products: [],
+      services: []
+    }
+  };
+}
+
+// Helper: Handle event routing queries (Complexity: Low)
+async function handleEventRoutingQuery(client, query, isEquipmentQuestion) {
   const businessCategory = detectBusinessCategory(query || '');
   const courseLogistics = !isEquipmentQuestion && /\b(course|beginners|lightroom|camera\s+course|weeks|how\s+many\s+weeks|syllabus|schedule)\b/i.test(query || '');
   const eventCues = /\b(workshop|workshops|event|photowalk|next\s+.*workshop|where\s+.*workshop|when\s+.*workshop|autumn\s+workshops|devon\s+workshop|bluebell\s+workshop|how\s+long.*workshop|bluebell|autumn|spring|summer|winter)\b/i.test(query || '');
   
-  if (!isEquipmentQuestion && (businessCategory === 'Event Queries' || courseLogistics || eventCues)) {
-    console.log(`✅ Event query detected in tryRagFirst, routing to events: "${query}"`);
-    const keywords = extractKeywords(query);
-    const events = await findEvents(client, { keywords, limit: 40 });
-    if (events && events.length > 0) {
+  if (isEquipmentQuestion || (businessCategory !== 'Event Queries' && !courseLogistics && !eventCues)) {
+    return null;
+  }
+  
+  console.log(`✅ Event query detected in tryRagFirst, routing to events: "${query}"`);
+  const keywords = extractKeywords(query);
+  const events = await findEvents(client, { keywords, limit: 40 });
+  if (events && events.length > 0) {
+    return {
+      success: true,
+      confidence: 0.96,
+      answer: generateEventAnswerMarkdown(events, query),
+      type: 'events',
+      sources: { events },
+      structured: { intent: 'events', events, services: [], products: [], articles: [] }
+    };
+  }
+  return null;
+}
+
+// Helper: Handle service queries (Complexity: Low)
+async function handleServiceQueries(client, query) {
+  const qlcService = query.toLowerCase();
+  const isTypesServiceQuery = (qlcService.includes("types") || qlcService.includes("what kind")) && 
+                               qlcService.includes("services") && 
+                               qlcService.includes("photography");
+
+  if (isTypesServiceQuery) {
+    console.log(`🎯 Types of services query detected, routing to service database lookup: "${query}"`);
+    const services = await findServices(client, { keywords: [], limit: 24 });
+    if (services && services.length > 0) {
+      console.log(`🎯 Found ${services.length} services for types query`);
       return {
         success: true,
-        confidence: 0.96,
-        answer: generateEventAnswerMarkdown(events, query),
-        type: 'events',
-        sources: { events },
-        structured: { intent: 'events', events, services: [], products: [], articles: [] }
+        confidence: 0.8,
+        answer: generateServiceAnswer(services, query),
+        type: "services",
+        sources: { services: services },
+        structured: {
+          intent: "services",
+          topic: "photography services",
+          services: services,
+          events: [],
+          products: [],
+          articles: []
+        }
       };
     }
   }
- 
- // Explicit check for "types of services" queries - force database lookup for service tiles
- const qlcService = query.toLowerCase();
- const isTypesServiceQuery = (qlcService.includes("types") || qlcService.includes("what kind")) && 
-                             qlcService.includes("services") && 
-                             qlcService.includes("photography");
- 
- if (isTypesServiceQuery) {
-   console.log(`🎯 Types of services query detected, routing to service database lookup: "${query}"`);
-   const keywords = extractKeywords(query);
-   // For generic "types of services" queries, use generic intent to avoid keyword filtering
-   const services = await findServices(client, { keywords: [], limit: 24 });
-   if (services && services.length > 0) {
-     console.log(`🎯 Found ${services.length} services for types query`);
-     return {
-       success: true,
-       confidence: 0.8,
-       answer: generateServiceAnswer(services, query),
-       type: "services",
-       sources: { services: services },
-       structured: {
-         intent: "services",
-         topic: "photography services",
-         services: services,
-         events: [],
-         products: [],
-         articles: []
-       }
-     };
-   }
- }
- 
- // Check for service patterns first
- const serviceResponse = getServiceAnswers(query.toLowerCase());
- if (serviceResponse) {
- console.log(`ðŸŽ¯ Service pattern matched for: "${query}"`);
- return {
- success: true,
- confidence: 0.8,
- answer: serviceResponse,
- type: "advice",
- sources: { articles: [] }
- };
+  
+  const serviceResponse = getServiceAnswers(qlcService);
+  if (serviceResponse) {
+    console.log(`🎯 Service pattern matched for: "${query}"`);
+    return {
+      success: true,
+      confidence: 0.8,
+      answer: serviceResponse,
+      type: "advice",
+      sources: { articles: [] }
+    };
   }
 
-  // Try to find relevant services from database
   const keywords = extractKeywords(query);
   const services = await findServices(client, { keywords, limit: 24 });
   if (services && services.length > 0) {
@@ -8342,88 +8336,115 @@ async function tryRagFirst(client, query) {
       }
     };
   }
+  return null;
+}
 
-  // Check for technical patterns first
+// Helper: Handle technical queries with article enrichment (Complexity: Low)
+async function handleTechnicalQueries(client, query) {
   const technicalResponse = getTechnicalAnswers(query.toLowerCase());
- console.log(`[DEBUG] getTechnicalAnswers returned: ${technicalResponse ? 'SUCCESS' : 'NULL'}`);
- 
- if (technicalResponse) {
- console.log(`[TARGET] Technical pattern matched for: "${query}"`);
- 
- // For technical concepts, also search for related articles
-    const keywords = extractKeywords(query);
-    // Enrich search terms for sharpness queries to actually discover relevant guides
-    const qlc = String(query).toLowerCase();
-    const sharpIntent = qlc.includes('sharp') || qlc.includes('soft') || qlc.includes('blurry') || qlc.includes('blur') || qlc.includes('out of focus') || qlc.includes('focus');
-    const enriched = sharpIntent
-      ? Array.from(new Set([...keywords, 'sharp', 'sharpness', 'focus', 'focusing', 'blur', 'blurry', 'camera shake', 'tripod', 'shutter speed', 'stabilization', 'ibis', 'vr']))
-      : keywords;
-    // Increase limit for sharpness queries to find more relevant articles
-    let articles = await findArticles(client, { keywords: enriched, limit: sharpIntent ? 25 : 12 });
-    // If query is about sharpness/focus/blur, filter but show more results
-    if (sharpIntent) {
-      const filtered = filterArticlesByKeywords(articles, ['sharp', 'focus', 'focusing', 'blur', 'blurry', 'camera shake', 'handheld', 'stabilization', 'ibis', 'vr', 'tripod']);
-      // If filtering removed too many, keep some unfiltered ones too
-      if (filtered.length < 6 && articles.length > filtered.length) {
-        articles = [...filtered, ...articles.filter(a => !filtered.includes(a))].slice(0, 12);
-      } else {
-        articles = filtered.slice(0, 12);
-      }
+  if (!technicalResponse) return null;
+  
+  console.log(`[TARGET] Technical pattern matched for: "${query}"`);
+  const keywords = extractKeywords(query);
+  const qlc = String(query).toLowerCase();
+  const sharpIntent = qlc.includes('sharp') || qlc.includes('soft') || qlc.includes('blurry') || qlc.includes('blur') || qlc.includes('out of focus') || qlc.includes('focus');
+  const enriched = sharpIntent
+    ? Array.from(new Set([...keywords, 'sharp', 'sharpness', 'focus', 'focusing', 'blur', 'blurry', 'camera shake', 'tripod', 'shutter speed', 'stabilization', 'ibis', 'vr']))
+    : keywords;
+  
+  let articles = await findArticles(client, { keywords: enriched, limit: sharpIntent ? 25 : 12 });
+  if (sharpIntent) {
+    const filtered = filterArticlesByKeywords(articles, ['sharp', 'focus', 'focusing', 'blur', 'blurry', 'camera shake', 'handheld', 'stabilization', 'ibis', 'vr', 'tripod']);
+    if (filtered.length < 6 && articles.length > filtered.length) {
+      articles = [...filtered, ...articles.filter(a => !filtered.includes(a))].slice(0, 12);
+    } else {
+      articles = filtered.slice(0, 12);
     }
+  }
+
+  return {
+    success: true,
+    confidence: 0.8,
+    answer: technicalResponse,
+    type: "advice",
+    sources: { articles: articles || [] },
+    structured: {
+      intent: "technical_answer",
+      articles: articles || [],
+      events: [],
+      products: [],
+      services: []
+    },
+    debugLogs: [
+      `findArticles.count=${articles?.length || 0}`,
+      `keywords=${(enriched || []).slice(0, 10).join(', ')}`
+    ]
+  };
+}
+
+// Helper: Process RAG fallback (Complexity: Low)
+async function processRagFallback(client, query) {
+  console.log(`[DEBUG] No technical pattern matched, continuing to RAG processing`);
+  try {
+    const { keywords, lcQuery, isConceptQuery, primaryKeyword } = prepareRagQuery(query);
+    const results = await processRagSearchResults({
+      client,
+      query,
+      keywords,
+      isConceptQuery,
+      primaryKeyword,
+      lcQuery
+    });
+    const { answer, type, sources, debugLogs = [] } = generateRagAnswer({ 
+      query, 
+      entities: results.entities, 
+      chunks: results.chunks, 
+      results,
+      articles: results.articles 
+    });
+    const { finalAnswer, finalType, finalSources } = handleRagFallbackLogic({ answer, type, sources, query });
+    return buildRagResponse({ results, finalAnswer, finalType, finalSources, debugLogs });
+  } catch (error) {
+    return handleRagError(error);
+  }
+}
+
+async function tryRagFirst(client, query) {
+ console.log(`ðŸ” RAG-First attempt for: "${query}"`);
  
-    return {
- success: true,
- confidence: 0.8,
- answer: technicalResponse,
- type: "advice",
-      sources: { articles: articles || [] },
- structured: {
- intent: "technical_answer",
-        articles: articles || [],
- events: [],
- products: [],
- services: []
-      },
-      debugLogs: [
-        `findArticles.count=${articles?.length || 0}`,
-        `keywords=${(enriched || []).slice(0, 10).join(', ')}`
-      ]
- };
+ // Check for contact Alan queries first
+ const contactResponse = checkContactAlanQuery(query);
+ if (contactResponse) {
+ return contactResponse;
  }
  
- console.log(`[DEBUG] No technical pattern matched, continuing to RAG processing`);
- 
- try {
- // Prepare query parameters
- const { keywords, lcQuery, isConceptQuery, primaryKeyword } = prepareRagQuery(query);
- 
- // Process RAG search results
- const results = await processRagSearchResults({
- client,
- query,
- keywords,
- isConceptQuery,
- primaryKeyword,
- lcQuery
- });
- 
-  // Generate answer using helper function
-  const { answer, type, sources, debugLogs = [] } = generateRagAnswer({ 
-    query, 
-    entities: results.entities, 
-    chunks: results.chunks, 
-    results,
-    articles: results.articles 
-  });
- 
- // Handle fallback cases
- const { finalAnswer, finalType, finalSources } = handleRagFallbackLogic({ answer, type, sources, query });
- 
- return buildRagResponse({ results, finalAnswer, finalType, finalSources, debugLogs });
- 
- } catch (error) {
- return handleRagError(error);
- }
+  // PRIORITY: Hardcoded answers for specific questions (restore baseline behavior)
+  // Declare equipment check early for use in event routing
+  const isEquipmentQuestion = /\b(what\s+(sort\s+of\s+)?camera|what\s+(gear|equipment)|tripod|lens|memory\s+card)\b/i.test(query || '');
+  
+  // Handle specific query types in priority order using helper functions
+  const contactInfo = handleContactInfoQuery(query);
+  if (contactInfo) return contactInfo;
+  
+  const giftVoucher = handleGiftVoucherQuery(query);
+  if (giftVoucher) return giftVoucher;
+  
+  const aboutAlan = await handleAboutAlanQuery(client, query);
+  if (aboutAlan) return aboutAlan;
+  
+  const equipment = await handleEquipmentQuery(client, query);
+  if (equipment) return equipment;
+  
+  const eventRouting = await handleEventRoutingQuery(client, query, isEquipmentQuestion);
+  if (eventRouting) return eventRouting;
+  
+  const services = await handleServiceQueries(client, query);
+  if (services) return services;
+  
+  const technical = await handleTechnicalQueries(client, query);
+  if (technical) return technical;
+  
+  return await processRagFallback(client, query);
 }
 
 // Helper: Process main query (Low Complexity)
@@ -9254,51 +9275,88 @@ function generateWorkshopDurationAnswer(query, response){
   return finalAnswer;
 }
 
-// Technical Advice - "How to..." and troubleshooting
-function enhanceTechnicalAdviceResponse(answer, query, response) {
+// Helper: Detect sharpness intent (Complexity: Low)
+function detectSharpnessIntent(query) {
   const q = (query || '').toLowerCase();
-  const sharpnessIntent = (
+  return (
     q.includes('not sharp') || q.includes('never sharp') || q.includes('soft') ||
     q.includes('blurry') || q.includes('out of focus') || q.includes('unsharp') ||
     (q.includes('sharp') && (q.includes('pictures') || q.includes('photos') || q.includes('images')))
   );
+}
+
+// Helper: Filter articles for sharpness topics (Complexity: Low)
+function filterSharpnessArticles(articles) {
+  const rel = ['sharp', 'focus', 'focusing', 'blurry', 'blur', 'camera shake', 'handheld', 'stabilization', 'ibis', 'vr', 'tripod'];
+  const isRelevant = (t = '') => {
+    const s = String(t).toLowerCase();
+    return rel.some(k => s.includes(k));
+  };
+  const filtered = articles.filter(a =>
+    isRelevant(a.title) || isRelevant(a.page_url || a.source_url || '') || isRelevant(a.meta_description || '')
+  );
+  let filteredForReturn = filtered.slice(0, 12);
+  if (filteredForReturn.length < 6 && articles.length > filteredForReturn.length) {
+    const unfiltered = articles.filter(a => !filtered.includes(a)).slice(0, 6);
+    filteredForReturn = [...filteredForReturn, ...unfiltered].slice(0, 12);
+  }
+  return filteredForReturn;
+}
+
+// Helper: Build sharpness answer content (Complexity: Low)
+function buildSharpnessAnswer(wantsChecklist) {
+  const checklist = [
+    'Focus: use single‑point AF on a high‑contrast area; AF‑C for moving subjects.',
+    'Shutter speed: start at 1/(focal length) as a minimum; 1/500–1/1000 for motion.',
+    'Aperture: avoid extremes; f/5.6–f/8 for most lenses; stop down from wide‑open.',
+    'ISO/Noise: raise shutter first; add ISO only as needed and enable noise reduction in post.',
+    'Stability: brace stance, enable IBIS/VR; use a tripod or support when possible.',
+    'Technique: half‑press to lock focus, smooth shutter press, burst 3–5 frames.'
+  ];
+
+  const quickTests = [
+    'Tripod test: shoot a static subject at 1/200s, f/5.6, ISO 200. If sharp → handshake/motion was the issue.',
+    'Shutter test: raise to 1/1000s handheld; if sharpens → shutter was too slow.',
+    'AF test: single‑point on a bold edge; if misses → switch AF mode or micro‑adjust.'
+  ];
+
+  if (wantsChecklist) {
+    return [
+      "Here's a quick sharpness troubleshooting checklist:",
+      ...checklist.map(i => `• ${i}`),
+      '',
+      'Quick tests to isolate the cause:',
+      ...quickTests.map(i => `• ${i}`),
+    ].join('\n');
+  }
+
+  const summary = 'Soft photos usually come from three things: focus missing the subject, shutter speed being too slow, or small camera shake.';
+  const threeSteps = [
+    'Use single‑point AF (AF‑C for moving subjects).',
+    'Raise shutter speed: at least 1/(focal length); 1/500–1/1000 for motion.',
+    'Stabilise the camera: brace stance, enable IBIS/VR, or use a tripod.'
+  ];
+  return [
+    summary,
+    '',
+    'Try this now:',
+    ...threeSteps.map(i => `• ${i}`),
+    '',
+    'Want a full checklist and tests? Ask: "show sharpness checklist".'
+  ].join('\n');
+}
+
+// Technical Advice - "How to..." and troubleshooting
+function enhanceTechnicalAdviceResponse(answer, query, response) {
+  const q = (query || '').toLowerCase();
+  const sharpnessIntent = detectSharpnessIntent(query);
 
   if (sharpnessIntent) {
-    // Filter related articles to only sharpness/focus topics
     let filteredForReturn = [];
-    if (response && response.structured && Array.isArray(response.structured.articles)) {
-      const rel = ['sharp', 'focus', 'focusing', 'blurry', 'blur', 'camera shake', 'handheld', 'stabilization', 'ibis', 'vr', 'tripod'];
-      const isRelevant = (t='')=>{
-        const s = String(t).toLowerCase();
-        return rel.some(k=>s.includes(k));
-      };
-      const filtered = response.structured.articles.filter(a =>
-        isRelevant(a.title) || isRelevant(a.page_url || a.source_url || '') || isRelevant(a.meta_description || '')
-      );
-      // Show more articles for sharpness queries - up to 12 instead of 6
-      filteredForReturn = filtered.slice(0, 12);
-      // If filtering was too aggressive, include some unfiltered ones too
-      if (filteredForReturn.length < 6 && response.structured.articles.length > filteredForReturn.length) {
-        const unfiltered = response.structured.articles.filter(a => !filtered.includes(a)).slice(0, 6);
-        filteredForReturn = [...filteredForReturn, ...unfiltered].slice(0, 12);
-      }
+    if (response?.structured?.articles) {
+      filteredForReturn = filterSharpnessArticles(response.structured.articles);
       response.structured.articles = filteredForReturn;
     }
-
-    const checklist = [
-      'Focus: use single‑point AF on a high‑contrast area; AF‑C for moving subjects.',
-      'Shutter speed: start at 1/(focal length) as a minimum; 1/500–1/1000 for motion.',
-      'Aperture: avoid extremes; f/5.6–f/8 for most lenses; stop down from wide‑open.',
-      'ISO/Noise: raise shutter first; add ISO only as needed and enable noise reduction in post.',
-      'Stability: brace stance, enable IBIS/VR; use a tripod or support when possible.',
-      'Technique: half‑press to lock focus, smooth shutter press, burst 3–5 frames.'
-    ];
-
-    const quickTests = [
-      'Tripod test: shoot a static subject at 1/200s, f/5.6, ISO 200. If sharp → handshake/motion was the issue.',
-      'Shutter test: raise to 1/1000s handheld; if sharpens → shutter was too slow.',
-      'AF test: single‑point on a bold edge; if misses → switch AF mode or micro‑adjust.'
-    ];
 
     const sources = (filteredForReturn.length ? filteredForReturn : (response?.structured?.articles || []))
       .slice(0, 2)
@@ -9306,34 +9364,9 @@ function enhanceTechnicalAdviceResponse(answer, query, response) {
       .join('\n');
 
     const wantsChecklist = q.includes('checklist');
-    let crafted;
-    if (!wantsChecklist) {
-      // Conversational, concise default
-      const summary = 'Soft photos usually come from three things: focus missing the subject, shutter speed being too slow, or small camera shake.';
-      const threeSteps = [
-        'Use single‑point AF (AF‑C for moving subjects).',
-        'Raise shutter speed: at least 1/(focal length); 1/500–1/1000 for motion.',
-        'Stabilise the camera: brace stance, enable IBIS/VR, or use a tripod.'
-      ];
-      crafted = [
-        summary,
-        '',
-        'Try this now:',
-        ...threeSteps.map(i => `• ${i}`),
-        '',
-        'Want a full checklist and tests? Ask: "show sharpness checklist".'
-      ].join('\n');
-    } else {
-      crafted = [
-        'Here’s a quick sharpness troubleshooting checklist:',
-        ...checklist.map(i => `• ${i}`),
-        '',
-        'Quick tests to isolate the cause:',
-        ...quickTests.map(i => `• ${i}`),
-      ].join('\n');
-    }
-
+    const crafted = buildSharpnessAnswer(wantsChecklist);
     const withSources = sources ? `${crafted}\n\nRelated guides:\n${sources}` : crafted;
+    
     return {
       answer: withSources,
       type: 'advice',
