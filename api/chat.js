@@ -1467,14 +1467,29 @@ const SERVICE_PATTERNS = [
  matcher: (lc) => lc.includes("commercial photography") || lc.includes("do you do commercial"),
  answer: `**Commercial Photography**: Alan specializes in photography education and workshops rather than commercial photography services. His focus is on teaching photography through courses, workshops, and private lessons. For commercial photography needs, he can recommend other professional photographers in his network. [View Alan's Services](https://www.alanranger.com/photography-tuition-services)\n\n`
  },
- {
- matcher: (lc) => lc.includes("portrait photography") || lc.includes("do you do portrait"),
- answer: `**Portrait Photography**: Alan focuses on photography education rather than portrait photography services. His expertise is in teaching photography through courses, workshops, and private lessons. For portrait photography needs, he can recommend other professional photographers in his network. [View Alan's Services](https://www.alanranger.com/photography-tuition-services)\n\n`
- },
- {
- matcher: (lc) => lc.includes("photography academy") && lc.includes("free"),
- answer: `**Free Photography Academy**: Yes! Alan offers a completely free online photography course that you can subscribe to. It's designed to help beginners learn photography fundamentals at their own pace. The course covers essential topics like exposure, composition, and camera settings. [Subscribe to Free Course](https://www.alanranger.com/free-online-photography-course)\n\n`
- }
+  {
+    matcher: (lc) => lc.includes("portrait photography") || lc.includes("do you do portrait"),
+    answer: `**Portrait Photography**: Alan focuses on photography education rather than portrait photography services. His expertise is in teaching photography through courses, workshops, and private lessons. For portrait photography needs, he can recommend other professional photographers in his network. [View Alan's Services](https://www.alanranger.com/photography-tuition-services)\n\n`
+  },
+  {
+    matcher: (lc) => lc.includes("photography academy") && lc.includes("free"),
+    answer: `**Free Photography Academy**: Yes! Alan offers a completely free online photography course that you can subscribe to. It's designed to help beginners learn photography fundamentals at their own pace. The course covers essential topics like exposure, composition, and camera settings. [Subscribe to Free Course](https://www.alanranger.com/free-online-photography-course)\n\n`
+  },
+  {
+    // Most specific: gallery + feedback/image submission combined query
+    matcher: (lc) => (lc.includes("gallery") || lc.includes("submit")) && (lc.includes("feedback") || lc.includes("image")),
+    answer: `**Gallery and Image Feedback**: Alan's photography gallery is available on his website at [www.alanranger.com/gallery](https://www.alanranger.com/gallery). For personalized feedback on your images, Alan offers 1-2-1 private photography lessons and mentoring services. You can submit your images for detailed, personalized feedback during these sessions. [Book Private Lessons for Feedback](https://www.alanranger.com/private-photography-lessons)\n\n`
+  },
+  {
+    // Image submission for feedback (without gallery)
+    matcher: (lc) => (lc.includes("submit") || lc.includes("send")) && (lc.includes("image") || lc.includes("photo")) && (lc.includes("feedback") || lc.includes("review")),
+    answer: `**Image Feedback**: For personalized feedback on your images, Alan offers 1-2-1 private photography lessons and mentoring services. During these sessions, you can submit your images for detailed, personalized feedback tailored to your specific needs and photography goals. [Book Private Lessons for Feedback](https://www.alanranger.com/private-photography-lessons)\n\n`
+  },
+  {
+    // Gallery-only query (least specific, comes last)
+    matcher: (lc) => lc.includes("gallery"),
+    answer: `**Gallery**: Alan's photography gallery is available on his website showcasing his portfolio of landscape, portrait, and fine art photography. You can view his work at [www.alanranger.com/gallery](https://www.alanranger.com/gallery).\n\n`
+  }
 ];
 
 function getServiceAnswers(lc) {
@@ -8332,6 +8347,10 @@ async function handleEventRoutingQuery(client, query, isEquipmentQuestion) {
 // Helper: Handle service queries (Complexity: Low)
 async function handleServiceQueries(client, query) {
   const qlcService = query.toLowerCase();
+  
+  // DEBUG: Log for debugging mismatches
+  console.log(`[DEBUG] handleServiceQueries called with query: "${query}"`);
+  
   const isTypesServiceQuery = (qlcService.includes("types") || qlcService.includes("what kind")) && 
                                qlcService.includes("services") && 
                                qlcService.includes("photography");
@@ -8359,8 +8378,10 @@ async function handleServiceQueries(client, query) {
     }
   }
   
+  // DEBUG: Check pattern matching
   const serviceResponse = getServiceAnswers(qlcService);
   if (serviceResponse) {
+    console.log(`[DEBUG] handleServiceQueries: Pattern matched! Query="${query}", Response snippet="${serviceResponse.substring(0, 100)}..."`);
     console.log(`🎯 Service pattern matched for: "${query}"`);
     return {
       success: true,
@@ -8370,15 +8391,20 @@ async function handleServiceQueries(client, query) {
       sources: { articles: [] }
     };
   }
+  
+  console.log(`[DEBUG] handleServiceQueries: No pattern match, trying database lookup with keywords`);
 
   const keywords = extractKeywords(query);
+  console.log(`[DEBUG] handleServiceQueries: Extracted keywords: ${keywords.join(', ')}`);
   const services = await findServices(client, { keywords, limit: 24 });
   if (services && services.length > 0) {
+    const answer = generateServiceAnswer(services, query);
+    console.log(`[DEBUG] handleServiceQueries: Database lookup returned ${services.length} services, answer="${answer.substring(0, 100)}..."`);
     console.log(`🎯 Found ${services.length} relevant services for: "${query}"`);
     return {
       success: true,
       confidence: 0.7,
-      answer: generateServiceAnswer(services, query),
+      answer: answer,
       type: "services",
       sources: { services: services },
       structured: {
@@ -8391,6 +8417,8 @@ async function handleServiceQueries(client, query) {
       }
     };
   }
+  
+  console.log(`[DEBUG] handleServiceQueries: No services found, returning null`);
   return null;
 }
 

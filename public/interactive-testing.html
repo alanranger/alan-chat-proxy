@@ -1433,15 +1433,25 @@
             
             try {
                 // Get response from chat bot
-                const response = await fetch('/api/chat', {
+                const requestPayload = {
+                    query: question.question,
+                    sessionId: 'interactive-test-session'
+                };
+                
+                // DEBUG: Log the exact endpoint being called
+                const endpoint = '/api/chat';
+                console.log('🔍 INTERACTIVE TEST DEBUG:', {
+                    endpoint: endpoint,
+                    fullUrl: window.location.origin + endpoint,
+                    payload: requestPayload
+                });
+                
+                const response = await fetch(endpoint, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({
-                        query: question.question,
-                        sessionId: 'interactive-test-session'
-                    })
+                    body: JSON.stringify(requestPayload)
                 });
                 
                 if (!response.ok) {
@@ -1449,6 +1459,14 @@
                 }
                 
                 const data = await response.json();
+                
+                // DEBUG: Log the response to compare
+                console.log('🔍 INTERACTIVE TEST RESPONSE:', {
+                    answer: data.answer?.substring(0, 200),
+                    type: data.type,
+                    confidence: data.confidence,
+                    hasStructured: !!data.structured
+                });
                 
                 // Display response in chat format
                 renderChatResponse(data);
