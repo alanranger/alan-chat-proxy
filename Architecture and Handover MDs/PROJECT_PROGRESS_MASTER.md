@@ -1,9 +1,15 @@
 # PROJECT_PROGRESS_MASTER.md
 
+# PROJECT_PROGRESS_MASTER.md
+
 ## Latest Snapshot
+- **1 Nov 2025** — SonarQube refactoring complete: Fixed 2 SonarQube issues (argument count mismatch, cognitive complexity violation). Reduced `sendRagSuccessResponse()` complexity from 20 to ≤15 by extracting 4 helper functions. Verified with 40Q test: 100% success (40/40) - no regressions
 - **1 Nov 2025** — Feature improvements complete: Removed article cap for equipment/technical questions, added histogram answer, removed URLs from all hardcoded answers
 - **1 Nov 2025** — Complexity refactoring complete: 5 high-complexity functions reduced from 42-120 to ≤15 complexity, all verified with 40Q tests (100% pass rate, no regressions)
-- **1 Nov 2025** — Helper functions extracted: 28 helper functions created across 5 refactored functions maintaining ≤15 complexity
+- **1 Nov 2025** — Helper functions extracted: 28 helper functions created across 5 refactored functions maintaining ≤15 complexity (plus 4 new helpers for `sendRagSuccessResponse`)
+- **1 Nov 2025** — Server crash fix: Added singleton Supabase client, global error handlers, HTTP timeouts. 430Q test: 100% success (430/430)
+- **1 Nov 2025** — 8 HTTP 500 failures fixed: All 8 questions consistently returning HTTP 500 errors now fixed - 100% success rate achieved (40/40 questions passing)
+- **1 Nov 2025** — Related information enrichment: Added `enrichAdviceWithRelatedInfo()` to automatically add related articles/services/events to responses
 - **1 Nov 2025** — Analytics dashboard updated: structure aligned with chat.html, Insights tab fixed, all tabs verified working
 - **1 Nov 2025** — Light-refresh.js refactored: modernized patterns, complexity rules compliance, schedule updated to every 8 hours
 - **1 Nov 2025** — Chat improvement API created: insights endpoint restored, refactored to meet complexity standards
@@ -20,8 +26,9 @@
 ## Current Status (1 Nov 2025)
 - **Test Success Rate**: 100% (40/40 questions return 200 status)
 - **Quality Pass Rate**: 92.5% (3 routing issues, 5 generic fallbacks expected)
-- **Complexity Refactoring**: ✅ 5 high-complexity functions refactored to ≤15 complexity (detectBusinessCategory, tryRagFirst, handleTechnicalQueries, generateEventAnswerMarkdown, generateArticleAnswer)
-- **Helper Functions**: ✅ 28 helper functions extracted, all maintaining ≤15 complexity
+- **SonarQube Issues**: ✅ 0 refactoring issues (2 fixed: argument count mismatch, cognitive complexity violation)
+- **Complexity Refactoring**: ✅ 6 high-complexity functions refactored to ≤15 complexity (detectBusinessCategory, tryRagFirst, handleTechnicalQueries, generateEventAnswerMarkdown, generateArticleAnswer, sendRagSuccessResponse)
+- **Helper Functions**: ✅ 32 helper functions extracted (28 from initial refactoring + 4 from SonarQube fixes), all maintaining ≤15 complexity
 - **Feature Improvements**: ✅ Article cap removed for equipment/technical questions, histogram answer added, URLs removed from all hardcoded answers
 - **Code Quality**: All future changes must maintain ≤15 complexity - no increases allowed
 - **Baseline**: Updated to `baseline-40-question-interactive-subset-2025-11-01T13-32-45-780Z.json`
