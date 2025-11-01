@@ -902,19 +902,57 @@ function getFaqData(relevantArticle) {
 
 // Helper function to find primary question
 function findPrimaryQuestion(faqItems, exactTerm) {
- console.log(`[DEBUG] findPrimaryQuestion called with exactTerm: "${exactTerm}"`);
- console.log(`[DEBUG] Searching through ${faqItems.length} FAQ items`);
- 
- const result = faqItems.find(item => {
- const question = (item.name || "").toLowerCase();
- const queryLower = exactTerm.toLowerCase();
- const matches = question.includes(queryLower) || queryLower.includes(question.split(' ')[0]);
- console.log(`[DEBUG] Question: "${question}" matches: ${matches}`);
- return matches;
- });
- 
- console.log(`[DEBUG] findPrimaryQuestion result: ${result ? 'FOUND' : 'NOT FOUND'}`);
- return result;
+  console.log(`[DEBUG] findPrimaryQuestion called with exactTerm: "${exactTerm}"`);
+  console.log(`[DEBUG] Searching through ${faqItems.length} FAQ items`);
+  
+  if (!exactTerm || exactTerm.trim().length === 0) {
+    console.log(`[DEBUG] Empty exactTerm, returning null`);
+    return null;
+  }
+  
+  const queryLower = exactTerm.toLowerCase().trim();
+  const queryWords = queryLower.split(/\s+/).filter(w => w.length > 2); // Filter out short words
+  
+  // First try: Exact match or close match
+  let result = faqItems.find(item => {
+    const question = (item.name || "").toLowerCase();
+    
+    // Exact phrase match (highest priority)
+    if (question.includes(queryLower)) {
+      console.log(`[DEBUG] Exact phrase match: "${question}"`);
+      return true;
+    }
+    
+    // All query words present (high priority)
+    if (queryWords.length > 0 && queryWords.every(word => question.includes(word))) {
+      console.log(`[DEBUG] All words match: "${question}"`);
+      return true;
+    }
+    
+    return false;
+  });
+  
+  // Second try: If no exact match, try more lenient matching but require significant overlap
+  if (!result && queryWords.length > 0) {
+    result = faqItems.find(item => {
+      const question = (item.name || "").toLowerCase();
+      const questionWords = question.split(/\s+/).filter(w => w.length > 2);
+      
+      // Require at least 50% of query words to match
+      const matchingWords = queryWords.filter(qw => questionWords.some(qw2 => qw2.includes(qw) || qw.includes(qw2)));
+      const matchRatio = matchingWords.length / queryWords.length;
+      
+      if (matchRatio >= 0.5) {
+        console.log(`[DEBUG] Partial match (${(matchRatio * 100).toFixed(0)}%): "${question}"`);
+        return true;
+      }
+      
+      return false;
+    });
+  }
+  
+  console.log(`[DEBUG] findPrimaryQuestion result: ${result ? 'FOUND - ' + (result.name || '').substring(0, 50) : 'NOT FOUND'}`);
+  return result || null;
 }
  
 // Helper function to extract and clean answer text
@@ -924,6 +962,14 @@ function extractAndCleanAnswer(primaryQuestion) {
  let answerText = primaryQuestion.acceptedAnswer.text;
  answerText = answerText.replace(/<[^>]*>/g, '').trim();
  answerText = cleanResponseText(answerText);
+ 
+ // Validate that answer is relevant - check for Q7/Q8 format that might be wrong
+ // If answer contains multiple Q/A pairs and doesn't match query, it's likely wrong
+ if (answerText.match(/Q\d+:/g) && answerText.match(/Q\d+:/g).length > 1) {
+   console.log(`[WARN] extractAndCleanAnswer: Answer contains multiple Q/A pairs, may be incorrectly matched`);
+   // Return null to prevent wrong answers
+   return null;
+ }
  
  return answerText;
  }
@@ -1359,6 +1405,7 @@ function getEquipmentAnswer() {
 function getTechnicalAnswers(lc) {
   // Group technical answer functions to reduce complexity
   const basicAnswers = [
+    () => getGoldenHourAnswer(lc),
     () => getJpegRawAnswer(lc),
     () => getEditRawAnswer(lc),
     () => getExposureTriangleAnswer(lc),
@@ -1404,6 +1451,14 @@ function getLensComparisonAnswer(lc) {
 function getEditRawAnswer(lc) {
   if (lc.includes("edit raw") || (lc.includes("edit") && lc.includes("raw files"))) {
     return `**How to Edit RAW Files**: RAW files require photo editing software to process. You'll need software like Adobe Lightroom, Photoshop, or free alternatives like Darktable or RawTherapee. Key steps:\n- Import RAW files into your editing software\n- Adjust exposure, white balance, and color temperature\n- Apply sharpening and noise reduction\n- Make creative adjustments to contrast, saturation, and highlights/shadows\n- Export as JPEG or other formats for sharing\n\nRAW files give you much more flexibility than JPEG since they contain all the image data captured by your camera sensor.\n\n`;
+  }
+  return null;
+}
+
+// Helper function for golden hour
+function getGoldenHourAnswer(lc) {
+  if (lc.includes("golden hour") || (lc.includes("when") && lc.includes("golden"))) {
+    return `**Golden Hour** is the period shortly after sunrise and before sunset when the light is soft, warm, and ideal for photography. It typically lasts about 1-2 hours:\n\n**Morning Golden Hour:**\n- Starts at sunrise\n- Best light: First hour after sunrise\n- Ideal for: Landscapes, portraits with warm tones\n\n**Evening Golden Hour:**\n- Starts about 1-2 hours before sunset\n- Best light: Last hour before sunset\n- Ideal for: Dramatic landscapes, warm portraits, silhouettes\n\n**Why Golden Hour is Special:**\n- **Soft, diffused light** reduces harsh shadows\n- **Warm color temperature** (around 2000-3000K) creates beautiful tones\n- **Low angle** of light creates depth and dimension\n- **Lower contrast** makes exposure easier\n\n**Tips for Golden Hour Photography:**\n- Arrive early to scout your location\n- Use a tripod for longer exposures\n- Shoot in RAW to capture the full color range\n- Experiment with backlighting and silhouettes\n- Watch for changing light - it moves quickly!\n\nGolden hour is one of the best times to photograph because the quality of light is so flattering and the warm tones add atmosphere to your images.\n\n`;
   }
   return null;
 }
