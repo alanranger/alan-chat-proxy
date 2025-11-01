@@ -9308,16 +9308,12 @@ async function tryRagFirst(client, query) {
   // CRITICAL: Check technical queries BEFORE service queries
   // Technical queries should route to handleTechnicalQueries, not handleServiceQueries
   const qlcTech = query.toLowerCase();
-  console.log(`[DEBUG] tryRagFirst: Checking technical query for "${query}", qlcTech="${qlcTech}"`);
-  const technicalResponse = getTechnicalAnswers(qlcTech);
-  console.log(`[DEBUG] tryRagFirst: technicalResponse=${technicalResponse ? 'HAS ANSWER (' + technicalResponse.length + ' chars)' : 'null'}`);
   
-  // DEBUG: Create debug info object
   const debugInfo = {
     query: query,
     qlcTech: qlcTech,
-    technicalResponseFound: technicalResponse !== null,
-    technicalResponseLength: technicalResponse ? technicalResponse.length : 0,
+    technicalResponseFound: false,
+    technicalResponseLength: 0,
     patternChecks: {
       'how do i': qlcTech.includes('how do i'),
       'shoot': qlcTech.includes('shoot'),
@@ -9327,91 +9323,21 @@ async function tryRagFirst(client, query) {
     }
   };
   
-  const isTechnicalQuery = isTechnicalQueryType(qlcTech, null, technicalResponse, false);
+  const techResult = await handleTechnicalQueryRouting(client, query, qlcTech, debugInfo);
+  if (techResult && techResult.success) return techResult;
   
+  const isTechnicalQuery = techResult?.isTechnicalQuery || false;
   debugInfo.isTechnicalQuery = isTechnicalQuery;
-  console.log(`[DEBUG] tryRagFirst: isTechnicalQuery=${isTechnicalQuery}`);
-  
-  if (isTechnicalQuery) {
-    console.log(`[ROUTE] tryRagFirst: Technical query detected, routing to technical handler: "${query}"`);
-    const technical = await handleTechnicalQueries(client, query);
-    console.log(`[DEBUG] tryRagFirst: handleTechnicalQueries returned=${technical ? (technical.success ? 'SUCCESS' : 'FAILED') : 'null'}`);
-    if (technical && technical.success) {
-      // Merge debug info
-      if (technical.debugInfo) {
-        technical.debugInfo.tryRagFirst = debugInfo;
-      } else {
-        technical.debugInfo = { tryRagFirst: debugInfo };
-      }
-      return technical;
-    }
-    // If technical returned but with success=false, continue but add debug info
-    if (technical && technical.debugInfo) {
-      debugInfo.handleTechnicalQueries = technical.debugInfo;
-    }
-  }
-  
-  // Add debug info to remaining flow
   debugInfo.technicalCheckPassed = false;
   
-  // Handle specific query types in priority order using helper functions
-  const contactInfo = handleContactInfoQuery(query);
-  if (contactInfo) return contactInfo;
+  const specificQuery = await handleSpecificQueryTypes(client, query);
+  if (specificQuery) return specificQuery;
   
-  const giftVoucher = handleGiftVoucherQuery(query);
-  if (giftVoucher) return giftVoucher;
+  const paymentPlan = await handlePaymentPlanRouting(client, query);
+  if (paymentPlan) return paymentPlan;
   
-  const aboutAlan = await handleAboutAlanQuery(client, query);
-  if (aboutAlan) return aboutAlan;
-  
-  const equipment = await handleEquipmentQuery(client, query);
-  if (equipment) return equipment;
-  
-  // Check for payment plan queries FIRST - these should route to services, not events
-  const isPaymentPlanQuery = /(pick.*n.*mix|payment.*plan|instalment.*plan|installment.*plan|pay.*instalment|pay.*installment|pay.*in.*instalment|pay.*in.*installment|instalment|installment|instalments|installments)/i.test(query || '');
-  if (isPaymentPlanQuery) {
-    console.log(`[ROUTE] Payment plan query detected, routing to services: "${query}"`);
-    // Payment plan queries should go to services, not events
-    const services = await handleServiceQueries(client, query);
-    if (services) {
-      return services;
-    }
-    // If no service match, return a payment plan response
-    return {
-      success: true,
-      confidence: 0.7,
-      answer: "I offer \"Pick N Mix\" payment plans to help spread the cost of courses and workshops. For details about payment plans and instalments, please contact Alan directly using the contact form or WhatsApp in the header section of this chat.",
-      answer_markdown: "I offer \"Pick N Mix\" payment plans to help spread the cost of courses and workshops. For details about payment plans and instalments, please contact Alan directly using the contact form or WhatsApp in the header section of this chat.",
-      type: "services",
-      sources: { services: [] },
-      structured: { intent: "services", services: [], events: [], products: [], articles: [] }
-    };
-  }
-  
-  // Skip service queries if this is a technical query (already checked above)
-  // Only check services if it's NOT a technical query
-  if (!isTechnicalQuery) {
-    // Check services BEFORE event routing to catch free course queries
-    const services = await handleServiceQueries(client, query);
-    if (services && services.success) {
-      return services;
-    }
-    // DEBUG: If services returned debug info, add it to response
-    if (services && services.debugInfo) {
-      debugInfo.handleServiceQueries = services.debugInfo;
-    }
-  }
-  
-  const eventRouting = await handleEventRoutingQuery(client, query, isEquipmentQuestion);
-  if (eventRouting) return eventRouting;
-  
-  // If technical query wasn't handled above, try again (fallback)
-  if (isTechnicalQuery) {
-    const technical = await handleTechnicalQueries(client, query);
-    if (technical && technical.success) {
-      return technical;
-    }
-  }
+  const routing = await handleServiceAndEventRouting(client, query, isEquipmentQuestion, isTechnicalQuery, debugInfo);
+  if (routing) return routing;
   
   return await processRagFallback(client, query);
 }
