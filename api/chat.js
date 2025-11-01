@@ -10077,6 +10077,89 @@ async function enrichAdviceWithRelatedInfo(client, query, structured) {
   }
 }
 
+// Helper: Initialize structured object with proper format
+function initializeStructuredObject(ragResult) {
+  if (!ragResult.structured) {
+    ragResult.structured = {
+      intent: ragResult.type || 'advice',
+      articles: [],
+      services: [],
+      events: [],
+      products: []
+    };
+  }
+  
+  // Ensure arrays exist
+  if (!Array.isArray(ragResult.structured.articles)) ragResult.structured.articles = [];
+  if (!Array.isArray(ragResult.structured.services)) ragResult.structured.services = [];
+  if (!Array.isArray(ragResult.structured.events)) ragResult.structured.events = [];
+  if (!Array.isArray(ragResult.structured.products)) ragResult.structured.products = [];
+}
+
+// Helper: Handle sources conversion for enrichment
+function handleSourcesConversion(ragResult) {
+  if (Array.isArray(ragResult.sources) && ragResult.sources.length > 0 && ragResult.structured.articles.length === 0) {
+    try {
+      console.log(`[ENRICH] Found ${ragResult.sources.length} source URLs, will enrich with proper objects`);
+    } catch (e) {
+      console.warn(`[ENRICH] Could not convert sources: ${e.message}`);
+    }
+  }
+}
+
+// Helper: Perform quality analysis and update confidence
+function performQualityAnalysis(ragResult, context) {
+  console.log(`🔍 RAG SUCCESS RESPONSE - Quality Analysis Check:`);
+  console.log(`🔍 Context exists: ${!!context}`);
+  console.log(`🔍 Answer exists: ${!!ragResult.answer}`);
+  console.log(`🔍 Context query: ${context?.query}`);
+  console.log(`🔍 Context queryLower: ${context?.queryLower}`);
+  console.log(`🔍 Quality indicators exist: ${!!context?.qualityIndicators}`);
+  
+  if (!context || !ragResult.answer) {
+    console.log(`❌ No context or answer for quality analysis`);
+    return;
+  }
+  
+  console.log(`🔍 Analyzing response for quality indicators...`);
+  try {
+    if (!context.queryLower && context.query) {
+      context.queryLower = context.query.toLowerCase();
+    }
+    analyzeResponseContent(ragResult.answer, ragResult.sources?.articles || [], context);
+    const newConfidence = finalizeConfidence(context.query, context);
+    console.log(`🎯 Quality-based confidence: ${(newConfidence * 100).toFixed(1)}% (was ${(ragResult.confidence * 100).toFixed(1)}%)`);
+    ragResult.confidence = newConfidence;
+  } catch (error) {
+    console.log(`❌ Error in quality analysis: ${error.message}`);
+    console.log(`❌ Error stack: ${error.stack}`);
+  }
+}
+
+// Helper: Build debug info object
+function buildDebugInfo(ragResult, composedResponse) {
+  return {
+    ...(ragResult.debugInfo || {}),
+    intent: ragResult.debugInfo?.intent || "rag_first",
+    classification: ragResult.debugInfo?.classification || "direct_answer",
+    confidence: composedResponse.confidence,
+    totalMatches: composedResponse.totalMatches,
+    chunksFound: composedResponse.chunksFound,
+    entitiesFound: composedResponse.entitiesFound,
+    entityTitles: composedResponse.entities?.map(e => e.title) || [],
+    approach: ragResult.debugInfo?.approach || "rag_first_hybrid",
+    debugLogs: [
+      "DEPLOYMENT TEST V2 - This should appear in response",
+      `Answer length: ${composedResponse.answer?.length || 0}`,
+      `Answer preview: ${composedResponse.answer?.substring(0, 50) || 'NO ANSWER'}...`,
+      `Chunks found: ${composedResponse.chunksFound || 0}`,
+      `Entities found: ${composedResponse.entitiesFound || 0}`,
+      ...(composedResponse.debugLogs || []),
+      ...(ragResult.debugInfo?.debugLogs || [])
+    ]
+  };
+}
+
 async function sendRagSuccessResponse(res, ragResult, context) {
   console.log(`[SUCCESS] RAG-First success: ${ragResult.confidence} confidence, ${ragResult.answerLength} chars`);
   
