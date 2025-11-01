@@ -148,6 +148,57 @@ const logQuestion = async (sessionId, question) => {
  }
 };
 
+const logAnswer = async (sessionId, question, answer, intent, confidence, responseTimeMs, sources, pageContext) => {
+  // Skip logging for test sessions to avoid performance issues
+  if (sessionId && (sessionId.includes('interactive-test') || sessionId.includes('baseline-test'))) {
+    return;
+  }
+  try {
+    const client = supabaseAdmin();
+    
+    // Update the most recent interaction for this session/question with the answer
+    const { data: existingInteraction } = await client
+      .from('chat_interactions')
+      .select('id')
+      .eq('session_id', sessionId)
+      .eq('question', question)
+      .is('answer', null)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single();
+    
+    const updateData = {
+      answer: answer,
+      intent: intent,
+      confidence: confidence,
+      response_time_ms: responseTimeMs,
+      sources_used: sources,
+      page_context: pageContext
+    };
+    
+    if (existingInteraction) {
+      // Update existing interaction
+      const { error } = await client
+        .from('chat_interactions')
+        .update(updateData)
+        .eq('id', existingInteraction.id);
+      
+      if (error) throw new Error(`Answer update failed: ${error.message}`);
+    } else {
+      // Insert new interaction if no matching question found
+      const { error } = await client.from('chat_interactions').insert([{
+        session_id: sessionId,
+        question: question,
+        ...updateData
+      }]);
+      
+      if (error) throw new Error(`Answer insert failed: ${error.message}`);
+    }
+  } catch (err) {
+    console.warn('Answer logging failed:', err.message);
+  }
+};
+
 
 /* ----------------------- Direct Answer Generation ----------------------- */
 
@@ -6233,6 +6284,22 @@ function sendEventsResponse(context) {
  keywords: context.keywords
  }
  });
+ 
+ // Log the complete interaction with answer
+ if (context.sessionId && context.query) {
+   const responseTimeMs = context.started ? Date.now() - context.started : null;
+   const sourcesArray = context.eventList?.map(e => e.page_url || e.event_url).filter(Boolean) || [];
+   logAnswer(
+     context.sessionId,
+     context.query,
+     formattedAnswer,
+     'events',
+     context.confidence,
+     responseTimeMs,
+     sourcesArray,
+     context.pageContext
+   ).catch(err => console.warn('Failed to log events answer:', err.message));
+ }
 }
 
 async function handleEventsPipeline(params) {
@@ -8634,12 +8701,29 @@ async function handleServiceQueries(client, query) {
                             (qlcService.includes('really free') && qlcService.includes('online photography course')) ||
                             (qlcService.includes('certificate') && qlcService.includes('photography course'));
   
+  // Queries asking what courses are offered - should route to events to show available courses
+  // Check this FIRST before any service pattern matching
+  const isWhatCoursesQuery = /\b(what\s+courses|what\s+photography\s+courses|courses\s+do\s+you\s+offer|courses\s+do\s+you\s+have)\b/i.test(query || '');
+  if (isWhatCoursesQuery && !isFreeCourseQuery) {
+    console.log(`[SKIP] handleServiceQueries: "What courses" query detected, routing to events: "${query}"`);
+    return null; // Let handleEventRoutingQuery handle it
+  }
+  
   // If this is NOT a free course query, check if it's an event query and exit early
   if (!isFreeCourseQuery && !isEquipmentQuestion) {
     const isWhenQuery = /\b(when|where|next|upcoming|schedule)\b/i.test(query || '') && /\b(workshop|course|event|session)\b/i.test(query || '');
     
+    // Course logistics keywords - queries asking about course requirements/features/duration
+    const courseLogisticsKeywords = /\b(need|needed|required|laptop|weeks|week|duration|how\s+many|equipment|bring|brings|prerequisite|requirement|what\s+do\s+i|do\s+i\s+need)\b/i;
+    const isCourseLogisticsQuery = courseLogistics && courseLogisticsKeywords.test(query || '');
+    
     // If this looks like an event query, skip service handling and let event routing handle it
-    if (businessCategory === 'Event Queries' || (courseLogistics && isWhenQuery) || eventCues || isWhenQuery) {
+    // Course logistics queries should route to events even without "when/where" keywords
+    if (businessCategory === 'Event Queries' || 
+        isCourseLogisticsQuery ||  // Course logistics queries (need laptop, weeks, etc.)
+        (courseLogistics && isWhenQuery) || 
+        eventCues || 
+        isWhenQuery) {
       console.log(`[SKIP] handleServiceQueries: Event query detected, skipping service handling: "${query}"`);
       return null; // Let handleEventRoutingQuery handle it
     }
@@ -9183,6 +9267,20 @@ function sendRagSuccessResponse(res, ragResult, context) {
  console.log(`âŒ No context or answer for quality analysis`);
  }
  
+ // Log the complete interaction with answer
+ const responseTimeMs = context.started ? Date.now() - context.started : null;
+ const sourcesArray = ragResult.sources?.articles ? ragResult.sources.articles.map(a => a.url || a.page_url) : [];
+ logAnswer(
+   context.sessionId,
+   context.query,
+   composedResponse.answer,
+   ragResult.debugInfo?.intent || 'rag_first',
+   composedResponse.confidence,
+   responseTimeMs,
+   sourcesArray,
+   context.pageContext
+ ).catch(err => console.warn('Failed to log answer:', err.message));
+
  return res.status(200).json({
    ok: true,
    type: composedResponse.type,
