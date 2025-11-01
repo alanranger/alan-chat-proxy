@@ -148,7 +148,7 @@ const logQuestion = async (sessionId, question) => {
  }
 };
 
-const logAnswer = async (sessionId, question, answer, intent, confidence, responseTimeMs, sources, pageContext) => {
+const logAnswer = async (sessionId, question, answer, intent, confidence, responseTimeMs, sources, pageContext, structuredResponse = null) => {
   // Skip logging for test sessions to avoid performance issues
   if (sessionId && (sessionId.includes('interactive-test') || sessionId.includes('baseline-test'))) {
     return;
@@ -173,7 +173,8 @@ const logAnswer = async (sessionId, question, answer, intent, confidence, respon
       confidence: confidence,
       response_time_ms: responseTimeMs,
       sources_used: sources,
-      page_context: pageContext
+      page_context: pageContext,
+      structured_response: structuredResponse
     };
     
     if (existingInteraction) {
@@ -1355,6 +1356,7 @@ function getTechnicalAnswers(lc) {
  getWhiteBalanceAnswer(lc) ||
  getHdrAnswer(lc) ||
  getFlashPhotographyAnswer(lc) ||
+ getLowLightAnswer(lc) ||
  getImprovePhotographySkillsAnswer(lc) ||
  // getFilterAnswer(lc) || // DISABLED: Let RAG system handle filter queries
  getDepthOfFieldAnswer(lc) ||
@@ -1465,6 +1467,14 @@ function getHdrAnswer(lc) {
 function getFlashPhotographyAnswer(lc) {
   if ((lc.includes("flash") && lc.includes("photography")) || (lc.includes("how do i") && lc.includes("use flash"))) {
     return `**Flash Photography** helps you add light to your images in low-light situations or fill in shadows. Key techniques include:\n- **Bounce Flash**: Point the flash at a ceiling or wall to create softer, more natural-looking light\n- **Fill Flash**: Use flash in daylight to fill in shadows on your subject's face\n- **Flash Compensation**: Adjust flash power (-1 to -3 stops) to balance with ambient light\n- **Off-Camera Flash**: Position the flash away from the camera for more directional lighting\n- **Diffusers**: Soften harsh flash light with diffusers or bounce cards\n\nStart with your camera's auto flash mode, then experiment with manual flash settings as you gain confidence.\n\n`;
+  }
+  return null;
+}
+
+// Helper function for low light photography
+function getLowLightAnswer(lc) {
+  if (lc.includes("low light") || (lc.includes("shoot") && lc.includes("low light")) || (lc.includes("photography") && lc.includes("low light")) || lc.includes("shoot in low light")) {
+    return `**How to Shoot in Low Light**: Low light photography requires balancing several key settings:\n\n**Camera Settings:**\n- **Widen your aperture**: Use f/2.8 or wider (lower f-number) to let in more light\n- **Slow down shutter speed**: Use 1/60 or slower, but be careful of camera shake - use a tripod if needed\n- **Increase ISO**: Start at ISO 800-1600, but watch for noise/grain. Modern cameras handle ISO 3200-6400 well\n- **Use manual mode**: Take full control to balance these three settings\n\n**Equipment Tips:**\n- **Use a tripod** for stability when using slow shutter speeds\n- **Fast lenses** (f/1.4, f/1.8, f/2.8) perform best in low light\n- **Consider a flash** for subjects, or use available light creatively\n\n**Techniques:**\n- **Focus carefully**: Low light makes autofocus struggle - use manual focus or focus on high-contrast areas\n- **Brace yourself**: Lean against a wall or use proper hand-holding technique to minimize shake\n- **Shoot in RAW**: Gives you more flexibility to adjust exposure in post-processing\n- **Accept some noise**: A slightly noisy image is better than a blurred one\n\nPractice with these settings in different low-light situations to find what works best for your camera and style.\n\n`;
   }
   return null;
 }
@@ -3997,18 +4007,18 @@ function logServicesResults(data) {
 // Generate service answer text
 function generateServiceAnswer(services, query) {
   if (!services || services.length === 0) return '';
-
+  
   // Build a simple set of service types from titles, urls, categories and tags
   const typeSet = new Set();
   const pushIf = (cond, label) => { if (cond) typeSet.add(label); };
-
+  
   services.forEach(s => {
     const t = `${s.title||''} ${s.norm_title||''}`.toLowerCase();
     const u = `${s.page_url||s.url||''}`.toLowerCase();
     const cats = Array.isArray(s.categories) ? s.categories.join(' ') : `${s.categories||''}`;
     const tags = Array.isArray(s.tags) ? s.tags.join(' ') : `${s.tags||''}`;
     const all = `${t} ${u} ${cats} ${tags}`;
-
+    
     pushIf(/private|1-2-1|one[- ]to[- ]one|lesson/.test(all), 'Private lessons');
     pushIf(/online|zoom/.test(all), 'Online lessons');
     pushIf(/course|class/.test(all), 'Courses');
@@ -4018,10 +4028,15 @@ function generateServiceAnswer(services, query) {
     pushIf(/print.*(prep|prepare)/.test(all), 'Print preparation');
     pushIf(/gift.*voucher/.test(all), 'Gift vouchers');
   });
-
+  
   const types = Array.from(typeSet).slice(0, 6);
+  
+  // If no types matched, return a generic response instead of empty string
+  if (types.length === 0) {
+    return 'I offer a range of photography services including courses, workshops, private lessons, and mentoring. For specific information about your query, please contact Alan directly using the contact form or WhatsApp in the header section of this chat.';
+  }
+  
   const list = types.length ? ` — including ${types.join(', ')}.` : '';
-
   return `I offer a range of photography services${list}`.trim();
 }
 
@@ -6305,6 +6320,30 @@ function sendEventsResponse(context) {
 async function handleEventsPipeline(params) {
  const { client, query, keywords, pageContext, res, debugInfo = null, sessionId = null, started = null } = params;
  
+ // CRITICAL: Skip event routing for payment plan queries - these should route to services
+ const isPaymentPlanQuery = /(pick.*n.*mix|payment.*plan|instalment.*plan|installment.*plan|pay.*instalment|pay.*installment|pay.*in.*instalment|pay.*in.*installment|instalment|installment|instalments|installments)/i.test(query || '');
+ if (isPaymentPlanQuery) {
+   console.log(`[SKIP] handleEventsPipeline: Payment plan query detected, routing to services instead: "${query}"`);
+   // Route to services instead
+   const services = await handleServiceQueries(client, query);
+   if (services) {
+     return res.status(200).json({
+       ok: true,
+       ...services
+     });
+   }
+   // If no service match, return generic response
+   return res.status(200).json({
+     ok: true,
+     type: "services",
+     answer: "I offer \"Pick N Mix\" payment plans to help spread the cost of courses and workshops. For details about payment plans and instalments, please contact Alan directly using the contact form or WhatsApp in the header section of this chat.",
+     answer_markdown: "I offer \"Pick N Mix\" payment plans to help spread the cost of courses and workshops. For details about payment plans and instalments, please contact Alan directly using the contact form or WhatsApp in the header section of this chat.",
+     confidence: 0.7,
+     sources: { services: [] },
+     structured: { intent: "services", services: [], events: [], products: [], articles: [] }
+   });
+ }
+ 
  // Early routing: if the original query already carries a normalized duration token,
  // bypass keyword-derived routing and fetch by category directly. This avoids
  // losses during keyword extraction (e.g., stripping "2.5hrs-4hrs").
@@ -6312,12 +6351,12 @@ async function handleEventsPipeline(params) {
  const durationCategory = extractDurationCategory(query);
  if (durationCategory) {
  return await handleDirectDurationRouting({
- client,
- query,
- keywords,
- durationCategory,
- res,
- debugInfo
+   client,
+   query,
+   keywords,
+   durationCategory,
+   res,
+   debugInfo
  });
  }
  } catch (_) { /* non-fatal: fall back to standard flow */ }
@@ -8661,6 +8700,13 @@ async function handleEventRoutingQuery(client, query, isEquipmentQuestion) {
     return null;
   }
   
+  // Skip event routing for payment plan queries - these should route to services
+  const isPaymentPlanQuery = /(pick.*n.*mix|payment.*plan|instalment.*plan|installment.*plan|pay.*instalment|pay.*installment|pay.*in.*instalment|pay.*in.*installment|instalment|installment|instalments|installments)/i.test(query || '');
+  if (isPaymentPlanQuery) {
+    console.log(`[SKIP] Skipping event routing for payment plan query: "${query}"`);
+    return null;
+  }
+  
   const businessCategory = detectBusinessCategory(query || '');
   const courseLogistics = !isEquipmentQuestion && /\b(course|beginners|lightroom|camera\s+course|weeks|how\s+many\s+weeks|syllabus|schedule)\b/i.test(query || '');
   const eventCues = /\b(workshop|workshops|event|photowalk|next\s+.*workshop|where\s+.*workshop|when\s+.*workshop|autumn\s+workshops|devon\s+workshop|bluebell\s+workshop|how\s+long.*workshop|bluebell|autumn|spring|summer|winter)\b/i.test(query || '');
@@ -8689,6 +8735,13 @@ async function handleEventRoutingQuery(client, query, isEquipmentQuestion) {
 async function handleServiceQueries(client, query) {
   const qlcService = query.toLowerCase();
   
+  // DEBUG: Track what's happening
+  const debugInfo = {
+    query: query,
+    qlcService: qlcService,
+    steps: []
+  };
+  
   // CRITICAL: Early exit for event queries - these should be handled by handleEventRoutingQuery()
   // Check if this is an event query using the same logic as handleEventRoutingQuery
   const isEquipmentQuestion = /\b(what\s+(sort\s+of\s+)?camera|what\s+(gear|equipment)|tripod|lens|memory\s+card)\b/i.test(query || '');
@@ -8712,8 +8765,39 @@ async function handleServiceQueries(client, query) {
     return null; // Let handleEventRoutingQuery handle it
   }
   
-  // If this is NOT a free course query, check if it's an event query and exit early
-  if (!isFreeCourseQuery && !isEquipmentQuestion) {
+  // Expanded course detection - queries about offering/doing/having specific courses
+  const isCourseOfferQuery = !isFreeCourseQuery && /\b(do\s+you\s+offer|do\s+you\s+do|do\s+you\s+have|do\s+you\s+run|offer.*course|run.*course|have.*course)\b/i.test(query || '') && 
+                            /\b(course|courses|class|classes|lightroom|beginners|beginner|portrait|photography\s+course)\b/i.test(query || '');
+  
+  // Course type queries - queries mentioning specific course types (Lightroom, post-processing, etc.)
+  // These often ask "what is X vs Y" where X/Y are course topics, or mention course types
+  const isCourseTypeQuery = !isFreeCourseQuery && (
+                            (/\b(lightroom|post-processing|photo\s+editing|beginners|beginner|portrait|foundation|intermediate|advanced)\b/i.test(query || '') &&
+                             /\b(course|courses|class|classes|workshop|vs|versus|difference|difference between)\b/i.test(query || '')) ||
+                            (/\b(lightroom|post-processing)\b/i.test(query || '') && /\b(vs|versus|difference|difference between)\b/i.test(query || ''))
+  );
+  
+  // Payment plan queries (Pick N Mix) should route to services, not events
+  // Check this FIRST before course payment detection
+  // Match both singular and plural forms of instalment/installment
+  const isPaymentPlanQuery = /(pick.*n.*mix|payment.*plan|instalment.*plan|installment.*plan|pay.*instalment|pay.*installment|pay.*in.*instalment|pay.*in.*installment|instalment|installment|instalments|installments)/i.test(query || '');
+  
+  // Payment/booking queries about courses - BUT exclude payment plan queries (these should route to services)
+  // If it's a payment plan query, don't treat it as a course payment query
+  // Also exclude queries that mention instalments/installments - these are payment plan queries
+  const isCoursePaymentQuery = !isFreeCourseQuery && !isPaymentPlanQuery && 
+                               !/(instalment|installment|instalments|installments)/i.test(query || '') &&
+                               /\b(pay|payment|book|booking|price|cost)\b/i.test(query || '') &&
+                               /\b(course|courses|class|classes)\b/i.test(query || '');
+  
+  // Course suitability/compatibility queries
+  const isCourseSuitabilityQuery = !isFreeCourseQuery && /\b(suitable|compatible|need|required|prerequisite|for|cover|covers|include|includes)\b/i.test(query || '') &&
+                                   /\b(course|courses|class|classes|beginners|beginner|lightroom|portrait)\b/i.test(query || '');
+  
+  // CRITICAL: Check course-related queries BEFORE SERVICE_PATTERNS to prevent false matches
+  // This must happen BEFORE service pattern matching and database lookup to catch course queries
+  // BUT: Payment plan queries should NOT be routed to events - they should go to services
+  if (!isFreeCourseQuery && !isEquipmentQuestion && !isPaymentPlanQuery) {
     const isWhenQuery = /\b(when|where|next|upcoming|schedule)\b/i.test(query || '') && /\b(workshop|course|event|session)\b/i.test(query || '');
     
     // Course logistics keywords - queries asking about course requirements/features/duration
@@ -8724,12 +8808,65 @@ async function handleServiceQueries(client, query) {
     // Course logistics queries should route to events even without "when/where" keywords
     if (businessCategory === 'Event Queries' || 
         isCourseLogisticsQuery ||  // Course logistics queries (need laptop, weeks, etc.)
+        isCourseOfferQuery ||      // Queries about offering/doing courses
+        isCourseTypeQuery ||       // Queries about specific course types
+        isCoursePaymentQuery ||    // Payment/booking queries about courses (but NOT payment plans)
+        isCourseSuitabilityQuery || // Course suitability/compatibility queries
         (courseLogistics && isWhenQuery) || 
         eventCues || 
         isWhenQuery) {
-      console.log(`[SKIP] handleServiceQueries: Event query detected, skipping service handling: "${query}"`);
+      console.log(`[SKIP] handleServiceQueries: Event/course query detected (before SERVICE_PATTERNS), skipping service handling: "${query}"`);
       return null; // Let handleEventRoutingQuery handle it
     }
+  }
+  
+  // CRITICAL: Check if this is a technical/about/person query BEFORE SERVICE_PATTERNS
+  // These queries should route to their specific handlers, not service lookup
+  // BUT: Free course queries should NOT be skipped (they need SERVICE_PATTERNS)
+  const technicalResponse = getTechnicalAnswers(qlcService);
+  debugInfo.steps.push(`getTechnicalAnswers returned: ${technicalResponse ? 'HAS ANSWER (' + technicalResponse.length + ' chars)' : 'null'}`);
+  debugInfo.steps.push(`qlcService="${qlcService}"`);
+  debugInfo.steps.push(`isFreeCourseQuery=${isFreeCourseQuery}`);
+  
+  const isTechnicalQuery = !isFreeCourseQuery && (
+                           businessCategory === 'Technical Photography Concepts' || 
+                           businessCategory === 'Technical Advice' ||
+                           technicalResponse !== null ||
+                           (qlcService.includes('what is') && (
+                             qlcService.includes('exposure') || qlcService.includes('iso') || 
+                             qlcService.includes('aperture') || qlcService.includes('shutter') ||
+                             qlcService.includes('raw') || qlcService.includes('white balance') ||
+                             qlcService.includes('depth of field') || qlcService.includes('hdr') ||
+                             qlcService.includes('long exposure') || qlcService.includes('flash') ||
+                             qlcService.includes('composition') || qlcService.includes('edit raw')
+                           )) ||
+                           (qlcService.includes('how do i') && (
+                             qlcService.includes('edit') || qlcService.includes('improve') ||
+                             qlcService.includes('use flash') || qlcService.includes('improve my photography') ||
+                             qlcService.includes('improve my composition') || qlcService.includes('photography skills') ||
+                             qlcService.includes('print') || qlcService.includes('resize') || qlcService.includes('back up') ||
+                             qlcService.includes('backup') || qlcService.includes('3-2-1') ||
+                             (qlcService.includes('photo') && (qlcService.includes('print') || qlcService.includes('backup') || qlcService.includes('size'))) ||
+                             (qlcService.includes('shoot') && qlcService.includes('low light')) ||
+                             qlcService.includes('shoot in low light')
+                           )) ||
+                           (qlcService.includes('low light') && (qlcService.includes('shoot') || qlcService.includes('photography'))) ||
+                           (qlcService.includes('improve') && qlcService.includes('photography') && qlcService.includes('skills'))
+  );
+  
+  debugInfo.steps.push(`isTechnicalQuery=${isTechnicalQuery}`);
+  debugInfo.steps.push(`Pattern check: 'how do i'=${qlcService.includes('how do i')}, 'shoot'=${qlcService.includes('shoot')}, 'low light'=${qlcService.includes('low light')}`);
+  debugInfo.steps.push(`Pattern match: 'shoot AND low light'=${qlcService.includes('shoot') && qlcService.includes('low light')}`);
+  
+  const isPersonQuery = !isFreeCourseQuery && (
+                        businessCategory === 'Person Queries' ||
+                        (qlcService.includes('alan ranger') && (qlcService.includes('based') || qlcService.includes('where')))
+  );
+  
+  if (isTechnicalQuery || isPersonQuery) {
+    debugInfo.steps.push(`RETURNING NULL - Technical/person query detected`);
+    console.log(`[SKIP] handleServiceQueries: Technical/person query detected, returning null: "${query}"`);
+    return null; // Return null so callers can correctly detect this should be handled elsewhere
   }
   
   const isTypesServiceQuery = (qlcService.includes("types") || qlcService.includes("what kind")) && 
@@ -8759,11 +8896,14 @@ async function handleServiceQueries(client, query) {
     }
   }
   
-  // Check SERVICE_PATTERNS
+  // Check SERVICE_PATTERNS AFTER technical check
   const serviceResponse = getServiceAnswers(qlcService);
+  debugInfo.steps.push(`getServiceAnswers returned: ${serviceResponse ? 'HAS ANSWER (' + serviceResponse.length + ' chars)' : 'null'}`);
+  
   if (serviceResponse) {
     console.log(`[DEBUG] handleServiceQueries: Pattern matched! Query="${query}", Response snippet="${serviceResponse.substring(0, 100)}..."`);
     console.log(`🎯 Service pattern matched for: "${query}"`);
+    debugInfo.steps.push(`SERVICE_PATTERNS matched, returning service response`);
     
     // For free course and certificate queries, fetch the service/article to show in related info
     const isFreeCourseQuery = qlcService.includes('free online photography course') || 
@@ -8883,70 +9023,44 @@ async function handleServiceQueries(client, query) {
         services: services,
         events: [],
         products: []
-      }
+      },
+      debugInfo: debugInfo
     };
   }
   
-  // CRITICAL: Check if this is a technical/about/person query BEFORE doing database lookup
-  // These queries should route to their specific handlers, not service lookup
-  // BUT: Free course queries should NOT be skipped (they need SERVICE_PATTERNS)
-  const technicalResponse = getTechnicalAnswers(qlcService);
-  const isTechnicalQuery = !isFreeCourseQuery && (
-                           businessCategory === 'Technical Photography Concepts' || 
-                           businessCategory === 'Technical Advice' ||
-                           technicalResponse !== null ||
-                           (qlcService.includes('what is') && (
-                             qlcService.includes('exposure') || qlcService.includes('iso') || 
-                             qlcService.includes('aperture') || qlcService.includes('shutter') ||
-                             qlcService.includes('raw') || qlcService.includes('white balance') ||
-                             qlcService.includes('depth of field') || qlcService.includes('hdr') ||
-                             qlcService.includes('long exposure') || qlcService.includes('flash') ||
-                             qlcService.includes('composition') || qlcService.includes('edit raw')
-                           )) ||
-                           (qlcService.includes('how do i') && (
-                             qlcService.includes('edit') || qlcService.includes('improve') ||
-                             qlcService.includes('use flash') || qlcService.includes('improve my photography') ||
-                             qlcService.includes('improve my composition') || qlcService.includes('photography skills')
-                           )) ||
-                           (qlcService.includes('improve') && qlcService.includes('photography') && qlcService.includes('skills'))
-  );
-  
-  const isPersonQuery = !isFreeCourseQuery && (
-                        businessCategory === 'Person Queries' ||
-                        (qlcService.includes('alan ranger') && (qlcService.includes('based') || qlcService.includes('where')))
-  );
-  
-  if (isTechnicalQuery || isPersonQuery) {
-    return null; // Let appropriate handler process it
-  }
-  
   console.log(`[DEBUG] handleServiceQueries: No pattern match, trying database lookup with keywords`);
+  debugInfo.steps.push(`SERVICE_PATTERNS did not match, proceeding to database lookup`);
 
   const keywords = extractKeywords(query);
-  console.log(`[DEBUG] handleServiceQueries: Extracted keywords: ${keywords.join(', ')}`);
-  const services = await findServices(client, { keywords, limit: 24 });
-  if (services && services.length > 0) {
-    const answer = generateServiceAnswer(services, query);
-    console.log(`[DEBUG] handleServiceQueries: Database lookup returned ${services.length} services, answer="${answer.substring(0, 100)}..."`);
-    console.log(`🎯 Found ${services.length} relevant services for: "${query}"`);
+  debugInfo.steps.push(`Database lookup with keywords: ${keywords.join(', ')}`);
+  const dbServices = await findServices(client, { keywords, limit: 24 });
+  if (dbServices && dbServices.length > 0) {
+    const answer = generateServiceAnswer(dbServices, query);
+    debugInfo.steps.push(`Database lookup returned ${dbServices.length} services, answer length=${answer.length}`);
+    debugInfo.steps.push(`RETURNING SERVICE RESPONSE`);
     return {
       success: true,
       confidence: 0.7,
       answer: answer,
       type: "services",
-      sources: { services: services },
+      sources: { services: dbServices },
       structured: {
         intent: "services",
-        topic: keywords.join(", "),
-        services: services,
+        services: dbServices,
         events: [],
         products: [],
         articles: []
-      }
+      },
+      debugInfo: debugInfo
     };
   }
   
-  return null;
+  debugInfo.steps.push(`No services found, returning null`);
+  return { 
+    success: false, 
+    debugInfo: debugInfo,
+    reason: 'No services found'
+  };
 }
 
 // Helper: Handle technical queries with article enrichment (Complexity: Low)
@@ -8989,6 +9103,8 @@ async function handleTechnicalQueries(client, query) {
       qlc.includes('white balance') ||
       qlc.includes('hdr') ||
       qlc.includes('flash photography') ||
+      qlc.includes('low light') ||
+      qlc.includes('shoot in low light') ||
       qlc.includes('edit raw') ||
       qlc.includes('photography skills');
     
@@ -9045,6 +9161,26 @@ async function handleTechnicalQueries(client, query) {
 
 // Helper: Process RAG fallback (Complexity: Low)
 async function processRagFallback(client, query) {
+  // CRITICAL: Check for payment plan queries FIRST - these should route to services
+  const isPaymentPlanQuery = /(pick.*n.*mix|payment.*plan|instalment.*plan|installment.*plan|pay.*instalment|pay.*installment|pay.*in.*instalment|pay.*in.*installment|instalment|installment|instalments|installments)/i.test(query || '');
+  if (isPaymentPlanQuery) {
+    console.log(`[ROUTE] processRagFallback: Payment plan query detected, routing to services: "${query}"`);
+    const services = await handleServiceQueries(client, query);
+    if (services) {
+      return services;
+    }
+    // If no service match, return payment plan response
+    return {
+      success: true,
+      confidence: 0.7,
+      answer: "I offer \"Pick N Mix\" payment plans to help spread the cost of courses and workshops. For details about payment plans and instalments, please contact Alan directly using the contact form or WhatsApp in the header section of this chat.",
+      answer_markdown: "I offer \"Pick N Mix\" payment plans to help spread the cost of courses and workshops. For details about payment plans and instalments, please contact Alan directly using the contact form or WhatsApp in the header section of this chat.",
+      type: "services",
+      sources: { services: [] },
+      structured: { intent: "services", services: [], events: [], products: [], articles: [] }
+    };
+  }
+  
   console.log(`[DEBUG] No technical pattern matched, continuing to RAG processing`);
   try {
     const { keywords, lcQuery, isConceptQuery, primaryKeyword } = prepareRagQuery(query);
@@ -9083,6 +9219,68 @@ async function tryRagFirst(client, query) {
   // Declare equipment check early for use in event routing
   const isEquipmentQuestion = /\b(what\s+(sort\s+of\s+)?camera|what\s+(gear|equipment)|tripod|lens|memory\s+card)\b/i.test(query || '');
   
+  // CRITICAL: Check technical queries BEFORE service queries
+  // Technical queries should route to handleTechnicalQueries, not handleServiceQueries
+  const qlcTech = query.toLowerCase();
+  console.log(`[DEBUG] tryRagFirst: Checking technical query for "${query}", qlcTech="${qlcTech}"`);
+  const technicalResponse = getTechnicalAnswers(qlcTech);
+  console.log(`[DEBUG] tryRagFirst: technicalResponse=${technicalResponse ? 'HAS ANSWER (' + technicalResponse.length + ' chars)' : 'null'}`);
+  
+  // DEBUG: Create debug info object
+  const debugInfo = {
+    query: query,
+    qlcTech: qlcTech,
+    technicalResponseFound: technicalResponse !== null,
+    technicalResponseLength: technicalResponse ? technicalResponse.length : 0,
+    patternChecks: {
+      'how do i': qlcTech.includes('how do i'),
+      'shoot': qlcTech.includes('shoot'),
+      'low light': qlcTech.includes('low light'),
+      'shoot AND low light': qlcTech.includes('shoot') && qlcTech.includes('low light'),
+      'shoot in low light': qlcTech.includes('shoot in low light')
+    }
+  };
+  
+  const isTechnicalQuery = technicalResponse !== null ||
+                           (qlcTech.includes('how do i') && (
+                             (qlcTech.includes('shoot') && qlcTech.includes('low light')) ||
+                             qlcTech.includes('shoot in low light') ||
+                             (qlcTech.includes('low light') && (qlcTech.includes('shoot') || qlcTech.includes('photography')))
+                           )) ||
+                           (qlcTech.includes('what is') && (
+                             qlcTech.includes('exposure') || qlcTech.includes('iso') || 
+                             qlcTech.includes('aperture') || qlcTech.includes('shutter') ||
+                             qlcTech.includes('raw') || qlcTech.includes('white balance') ||
+                             qlcTech.includes('depth of field') || qlcTech.includes('hdr') ||
+                             qlcTech.includes('long exposure') || qlcTech.includes('flash') ||
+                             qlcTech.includes('composition') || qlcTech.includes('edit raw')
+                           ));
+  
+  debugInfo.isTechnicalQuery = isTechnicalQuery;
+  console.log(`[DEBUG] tryRagFirst: isTechnicalQuery=${isTechnicalQuery}`);
+  
+  if (isTechnicalQuery) {
+    console.log(`[ROUTE] tryRagFirst: Technical query detected, routing to technical handler: "${query}"`);
+    const technical = await handleTechnicalQueries(client, query);
+    console.log(`[DEBUG] tryRagFirst: handleTechnicalQueries returned=${technical ? (technical.success ? 'SUCCESS' : 'FAILED') : 'null'}`);
+    if (technical && technical.success) {
+      // Merge debug info
+      if (technical.debugInfo) {
+        technical.debugInfo.tryRagFirst = debugInfo;
+      } else {
+        technical.debugInfo = { tryRagFirst: debugInfo };
+      }
+      return technical;
+    }
+    // If technical returned but with success=false, continue but add debug info
+    if (technical && technical.debugInfo) {
+      debugInfo.handleTechnicalQueries = technical.debugInfo;
+    }
+  }
+  
+  // Add debug info to remaining flow
+  debugInfo.technicalCheckPassed = false;
+  
   // Handle specific query types in priority order using helper functions
   const contactInfo = handleContactInfoQuery(query);
   if (contactInfo) return contactInfo;
@@ -9096,15 +9294,51 @@ async function tryRagFirst(client, query) {
   const equipment = await handleEquipmentQuery(client, query);
   if (equipment) return equipment;
   
-  // Check services BEFORE event routing to catch free course queries
-  const services = await handleServiceQueries(client, query);
-  if (services) return services;
+  // Check for payment plan queries FIRST - these should route to services, not events
+  const isPaymentPlanQuery = /(pick.*n.*mix|payment.*plan|instalment.*plan|installment.*plan|pay.*instalment|pay.*installment|pay.*in.*instalment|pay.*in.*installment|instalment|installment|instalments|installments)/i.test(query || '');
+  if (isPaymentPlanQuery) {
+    console.log(`[ROUTE] Payment plan query detected, routing to services: "${query}"`);
+    // Payment plan queries should go to services, not events
+    const services = await handleServiceQueries(client, query);
+    if (services) {
+      return services;
+    }
+    // If no service match, return a payment plan response
+    return {
+      success: true,
+      confidence: 0.7,
+      answer: "I offer \"Pick N Mix\" payment plans to help spread the cost of courses and workshops. For details about payment plans and instalments, please contact Alan directly using the contact form or WhatsApp in the header section of this chat.",
+      answer_markdown: "I offer \"Pick N Mix\" payment plans to help spread the cost of courses and workshops. For details about payment plans and instalments, please contact Alan directly using the contact form or WhatsApp in the header section of this chat.",
+      type: "services",
+      sources: { services: [] },
+      structured: { intent: "services", services: [], events: [], products: [], articles: [] }
+    };
+  }
+  
+  // Skip service queries if this is a technical query (already checked above)
+  // Only check services if it's NOT a technical query
+  if (!isTechnicalQuery) {
+    // Check services BEFORE event routing to catch free course queries
+    const services = await handleServiceQueries(client, query);
+    if (services && services.success) {
+      return services;
+    }
+    // DEBUG: If services returned debug info, add it to response
+    if (services && services.debugInfo) {
+      debugInfo.handleServiceQueries = services.debugInfo;
+    }
+  }
   
   const eventRouting = await handleEventRoutingQuery(client, query, isEquipmentQuestion);
   if (eventRouting) return eventRouting;
   
-  const technical = await handleTechnicalQueries(client, query);
-  if (technical) return technical;
+  // If technical query wasn't handled above, try again (fallback)
+  if (isTechnicalQuery) {
+    const technical = await handleTechnicalQueries(client, query);
+    if (technical && technical.success) {
+      return technical;
+    }
+  }
   
   return await processRagFallback(client, query);
 }
@@ -9187,20 +9421,58 @@ async function initializeSession(context) {
 // Helper function to handle query classification
 async function handleQueryClassification(client, context) {
  const classification = classifyQuery(context.query);
- console.log(`ðŸ” Classification result for "${context.query}":`, classification);
+ console.log(`ðŸ" Classification result for "${context.query}":`, classification);
+ 
+ // CRITICAL: Check for payment plan queries BEFORE workshop classification
+ // Payment plan queries should route to services, not events
+ const isPaymentPlanQuery = /(pick.*n.*mix|payment.*plan|instalment.*plan|installment.*plan|pay.*instalment|pay.*installment|pay.*in.*instalment|pay.*in.*installment|instalment|installment|instalments|installments)/i.test(context.query || '');
+ if (isPaymentPlanQuery) {
+   console.log(`[ROUTE] Classification: Payment plan query detected, routing to services: "${context.query}"`);
+   const services = await handleServiceQueries(client, context.query);
+   if (services) {
+     return context.res.status(200).json({
+       ok: true,
+       ...services
+     });
+   }
+   // If no service match, return payment plan response
+   return context.res.status(200).json({
+     ok: true,
+     type: "services",
+     answer: "I offer \"Pick N Mix\" payment plans to help spread the cost of courses and workshops. For details about payment plans and instalments, please contact Alan directly using the contact form or WhatsApp in the header section of this chat.",
+     answer_markdown: "I offer \"Pick N Mix\" payment plans to help spread the cost of courses and workshops. For details about payment plans and instalments, please contact Alan directly using the contact form or WhatsApp in the header section of this chat.",
+     confidence: 0.7,
+     sources: { services: [] },
+     structured: { intent: "services", services: [], events: [], products: [], articles: [] }
+   });
+ }
  
  if (classification.type === 'workshop') {
  return await handleWorkshopClassification(client, context);
  } else if (classification.type === 'clarification') {
  return await handleClarificationClassification(client, context, classification);
  } else {
- console.log(`ðŸ” Not a workshop or clarification query, proceeding to RAG for: "${context.query}"`);
+ console.log(`ðŸ" Not a workshop or clarification query, proceeding to RAG for: "${context.query}"`);
  return { handled: false };
  }
 }
 
 // Helper function to handle workshop classification
 async function handleWorkshopClassification(client, context) {
+ // Skip event routing for payment plan queries - these should route to services
+ const isPaymentPlanQuery = /(pick.*n.*mix|payment.*plan|instalment.*plan|installment.*plan|pay.*instalment|pay.*installment|pay.*in.*instalment|pay.*in.*installment|instalment|installment|instalments|installments)/i.test(context.query || '');
+ if (isPaymentPlanQuery) {
+   console.log(`[SKIP] Workshop classification: Payment plan query detected, routing to services instead: "${context.query}"`);
+   // Route to services instead
+   const services = await handleServiceQueries(client, context.query);
+   if (services) {
+     return context.res.status(200).json({
+       ok: true,
+       ...services
+     });
+   }
+ }
+ 
  console.log(`ðŸŽ¯ Workshop query detected: "${context.query}" - skipping RAG, routing to events`);
  const keywords = extractKeywords(context.query);
  await handleEventsPipeline({ client, query: context.query, keywords, pageContext: context.pageContext, res: context.res, debugInfo: { bypassReason: 'workshop_query' }, sessionId: context.sessionId, started: context.started });
@@ -9293,23 +9565,25 @@ function sendRagSuccessResponse(res, ragResult, context) {
    sources: composedResponse.sources,
    structured: composedResponse.structured,
    debugInfo: {
-     intent: "rag_first",
-     classification: "direct_answer",
+     ...(ragResult.debugInfo || {}), // Preserve debug info from ragResult
+     intent: ragResult.debugInfo?.intent || "rag_first",
+     classification: ragResult.debugInfo?.classification || "direct_answer",
      confidence: composedResponse.confidence,
      totalMatches: composedResponse.totalMatches,
      chunksFound: composedResponse.chunksFound,
      entitiesFound: composedResponse.entitiesFound,
      entityTitles: composedResponse.entities?.map(e => e.title) || [],
- approach: "rag_first_hybrid",
+     approach: ragResult.debugInfo?.approach || "rag_first_hybrid",
      debugLogs: [
        "DEPLOYMENT TEST V2 - This should appear in response",
        `Answer length: ${composedResponse.answer?.length || 0}`,
        `Answer preview: ${composedResponse.answer?.substring(0, 50) || 'NO ANSWER'}...`,
        `Chunks found: ${composedResponse.chunksFound || 0}`,
        `Entities found: ${composedResponse.entitiesFound || 0}`,
-       ...(composedResponse.debugLogs || [])
- ]
- }
+       ...(composedResponse.debugLogs || []),
+       ...(ragResult.debugInfo?.debugLogs || [])
+     ]
+   }
  });
  }
  
@@ -9334,38 +9608,67 @@ async function handleRagFallbackWithIntent(client, context, ragResult) {
 
 // Helper: Determine intent (Low Complexity)
 function determineIntent(query, previousQuery, pageContext) {
- // Check for clarification follow-ups first
- if (pageContext && pageContext.clarificationLevel > 0) {
- return "clarification_followup";
- }
- 
- // Use new classification system instead of old detectIntent
- const classification = classifyQuery(query || "");
- console.log(`ðŸŽ¯ Query classified as: ${classification.type} (${classification.reason})`);
- 
- // Map classification types to intent
- switch (classification.type) {
- case 'workshop':
- return "workshop";
- case 'direct_answer':
- return "direct_answer";
- case 'clarification':
- return "clarification";
- default:
- return "events"; // fallback
- }
+  // Check for clarification follow-ups first
+  if (pageContext && pageContext.clarificationLevel > 0) {
+    return "clarification_followup";
+  }
+  
+  // CRITICAL: Check for payment plan queries FIRST - these should route to services
+  const isPaymentPlanQuery = /(pick.*n.*mix|payment.*plan|instalment.*plan|installment.*plan|pay.*instalment|pay.*installment|pay.*in.*instalment|pay.*in.*installment|instalment|installment|instalments|installments)/i.test(query || '');
+  if (isPaymentPlanQuery) {
+    console.log(`[ROUTE] determineIntent: Payment plan query detected, routing to services: "${query}"`);
+    return "services"; // Route to services instead of events
+  }
+  
+  // Use new classification system instead of old detectIntent
+  const classification = classifyQuery(query || "");
+  console.log(`ðŸŽ¯ Query classified as: ${classification.type} (${classification.reason})`);
+  
+  // Map classification types to intent
+  switch (classification.type) {
+  case 'workshop':
+    return "workshop";
+  case 'direct_answer':
+    return "direct_answer";
+  case 'clarification':
+    return "clarification";
+  default:
+    return "events"; // fallback
+  }
 }
 
 // Helper: Process by intent (Low Complexity)
 async function processByIntent(context) {
  if (context.intent === "clarification_followup") {
  return await handleClarificationFollowup({
- client: context.client,
- query: context.query,
- previousQuery: context.previousQuery,
- pageContext: context.pageContext,
- res: context.res
+   client: context.client,
+   query: context.query,
+   previousQuery: context.previousQuery,
+   pageContext: context.pageContext,
+   res: context.res
  });
+ }
+ 
+ // Handle payment plan queries (services intent)
+ if (context.intent === "services") {
+   console.log(`[ROUTE] processByIntent: Routing to services for: "${context.query}"`);
+   const services = await handleServiceQueries(context.client, context.query);
+   if (services) {
+     return context.res.status(200).json({
+       ok: true,
+       ...services
+     });
+   }
+   // If no service match, return payment plan response
+   return context.res.status(200).json({
+     ok: true,
+     type: "services",
+     answer: "I offer \"Pick N Mix\" payment plans to help spread the cost of courses and workshops. For details about payment plans and instalments, please contact Alan directly using the contact form or WhatsApp in the header section of this chat.",
+     answer_markdown: "I offer \"Pick N Mix\" payment plans to help spread the cost of courses and workshops. For details about payment plans and instalments, please contact Alan directly using the contact form or WhatsApp in the header section of this chat.",
+     confidence: 0.7,
+     sources: { services: [] },
+     structured: { intent: "services", services: [], events: [], products: [], articles: [] }
+   });
  }
  
  if (context.intent === "workshop") {
@@ -9377,13 +9680,13 @@ async function processByIntent(context) {
  }
  
  return await processRemainingLogic({
- client: context.client,
- query: context.query,
- previousQuery: context.previousQuery,
- intent: context.intent,
- pageContext: context.pageContext,
- res: context.res,
- started: context.started
+   client: context.client,
+   query: context.query,
+   previousQuery: context.previousQuery,
+   intent: context.intent,
+   pageContext: context.pageContext,
+   res: context.res,
+   started: context.started
  });
 }
 
@@ -9404,6 +9707,29 @@ async function handleWorkshopIntent(context) {
 
 // Helper function to handle direct answer or workshop classification
 async function handleDirectAnswerOrWorkshop(context) {
+ // CRITICAL: Check for payment plan queries FIRST - these should route to services
+ const isPaymentPlanQuery = /(pick.*n.*mix|payment.*plan|instalment.*plan|installment.*plan|pay.*instalment|pay.*installment|pay.*in.*instalment|pay.*in.*installment|instalment|installment|instalments|installments)/i.test(context.query || '');
+ if (isPaymentPlanQuery) {
+   console.log(`[ROUTE] handleDirectAnswerOrWorkshop: Payment plan query detected, routing to services: "${context.query}"`);
+   const services = await handleServiceQueries(context.client, context.query);
+   if (services) {
+     return context.res.status(200).json({
+       ok: true,
+       ...services
+     });
+   }
+   // If no service match, return payment plan response
+   return context.res.status(200).json({
+     ok: true,
+     type: "services",
+     answer: "I offer \"Pick N Mix\" payment plans to help spread the cost of courses and workshops. For details about payment plans and instalments, please contact Alan directly using the contact form or WhatsApp in the header section of this chat.",
+     answer_markdown: "I offer \"Pick N Mix\" payment plans to help spread the cost of courses and workshops. For details about payment plans and instalments, please contact Alan directly using the contact form or WhatsApp in the header section of this chat.",
+     confidence: 0.7,
+     sources: { services: [] },
+     structured: { intent: "services", services: [], events: [], products: [], articles: [] }
+   });
+ }
+ 
  const classification = classifyQuery(context.query);
  
  // Check for equipment queries first - route to NEW RAG system
@@ -9442,6 +9768,29 @@ async function handleDirectAnswerClassification(context) {
 
 // Helper function to handle workshop classification
 async function handleWorkshopClassificationWithContext(context) {
+ // CRITICAL: Check for payment plan queries FIRST - these should route to services
+ const isPaymentPlanQuery = /(pick.*n.*mix|payment.*plan|instalment.*plan|installment.*plan|pay.*instalment|pay.*installment|pay.*in.*instalment|pay.*in.*installment|instalment|installment|instalments|installments)/i.test(context.query || '');
+ if (isPaymentPlanQuery) {
+   console.log(`[SKIP] handleWorkshopClassificationWithContext: Payment plan query detected, routing to services instead: "${context.query}"`);
+   const services = await handleServiceQueries(context.client, context.query);
+   if (services) {
+     return context.res.status(200).json({
+       ok: true,
+       ...services
+     });
+   }
+   // If no service match, return payment plan response
+   return context.res.status(200).json({
+     ok: true,
+     type: "services",
+     answer: "I offer \"Pick N Mix\" payment plans to help spread the cost of courses and workshops. For details about payment plans and instalments, please contact Alan directly using the contact form or WhatsApp in the header section of this chat.",
+     answer_markdown: "I offer \"Pick N Mix\" payment plans to help spread the cost of courses and workshops. For details about payment plans and instalments, please contact Alan directly using the contact form or WhatsApp in the header section of this chat.",
+     confidence: 0.7,
+     sources: { services: [] },
+     structured: { intent: "services", services: [], events: [], products: [], articles: [] }
+   });
+ }
+ 
  console.log(`ðŸŽ¯ Workshop query detected: "${context.query}" - routing to workshop system`);
  const keywords = extractKeywords(context.query);
  const handled = await handleEventsPipeline({ 
@@ -9457,27 +9806,50 @@ async function handleWorkshopClassificationWithContext(context) {
 
 // Helper: Process remaining logic (Low Complexity)
 async function processRemainingLogic(context) {
+ // CRITICAL: Check for payment plan queries FIRST - these should route to services
+ const isPaymentPlanQuery = /(pick.*n.*mix|payment.*plan|instalment.*plan|installment.*plan|pay.*instalment|pay.*installment|pay.*in.*instalment|pay.*in.*installment|instalment|installment|instalments|installments)/i.test(context.query || '');
+ if (isPaymentPlanQuery) {
+   console.log(`[ROUTE] processRemainingLogic: Payment plan query detected, routing to services: "${context.query}"`);
+   const services = await handleServiceQueries(context.client, context.query);
+   if (services) {
+     return context.res.status(200).json({
+       ok: true,
+       ...services
+     });
+   }
+   // If no service match, return payment plan response
+   return context.res.status(200).json({
+     ok: true,
+     type: "services",
+     answer: "I offer \"Pick N Mix\" payment plans to help spread the cost of courses and workshops. For details about payment plans and instalments, please contact Alan directly using the contact form or WhatsApp in the header section of this chat.",
+     answer_markdown: "I offer \"Pick N Mix\" payment plans to help spread the cost of courses and workshops. For details about payment plans and instalments, please contact Alan directly using the contact form or WhatsApp in the header section of this chat.",
+     confidence: 0.7,
+     sources: { services: [] },
+     structured: { intent: "services", services: [], events: [], products: [], articles: [] }
+   });
+ }
+ 
  // Extract keywords for search
  const keywords = extractKeywords(context.query);
  
  // Handle different intents
  if (context.intent === "events") {
  const handled = await handleEventsPipeline({ 
- client: context.client, 
- query: context.query, 
- keywords, 
- pageContext: context.pageContext, 
- res: context.res, 
- debugInfo: { intent: context.intent } 
+   client: context.client, 
+   query: context.query, 
+   keywords, 
+   pageContext: context.pageContext, 
+   res: context.res, 
+   debugInfo: { intent: context.intent } 
  });
  if (handled) return;
  } else if (context.intent === "advice") {
  const handled = await handleAdviceClarification({
- client: context.client,
- query: context.query,
- keywords,
- pageContext: context.pageContext,
- res: context.res
+   client: context.client,
+   query: context.query,
+   keywords,
+   pageContext: context.pageContext,
+   res: context.res
  });
  if (handled) return;
  }
@@ -9587,6 +9959,52 @@ function addEventDetails(eventList) {
 function generateEventAnswerMarkdown(eventList, query) {
  if (!eventList || eventList.length === 0) {
  return "I couldn't find any events matching your query.";
+ }
+ 
+ // Check if query is asking about course content/inclusions
+ const lcQuery = query.toLowerCase();
+ const isCourseContentQuery = (lcQuery.includes("what is included") || lcQuery.includes("what's included") || 
+                                lcQuery.includes("what does") || lcQuery.includes("what do") ||
+                                lcQuery.includes("include") || lcQuery.includes("cover") || 
+                                lcQuery.includes("covers")) && 
+                               (lcQuery.includes("course") || lcQuery.includes("beginner") || 
+                                lcQuery.includes("class") || lcQuery.includes("workshop"));
+ 
+ if (isCourseContentQuery && eventList.length > 0) {
+   // For course content queries, provide a more detailed answer
+   const courseType = lcQuery.includes("beginner") ? "beginner" : 
+                     lcQuery.includes("lightroom") ? "Lightroom" :
+                     lcQuery.includes("portrait") ? "portrait" : "photography";
+   
+   let answer = `I found ${eventList.length} ${eventList.length === 1 ? 'course' : 'courses'} that match your query. `;
+   answer += `Here's what ${courseType === "beginner" ? "beginner photography courses" : courseType === "Lightroom" ? "Lightroom courses" : courseType === "portrait" ? "portrait photography courses" : "photography courses"} typically include:\n\n`;
+   
+   // Extract common course elements from event descriptions
+   const commonElements = new Set();
+   eventList.slice(0, 5).forEach(event => {
+     const desc = (event.description || event.brief || '').toLowerCase();
+     if (desc.includes('camera') || desc.includes('settings')) commonElements.add('Camera settings and controls');
+     if (desc.includes('exposure') || desc.includes('aperture') || desc.includes('iso')) commonElements.add('Exposure fundamentals (aperture, shutter speed, ISO)');
+     if (desc.includes('composition')) commonElements.add('Composition techniques');
+     if (desc.includes('practical') || desc.includes('hands-on')) commonElements.add('Practical hands-on sessions');
+     if (desc.includes('lightroom') || desc.includes('editing')) commonElements.add('Photo editing and post-processing');
+     if (desc.includes('feedback') || desc.includes('review')) commonElements.add('Image review and feedback');
+     if (desc.includes('portfolio') || desc.includes('project')) commonElements.add('Portfolio development');
+   });
+   
+   if (commonElements.size > 0) {
+     answer += Array.from(commonElements).slice(0, 6).map(el => `• ${el}`).join('\n') + '\n\n';
+   }
+   
+   answer += `Each course varies in content and duration. Below are the specific courses available:\n\n`;
+   answer += eventList.slice(0, 10).map(event => {
+     const title = event.title || event.name || 'Untitled Course';
+     const brief = event.brief || event.description || '';
+     const briefPreview = brief.length > 150 ? brief.substring(0, 150) + '...' : brief;
+     return `**${title}**${briefPreview ? '\n' + briefPreview : ''}`;
+   }).join('\n\n');
+   
+   return answer;
  }
  
  const { isLocationQuery, isTimeQuery } = analyzeQueryTypes(query);
