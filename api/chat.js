@@ -1526,7 +1526,7 @@ function getPolicyAnswers(lc) {
 // Helper functions for each policy type
 function getTermsAndConditionsAnswer(lc) {
  if (lc.includes("terms") || lc.includes("conditions") || lc.includes("policy")) {
- return `**Terms and Conditions**: Alan Ranger Photography has comprehensive terms and conditions covering booking policies, copyright, privacy, and insurance. All content and photos are copyright of Alan Ranger unless specifically stated. For full details, visit the [Terms and Conditions page](https://www.alanranger.com/terms-and-conditions).\n\n`;
+ return `**Terms and Conditions**: Alan Ranger Photography has comprehensive terms and conditions covering booking policies, copyright, privacy, and insurance. All content and photos are copyright of Alan Ranger unless specifically stated. For full details, please contact Alan directly using the contact form or WhatsApp in the header section of this chat.\n\n`;
  }
  return null;
  }
@@ -1540,28 +1540,28 @@ function getContactInformationAnswer(lc) {
  
 function getBookingCancellationAnswer(lc) {
  if (lc.includes("refund") || lc.includes("cancel") || lc.includes("booking")) {
- return `**Booking and Cancellation**: For course changes, please notify at least four weeks in advance. Alan Ranger Photography has comprehensive booking terms and conditions, public liability insurance, and CRB disclosure. Full details are available in the [Terms and Conditions](https://www.alanranger.com/terms-and-conditions).\n\n`;
+ return `**Booking and Cancellation**: For course changes, please notify at least four weeks in advance. Alan Ranger Photography has comprehensive booking terms and conditions, public liability insurance, and CRB disclosure. For full details, please contact Alan directly using the contact form or WhatsApp in the header section of this chat.\n\n`;
  }
  return null;
  }
  
 function getProfessionalQualificationsAnswer(lc) {
  if (lc.includes("insurance") || lc.includes("qualified") || lc.includes("professional")) {
- return `**Professional Qualifications**: Alan Ranger Photography has public liability insurance, professional indemnity insurance, CRB disclosure, and professional qualifications/accreditations. Full certificates and documentation are available on the [Terms and Conditions page](https://www.alanranger.com/terms-and-conditions).\n\n`;
+ return `**Professional Qualifications**: Alan Ranger Photography has public liability insurance, professional indemnity insurance, CRB disclosure, and professional qualifications/accreditations. For full certificates and documentation, please contact Alan directly using the contact form or WhatsApp in the header section of this chat.\n\n`;
  }
  return null;
  }
  
 function getPaymentPlansAnswer(lc) {
  if (lc.includes("payment") && !lc.includes("voucher") && !lc.includes("gift")) {
- return `**Payment Plans**: Alan Ranger Photography offers "Pick N Mix" payment plans to help spread the cost of courses and workshops. Full terms and conditions for payment options are detailed in the [Terms and Conditions](https://www.alanranger.com/terms-and-conditions).\n\n`;
+ return `**Payment Plans**: Alan Ranger Photography offers "Pick N Mix" payment plans to help spread the cost of courses and workshops. For full terms and conditions for payment options, please contact Alan directly using the contact form or WhatsApp in the header section of this chat.\n\n`;
  }
  return null;
  }
  
 function getPrivacyDataProtectionAnswer(lc) {
  if (lc.includes("privacy") || lc.includes("data") || lc.includes("newsletter")) {
- return `**Privacy and Data Protection**: Alan Ranger Photography has comprehensive privacy and cookie policies. When you subscribe to the newsletter, you'll receive an email to verify and confirm your subscription. Full privacy details are available in the [Terms and Conditions](https://www.alanranger.com/terms-and-conditions).\n\n`;
+ return `**Privacy and Data Protection**: Alan Ranger Photography has comprehensive privacy and cookie policies. When you subscribe to the newsletter, you'll receive an email to verify and confirm your subscription. For full privacy details, please contact Alan directly using the contact form or WhatsApp in the header section of this chat.\n\n`;
  }
  return null;
  }
