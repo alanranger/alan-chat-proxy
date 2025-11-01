@@ -1,6 +1,7 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
+const { validateAnswerQuality } = require('./validate-answer-quality.cjs');
 
 // Load test data
 const interactiveData = JSON.parse(fs.readFileSync('testing-scripts/interactive-testing-data.json', 'utf8'));
@@ -124,10 +125,28 @@ async function runBaselineTest(testConfig) {
       console.log(`[${i + 1}/${testConfig.questions.length}] (${progress}%) Testing: "${question.question}"`);
       
       const result = await testQuery(question, testConfig.name);
+      
+      // Validate answer quality (catch regressions)
+      const validation = validateAnswerQuality(
+        result.query,
+        result.response.answer,
+        result.response.type,
+        result.response.sources
+      );
+      
+      if (!validation.valid) {
+        console.log(`  ⚠️  Quality issues: ${validation.errors.join(', ')}`);
+      } else if (validation.warnings.length > 0) {
+        console.log(`  ⚠️  Warnings: ${validation.warnings.join(', ')}`);
+      }
+      
+      // Add validation results to result object
+      result.qualityValidation = validation;
       results.push(result);
       
       // Log key metrics
-      console.log(`  ✅ Status: ${result.status}, Confidence: ${(result.response.confidence * 100).toFixed(1)}%, Answer Length: ${result.analysis.answerLength}`);
+      const statusIcon = validation.errors.length > 0 ? '❌' : (validation.warnings.length > 0 ? '⚠️' : '✅');
+      console.log(`  ${statusIcon} Status: ${result.status}, Confidence: ${(result.response.confidence * 100).toFixed(1)}%, Answer Length: ${result.analysis.answerLength}`);
       
       // Add small delay to avoid overwhelming the server
       await new Promise(resolve => setTimeout(resolve, 100));
@@ -164,6 +183,10 @@ async function runBaselineTest(testConfig) {
     .filter(r => r.response?.confidence !== undefined)
     .reduce((sum, r) => sum + r.response.confidence, 0) / successfulTests || 0;
   
+  // Quality validation stats
+  const qualityErrors = results.filter(r => r.qualityValidation && !r.qualityValidation.valid).length;
+  const qualityWarnings = results.filter(r => r.qualityValidation && r.qualityValidation.warnings.length > 0).length;
+  
   const summary = {
     testName: testConfig.name,
     description: testConfig.description,
@@ -174,6 +197,9 @@ async function runBaselineTest(testConfig) {
     failedTests,
     successRate: `${(successfulTests / testConfig.questions.length * 100).toFixed(1)}%`,
     averageConfidence: `${(avgConfidence * 100).toFixed(1)}%`,
+    qualityErrors,
+    qualityWarnings,
+    qualityPassRate: `${((testConfig.questions.length - qualityErrors) / testConfig.questions.length * 100).toFixed(1)}%`,
     results
   };
   
@@ -192,6 +218,13 @@ async function runBaselineTest(testConfig) {
   console.log(`✅ Successful: ${successfulTests}/${testConfig.questions.length} (${summary.successRate})`);
   console.log(`❌ Failed: ${failedTests}`);
   console.log(`📈 Average Confidence: ${summary.averageConfidence}`);
+  console.log(`📊 Quality Pass Rate: ${summary.qualityPassRate} (${qualityErrors} errors, ${qualityWarnings} warnings)`);
+  
+  if (qualityErrors > 0) {
+    console.log(`\n❌ QUALITY ISSUES DETECTED: ${qualityErrors} questions with errors`);
+    console.log(`   These indicate regressions (e.g., wrong routing, generic responses)`);
+  }
+  
   console.log(`💾 Results saved to: ${filename}`);
   
   return summary;

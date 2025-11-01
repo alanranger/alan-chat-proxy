@@ -1,5 +1,5 @@
 # 🧠 AI_TODO_LIST_CURRENT.md  
-_Last updated: 31 Oct 2025_  
+_Last updated: 1 Nov 2025_  
 _Alan Ranger — Chat AI Bot / alan-chat-proxy_
 
 ---
@@ -18,6 +18,13 @@ All older references or notes can be found inside `/Archive/AI_TODO_LIST_2025-01
 ## ✅ Recently Completed (Last 2 Weeks)
 | Date | Completed Item | Notes |
 |------|-----------------|-------|
+| 1 Nov 2025 | **Baseline Updated** | New baseline established: baseline-40-question-interactive-subset-2025-11-01T13-32-45-780Z.json (100% success, 92.5% quality) |
+| 1 Nov 2025 | **Q36 Fixed** | "How do I subscribe to the free online photography course?" now returns proper answer (391 chars) instead of generic fallback |
+| 1 Nov 2025 | **Q27 Fixed** | "What is the exposure triangle?" now returns proper technical answer instead of empty response |
+| 1 Nov 2025 | **Debug Code Removed** | All Q36 debug code removed from handleServiceQueries, getServiceAnswers, and related functions |
+| 1 Nov 2025 | **Routing Logic Restored** | Course queries routing restored - early exit logic improved to prevent service interception of event queries |
+| 1 Nov 2025 | **Testing Analysis** | Comprehensive response analysis document created with detailed breakdown of all 40 questions |
+| 1 Nov 2025 | **Script Updates** | analyze-40q-results.cjs and make-40q-side-by-side-oct28.cjs updated to use new Nov 1 baseline |
 | 31 Oct 2025 | **40Q Interactive Testing Baseline** | Saved baseline-40q-2025-10-31-interactive.csv - 8 Pass (20%), 32 Fail (80%) - comprehensive analysis completed |
 | 31 Oct 2025 | **Service Rendering Fix** | Added service tile rendering to interactive-testing.html to match live chat display |
 | 31 Oct 2025 | **Critical Issues Analysis** | Documented 32 failing questions with prioritized fixes (P1/P2/P3) and testing strategy |
@@ -48,17 +55,22 @@ All older references or notes can be found inside `/Archive/AI_TODO_LIST_2025-01
 ## 🚧 Active Tasks (Current Focus)
 | Priority | Task | Description | Owner | Status |
 |-----------|------|--------------|-------|--------|
-| 🔴 P1 | **Fix Missing Initial Responses** | Q23 (exposure triangle), Q38 (free course subscribe) - ensure technical questions generate answers | Cursor | Pending |
-| 🔴 P1 | **Fix Wrong Routing** | 12+ questions with incorrect routing: equipment, service, technical queries need pattern matches | Cursor | Pending |
-| 🔴 P1 | **Remove Article Cap** | Q7 (tripod) should show ALL related articles - remove 6-article cap for equipment/technical questions | Cursor | Pending |
-| 🔴 P1 | **Fix Service/Landing Tiles** | 7+ questions missing service tiles or should use landing pages for person queries | Cursor | Pending |
+| 🔴 P1 | **Fix Course Logistics Routing** | Q17 (laptop for lightroom course), Q20 (weeks for beginners course) - route to events not services | Cursor | In Progress |
+| 🔴 P1 | **Fix Missing Initial Responses** | ✅ Q27 (exposure triangle) - FIXED | Cursor | ✅ Complete |
+| 🔴 P1 | **Fix Missing Initial Responses** | ✅ Q36 (free course subscribe) - FIXED | Cursor | ✅ Complete |
+| 🔴 P1 | **Fix Wrong Routing** | Course logistics queries need early exit logic adjustment in handleServiceQueries | Cursor | In Progress |
+| 🟡 P2 | **Remove Article Cap** | Q7 (tripod) should show ALL related articles - remove 6-article cap for equipment/technical questions | Cursor | Pending |
+| 🟡 P2 | **Fix Service/Landing Tiles** | Some questions missing service tiles or should use landing pages for person queries | Cursor | Pending |
 | 🟡 P2 | **Improve Article Relevance** | Wrong articles shown, better matches exist - improve scoring algorithm | Cursor | Pending |
 | 🟡 P2 | **Course vs Workshop Distinction** | Course queries showing workshops - need separate classification | Cursor | Pending |
 | 🟡 P2 | **Answer Quality** | Generate conversational answers from content chunks for technical questions | Cursor | Pending |
 | 🟡 P2 | **Remove URLs from Responses** | Clean up hardcoded answers to remove inline URLs | Cursor | Pending |
 | 🟢 P3 | **Free Course Edge Case** | Special routing for "free online photography course" queries | Cursor | Pending |
 | 🟢 P3 | **Event Selection Criteria** | Improve logging/transparency for event filtering | Cursor | Pending |
-| 🔸 High | **40Q Baseline Saved** | baseline-40q-2025-10-31-interactive.csv saved for comparison | Cursor | ✅ Complete |
+| 🔸 High | **40Q Baseline Saved** | ✅ Nov 1 baseline established - baseline-40-question-interactive-subset-2025-11-01T13-32-45-780Z.json | Cursor | ✅ Complete |
+| 🔸 High | **Testing Infrastructure** | ✅ Automatic regression detection, side-by-side comparisons, detailed analysis reports | Cursor | ✅ Complete |
+| 🔸 High | **Q36 Subscribe Fix** | ✅ Pattern matching working, returns proper answer instead of generic fallback | Cursor | ✅ Complete |
+| 🔸 High | **Q27 Exposure Triangle Fix** | ✅ Technical answer now returned correctly | Cursor | ✅ Complete |
 | 🔸 High | **Critical Fixes Document** | CRITICAL_FIXES_AND_TESTING_STRATEGY.md created with prioritized fixes | Cursor | ✅ Complete |
 | 🔸 High | **Service Rendering Fix** | Interactive testing now matches live chat service tile display | Cursor | ✅ Complete |
 | 🔸 High | **Add Missing Hardcoded Answers** | Add hardcoded answers for 'what is histogram' and 'what is long exposure photography' | Cursor | Pending |

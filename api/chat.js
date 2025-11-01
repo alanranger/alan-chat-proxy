@@ -1294,11 +1294,17 @@ function getEquipmentAnswer() {
  
 function getTechnicalAnswers(lc) {
  return getJpegRawAnswer(lc) ||
+ getEditRawAnswer(lc) ||
  getExposureTriangleAnswer(lc) ||
  getIsoAnswer(lc) ||
  getApertureAnswer(lc) ||
  getShutterSpeedAnswer(lc) ||
  getCompositionAnswer(lc) ||
+ getLongExposureAnswer(lc) ||
+ getWhiteBalanceAnswer(lc) ||
+ getHdrAnswer(lc) ||
+ getFlashPhotographyAnswer(lc) ||
+ getImprovePhotographySkillsAnswer(lc) ||
  // getFilterAnswer(lc) || // DISABLED: Let RAG system handle filter queries
  getDepthOfFieldAnswer(lc) ||
  getSharpnessAnswer(lc) ||
@@ -1306,9 +1312,17 @@ function getTechnicalAnswers(lc) {
  null;
 }
 
+// Helper function for editing RAW files
+function getEditRawAnswer(lc) {
+  if (lc.includes("edit raw") || (lc.includes("edit") && lc.includes("raw files"))) {
+    return `**How to Edit RAW Files**: RAW files require photo editing software to process. You'll need software like Adobe Lightroom, Photoshop, or free alternatives like Darktable or RawTherapee. Key steps:\n- Import RAW files into your editing software\n- Adjust exposure, white balance, and color temperature\n- Apply sharpening and noise reduction\n- Make creative adjustments to contrast, saturation, and highlights/shadows\n- Export as JPEG or other formats for sharing\n\nRAW files give you much more flexibility than JPEG since they contain all the image data captured by your camera sensor.\n\n`;
+  }
+  return null;
+}
+
 // Helper function for JPEG vs RAW
 function getJpegRawAnswer(lc) {
- if (lc.includes("jpeg") && lc.includes("raw")) {
+ if (lc.includes("jpeg") && lc.includes("raw") && !lc.includes("edit raw")) {
  return `**JPEG vs RAW**: JPEG files are smaller and ready to use, while RAW files give you more editing flexibility but require post-processing. For beginners, JPEG is fine to start with, but RAW becomes valuable as you develop your editing skills.\n\n`;
  }
  return null;
@@ -1316,11 +1330,13 @@ function getJpegRawAnswer(lc) {
  
 // Helper function for exposure triangle
 function getExposureTriangleAnswer(lc) {
- if (lc.includes("exposure triangle")) {
- return `**The Exposure Triangle** consists of three key settings:\n- **Aperture** (f-stop): Controls depth of field and light\n- **Shutter Speed**: Controls motion blur and light\n- **ISO**: Controls sensor sensitivity and light\n\nBalancing these three creates proper exposure.\n\n`;
- }
- return null;
- }
+  // Remove quotes and normalize - handle queries with quotes like: "What is the exposure triangle (aperture, shutter, ISO)?"
+  const normalized = lc.replace(/["""]/g, '').trim();
+  if (normalized.includes("exposure triangle") || (normalized.includes("exposure") && normalized.includes("triangle"))) {
+    return `**The Exposure Triangle** consists of three key settings:\n- **Aperture** (f-stop): Controls depth of field and light\n- **Shutter Speed**: Controls motion blur and light\n- **ISO**: Controls sensor sensitivity and light\n\nBalancing these three creates proper exposure.\n\n`;
+  }
+  return null;
+}
 
 // Helper function for ISO
 function getIsoAnswer(lc) {
@@ -1370,6 +1386,46 @@ function getDepthOfFieldAnswer(lc) {
  return null;
  }
  
+// Helper function for long exposure
+function getLongExposureAnswer(lc) {
+  if (lc.includes("long exposure")) {
+    return `**Long Exposure Photography** uses slow shutter speeds (typically 1 second or longer) to create unique effects. It's perfect for:\n- Blurring moving water (rivers, waterfalls, oceans) to create smooth, silky effects\n- Capturing light trails from cars at night\n- Creating motion blur in clouds\n- Producing dreamy, ethereal landscape images\n\nYou'll need a tripod for stability, neutral density (ND) filters to reduce light in bright conditions, and practice with your camera's manual settings.\n\n`;
+  }
+  return null;
+}
+
+// Helper function for white balance
+function getWhiteBalanceAnswer(lc) {
+  if (lc.includes("white balance")) {
+    return `**White Balance** controls the color temperature in your photos to ensure whites appear white under different lighting conditions. Different light sources have different color temperatures:\n- Daylight: 5000-5500K (neutral)\n- Shade: 7000-8000K (blue/cool)\n- Tungsten/Incandescent: 2500-3000K (warm/yellow)\n- Fluorescent: 4000-4500K (green)\n\nYou can use presets (Daylight, Cloudy, Tungsten, etc.) or set custom white balance. For the most accurate results, use a custom white balance by photographing a white or neutral gray card under your shooting conditions.\n\n`;
+  }
+  return null;
+}
+
+// Helper function for HDR photography
+function getHdrAnswer(lc) {
+  if (lc.includes("hdr") || (lc.includes("high dynamic range") && lc.includes("photography"))) {
+    return `**HDR (High Dynamic Range) Photography** combines multiple exposures of the same scene (one underexposed, one correctly exposed, one overexposed) to capture detail in both shadows and highlights. This is especially useful for:\n- High-contrast scenes (bright sky with dark foreground)\n- Landscape photography with dramatic skies\n- Indoor scenes with windows\n- Any scene where the camera can't capture the full range of light in a single exposure\n\nYou can create HDR images by taking multiple shots manually and combining them in software, or use your camera's built-in HDR mode if available.\n\n`;
+  }
+  return null;
+}
+
+// Helper function for flash photography
+function getFlashPhotographyAnswer(lc) {
+  if ((lc.includes("flash") && lc.includes("photography")) || (lc.includes("how do i") && lc.includes("use flash"))) {
+    return `**Flash Photography** helps you add light to your images in low-light situations or fill in shadows. Key techniques include:\n- **Bounce Flash**: Point the flash at a ceiling or wall to create softer, more natural-looking light\n- **Fill Flash**: Use flash in daylight to fill in shadows on your subject's face\n- **Flash Compensation**: Adjust flash power (-1 to -3 stops) to balance with ambient light\n- **Off-Camera Flash**: Position the flash away from the camera for more directional lighting\n- **Diffusers**: Soften harsh flash light with diffusers or bounce cards\n\nStart with your camera's auto flash mode, then experiment with manual flash settings as you gain confidence.\n\n`;
+  }
+  return null;
+}
+
+// Helper function for improving photography skills
+function getImprovePhotographySkillsAnswer(lc) {
+  if ((lc.includes("improve") || lc.includes("get better")) && lc.includes("photography") && (lc.includes("skills") || lc.includes("photography skills"))) {
+    return `**How to Improve Your Photography Skills**: Here are key ways to develop as a photographer:\n- **Practice regularly**: Take photos regularly and experiment with different subjects and settings\n- **Learn the fundamentals**: Master exposure (aperture, shutter speed, ISO), composition techniques, and focusing\n- **Study others' work**: Analyze photographs you admire to understand what makes them effective\n- **Get feedback**: Join photography communities, share your work, and learn from critiques\n- **Take courses or workshops**: Structured learning can accelerate your development and provide expert guidance\n- **Practice manual mode**: Understanding manual controls gives you creative control over your images\n- **Post-process thoughtfully**: Learn basic editing to enhance your images without over-processing\n- **Experiment with different genres**: Try landscape, portrait, macro, or street photography to discover your interests\n\nConsistent practice combined with learning and feedback is the key to improving your photography skills.\n\n`;
+  }
+  return null;
+}
+
 // Helper function for sharpness
 function getSharpnessAnswer(lc) {
  if (lc.includes("sharp") || lc.includes("blurry")) {
@@ -1451,10 +1507,14 @@ const SERVICE_PATTERNS = [
  matcher: (lc) => lc.includes("private photography lessons") || lc.includes("private lessons") || lc.includes("1-2-1") || lc.includes("face-to-face"),
  answer: `**Private Photography Lessons**: Alan offers bespoke face-to-face private photography lessons in Coventry (CV4 9HW) or at a location of your choice. Lessons are tailored to your specific needs and delivered at times that suit your availability. [Book Private Lessons](https://www.alanranger.com/private-photography-lessons)\n\n`
  },
- {
- matcher: (lc) => lc.includes("private") || lc.includes("mentoring") || lc.includes("tuition"),
- answer: `**Private Lessons & Mentoring**: Alan offers face-to-face private photography lessons in Coventry (CV4 9HW) or at a location of your choice. Lessons are bespoke to your needs and available at times that suit you. Also available: RPS mentoring for distinctions, monthly mentoring assignments, and 1-2-1 Zoom support. Visit [Private Lessons](https://www.alanranger.com/private-photography-lessons) for details.\n\n`
- },
+  {
+    matcher: (lc) => (lc.includes("personalised feedback") || lc.includes("personalized feedback")) && (lc.includes("image") || lc.includes("photo") || lc.includes("get") || lc.includes("how")),
+    answer: `**Personalised Feedback**: Alan offers 1-2-1 private photography lessons (face-to-face in Coventry or online via Zoom) where you can get personalised feedback on your images. These sessions are tailored to your specific needs and help you improve your photography skills through direct critique and guidance. [Book Private Lessons for Feedback](https://www.alanranger.com/private-photography-lessons)\n\n`
+  },
+  {
+    matcher: (lc) => lc.includes("private") || lc.includes("mentoring") || lc.includes("tuition"),
+    answer: `**Private Lessons & Mentoring**: Alan offers face-to-face private photography lessons in Coventry (CV4 9HW) or at a location of your choice. Lessons are bespoke to your needs and available at times that suit you. Also available: RPS mentoring for distinctions, monthly mentoring assignments, and 1-2-1 Zoom support. Visit [Private Lessons](https://www.alanranger.com/private-photography-lessons) for details.\n\n`
+  },
  {
  matcher: (lc) => lc.includes("voucher") || lc.includes("gift") || lc.includes("present"),
  answer: `**Gift Vouchers**: Digital photography gift vouchers are available from Â£5-Â£600, perfect for any photography enthusiast. Vouchers can be used for workshops, courses, private lessons, or any photography tuition event. They expire 12 months from purchase date and can be split across multiple purchases. [Buy Gift Vouchers](https://www.alanranger.com/photography-gift-vouchers)\n\n`
@@ -1465,15 +1525,53 @@ const SERVICE_PATTERNS = [
  },
  {
  matcher: (lc) => lc.includes("commercial photography") || lc.includes("do you do commercial"),
- answer: `**Commercial Photography**: Alan specializes in photography education and workshops rather than commercial photography services. His focus is on teaching photography through courses, workshops, and private lessons. For commercial photography needs, he can recommend other professional photographers in his network. [View Alan's Services](https://www.alanranger.com/photography-tuition-services)\n\n`
+ answer: `**Commercial Photography**: Alan Ranger offers commercial photography services in addition to photography education. He provides workshops, courses, private lessons, and commercial photography services. To discuss your commercial photography needs, please contact Alan directly using the contact form or WhatsApp in the header section of this chat. [View Alan's Services](https://www.alanranger.com/photography-tuition-services)\n\n`
  },
-  {
-    matcher: (lc) => lc.includes("portrait photography") || lc.includes("do you do portrait"),
-    answer: `**Portrait Photography**: Alan focuses on photography education rather than portrait photography services. His expertise is in teaching photography through courses, workshops, and private lessons. For portrait photography needs, he can recommend other professional photographers in his network. [View Alan's Services](https://www.alanranger.com/photography-tuition-services)\n\n`
-  },
+         {
+           matcher: (lc) => lc.includes("portrait photography") || lc.includes("do you do portrait"),
+           answer: `**Portrait Photography**: Alan focuses on photography education rather than portrait photography services. His expertise is in teaching photography through courses, workshops, and private lessons. For portrait photography needs, he can recommend other professional photographers in his network. [View Alan's Services](https://www.alanranger.com/photography-tuition-services)\n\n`
+         },
+         {
+           matcher: (lc) => (lc.includes("hire") || lc.includes("can i hire")) && (lc.includes("photographer") || lc.includes("professional")) && lc.includes("coventry"),
+           answer: `**Hiring a Professional Photographer in Coventry**: Alan Ranger offers professional photography services in Coventry and the surrounding areas, in addition to his photography education services. He provides workshops, courses, and private lessons, as well as commercial photography services. To discuss your photography needs, please contact Alan directly using the contact form or WhatsApp in the header section of this chat. [View Alan's Photography Services](https://www.alanranger.com/photography-tuition-services)\n\n`
+         },
+         {
+           matcher: (lc) => (lc.includes("hire") || lc.includes("can i hire")) && lc.includes("photographer"),
+           answer: `**Hiring a Professional Photographer**: Alan Ranger offers professional photography services in addition to photography education. He provides workshops, courses, private lessons, and commercial photography services. To discuss your photography needs or requirements, please contact Alan directly using the contact form or WhatsApp in the header section of this chat. [View Alan's Photography Services](https://www.alanranger.com/photography-tuition-services)\n\n`
+         },
   {
     matcher: (lc) => lc.includes("photography academy") && lc.includes("free"),
     answer: `**Free Photography Academy**: Yes! Alan offers a completely free online photography course that you can subscribe to. It's designed to help beginners learn photography fundamentals at their own pace. The course covers essential topics like exposure, composition, and camera settings. [Subscribe to Free Course](https://www.alanranger.com/free-online-photography-course)\n\n`
+  },
+  {
+    matcher: (lc) => (lc.includes("is the online photography course really free") || 
+                      lc.includes("is the free course really free") || 
+                      (lc.includes("really free") && lc.includes("online photography course")) ||
+                      (lc.includes("really free") && lc.includes("photography course"))),
+    answer: `**Is the Online Photography Course Really Free?** Yes, the full course is completely free to access — no credit card required. It's a 60-module Foundation Course with instant access once you sign up. Optional paid services (like 1-to-1 help) are available, but not needed to complete the course. [Sign up for Free Course](https://www.alanranger.com/free-online-photography-course)\n\n`
+  },
+  {
+    // Subscribe/signup queries for free course - must come before generic free course pattern
+    matcher: (lc) => (lc.includes("subscribe") || lc.includes("sign up") || lc.includes("how do i join") || lc.includes("how to join") || lc.includes("how can i subscribe") || lc.includes("how can i join")) && 
+             (lc.includes("free online photography course") || lc.includes("free course") || 
+              (lc.includes("photography academy") && lc.includes("free")) || 
+              lc.includes("free photography course") || lc.includes("free academy") ||
+              (lc.includes("online photography course") && lc.includes("free"))),
+    answer: `**How to Subscribe to the Free Online Photography Course**: Click the "Sign up — Free Online Course" button on the course page to register instantly with your email address. You'll receive an email to verify and confirm your subscription. Once verified, you'll gain instant access to all 60 free modules. [Sign up for Free Course](https://www.alanranger.com/free-online-photography-course)\n\n`
+  },
+  {
+    matcher: (lc) => (lc.includes("certificate") || lc.includes("certification") || lc.includes("exams and certification")) && 
+                      (lc.includes("photography course") || lc.includes("course") || lc.includes("online course")),
+    answer: `**Certificates**: The free online photography course provides free access to 60 modules of content, but I don't have specific information about certificates for this course. For details about certificates, qualifications, or course completion credentials, please contact Alan directly using the contact form or WhatsApp in the header section of this chat. [View Free Course](https://www.alanranger.com/free-online-photography-course)\n\n`
+  },
+  {
+    matcher: (lc) => (lc.includes("online photography course") && !lc.includes("beginners") && !lc.includes("lightroom")) ||
+                      (lc.includes("free online course") && lc.includes("photography")) ||
+                      (lc.includes("free photography course") && !lc.includes("beginners")) ||
+                      (lc.includes("photography academy") && !lc.includes("beginners")) ||
+                      (lc.includes("free academy") && lc.includes("photography")) ||
+                      (lc.includes("course add-ons") || lc.includes("course addons")),
+    answer: `**Free Online Photography Course**: Alan offers a completely free 60-module Foundation Course in photography. It's designed to help beginners learn photography fundamentals at their own pace. The course covers essential topics like exposure, composition, camera settings, gear guides, composition techniques, and practical assignments. It's completely free with no credit card required. [Sign up for Free Course](https://www.alanranger.com/free-online-photography-course)\n\n`
   },
   {
     // Most specific: gallery + feedback/image submission combined query
@@ -1493,10 +1591,16 @@ const SERVICE_PATTERNS = [
 ];
 
 function getServiceAnswers(lc) {
- for (const pattern of SERVICE_PATTERNS) {
- if (pattern.matcher(lc)) {
- return pattern.answer;
- }
+ for (let i = 0; i < SERVICE_PATTERNS.length; i++) {
+   const pattern = SERVICE_PATTERNS[i];
+   try {
+     const matched = pattern.matcher(lc);
+     if (matched) {
+       return pattern.answer;
+     }
+   } catch (error) {
+     // Pattern matcher error, continue to next pattern
+   }
  }
  return null;
 }
@@ -6499,24 +6603,144 @@ async function handleClarificationQuery(context) {
  }
 }
 
+// Helper function to score article relevance to a query
+function scoreArticleRelevance(article, query) {
+  const queryLower = query.toLowerCase().replace(/["""]/g, '').trim();
+  const queryWords = queryLower.split(/\s+/).filter(w => w.length > 2);
+  const title = (article.title || '').toLowerCase();
+  const url = (article.page_url || article.url || '').toLowerCase();
+  const description = ((article.meta_description || article.description) || '').toLowerCase();
+  
+  let score = 0;
+  
+  // Extract main concept from query (e.g., "long exposure" from "what is long exposure")
+  const conceptMatch = queryLower.match(/what is (.+?)(\?|$|and|or|how)/i);
+  const mainConcept = conceptMatch ? conceptMatch[1].trim() : queryLower.replace(/^(what is|what's|how do|how can)\s+/i, '').trim();
+  const conceptWords = mainConcept.split(/\s+/).filter(w => w.length > 2);
+  
+  // Title matches - highest weight
+  for (const word of conceptWords) {
+    if (title.includes(word)) score += 10;
+  }
+  if (title.includes(mainConcept)) score += 20;
+  
+  // URL matches - high weight
+  const urlSlug = mainConcept.replace(/\s+/g, '-');
+  if (url.includes(urlSlug)) score += 15;
+  
+  // Description matches
+  for (const word of conceptWords) {
+    if (description.includes(word)) score += 3;
+  }
+  if (description.includes(mainConcept)) score += 10;
+  
+  // Keyword matches in title/description
+  for (const word of queryWords) {
+    if (title.includes(word)) score += 5;
+    if (description.includes(word)) score += 2;
+  }
+  
+  // Penalize mismatches (e.g., "exposure" article for "long exposure" query)
+  if (mainConcept.includes('long exposure') && !title.includes('long') && title.includes('exposure')) {
+    score -= 30; // Heavy penalty for wrong article
+  }
+  if (mainConcept.includes('exposure triangle') && !title.includes('triangle') && !title.includes('exposure triangle')) {
+    score -= 30;
+  }
+  
+  return score;
+}
+
+// Helper function to find the most relevant article from a list
+function findMostRelevantArticle(articles, query) {
+  if (!articles || articles.length === 0) return null;
+  if (articles.length === 1) return articles[0];
+  
+  // Score all articles
+  const scored = articles.map(article => ({
+    article,
+    score: scoreArticleRelevance(article, query)
+  }));
+  
+  // Sort by score (highest first)
+  scored.sort((a, b) => b.score - a.score);
+  
+  console.log(`[DEBUG] Article relevance scores: ${scored.map(s => `${s.article.title?.substring(0, 40)}: ${s.score}`).join(', ')}`);
+  
+  // Return the highest scoring article (if score > 0, otherwise return first as fallback)
+  const best = scored[0];
+  if (best.score > 0) {
+    return best.article;
+  }
+  
+  // Fallback to first article if no good match
+  return articles[0];
+}
+
 // Helper: Generate evidence-based answer (Low Complexity)
 // Helper function to generate article-based answer
 function generateArticleAnswer(articles, query = '') {
- const bestArticle = articles[0];
- 
- // Extract the main concept from the query for FAQ matching
- const concept = query.toLowerCase().replace(/^(what is|what's|what are|what's the|how does|how do|why is|why are|when should|when do|where is|where are)\s+/i, '').trim();
- 
- // Try to extract FAQ content from json_ld_data first
- const faqAnswer = extractAnswerFromJsonLd(bestArticle, concept);
- if (faqAnswer) {
- console.log(`[SUCCESS] Generated FAQ answer from article: "${faqAnswer.substring(0, 100)}..."`);
- return faqAnswer;
- }
- 
- // Fallback to generic response
- console.log(`[FALLBACK] No FAQ content found, using generic response`);
- return `Based on Alan Ranger's expertise, here's what you need to know about your question.\n\n*For detailed information, read the full guide: ${bestArticle.page_url}*`;
+  if (!articles || articles.length === 0) {
+    console.log(`[WARN] generateArticleAnswer: No articles provided`);
+    return '';
+  }
+  
+  const bestArticle = articles[0];
+  const qlc = query.toLowerCase().replace(/["""]/g, '').trim();
+  
+  // Extract the main concept from the query for FAQ matching
+  const concept = qlc.replace(/^(what is|what's|what are|what's the|how does|how do|why is|why are|when should|when do|where is|where are)\s+/i, '').trim();
+  
+  // Try to extract FAQ content from json_ld_data first
+  const faqAnswer = extractAnswerFromJsonLd(bestArticle, concept);
+  if (faqAnswer) {
+    console.log(`[SUCCESS] Generated FAQ answer from article: "${faqAnswer.substring(0, 100)}..."`);
+    return faqAnswer;
+  }
+  
+  // Try to extract from article description/meta_description for "what is" queries
+  if (qlc.includes('what is') || qlc.includes('what\'s')) {
+    const articleDescription = bestArticle.meta_description || bestArticle.description;
+    if (articleDescription && articleDescription.trim().length > 50) {
+      console.log(`[SUCCESS] Extracting answer from article description for "what is" query`);
+      const extracted = extractAnswerFromArticleDescription(bestArticle, query);
+      if (extracted && extracted.trim().length > 50) {
+        return extracted;
+      }
+    }
+  }
+  
+  // Try to find most relevant article and extract from description
+  if (articles.length > 1) {
+    const relevantArticle = findMostRelevantArticle(articles, query);
+    if (relevantArticle) {
+      const articleDescription = relevantArticle.meta_description || relevantArticle.description;
+      if (articleDescription && articleDescription.trim().length > 50) {
+        const extracted = extractAnswerFromArticleDescription(relevantArticle, query);
+        if (extracted && extracted.trim().length > 50) {
+          console.log(`[SUCCESS] Extracted answer from most relevant article`);
+          return extracted;
+        }
+      }
+    }
+  }
+  
+  // Last resort: Check if we have any description content before using generic
+  const articleDescription = bestArticle.meta_description || bestArticle.description;
+  if (articleDescription && articleDescription.trim().length > 50) {
+    // Filter to ensure relevance
+    if (filterRelevantContent(articleDescription, query)) {
+      const cleanDescription = cleanResponseText(articleDescription);
+      if (cleanDescription && cleanDescription.trim().length > 50) {
+        console.log(`[SUCCESS] Using article description as answer`);
+        return cleanDescription.substring(0, 500); // Limit length
+      }
+    }
+  }
+  
+  // Only use generic fallback if we truly have no content
+  console.log(`[FALLBACK] No extractable content found, using generic response with article link`);
+  return `Based on Alan Ranger's expertise, here's what you need to know about your question.\n\n*For detailed information, read the full guide: ${bestArticle.page_url}*`;
 }
 
 // Helper function to generate equipment service answer
@@ -7043,25 +7267,24 @@ function cleanRagText(raw) {
 // Helper function to check for contact Alan queries
 function checkContactAlanQuery(query) {
  const contactAlanQueries = [
- /cancellation or refund policy for courses/i,
- /cancellation or refund policy for workshops/i,
- /how do i book a course or workshop/i,
- /can the gift voucher be used for any workshop/i,
- /can the gift voucher be used for any course/i,
- /how do i know which course or workshop is best/i,
- /do you do astrophotography workshops/i,
- /do you get a certificate with the photography course/i,
- /do i get a certificate with the photography course/i,
- /do you i get a certificate with the photography course/i,
- /can my.*attend your workshop/i,
- /can.*year old attend your workshop/i,
- /how do i subscribe to the free online photography course/i,
- /how many students per workshop/i,
- /how many students per class/i,
- /what gear or equipment do i need to bring to a workshop/i,
- /what equipment do i need to bring to a workshop/i,
- /how early should i arrive before a class/i,
- /how early should i arrive before a workshop/i
+   /cancellation or refund policy for courses/i,
+   /cancellation or refund policy for workshops/i,
+   /how do i book a course or workshop/i,
+   /can the gift voucher be used for any workshop/i,
+   /can the gift voucher be used for any course/i,
+   /how do i know which course or workshop is best/i,
+   /do you do astrophotography workshops/i,
+   /do you get a certificate with the photography course/i,
+   /do i get a certificate with the photography course/i,
+   /do you i get a certificate with the photography course/i,
+   /can my.*attend your workshop/i,
+   /can.*year old attend your workshop/i,
+   /how many students per workshop/i,
+   /how many students per class/i,
+   /what gear or equipment do i need to bring to a workshop/i,
+   /what equipment do i need to bring to a workshop/i,
+   /how early should i arrive before a class/i,
+   /how early should i arrive before a workshop/i
  ];
  
  for (const pattern of contactAlanQueries) {
@@ -7958,6 +8181,17 @@ function generateRagAnswer(params) {
     return processEntitiesForRag(query, entities, chunks, results, debugLogs);
   }
 
+  // Last resort: Try to extract from articles if we have them but no chunks/entities
+  if (articles && articles.length > 0) {
+    console.log(`[DEBUG] generateRagAnswer: No chunks/entities, trying article extraction`);
+    const articleAnswer = generateArticleAnswer(articles, query);
+    if (articleAnswer && articleAnswer.trim().length > 50 && 
+        !articleAnswer.includes("Based on Alan Ranger's expertise, here's what you need to know")) {
+      console.log(`[SUCCESS] Extracted answer from articles: "${articleAnswer.substring(0, 100)}..."`);
+      return { answer: articleAnswer, type: "advice", sources: articles.map(a => a.page_url || a.url), debugLogs };
+    }
+  }
+
   return { answer: "", type: "advice", sources: [], debugLogs };
 }
 
@@ -7989,10 +8223,15 @@ function handleRagFallbackLogic(context) {
  let finalType = context.type;
  let finalSources = context.sources;
  
+ // Check for empty or generic responses - but avoid fallback for "Based on Alan Ranger's expertise" if it has article content
+ const isGenericFallback = context.answer && context.answer.includes("Based on Alan Ranger's expertise, here's what you need to know") && 
+                           (!context.answer.includes('*For detailed information') || context.answer.length < 150);
+ 
  if (!context.answer || context.answer.trim().length === 0 || 
  context.answer.includes("Yes, Alan Ranger offers the services you're asking about") ||
  (context.answer.includes("Yes, Alan Ranger") && context.answer.length < 200) ||
- context.answer.includes("I'd be happy to help you with your photography questions")) {
+ context.answer.includes("I'd be happy to help you with your photography questions") ||
+ isGenericFallback) {
  console.log(`[WARN] No answer generated or generic response detected, providing fallback`);
  const fallback = handleRagFallback(context.query);
  finalAnswer = fallback.answer;
@@ -8197,6 +8436,27 @@ function handleGiftVoucherQuery(query) {
 // Helper: Handle about Alan queries (Complexity: Low)
 async function handleAboutAlanQuery(client, query) {
   const qlc = query.toLowerCase();
+  
+  // Handle "where is alan based" queries specifically
+  if (qlc.includes("alan ranger") && (qlc.includes("where") || qlc.includes("based"))) {
+    console.log(`✅ Where is Alan based query detected: "${query}"`);
+    return {
+      success: true,
+      confidence: 0.8,
+      answer: `**Where is Alan Ranger based?** Alan Ranger is based in Coventry, United Kingdom (CV4 9HW). He offers photography workshops, courses, and private lessons both in-person in the Coventry area and online via Zoom. Many of his landscape photography workshops take place in locations throughout the UK, including Wales, Devon, Yorkshire, and the Lake District.\n\n`,
+      type: "advice",
+      sources: { articles: [] },
+      structured: {
+        intent: "advice",
+        articles: [],
+        events: [],
+        products: [],
+        services: []
+      }
+    };
+  }
+  
+  // Handle "who is alan" or background queries
   if ((qlc.includes("alan ranger") || qlc.includes("who is")) && (qlc.includes("who") || qlc.includes("background") || qlc.includes("about") || qlc.includes("photographic background"))) {
     console.log(`✅ About Alan query detected, returning bio as advice: "${query}"`);
     const keywords = extractKeywords(query);
@@ -8320,6 +8580,17 @@ async function handleEquipmentQuery(client, query) {
 
 // Helper: Handle event routing queries (Complexity: Low)
 async function handleEventRoutingQuery(client, query, isEquipmentQuestion) {
+  // Skip event routing for free course queries - these should be handled by service patterns
+  const qlcEvent = query.toLowerCase();
+  if (qlcEvent.includes('free online photography course') || 
+      (qlcEvent.includes('free course') && qlcEvent.includes('photography')) ||
+      (qlcEvent.includes('photography academy') && qlcEvent.includes('free')) ||
+      (qlcEvent.includes('subscribe') && qlcEvent.includes('free')) ||
+      (qlcEvent.includes('really free') && qlcEvent.includes('online photography course'))) {
+    console.log(`[SKIP] Skipping event routing for free course query: "${query}"`);
+    return null;
+  }
+  
   const businessCategory = detectBusinessCategory(query || '');
   const courseLogistics = !isEquipmentQuestion && /\b(course|beginners|lightroom|camera\s+course|weeks|how\s+many\s+weeks|syllabus|schedule)\b/i.test(query || '');
   const eventCues = /\b(workshop|workshops|event|photowalk|next\s+.*workshop|where\s+.*workshop|when\s+.*workshop|autumn\s+workshops|devon\s+workshop|bluebell\s+workshop|how\s+long.*workshop|bluebell|autumn|spring|summer|winter)\b/i.test(query || '');
@@ -8348,8 +8619,31 @@ async function handleEventRoutingQuery(client, query, isEquipmentQuestion) {
 async function handleServiceQueries(client, query) {
   const qlcService = query.toLowerCase();
   
-  // DEBUG: Log for debugging mismatches
-  console.log(`[DEBUG] handleServiceQueries called with query: "${query}"`);
+  // CRITICAL: Early exit for event queries - these should be handled by handleEventRoutingQuery()
+  // Check if this is an event query using the same logic as handleEventRoutingQuery
+  const isEquipmentQuestion = /\b(what\s+(sort\s+of\s+)?camera|what\s+(gear|equipment)|tripod|lens|memory\s+card)\b/i.test(query || '');
+  const businessCategory = detectBusinessCategory(query || '');
+  const courseLogistics = !isEquipmentQuestion && /\b(course|beginners|lightroom|camera\s+course|weeks|how\s+many\s+weeks|syllabus|schedule)\b/i.test(query || '');
+  const eventCues = /\b(workshop|workshops|event|photowalk|next\s+.*workshop|where\s+.*workshop|when\s+.*workshop|autumn\s+workshops|devon\s+workshop|bluebell\s+workshop|how\s+long.*workshop|bluebell|autumn|spring|summer|winter)\b/i.test(query || '');
+  
+  // Check if this is a free course query - these should use SERVICE_PATTERNS
+  const isFreeCourseQuery = qlcService.includes('free online photography course') || 
+                            (qlcService.includes('free course') && qlcService.includes('photography')) ||
+                            (qlcService.includes('photography academy') && qlcService.includes('free')) ||
+                            (qlcService.includes('subscribe') && (qlcService.includes('free') || qlcService.includes('online photography course'))) ||
+                            (qlcService.includes('really free') && qlcService.includes('online photography course')) ||
+                            (qlcService.includes('certificate') && qlcService.includes('photography course'));
+  
+  // If this is NOT a free course query, check if it's an event query and exit early
+  if (!isFreeCourseQuery && !isEquipmentQuestion) {
+    const isWhenQuery = /\b(when|where|next|upcoming|schedule)\b/i.test(query || '') && /\b(workshop|course|event|session)\b/i.test(query || '');
+    
+    // If this looks like an event query, skip service handling and let event routing handle it
+    if (businessCategory === 'Event Queries' || (courseLogistics && isWhenQuery) || eventCues || isWhenQuery) {
+      console.log(`[SKIP] handleServiceQueries: Event query detected, skipping service handling: "${query}"`);
+      return null; // Let handleEventRoutingQuery handle it
+    }
+  }
   
   const isTypesServiceQuery = (qlcService.includes("types") || qlcService.includes("what kind")) && 
                                qlcService.includes("services") && 
@@ -8378,18 +8672,165 @@ async function handleServiceQueries(client, query) {
     }
   }
   
-  // DEBUG: Check pattern matching
+  // Check SERVICE_PATTERNS
   const serviceResponse = getServiceAnswers(qlcService);
   if (serviceResponse) {
     console.log(`[DEBUG] handleServiceQueries: Pattern matched! Query="${query}", Response snippet="${serviceResponse.substring(0, 100)}..."`);
     console.log(`🎯 Service pattern matched for: "${query}"`);
+    
+    // For free course and certificate queries, fetch the service/article to show in related info
+    const isFreeCourseQuery = qlcService.includes('free online photography course') || 
+                              (qlcService.includes('free course') && qlcService.includes('photography')) ||
+                              (qlcService.includes('photography academy') && qlcService.includes('free')) ||
+                              (qlcService.includes('subscribe') && qlcService.includes('free')) ||
+                              qlcService.includes('free photography course') ||
+                              (qlcService.includes('free academy') && qlcService.includes('photography')) ||
+                              (qlcService.includes('online photography course') && !qlcService.includes('beginners') && !qlcService.includes('lightroom')) ||
+                              qlcService.includes('course add-ons') || qlcService.includes('course addons');
+    
+    const isCertificateQuery = (qlcService.includes('certificate') || qlcService.includes('certification') || qlcService.includes('exams and certification')) && 
+                               (qlcService.includes('course') || qlcService.includes('online course'));
+    
+    let articles = [];
+    let services = [];
+    let enrichedAnswer = serviceResponse;
+    
+    if (isFreeCourseQuery) {
+      // Try to find the free course service/article using multiple search terms
+      const freeCourseKeywords = [
+        'free online photography course',
+        'photography academy',
+        'free photography course',
+        'online photography course',
+        'free academy',
+        'course add-ons'
+      ];
+      const freeCourseServices = await findServices(client, { keywords: freeCourseKeywords, limit: 10 });
+      const freeCourseArticles = await findArticles(client, { keywords: freeCourseKeywords, limit: 10 });
+      
+      // Filter for the specific free course page
+      services = (freeCourseServices || []).filter(s => 
+        (s.page_url || s.url || '').includes('free-online-photography-course') ||
+        (s.title || '').toLowerCase().includes('free online photography course') ||
+        (s.title || '').toLowerCase().includes('photography academy')
+      );
+      
+      articles = (freeCourseArticles || []).filter(a => 
+        (a.page_url || a.url || '').includes('free-online-photography-course') ||
+        (a.title || '').toLowerCase().includes('free online photography course') ||
+        (a.title || '').toLowerCase().includes('photography academy')
+      );
+      
+      // Also search page_chunks for FAQ content to enrich the answer
+      try {
+        const { data: faqChunks, error: chunksError } = await client
+          .from('page_chunks')
+          .select('chunk_text, url')
+          .eq('url', 'https://www.alanranger.com/free-online-photography-course')
+          .or('chunk_text.ilike.%FREQUENTLY ASKED QUESTIONS%,chunk_text.ilike.%Is it really free%,chunk_text.ilike.%How do I sign up%,chunk_text.ilike.%How long does it take%')
+          .limit(3);
+        
+        if (!chunksError && faqChunks && faqChunks.length > 0) {
+          console.log(`[DEBUG] Found ${faqChunks.length} FAQ chunks for free course enrichment`);
+          // Extract FAQ content from chunks
+          const faqContent = faqChunks
+            .map(chunk => {
+              const text = chunk.chunk_text || '';
+              // Extract FAQ sections
+              const faqMatch = text.match(/(?:Is it really free\?|How do I sign up\?|How long does it take\?|Can I download|Do I need|Can I do the course)[\s\S]{0,300}/i);
+              return faqMatch ? faqMatch[0] : null;
+            })
+            .filter(Boolean)
+            .join('\n\n');
+          
+          if (faqContent && faqContent.length > 50) {
+            // Enhance answer with FAQ details if query asks specific questions
+            if (qlcService.includes('really free') || qlcService.includes('is it free')) {
+              const freeMatch = faqContent.match(/Is it really free\?[\s\S]{0,200}/i);
+              if (freeMatch) {
+                enrichedAnswer = serviceResponse + '\n\n' + freeMatch[0].trim();
+              }
+            } else if (qlcService.includes('subscribe') || qlcService.includes('sign up') || qlcService.includes('how do i join') || qlcService.includes('how to join')) {
+              // Look for signup instructions in FAQ
+              const signupMatch = faqContent.match(/How do I sign up\?[\s\S]{0,300}/i) || 
+                                  faqContent.match(/sign up[\s\S]{0,200}button[\s\S]{0,200}register/i);
+              if (signupMatch) {
+                enrichedAnswer = serviceResponse + '\n\n' + signupMatch[0].trim();
+              }
+            } else if (qlcService.includes('how long') || qlcService.includes('duration') || qlcService.includes('take')) {
+              const durationMatch = faqContent.match(/How long does it take\?[\s\S]{0,200}/i);
+              if (durationMatch) {
+                enrichedAnswer = serviceResponse + '\n\n' + durationMatch[0].trim();
+              }
+            }
+          }
+        }
+      } catch (chunkError) {
+        console.log(`[DEBUG] Error searching chunks for free course: ${chunkError.message}`);
+      }
+      
+      console.log(`[DEBUG] Found ${services.length} services and ${articles.length} articles for free course`);
+    } else if (isCertificateQuery) {
+      // For certificate queries, fetch course-related services/articles
+      const courseServices = await findServices(client, { keywords: ['photography course', 'course'], limit: 5 });
+      const courseArticles = await findArticles(client, { keywords: ['photography course', 'course'], limit: 5 });
+      
+      services = (courseServices || []).slice(0, 3);
+      articles = (courseArticles || []).slice(0, 3);
+      
+      console.log(`[DEBUG] Found ${services.length} services and ${articles.length} articles for certificate query`);
+    }
+    
     return {
       success: true,
       confidence: 0.8,
-      answer: serviceResponse,
+      answer: enrichedAnswer,
       type: "advice",
-      sources: { articles: [] }
+      sources: { 
+        articles: articles,
+        services: services
+      },
+      structured: {
+        intent: "advice",
+        articles: articles,
+        services: services,
+        events: [],
+        products: []
+      }
     };
+  }
+  
+  // CRITICAL: Check if this is a technical/about/person query BEFORE doing database lookup
+  // These queries should route to their specific handlers, not service lookup
+  // BUT: Free course queries should NOT be skipped (they need SERVICE_PATTERNS)
+  const technicalResponse = getTechnicalAnswers(qlcService);
+  const isTechnicalQuery = !isFreeCourseQuery && (
+                           businessCategory === 'Technical Photography Concepts' || 
+                           businessCategory === 'Technical Advice' ||
+                           technicalResponse !== null ||
+                           (qlcService.includes('what is') && (
+                             qlcService.includes('exposure') || qlcService.includes('iso') || 
+                             qlcService.includes('aperture') || qlcService.includes('shutter') ||
+                             qlcService.includes('raw') || qlcService.includes('white balance') ||
+                             qlcService.includes('depth of field') || qlcService.includes('hdr') ||
+                             qlcService.includes('long exposure') || qlcService.includes('flash') ||
+                             qlcService.includes('composition') || qlcService.includes('edit raw')
+                           )) ||
+                           (qlcService.includes('how do i') && (
+                             qlcService.includes('edit') || qlcService.includes('improve') ||
+                             qlcService.includes('use flash') || qlcService.includes('improve my photography') ||
+                             qlcService.includes('improve my composition') || qlcService.includes('photography skills')
+                           )) ||
+                           (qlcService.includes('improve') && qlcService.includes('photography') && qlcService.includes('skills'))
+  );
+  
+  const isPersonQuery = !isFreeCourseQuery && (
+                        businessCategory === 'Person Queries' ||
+                        (qlcService.includes('alan ranger') && (qlcService.includes('based') || qlcService.includes('where')))
+  );
+  
+  if (isTechnicalQuery || isPersonQuery) {
+    return null; // Let appropriate handler process it
   }
   
   console.log(`[DEBUG] handleServiceQueries: No pattern match, trying database lookup with keywords`);
@@ -8418,18 +8859,20 @@ async function handleServiceQueries(client, query) {
     };
   }
   
-  console.log(`[DEBUG] handleServiceQueries: No services found, returning null`);
   return null;
 }
 
 // Helper: Handle technical queries with article enrichment (Complexity: Low)
 async function handleTechnicalQueries(client, query) {
-  const technicalResponse = getTechnicalAnswers(query.toLowerCase());
+  // Normalize query to handle quotes/parentheses
+  const normalizedQuery = query.replace(/["""]/g, '').trim();
+  const qlc = normalizedQuery.toLowerCase();
+  const technicalResponse = getTechnicalAnswers(qlc);
+  
   if (!technicalResponse) return null;
   
   console.log(`[TARGET] Technical pattern matched for: "${query}"`);
-  const keywords = extractKeywords(query);
-  const qlc = String(query).toLowerCase();
+  const keywords = extractKeywords(normalizedQuery);
   const sharpIntent = qlc.includes('sharp') || qlc.includes('soft') || qlc.includes('blurry') || qlc.includes('blur') || qlc.includes('out of focus') || qlc.includes('focus');
   const enriched = sharpIntent
     ? Array.from(new Set([...keywords, 'sharp', 'sharpness', 'focus', 'focusing', 'blur', 'blurry', 'camera shake', 'tripod', 'shutter speed', 'stabilization', 'ibis', 'vr']))
@@ -8445,10 +8888,58 @@ async function handleTechnicalQueries(client, query) {
     }
   }
 
+  // If we have articles and the technical response seems short, try to enrich it
+  // BUT: Don't override hardcoded technical answers with potentially wrong article content
+  // Only enrich if the hardcoded answer is very short (likely incomplete) or if articles are clearly relevant
+  let finalAnswer = technicalResponse;
+  if (articles && articles.length > 0 && (qlc.includes('what is') || qlc.includes('what\'s'))) {
+    // Check if this is a query we have a specific hardcoded answer for
+    // These should NOT be overridden by article content unless article is clearly better and relevant
+    const hasSpecificHardcodedAnswer = 
+      qlc.includes('long exposure') ||
+      qlc.includes('exposure triangle') ||
+      qlc.includes('depth of field') ||
+      qlc.includes('white balance') ||
+      qlc.includes('hdr') ||
+      qlc.includes('flash photography') ||
+      qlc.includes('edit raw') ||
+      qlc.includes('photography skills');
+    
+    if (!hasSpecificHardcodedAnswer || technicalResponse.length < 100) {
+      // Only try enrichment for queries without specific hardcoded answers, or if answer is very short
+      const articleAnswer = generateArticleAnswer(articles, normalizedQuery);
+      // Only use article answer if it's better (longer and more specific, not generic)
+      // AND if it doesn't contradict the hardcoded answer (check for topic mismatch)
+      if (articleAnswer && articleAnswer.trim().length > technicalResponse.length && 
+          !articleAnswer.includes("Based on Alan Ranger's expertise, here's what you need to know")) {
+        // For specific technical concepts, verify article is actually about the same topic
+        if (hasSpecificHardcodedAnswer) {
+          const queryKeywords = normalizedQuery.toLowerCase().split(/\s+/);
+          const articleLower = articleAnswer.toLowerCase();
+          // Check if article answer contains the key terms from the query
+          const hasRelevantKeywords = queryKeywords.some(keyword => 
+            keyword.length > 3 && articleLower.includes(keyword)
+          );
+          if (hasRelevantKeywords) {
+            console.log(`[SUCCESS] Enriched technical answer with relevant article content`);
+            finalAnswer = articleAnswer;
+          } else {
+            console.log(`[SKIP] Article content doesn't match query topic, keeping hardcoded answer`);
+          }
+        } else {
+          console.log(`[SUCCESS] Enriched technical answer with article content`);
+          finalAnswer = articleAnswer;
+        }
+      }
+    } else {
+      console.log(`[SKIP] Keeping hardcoded technical answer for specific concept query`);
+    }
+  }
+
   return {
     success: true,
     confidence: 0.8,
-    answer: technicalResponse,
+    answer: finalAnswer,
     type: "advice",
     sources: { articles: articles || [] },
     structured: {
@@ -8518,11 +9009,12 @@ async function tryRagFirst(client, query) {
   const equipment = await handleEquipmentQuery(client, query);
   if (equipment) return equipment;
   
-  const eventRouting = await handleEventRoutingQuery(client, query, isEquipmentQuestion);
-  if (eventRouting) return eventRouting;
-  
+  // Check services BEFORE event routing to catch free course queries
   const services = await handleServiceQueries(client, query);
   if (services) return services;
+  
+  const eventRouting = await handleEventRoutingQuery(client, query, isEquipmentQuestion);
+  if (eventRouting) return eventRouting;
   
   const technical = await handleTechnicalQueries(client, query);
   if (technical) return technical;
@@ -8543,6 +9035,28 @@ async function processMainQuery(context) {
  
  const ragResult = await attemptRagFirst(client, context);
  console.log(`ðŸ” RAG result success: ${ragResult.success}`);
+ 
+ // If we have debugInfo (e.g., Q36 debug logs) but success is false, send response with debug info
+ if (!ragResult.success && ragResult.debugInfo) {
+   console.log(`[DEBUG] RAG result has debugInfo but success=false, sending response with debug info`);
+   return context.res.status(200).json({
+     ok: true,
+     type: ragResult.type || "advice",
+     answer: ragResult.answer || "I can't find a reliable answer for that specific question in my knowledge base. For detailed information about this, please contact Alan directly using the contact form or WhatsApp in the header section of this chat.",
+     answer_markdown: ragResult.answer || "I can't find a reliable answer for that specific question in my knowledge base. For detailed information about this, please contact Alan directly using the contact form or WhatsApp in the header section of this chat.",
+     confidence: ragResult.confidence || 0.8,
+     sources: ragResult.sources || {},
+     structured: ragResult.structured || {
+       intent: "advice",
+       articles: [],
+       events: [],
+       products: [],
+       services: []
+     },
+     debugInfo: ragResult.debugInfo
+   });
+ }
+
  if (ragResult.success) {
  console.log(`ðŸ” Calling sendRagSuccessResponse...`);
  return sendRagSuccessResponse(context.res, ragResult, context);
@@ -9034,7 +9548,8 @@ function detectBusinessCategory(query) {
     lc.includes('exposure') || lc.includes('iso') || lc.includes('aperture') || 
     lc.includes('shutter') || lc.includes('raw') || lc.includes('white balance') ||
     lc.includes('depth of field') || lc.includes('histogram') || lc.includes('composition') ||
-    lc.includes('metering') || lc.includes('focal length') || lc.includes('hdr')
+    lc.includes('metering') || lc.includes('focal length') || lc.includes('hdr') ||
+    lc.includes('long exposure') || (lc.includes('flash') && lc.includes('photography'))
   )) {
     return 'Technical Photography Concepts';
   }
@@ -9072,7 +9587,8 @@ function detectBusinessCategory(query) {
     lc.includes('take') || lc.includes('improve') || lc.includes('photograph') ||
     lc.includes('sharp') || lc.includes('blurry') || lc.includes('grainy') ||
     lc.includes('noisy') || lc.includes('lighting') || lc.includes('edit') ||
-    lc.includes('compose') || lc.includes('exposure') || lc.includes('settings') || lc.includes('focus')
+    lc.includes('compose') || lc.includes('exposure') || lc.includes('settings') || lc.includes('focus') ||
+    lc.includes('flash') || lc.includes('use flash')
   )) {
     return 'Technical Advice';
   }
@@ -9164,15 +9680,48 @@ function enhanceResponseByCategory(answer, category, query, response, context) {
 
 // Technical Photography Concepts - "What is..." definitions
 function enhanceTechnicalConceptsResponse(answer, query, response) {
-  // If answer is too short or generic, provide helpful context
-  if (!answer || answer.length < 50) {
-    const concept = query.toLowerCase().replace('what is', '').trim();
-    return `I'd be happy to explain ${concept}! This is a fundamental photography concept that's important to understand. Let me know if you'd like specific guidance on how to apply this in your photography.`;
+  // CRITICAL: Always return an object, never a string
+  // If answer is empty, try to get technical answer from hardcoded patterns
+  if (!answer || answer.trim().length === 0) {
+    console.log(`[WARN] enhanceTechnicalConceptsResponse: Empty answer for query "${query}", trying getTechnicalAnswers`);
+    const technicalAnswer = getTechnicalAnswers(query.toLowerCase().replace(/["""]/g, '').trim());
+    if (technicalAnswer) {
+      console.log(`[SUCCESS] Found technical answer from getTechnicalAnswers`);
+      return { answer: technicalAnswer, confidenceBoost: 0.8 };
+    }
+    
+    // If still no answer, check if we have articles and try RAG extraction
+    if (response?.structured?.articles && response.structured.articles.length > 0) {
+      console.log(`[DEBUG] Trying RAG extraction from ${response.structured.articles.length} articles`);
+      const ragAnswer = generateArticleAnswer(response.structured.articles, query);
+      if (ragAnswer && ragAnswer.trim().length > 0) {
+        return { answer: ragAnswer, confidenceBoost: 0.8 };
+      }
+    }
+    
+    // Last resort: provide a helpful message
+    const concept = query.toLowerCase().replace(/["""]/g, '').replace('what is', '').trim();
+    return { 
+      answer: `I'd be happy to explain ${concept}! This is a fundamental photography concept that's important to understand. Let me know if you'd like specific guidance on how to apply this in your photography.`, 
+      confidenceBoost: 0.7 
+    };
+  }
+  
+  // If answer is too short, enhance it but keep original
+  if (answer.length < 50) {
+    const concept = query.toLowerCase().replace(/["""]/g, '').replace('what is', '').trim();
+    return { 
+      answer: `${answer}\n\nThis concept is essential for understanding how your camera works and achieving the results you want.`, 
+      confidenceBoost: 0.8 
+    };
   }
   
   // If answer contains technical jargon, make it more accessible
   if (answer.includes('f-stop') || answer.includes('ISO') || answer.includes('shutter speed')) {
-    return `Here's a clear explanation: ${answer} This concept is essential for understanding how your camera works and achieving the results you want.`;
+    return { 
+      answer: `Here's a clear explanation: ${answer} This concept is essential for understanding how your camera works and achieving the results you want.`, 
+      confidenceBoost: 0.8 
+    };
   }
   
   return { answer, confidenceBoost: 0.8 };

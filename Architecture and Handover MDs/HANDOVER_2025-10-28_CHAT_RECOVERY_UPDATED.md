@@ -1,16 +1,20 @@
 # alan-chat-proxy Handover — 28 Oct 2025
-_Last updated: 28 Oct 2025 23:00 by Cursor AI (system deployment complete - ready for interactive testing)_
+_Last updated: 1 Nov 2025 13:35 by Cursor AI (baseline updated, Q36/Q27 fixed, testing improved)_
 
 ---
 
 ## 1. Overview
 This document was generated following the **loss of active chat history in Cursor** after a version update. It provides a **continuity handover** for `alan-chat-proxy`, consolidating all current structure, objectives, implementation notes, and ongoing work threads previously tracked in chat.js and related testing logic.
 
-**🎉 SYSTEM STATUS: DEPLOYMENT COMPLETE - READY FOR INTERACTIVE TESTING**
-- **100% Success Rate**: All 430 questions pass with no 500 errors or timeouts
-- **Response Composer Layer**: Intelligent wrapper implemented for all 8 business logic categories
-- **Interactive Testing Ready**: Updated HTML with 40-question subset and copy buttons
-- **Critical Issues Resolved**: Fixed infinite loops, 500 errors, and timeout issues
+**🎉 SYSTEM STATUS: DEPLOYMENT COMPLETE - CONTINUOUS IMPROVEMENT IN PROGRESS**
+- **100% Success Rate**: All 430 questions pass with no 500 errors or timeouts ✅
+- **40Q Test Quality**: 92.5% quality pass rate (100% success, 3 routing issues remaining)
+- **Response Composer Layer**: Intelligent wrapper implemented for all 8 business logic categories ✅
+- **Interactive Testing Ready**: Updated HTML with 40-question subset and copy buttons ✅
+- **Critical Issues Resolved**: Fixed infinite loops, 500 errors, and timeout issues ✅
+- **Latest Fixes (1 Nov 2025)**: Q36 (subscribe to free course) and Q27 (exposure triangle) fixed ✅
+- **Current Baseline**: Nov 1, 2025 baseline established for regression testing ✅
+- **Remaining Issues**: Q17, Q20 need course logistics routing fix (in progress)
 
 It is intended to serve as the **primary recovery anchor** for Cursor AI or any subsequent system reinitialization.
 

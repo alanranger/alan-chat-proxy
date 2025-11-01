@@ -1,0 +1,971 @@
+{
+  "timestamp": "2025-11-01T10:21:53.966Z",
+  "summary": {
+    "total": 40,
+    "passed": 40,
+    "failed": 0,
+    "errors": 0
+  },
+  "results": [
+    {
+      "questionNum": 1,
+      "question": "whens the next bluebell workshops and whats the cost",
+      "match": true,
+      "localhost": {
+        "status": 200,
+        "answer": "I found 12 events that match your query. The next workshop is \"Bluebell Photography Workshop | Warwickshire | 20 Apr\" on Monday, 20 April 2026 in Warwickshire. These include workshops in various locations with different skill levels and dates.",
+        "answerLength": 243,
+        "type": "events",
+        "confidence": 0.96
+      },
+      "deployed": {
+        "status": 200,
+        "answer": "I found 12 events that match your query. The next workshop is \"Bluebell Photography Workshop | Warwickshire | 20 Apr\" on Monday, 20 April 2026 in Warwickshire. These include workshops in various locations with different skill levels and dates.",
+        "answerLength": 243,
+        "type": "events",
+        "confidence": 0.96
+      },
+      "differences": {
+        "answerDifferent": false,
+        "typeDifferent": false,
+        "confidenceDifferent": false
+      }
+    },
+    {
+      "questionNum": 2,
+      "question": "when is the next devon workshop",
+      "match": true,
+      "localhost": {
+        "status": 200,
+        "answer": "I found 2 events that match your query. The next Devon workshop is \"Hartland Quay, Devon Seascape Photography Workshop\" on Thursday, 19 February 2026 in Devon. These workshops are located in Devon and North Devon/Exmoor. Here are the details:\n\n**Hartland Quay, Devon Seascape Photography Workshop**\nâ€¢ Date: Thursday, 19 February 2026\nâ€¢ Location: Devon\nâ€¢ Equipment Needed: DSLR or Mirrorless Camera, Tripod and ND Filters\nâ€¢ Transport + B&B included\nâ€¢ Price: Â£750\nâ€¢ Level: Beginner to Advanced\n\n**Exmoor Photography Workshops - Seascapes | Lynmouth**\nâ€¢ Date: Saturday, 23 May 2026\nâ€¢ Location: North Devon/Exmoor\nâ€¢ Equipment Needed: DSLR or Mirrorless Camera and TripodExmoor\nâ€¢ Transport + B&B included\nâ€¢ Price: Â£575\nâ€¢ Level: Beginner to Advanced",
+        "answerLength": 769,
+        "type": "events",
+        "confidence": 0.96
+      },
+      "deployed": {
+        "status": 200,
+        "answer": "I found 2 events that match your query. The next Devon workshop is \"Hartland Quay, Devon Seascape Photography Workshop\" on Thursday, 19 February 2026 in Devon. These workshops are located in Devon and North Devon/Exmoor. Here are the details:\n\n**Hartland Quay, Devon Seascape Photography Workshop**\nâ€¢ Date: Thursday, 19 February 2026\nâ€¢ Location: Devon\nâ€¢ Equipment Needed: DSLR or Mirrorless Camera, Tripod and ND Filters\nâ€¢ Transport + B&B included\nâ€¢ Price: Â£750\nâ€¢ Level: Beginner to Advanced\n\n**Exmoor Photography Workshops - Seascapes | Lynmouth**\nâ€¢ Date: Saturday, 23 May 2026\nâ€¢ Location: North Devon/Exmoor\nâ€¢ Equipment Needed: DSLR or Mirrorless Camera and TripodExmoor\nâ€¢ Transport + B&B included\nâ€¢ Price: Â£575\nâ€¢ Level: Beginner to Advanced",
+        "answerLength": 769,
+        "type": "events",
+        "confidence": 0.96
+      },
+      "differences": {
+        "answerDifferent": false,
+        "typeDifferent": false,
+        "confidenceDifferent": false
+      }
+    },
+    {
+      "questionNum": 3,
+      "question": "what is your next workshop date and where is it",
+      "match": true,
+      "localhost": {
+        "status": 200,
+        "answer": "I found 20 events that match your query. The next workshop is \"Abstract and Macro Photography Workshop - Warwickshire\" on Saturday, 8 November 2025 in Alan Ranger Photography. These include workshops in various locations with different skill levels and dates.",
+        "answerLength": 259,
+        "type": "events",
+        "confidence": 0.96
+      },
+      "deployed": {
+        "status": 200,
+        "answer": "I found 20 events that match your query. The next workshop is \"Abstract and Macro Photography Workshop - Warwickshire\" on Saturday, 8 November 2025 in Alan Ranger Photography. These include workshops in various locations with different skill levels and dates.",
+        "answerLength": 259,
+        "type": "events",
+        "confidence": 0.96
+      },
+      "differences": {
+        "answerDifferent": false,
+        "typeDifferent": false,
+        "confidenceDifferent": false
+      }
+    },
+    {
+      "questionNum": 4,
+      "question": "when are your next Autumn workshops and where are they?",
+      "match": true,
+      "localhost": {
+        "status": 200,
+        "answer": "I found 7 events that match your query. The next workshop is \"Lake District Photography Workshops | Autumn in Cumbria\" on Friday, 14 November 2025 in Lake District. These include workshops in various locations with different skill levels and dates.",
+        "answerLength": 248,
+        "type": "events",
+        "confidence": 0.96
+      },
+      "deployed": {
+        "status": 200,
+        "answer": "I found 7 events that match your query. The next workshop is \"Lake District Photography Workshops | Autumn in Cumbria\" on Friday, 14 November 2025 in Lake District. These include workshops in various locations with different skill levels and dates.",
+        "answerLength": 248,
+        "type": "events",
+        "confidence": 0.96
+      },
+      "differences": {
+        "answerDifferent": false,
+        "typeDifferent": false,
+        "confidenceDifferent": false
+      }
+    },
+    {
+      "questionNum": 5,
+      "question": "How long are your workshops?",
+      "match": true,
+      "localhost": {
+        "status": 200,
+        "answer": "I offer 2.5–4 hour sessions, one‑day workshops, and 2–5 day multi‑day workshops.\n\nHere are a couple of matching workshops:\n• Suffolk Landscape Photography Workshop - Long Exposure — 21 November 2025 — Suffolk\n• Long Exposure Photography Workshop - Kenilworth 31-3 — 31 March 2026 — Kenilworth",
+        "answerLength": 292,
+        "type": "events",
+        "confidence": 0.96
+      },
+      "deployed": {
+        "status": 200,
+        "answer": "I offer 2.5–4 hour sessions, one‑day workshops, and 2–5 day multi‑day workshops.\n\nHere are a couple of matching workshops:\n• Suffolk Landscape Photography Workshop - Long Exposure — 21 November 2025 — Suffolk\n• Long Exposure Photography Workshop - Kenilworth 31-3 — 31 March 2026 — Kenilworth",
+        "answerLength": 292,
+        "type": "events",
+        "confidence": 0.96
+      },
+      "differences": {
+        "answerDifferent": false,
+        "typeDifferent": false,
+        "confidenceDifferent": false
+      }
+    },
+    {
+      "questionNum": 6,
+      "question": "How much is a residential photography course and does it include B&B",
+      "match": true,
+      "localhost": {
+        "status": 200,
+        "answer": "Yes—all multi‑day workshops include transport and B&B in the price. See individual workshop event cards for current prices.\n\nI offer 2–5 day multi‑day workshops.\n\nHere are a couple of matching workshops:\n• Lake District Photography Workshops | Autumn in Cumbria — 14 November 2025 — Lake District\n• Suffolk Landscape Photography Workshop - Long Exposure — 21 November 2025 — Suffolk",
+        "answerLength": 382,
+        "type": "events",
+        "confidence": 0.53
+      },
+      "deployed": {
+        "status": 200,
+        "answer": "Yes—all multi‑day workshops include transport and B&B in the price. See individual workshop event cards for current prices.\n\nI offer 2–5 day multi‑day workshops.\n\nHere are a couple of matching workshops:\n• Lake District Photography Workshops | Autumn in Cumbria — 14 November 2025 — Lake District\n• Suffolk Landscape Photography Workshop - Long Exposure — 21 November 2025 — Suffolk",
+        "answerLength": 382,
+        "type": "events",
+        "confidence": 0.53
+      },
+      "differences": {
+        "answerDifferent": false,
+        "typeDifferent": false,
+        "confidenceDifferent": false
+      }
+    },
+    {
+      "questionNum": 7,
+      "question": "Do you do astrophotography workshops",
+      "match": true,
+      "localhost": {
+        "status": 200,
+        "answer": "I can't find a reliable answer for that specific question in my knowledge base. For detailed information about this, please contact Alan directly using the contact form or WhatsApp in the header section of this chat. He'll be happy to provide you with accurate and up-to-date information.",
+        "answerLength": 288,
+        "type": "advice",
+        "confidence": 0.8
+      },
+      "deployed": {
+        "status": 200,
+        "answer": "I can't find a reliable answer for that specific question in my knowledge base. For detailed information about this, please contact Alan directly using the contact form or WhatsApp in the header section of this chat. He'll be happy to provide you with accurate and up-to-date information.",
+        "answerLength": 288,
+        "type": "advice",
+        "confidence": 0.8
+      },
+      "differences": {
+        "answerDifferent": false,
+        "typeDifferent": false,
+        "confidenceDifferent": false
+      }
+    },
+    {
+      "questionNum": 8,
+      "question": "Can my 14yr old attend your workshop",
+      "match": true,
+      "localhost": {
+        "status": 200,
+        "answer": "I can't find a reliable answer for that specific question in my knowledge base. For detailed information about this, please contact Alan directly using the contact form or WhatsApp in the header section of this chat. He'll be happy to provide you with accurate and up-to-date information.",
+        "answerLength": 288,
+        "type": "advice",
+        "confidence": 0.8
+      },
+      "deployed": {
+        "status": 200,
+        "answer": "I can't find a reliable answer for that specific question in my knowledge base. For detailed information about this, please contact Alan directly using the contact form or WhatsApp in the header section of this chat. He'll be happy to provide you with accurate and up-to-date information.",
+        "answerLength": 288,
+        "type": "advice",
+        "confidence": 0.8
+      },
+      "differences": {
+        "answerDifferent": false,
+        "typeDifferent": false,
+        "confidenceDifferent": false
+      }
+    },
+    {
+      "questionNum": 9,
+      "question": "My pictures never seem sharp.  Can you advise on what I am doing wrong",
+      "match": true,
+      "localhost": {
+        "status": 200,
+        "answer": "Soft photos usually come from three things: focus missing the subject, shutter speed being too slow, or small camera shake.\n\nTry this now:\n• Use single‑point AF (AF‑C for moving subjects).\n• Raise shutter speed: at least 1/(focal length); 1/500–1/1000 for motion.\n• Stabilise the camera: brace stance, enable IBIS/VR, or use a tripod.\n\nWant a full checklist and tests? Ask: \"show sharpness checklist\".\n\nRelated guides:\n- 08 What is FOCUS in Photography: Key Concepts Explained\n- Focus — 1-Page Field Checklist (PDF)",
+        "answerLength": 515,
+        "type": "advice",
+        "confidence": 0.9
+      },
+      "deployed": {
+        "status": 200,
+        "answer": "Soft photos usually come from three things: focus missing the subject, shutter speed being too slow, or small camera shake.\n\nTry this now:\n• Use single‑point AF (AF‑C for moving subjects).\n• Raise shutter speed: at least 1/(focal length); 1/500–1/1000 for motion.\n• Stabilise the camera: brace stance, enable IBIS/VR, or use a tripod.\n\nWant a full checklist and tests? Ask: \"show sharpness checklist\".\n\nRelated guides:\n- 08 What is FOCUS in Photography: Key Concepts Explained\n- Focus — 1-Page Field Checklist (PDF)",
+        "answerLength": 515,
+        "type": "advice",
+        "confidence": 0.9
+      },
+      "differences": {
+        "answerDifferent": false,
+        "typeDifferent": false,
+        "confidenceDifferent": false
+      }
+    },
+    {
+      "questionNum": 10,
+      "question": "What types of photography services do you offer?",
+      "match": true,
+      "localhost": {
+        "status": 200,
+        "answer": "I offer a range of photography services — including Workshops, Camera sensor cleaning, Online lessons, Courses, Private lessons, RPS mentoring.",
+        "answerLength": 143,
+        "type": "services",
+        "confidence": 0.8
+      },
+      "deployed": {
+        "status": 200,
+        "answer": "I offer a range of photography services — including Workshops, Camera sensor cleaning, Online lessons, Courses, Private lessons, RPS mentoring.",
+        "answerLength": 143,
+        "type": "services",
+        "confidence": 0.8
+      },
+      "differences": {
+        "answerDifferent": false,
+        "typeDifferent": false,
+        "confidenceDifferent": false
+      }
+    },
+    {
+      "questionNum": 11,
+      "question": "What tripod do you recommend",
+      "match": true,
+      "localhost": {
+        "status": 200,
+        "answer": "For tripods, I recommend lightweight carbon fiber models for travel, or sturdy aluminum for studio work. Look for features like quick-release plates and adjustable leg angles. I have detailed guides covering specific recommendations and technical details.",
+        "answerLength": 255,
+        "type": "advice",
+        "confidence": 0.8
+      },
+      "deployed": {
+        "status": 200,
+        "answer": "For tripods, I recommend lightweight carbon fiber models for travel, or sturdy aluminum for studio work. Look for features like quick-release plates and adjustable leg angles. I have detailed guides covering specific recommendations and technical details.",
+        "answerLength": 255,
+        "type": "advice",
+        "confidence": 0.8
+      },
+      "differences": {
+        "answerDifferent": false,
+        "typeDifferent": false,
+        "confidenceDifferent": false
+      }
+    },
+    {
+      "questionNum": 12,
+      "question": "What sort of camera do I need for your camera course",
+      "match": true,
+      "localhost": {
+        "status": 200,
+        "answer": "For my courses and workshops, any DSLR or mirrorless camera with manual controls will work perfectly. The key is having aperture, shutter speed, and ISO control. I have detailed guides covering specific recommendations and technical details.",
+        "answerLength": 241,
+        "type": "advice",
+        "confidence": 0.8
+      },
+      "deployed": {
+        "status": 200,
+        "answer": "For my courses and workshops, any DSLR or mirrorless camera with manual controls will work perfectly. The key is having aperture, shutter speed, and ISO control. I have detailed guides covering specific recommendations and technical details.",
+        "answerLength": 241,
+        "type": "advice",
+        "confidence": 0.8
+      },
+      "differences": {
+        "answerDifferent": false,
+        "typeDifferent": false,
+        "confidenceDifferent": false
+      }
+    },
+    {
+      "questionNum": 13,
+      "question": "What gear or equipment do I need to bring to a workshop?",
+      "match": true,
+      "localhost": {
+        "status": 200,
+        "answer": "I can't find a reliable answer for that specific question in my knowledge base. For detailed information about this, please contact Alan directly using the contact form or WhatsApp in the header section of this chat. He'll be happy to provide you with accurate and up-to-date information.",
+        "answerLength": 288,
+        "type": "advice",
+        "confidence": 0.8
+      },
+      "deployed": {
+        "status": 200,
+        "answer": "I can't find a reliable answer for that specific question in my knowledge base. For detailed information about this, please contact Alan directly using the contact form or WhatsApp in the header section of this chat. He'll be happy to provide you with accurate and up-to-date information.",
+        "answerLength": 288,
+        "type": "advice",
+        "confidence": 0.8
+      },
+      "differences": {
+        "answerDifferent": false,
+        "typeDifferent": false,
+        "confidenceDifferent": false
+      }
+    },
+    {
+      "questionNum": 14,
+      "question": "What is the difference between prime and zoom lenses?",
+      "match": true,
+      "localhost": {
+        "status": 200,
+        "answer": "For lens, I recommend focusing on quality over quantity. Look for reputable brands with good warranties and user reviews. I have detailed guides covering specific recommendations and technical details.",
+        "answerLength": 201,
+        "type": "advice",
+        "confidence": 0.8
+      },
+      "deployed": {
+        "status": 200,
+        "answer": "For lens, I recommend focusing on quality over quantity. Look for reputable brands with good warranties and user reviews. I have detailed guides covering specific recommendations and technical details.",
+        "answerLength": 201,
+        "type": "advice",
+        "confidence": 0.8
+      },
+      "differences": {
+        "answerDifferent": false,
+        "typeDifferent": false,
+        "confidenceDifferent": false
+      }
+    },
+    {
+      "questionNum": 15,
+      "question": "What memory card should I buy?",
+      "match": true,
+      "localhost": {
+        "status": 200,
+        "answer": "I'd be happy to help you choose memory card equipment! Based on your photography needs, I can provide personalized recommendations.",
+        "answerLength": 131,
+        "type": "advice",
+        "confidence": 0.8
+      },
+      "deployed": {
+        "status": 200,
+        "answer": "I'd be happy to help you choose memory card equipment! Based on your photography needs, I can provide personalized recommendations.",
+        "answerLength": 131,
+        "type": "advice",
+        "confidence": 0.8
+      },
+      "differences": {
+        "answerDifferent": false,
+        "typeDifferent": false,
+        "confidenceDifferent": false
+      }
+    },
+    {
+      "questionNum": 16,
+      "question": "Do you I get a certificate with the photography course",
+      "match": true,
+      "localhost": {
+        "status": 200,
+        "answer": "I can't find a reliable answer for that specific question in my knowledge base. For detailed information about this, please contact Alan directly using the contact form or WhatsApp in the header section of this chat. He'll be happy to provide you with accurate and up-to-date information.",
+        "answerLength": 288,
+        "type": "advice",
+        "confidence": 0.8
+      },
+      "deployed": {
+        "status": 200,
+        "answer": "I can't find a reliable answer for that specific question in my knowledge base. For detailed information about this, please contact Alan directly using the contact form or WhatsApp in the header section of this chat. He'll be happy to provide you with accurate and up-to-date information.",
+        "answerLength": 288,
+        "type": "advice",
+        "confidence": 0.8
+      },
+      "differences": {
+        "answerDifferent": false,
+        "typeDifferent": false,
+        "confidenceDifferent": false
+      }
+    },
+    {
+      "questionNum": 17,
+      "question": "Do I need a laptop for the lightroom course",
+      "match": true,
+      "localhost": {
+        "status": 200,
+        "answer": "I found 6 events that match your query. These include workshops in various locations with different skill levels and dates.",
+        "answerLength": 123,
+        "type": "events",
+        "confidence": 0.96
+      },
+      "deployed": {
+        "status": 200,
+        "answer": "I found 6 events that match your query. These include workshops in various locations with different skill levels and dates.",
+        "answerLength": 123,
+        "type": "events",
+        "confidence": 0.96
+      },
+      "differences": {
+        "answerDifferent": false,
+        "typeDifferent": false,
+        "confidenceDifferent": false
+      }
+    },
+    {
+      "questionNum": 18,
+      "question": "Is the online photography course really free",
+      "match": true,
+      "localhost": {
+        "status": 200,
+        "answer": "I found 2 events that match your query. Here are the details:\n\n**RPS Courses - RPS Distinctions Course - Enrol Anytime - 6-11**\nâ€¢ Date: Thursday, 6 November 2025\nâ€¢ Location: Online - Virtual Class - Zoom Meeting\nâ€¢ Equipment Needed: Zoom AppDropbox App used for updated portfolios and imagesTerms\nâ€¢ Price: Â£395\n\n**RPS Courses - RPS Distinctions Course - Enrol Anytime -1-12**\nâ€¢ Date: Monday, 1 December 2025\nâ€¢ Location: Online - Virtual Class - Zoom Meeting\nâ€¢ Equipment Needed: Zoom AppDropbox App used for updated portfolios and imagesTerms\nâ€¢ Price: Â£395",
+        "answerLength": 572,
+        "type": "events",
+        "confidence": 0.96
+      },
+      "deployed": {
+        "status": 200,
+        "answer": "I found 2 events that match your query. Here are the details:\n\n**RPS Courses - RPS Distinctions Course - Enrol Anytime - 6-11**\nâ€¢ Date: Thursday, 6 November 2025\nâ€¢ Location: Online - Virtual Class - Zoom Meeting\nâ€¢ Equipment Needed: Zoom AppDropbox App used for updated portfolios and imagesTerms\nâ€¢ Price: Â£395\n\n**RPS Courses - RPS Distinctions Course - Enrol Anytime -1-12**\nâ€¢ Date: Monday, 1 December 2025\nâ€¢ Location: Online - Virtual Class - Zoom Meeting\nâ€¢ Equipment Needed: Zoom AppDropbox App used for updated portfolios and imagesTerms\nâ€¢ Price: Â£395",
+        "answerLength": 572,
+        "type": "events",
+        "confidence": 0.96
+      },
+      "differences": {
+        "answerDifferent": false,
+        "typeDifferent": false,
+        "confidenceDifferent": false
+      }
+    },
+    {
+      "questionNum": 19,
+      "question": "What courses do you offer for complete beginners?",
+      "match": true,
+      "localhost": {
+        "status": 200,
+        "answer": "I found 18 events that match your query. These include workshops in various locations with different skill levels and dates.",
+        "answerLength": 124,
+        "type": "events",
+        "confidence": 0.96
+      },
+      "deployed": {
+        "status": 200,
+        "answer": "I found 18 events that match your query. These include workshops in various locations with different skill levels and dates.",
+        "answerLength": 124,
+        "type": "events",
+        "confidence": 0.96
+      },
+      "differences": {
+        "answerDifferent": false,
+        "typeDifferent": false,
+        "confidenceDifferent": false
+      }
+    },
+    {
+      "questionNum": 20,
+      "question": "How many weeks is the beginners’ photography course?",
+      "match": true,
+      "localhost": {
+        "status": 200,
+        "answer": "I found 18 events that match your query. These include workshops in various locations with different skill levels and dates.",
+        "answerLength": 124,
+        "type": "events",
+        "confidence": 0.96
+      },
+      "deployed": {
+        "status": 200,
+        "answer": "I found 18 events that match your query. These include workshops in various locations with different skill levels and dates.",
+        "answerLength": 124,
+        "type": "events",
+        "confidence": 0.96
+      },
+      "differences": {
+        "answerDifferent": false,
+        "typeDifferent": false,
+        "confidenceDifferent": false
+      }
+    },
+    {
+      "questionNum": 21,
+      "question": "How do I get personalised feedback on my images",
+      "match": true,
+      "localhost": {
+        "status": 200,
+        "answer": "Book the ISO & Noise Clinic [ and we’ll set it up together. ”Auto-ISO Quick Setup (3 steps)1) Min shutter: start at 1/focal-length (e. g. 100 mm → 1/100 s). For action use 1/500–1/1000 s. 2) Max ISO: pick the highest you’ll accept (often 3200–6400 on modern bodies). 3) Base ISO: 100/200; camera only raises when light drops. FAQS - WHAT IS ISO IN PHOTOGRAPHY. What does ISO mean in photography.",
+        "answerLength": 395,
+        "type": "advice",
+        "confidence": 0.8
+      },
+      "deployed": {
+        "status": 200,
+        "answer": "Book the ISO & Noise Clinic [ and we’ll set it up together. ”Auto-ISO Quick Setup (3 steps)1) Min shutter: start at 1/focal-length (e. g. 100 mm → 1/100 s). For action use 1/500–1/1000 s. 2) Max ISO: pick the highest you’ll accept (often 3200–6400 on modern bodies). 3) Base ISO: 100/200; camera only raises when light drops. FAQS - WHAT IS ISO IN PHOTOGRAPHY. What does ISO mean in photography.",
+        "answerLength": 395,
+        "type": "advice",
+        "confidence": 0.8
+      },
+      "differences": {
+        "answerDifferent": false,
+        "typeDifferent": false,
+        "confidenceDifferent": false
+      }
+    },
+    {
+      "questionNum": 22,
+      "question": "How can I contact you or book a discovery call?",
+      "match": true,
+      "localhost": {
+        "status": 200,
+        "answer": "**Contact Information**:\n- **Address**: 45 Hathaway Road, Coventry, CV4 9HW, United Kingdom\n- **Phone**: +44 781 701 7994\n- **Email**: info@alanranger.com\n- **Hours**: Monday-Sunday, 9am-5pm\n\n",
+        "answerLength": 192,
+        "type": "advice",
+        "confidence": 0.8
+      },
+      "deployed": {
+        "status": 200,
+        "answer": "**Contact Information**:\n- **Address**: 45 Hathaway Road, Coventry, CV4 9HW, United Kingdom\n- **Phone**: +44 781 701 7994\n- **Email**: info@alanranger.com\n- **Hours**: Monday-Sunday, 9am-5pm\n\n",
+        "answerLength": 192,
+        "type": "advice",
+        "confidence": 0.8
+      },
+      "differences": {
+        "answerDifferent": false,
+        "typeDifferent": false,
+        "confidenceDifferent": false
+      }
+    },
+    {
+      "questionNum": 23,
+      "question": "Do you offer gift vouchers?",
+      "match": true,
+      "localhost": {
+        "status": 200,
+        "answer": "Here's what I can tell you: **Gift Vouchers**: Digital photography gift vouchers are available from £5-£600, perfect for any photography enthusiast. Vouchers can be used for workshops, courses, private lessons, or any photography tuition event. They expire 12 months from purchase date and can be split across multiple purchases. [Buy Gift Vouchers](https://www.alanranger.com/photography-gift-vouchers)\n\n",
+        "answerLength": 405,
+        "type": "advice",
+        "confidence": 0.8
+      },
+      "deployed": {
+        "status": 200,
+        "answer": "Here's what I can tell you: **Gift Vouchers**: Digital photography gift vouchers are available from £5-£600, perfect for any photography enthusiast. Vouchers can be used for workshops, courses, private lessons, or any photography tuition event. They expire 12 months from purchase date and can be split across multiple purchases. [Buy Gift Vouchers](https://www.alanranger.com/photography-gift-vouchers)\n\n",
+        "answerLength": 405,
+        "type": "advice",
+        "confidence": 0.8
+      },
+      "differences": {
+        "answerDifferent": false,
+        "typeDifferent": false,
+        "confidenceDifferent": false
+      }
+    },
+    {
+      "questionNum": 24,
+      "question": "What is your cancellation or refund policy for courses/workshops?",
+      "match": true,
+      "localhost": {
+        "status": 200,
+        "answer": "I can't find a reliable answer for that specific question in my knowledge base. For detailed information about this, please contact Alan directly using the contact form or WhatsApp in the header section of this chat. He'll be happy to provide you with accurate and up-to-date information.",
+        "answerLength": 288,
+        "type": "advice",
+        "confidence": 0.8
+      },
+      "deployed": {
+        "status": 200,
+        "answer": "I can't find a reliable answer for that specific question in my knowledge base. For detailed information about this, please contact Alan directly using the contact form or WhatsApp in the header section of this chat. He'll be happy to provide you with accurate and up-to-date information.",
+        "answerLength": 288,
+        "type": "advice",
+        "confidence": 0.8
+      },
+      "differences": {
+        "answerDifferent": false,
+        "typeDifferent": false,
+        "confidenceDifferent": false
+      }
+    },
+    {
+      "questionNum": 25,
+      "question": "Where is your gallery and can I submit my images for feedback?",
+      "match": true,
+      "localhost": {
+        "status": 200,
+        "answer": "**Gallery and Image Feedback**: Alan's photography gallery is available on his website at [www.alanranger.com/gallery](https://www.alanranger.com/gallery). For personalized feedback on your images, Alan offers 1-2-1 private photography lessons and mentoring services. You can submit your images for detailed, personalized feedback during these sessions. [Book Private Lessons for Feedback](https://www.alanranger.com/private-photography-lessons)\n\n",
+        "answerLength": 447,
+        "type": "advice",
+        "confidence": 0.8
+      },
+      "deployed": {
+        "status": 200,
+        "answer": "**Gallery and Image Feedback**: Alan's photography gallery is available on his website at [www.alanranger.com/gallery](https://www.alanranger.com/gallery). For personalized feedback on your images, Alan offers 1-2-1 private photography lessons and mentoring services. You can submit your images for detailed, personalized feedback during these sessions. [Book Private Lessons for Feedback](https://www.alanranger.com/private-photography-lessons)\n\n",
+        "answerLength": 447,
+        "type": "advice",
+        "confidence": 0.8
+      },
+      "differences": {
+        "answerDifferent": false,
+        "typeDifferent": false,
+        "confidenceDifferent": false
+      }
+    },
+    {
+      "questionNum": 26,
+      "question": "What is long exposure and how can I find out more about it",
+      "match": true,
+      "localhost": {
+        "status": 200,
+        "answer": "I offer a range of photography services — including Courses.",
+        "answerLength": 60,
+        "type": "services",
+        "confidence": 0.8
+      },
+      "deployed": {
+        "status": 200,
+        "answer": "I offer a range of photography services — including Courses.",
+        "answerLength": 60,
+        "type": "services",
+        "confidence": 0.8
+      },
+      "differences": {
+        "answerDifferent": false,
+        "typeDifferent": false,
+        "confidenceDifferent": false
+      }
+    },
+    {
+      "questionNum": 27,
+      "question": "\"What is the exposure triangle (aperture, shutter, ISO)?\"",
+      "match": true,
+      "localhost": {
+        "status": 200,
+        "answer": "",
+        "answerLength": 0,
+        "type": "advice",
+        "confidence": 0.8
+      },
+      "deployed": {
+        "status": 200,
+        "answer": "",
+        "answerLength": 0,
+        "type": "advice",
+        "confidence": 0.8
+      },
+      "differences": {
+        "answerDifferent": false,
+        "typeDifferent": false,
+        "confidenceDifferent": false
+      }
+    },
+    {
+      "questionNum": 28,
+      "question": "\"What is depth of field, and how do I control it?\"",
+      "match": true,
+      "localhost": {
+        "status": 200,
+        "answer": "**Depth of field** is the area of your image that appears sharp. You control it with aperture: wider apertures (lower f-numbers) create shallow depth of field, while smaller apertures (higher f-numbers) keep more of the image in focus.\n\n",
+        "answerLength": 237,
+        "type": "advice",
+        "confidence": 0.8
+      },
+      "deployed": {
+        "status": 200,
+        "answer": "**Depth of field** is the area of your image that appears sharp. You control it with aperture: wider apertures (lower f-numbers) create shallow depth of field, while smaller apertures (higher f-numbers) keep more of the image in focus.\n\n",
+        "answerLength": 237,
+        "type": "advice",
+        "confidence": 0.8
+      },
+      "differences": {
+        "answerDifferent": false,
+        "typeDifferent": false,
+        "confidenceDifferent": false
+      }
+    },
+    {
+      "questionNum": 29,
+      "question": "What is white balance and how do I use it?",
+      "match": true,
+      "localhost": {
+        "status": 200,
+        "answer": "Based on Alan Ranger's expertise, here's what you need to know about your question.\n\nFIVE CREATIVE AUTUMN PHOTOGRAPHY PROJECTS: TO INSPIRE YOU\n\n*For detailed information, read the full guide: https://www.alanranger.com/blog-on-photography/five-creative-autumn-photography-projects*",
+        "answerLength": 281,
+        "type": "advice",
+        "confidence": 0.8
+      },
+      "deployed": {
+        "status": 200,
+        "answer": "Based on Alan Ranger's expertise, here's what you need to know about your question.\n\nFIVE CREATIVE AUTUMN PHOTOGRAPHY PROJECTS: TO INSPIRE YOU\n\n*For detailed information, read the full guide: https://www.alanranger.com/blog-on-photography/five-creative-autumn-photography-projects*",
+        "answerLength": 281,
+        "type": "advice",
+        "confidence": 0.8
+      },
+      "differences": {
+        "answerDifferent": false,
+        "typeDifferent": false,
+        "confidenceDifferent": false
+      }
+    },
+    {
+      "questionNum": 30,
+      "question": "What is HDR photography?",
+      "match": true,
+      "localhost": {
+        "status": 200,
+        "answer": "I offer a range of photography services — including Workshops, Camera sensor cleaning, Online lessons, Courses, Private lessons, RPS mentoring.",
+        "answerLength": 143,
+        "type": "services",
+        "confidence": 0.8
+      },
+      "deployed": {
+        "status": 200,
+        "answer": "I offer a range of photography services — including Workshops, Camera sensor cleaning, Online lessons, Courses, Private lessons, RPS mentoring.",
+        "answerLength": 143,
+        "type": "services",
+        "confidence": 0.8
+      },
+      "differences": {
+        "answerDifferent": false,
+        "typeDifferent": false,
+        "confidenceDifferent": false
+      }
+    },
+    {
+      "questionNum": 31,
+      "question": "Who is Alan Ranger and what is his photographic background?",
+      "match": true,
+      "localhost": {
+        "status": 200,
+        "answer": "**About Alan Ranger**: Alan is a highly qualified professional photographer and photography tutor based in the Midlands, UK, with over 20 years of experience. He is a qualified Associate of the British Institute of Professional Photographers (BIPP) and holds ARPS (Associate of the Royal Photographic Society) distinctions. Alan offers personalised photography courses and workshops tailored to all skill levels, spanning various genres from portraits to landscape and black and white photography. He has led over 30 educational lectures at the Xposure International Photography Festival in UAE and has won multiple awards including Landscape Photographer of the Year (7 awards) and International Landscape Photographer of the Year. [Learn more about Alan](https://www.alanranger.com/about-alan-ranger)",
+        "answerLength": 802,
+        "type": "advice",
+        "confidence": 0.8
+      },
+      "deployed": {
+        "status": 200,
+        "answer": "**About Alan Ranger**: Alan is a highly qualified professional photographer and photography tutor based in the Midlands, UK, with over 20 years of experience. He is a qualified Associate of the British Institute of Professional Photographers (BIPP) and holds ARPS (Associate of the Royal Photographic Society) distinctions. Alan offers personalised photography courses and workshops tailored to all skill levels, spanning various genres from portraits to landscape and black and white photography. He has led over 30 educational lectures at the Xposure International Photography Festival in UAE and has won multiple awards including Landscape Photographer of the Year (7 awards) and International Landscape Photographer of the Year. [Learn more about Alan](https://www.alanranger.com/about-alan-ranger)",
+        "answerLength": 802,
+        "type": "advice",
+        "confidence": 0.8
+      },
+      "differences": {
+        "answerDifferent": false,
+        "typeDifferent": false,
+        "confidenceDifferent": false
+      }
+    },
+    {
+      "questionNum": 32,
+      "question": "Where is Alan Ranger based?",
+      "match": true,
+      "localhost": {
+        "status": 200,
+        "answer": "I offer a range of photography services — including Workshops, Camera sensor cleaning, Online lessons, Courses, Private lessons, RPS mentoring.",
+        "answerLength": 143,
+        "type": "services",
+        "confidence": 0.8
+      },
+      "deployed": {
+        "status": 200,
+        "answer": "I offer a range of photography services — including Workshops, Camera sensor cleaning, Online lessons, Courses, Private lessons, RPS mentoring.",
+        "answerLength": 143,
+        "type": "services",
+        "confidence": 0.8
+      },
+      "differences": {
+        "answerDifferent": false,
+        "typeDifferent": false,
+        "confidenceDifferent": false
+      }
+    },
+    {
+      "questionNum": 33,
+      "question": "Can I hire you as a professional photographer in Coventry?",
+      "match": true,
+      "localhost": {
+        "status": 200,
+        "answer": "I offer a range of photography services — including Camera sensor cleaning, Online lessons, Courses, Private lessons.",
+        "answerLength": 117,
+        "type": "services",
+        "confidence": 0.8
+      },
+      "deployed": {
+        "status": 200,
+        "answer": "I offer a range of photography services — including Camera sensor cleaning, Online lessons, Courses, Private lessons.",
+        "answerLength": 117,
+        "type": "services",
+        "confidence": 0.8
+      },
+      "differences": {
+        "answerDifferent": false,
+        "typeDifferent": false,
+        "confidenceDifferent": false
+      }
+    },
+    {
+      "questionNum": 34,
+      "question": "peter orton",
+      "match": true,
+      "localhost": {
+        "status": 200,
+        "answer": "# Case Study - Peter Orton - ARPS | RPS Distinctions Panel **Source**: [https://www.alanranger.com/blog-on-photography/peter-orton-rps-distinctions](https://www.alanranger.com/blog-on-photography/peter-orton-rps-distinctions) CASE STUDY - PETER ORTON - ARPS | RPS DISTINCTIONS PANEL",
+        "answerLength": 282,
+        "type": "advice",
+        "confidence": 0.8
+      },
+      "deployed": {
+        "status": 200,
+        "answer": "# Case Study - Peter Orton - ARPS | RPS Distinctions Panel **Source**: [https://www.alanranger.com/blog-on-photography/peter-orton-rps-distinctions](https://www.alanranger.com/blog-on-photography/peter-orton-rps-distinctions) CASE STUDY - PETER ORTON - ARPS | RPS DISTINCTIONS PANEL",
+        "answerLength": 282,
+        "type": "advice",
+        "confidence": 0.8
+      },
+      "differences": {
+        "answerDifferent": false,
+        "typeDifferent": false,
+        "confidenceDifferent": false
+      }
+    },
+    {
+      "questionNum": 35,
+      "question": "who is alan ranger",
+      "match": true,
+      "localhost": {
+        "status": 200,
+        "answer": "**About Alan Ranger**: Alan is a highly qualified professional photographer and photography tutor based in the Midlands, UK, with over 20 years of experience. He is a qualified Associate of the British Institute of Professional Photographers (BIPP) and holds ARPS (Associate of the Royal Photographic Society) distinctions. Alan offers personalised photography courses and workshops tailored to all skill levels, spanning various genres from portraits to landscape and black and white photography. He has led over 30 educational lectures at the Xposure International Photography Festival in UAE and has won multiple awards including Landscape Photographer of the Year (7 awards) and International Landscape Photographer of the Year. [Learn more about Alan](https://www.alanranger.com/about-alan-ranger)",
+        "answerLength": 802,
+        "type": "advice",
+        "confidence": 0.8
+      },
+      "deployed": {
+        "status": 200,
+        "answer": "**About Alan Ranger**: Alan is a highly qualified professional photographer and photography tutor based in the Midlands, UK, with over 20 years of experience. He is a qualified Associate of the British Institute of Professional Photographers (BIPP) and holds ARPS (Associate of the Royal Photographic Society) distinctions. Alan offers personalised photography courses and workshops tailored to all skill levels, spanning various genres from portraits to landscape and black and white photography. He has led over 30 educational lectures at the Xposure International Photography Festival in UAE and has won multiple awards including Landscape Photographer of the Year (7 awards) and International Landscape Photographer of the Year. [Learn more about Alan](https://www.alanranger.com/about-alan-ranger)",
+        "answerLength": 802,
+        "type": "advice",
+        "confidence": 0.8
+      },
+      "differences": {
+        "answerDifferent": false,
+        "typeDifferent": false,
+        "confidenceDifferent": false
+      }
+    },
+    {
+      "questionNum": 36,
+      "question": "How do I subscribe to the free online photography course?",
+      "match": true,
+      "localhost": {
+        "status": 200,
+        "answer": "I can't find a reliable answer for that specific question in my knowledge base. For detailed information about this, please contact Alan directly using the contact form or WhatsApp in the header section of this chat. He'll be happy to provide you with accurate and up-to-date information.",
+        "answerLength": 288,
+        "type": "advice",
+        "confidence": 0.8
+      },
+      "deployed": {
+        "status": 200,
+        "answer": "I can't find a reliable answer for that specific question in my knowledge base. For detailed information about this, please contact Alan directly using the contact form or WhatsApp in the header section of this chat. He'll be happy to provide you with accurate and up-to-date information.",
+        "answerLength": 288,
+        "type": "advice",
+        "confidence": 0.8
+      },
+      "differences": {
+        "answerDifferent": false,
+        "typeDifferent": false,
+        "confidenceDifferent": false
+      }
+    },
+    {
+      "questionNum": 37,
+      "question": "How do I improve my composition and storytelling in photos?",
+      "match": true,
+      "localhost": {
+        "status": 200,
+        "answer": "",
+        "answerLength": 0,
+        "type": "services",
+        "confidence": 0.7
+      },
+      "deployed": {
+        "status": 200,
+        "answer": "",
+        "answerLength": 0,
+        "type": "services",
+        "confidence": 0.7
+      },
+      "differences": {
+        "answerDifferent": false,
+        "typeDifferent": false,
+        "confidenceDifferent": false
+      }
+    },
+    {
+      "questionNum": 38,
+      "question": "How do I use flash photography?",
+      "match": true,
+      "localhost": {
+        "status": 200,
+        "answer": "I offer a range of photography services — including Camera sensor cleaning, Online lessons, Courses, Private lessons, RPS mentoring, Gift vouchers.",
+        "answerLength": 147,
+        "type": "services",
+        "confidence": 0.8
+      },
+      "deployed": {
+        "status": 200,
+        "answer": "I offer a range of photography services — including Camera sensor cleaning, Online lessons, Courses, Private lessons, RPS mentoring, Gift vouchers.",
+        "answerLength": 147,
+        "type": "services",
+        "confidence": 0.8
+      },
+      "differences": {
+        "answerDifferent": false,
+        "typeDifferent": false,
+        "confidenceDifferent": false
+      }
+    },
+    {
+      "questionNum": 39,
+      "question": "How do I edit RAW files?",
+      "match": true,
+      "localhost": {
+        "status": 200,
+        "answer": "I offer a range of photography services — including Courses.",
+        "answerLength": 60,
+        "type": "services",
+        "confidence": 0.8
+      },
+      "deployed": {
+        "status": 200,
+        "answer": "I offer a range of photography services — including Courses.",
+        "answerLength": 60,
+        "type": "services",
+        "confidence": 0.8
+      },
+      "differences": {
+        "answerDifferent": false,
+        "typeDifferent": false,
+        "confidenceDifferent": false
+      }
+    },
+    {
+      "questionNum": 40,
+      "question": "How do I improve my photography skills?",
+      "match": true,
+      "localhost": {
+        "status": 200,
+        "answer": "I offer a range of photography services — including Camera sensor cleaning, Online lessons, Courses, Private lessons, RPS mentoring, Gift vouchers.",
+        "answerLength": 147,
+        "type": "services",
+        "confidence": 0.8
+      },
+      "deployed": {
+        "status": 200,
+        "answer": "I offer a range of photography services — including Camera sensor cleaning, Online lessons, Courses, Private lessons, RPS mentoring, Gift vouchers.",
+        "answerLength": 147,
+        "type": "services",
+        "confidence": 0.8
+      },
+      "differences": {
+        "answerDifferent": false,
+        "typeDifferent": false,
+        "confidenceDifferent": false
+      }
+    }
+  ]
+}
