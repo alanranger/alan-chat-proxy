@@ -18,6 +18,10 @@ All older references or notes can be found inside `/Archive/AI_TODO_LIST_2025-01
 ## ✅ Recently Completed (Last 2 Weeks)
 | Date | Completed Item | Notes |
 |------|-----------------|-------|
+| 1 Nov 2025 | **Analytics Dashboard Updates** | Updated analytics.html structure to match chat.html (meta tags, fonts, CSS variables, JSON-LD, GA4), all tabs verified working |
+| 1 Nov 2025 | **Insights Tab Fixed** | Created /api/chat-improvement.js endpoint, refactored to meet complexity rules, all 8 endpoints tested and working |
+| 1 Nov 2025 | **Light-Refresh Modernization** | Refactored light-refresh.js to use supabaseAdmin() pattern, improved error handling, updated schedule to every 8 hours |
+| 1 Nov 2025 | **Light-Refresh Testing** | Created test-light-refresh-api.cjs for endpoint verification |
 | 1 Nov 2025 | **Baseline Updated** | New baseline established: baseline-40-question-interactive-subset-2025-11-01T13-32-45-780Z.json (100% success, 92.5% quality) |
 | 1 Nov 2025 | **Q36 Fixed** | "How do I subscribe to the free online photography course?" now returns proper answer (391 chars) instead of generic fallback |
 | 1 Nov 2025 | **Q27 Fixed** | "What is the exposure triangle?" now returns proper technical answer instead of empty response |
