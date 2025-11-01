@@ -446,12 +446,17 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
 
     .articles-grid, .services-grid, .events-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      grid-template-columns: repeat(2, 1fr);
       gap: 12px;
       margin-top: 12px;
       width: 100%;
       box-sizing: border-box;
-      overflow-x: visible;
+    }
+
+    @media (min-width: 1000px) {
+      .articles-grid, .services-grid, .events-grid {
+        grid-template-columns: repeat(3, 1fr);
+      }
     }
 
     .article-card, .service-card, .event-card {
@@ -460,7 +465,7 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
       border-radius: 8px;
       padding: 16px;
       transition: all 0.2s ease;
-      min-width: 280px;
+      min-width: 0;
       max-width: 100%;
       min-height: auto;
       height: auto;
@@ -550,9 +555,9 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
     .modal-content {
       background: #1f2937;
       border-radius: 8px;
-      max-width: 1200px;
+      max-width: 1400px;
       max-height: 95vh;
-      width: 95%;
+      width: 98%;
       overflow: hidden;
       display: flex;
       flex-direction: column;
