@@ -10177,6 +10177,8 @@ async function sendRagSuccessResponse(res, ragResult, context) {
   console.log(`🎭 Response Composer: Converted ${ragResult.type} response to conversational format`);
   
   performQualityAnalysis(ragResult, context);
+  
+  // Log the complete interaction with answer
  console.log(`ðŸ” Context exists: ${!!context}`);
  console.log(`ðŸ” Answer exists: ${!!ragResult.answer}`);
  console.log(`ðŸ” Context query: ${context?.query}`);
