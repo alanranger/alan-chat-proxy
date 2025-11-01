@@ -8208,6 +8208,36 @@ async function handleEquipmentQuery(client, query) {
   console.log(`✅ Equipment question detected, routing to articles/advice: "${query}"`);
   const keywords = extractKeywords(query);
   const articles = await findArticles(client, { keywords, limit: 25 });
+  
+  // Check if this is a recommendation query - use direct equipment recommendations
+  const qlc = query.toLowerCase();
+  const isRecommendationQuery = qlc.includes('recommend') || qlc.includes('suggest') || qlc.includes('best') || qlc.includes('should i buy');
+  
+  if (isRecommendationQuery && articles && articles.length > 0) {
+    const equipmentType = extractEquipmentTypeFromQuery(query);
+    if (equipmentType) {
+      console.log(`🎯 Recommendation query detected for ${equipmentType}, using generateDirectEquipmentRecommendation`);
+      const recommendation = generateDirectEquipmentRecommendation(equipmentType, articles, query);
+      if (recommendation && recommendation.trim().length > 0) {
+        return {
+          success: true,
+          confidence: 0.8,
+          answer: recommendation,
+          type: "advice",
+          sources: { articles: articles },
+          structured: {
+            intent: "advice",
+            articles: articles,
+            events: [],
+            products: [],
+            services: []
+          }
+        };
+      }
+    }
+  }
+  
+  // Try RAG extraction from articles for non-recommendation queries
   if (articles && articles.length > 0) {
     const articleAnswer = generateArticleAnswer(articles, query);
     if (articleAnswer && articleAnswer.trim().length > 0) {
@@ -8228,7 +8258,28 @@ async function handleEquipmentQuery(client, query) {
     }
   }
   
-  const qlc = query.toLowerCase();
+  // Fallback for recommendation queries without articles
+  if (isRecommendationQuery) {
+    const equipmentType = extractEquipmentTypeFromQuery(query);
+    if (equipmentType === 'tripod') {
+      return {
+        success: true,
+        confidence: 0.8,
+        answer: "For tripods, I recommend lightweight carbon fiber models for travel, or sturdy aluminum for studio work. Look for features like quick-release plates and adjustable leg angles.",
+        type: "advice",
+        sources: { articles: [] },
+        structured: {
+          intent: "advice",
+          articles: [],
+          events: [],
+          products: [],
+          services: []
+        }
+      };
+    }
+  }
+  
+  // Generic fallback
   const genericEquipmentAnswer = qlc.includes("camera") 
     ? "For my courses and workshops, any DSLR or mirrorless camera with manual controls will work perfectly. The key is having aperture, shutter speed, and ISO control. I have detailed guides covering specific recommendations and technical details."
     : "I can help you choose the right photography equipment. I have detailed guides covering specific recommendations and technical details for various photography gear.";
