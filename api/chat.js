@@ -913,46 +913,64 @@ function findPrimaryQuestion(faqItems, exactTerm) {
   const queryLower = exactTerm.toLowerCase().trim();
   const queryWords = queryLower.split(/\s+/).filter(w => w.length > 2); // Filter out short words
   
-  // First try: Exact match or close match
-  let result = faqItems.find(item => {
-    const question = (item.name || "").toLowerCase();
-    
-    // Exact phrase match (highest priority)
-    if (question.includes(queryLower)) {
-      console.log(`[DEBUG] Exact phrase match: "${question}"`);
-      return true;
-    }
-    
-    // All query words present (high priority)
-    if (queryWords.length > 0 && queryWords.every(word => question.includes(word))) {
-      console.log(`[DEBUG] All words match: "${question}"`);
-      return true;
-    }
-    
-    return false;
-  });
-  
-  // Second try: If no exact match, try more lenient matching but require significant overlap
-  if (!result && queryWords.length > 0) {
-    result = faqItems.find(item => {
-      const question = (item.name || "").toLowerCase();
-      const questionWords = question.split(/\s+/).filter(w => w.length > 2);
-      
-      // Require at least 50% of query words to match
-      const matchingWords = queryWords.filter(qw => questionWords.some(qw2 => qw2.includes(qw) || qw.includes(qw2)));
-      const matchRatio = matchingWords.length / queryWords.length;
-      
-      if (matchRatio >= 0.5) {
-        console.log(`[DEBUG] Partial match (${(matchRatio * 100).toFixed(0)}%): "${question}"`);
-        return true;
-      }
-      
-      return false;
-    });
+  if (queryWords.length === 0) {
+    console.log(`[DEBUG] No meaningful query words after filtering, returning null`);
+    return null;
   }
   
-  console.log(`[DEBUG] findPrimaryQuestion result: ${result ? 'FOUND - ' + (result.name || '').substring(0, 50) : 'NOT FOUND'}`);
-  return result || null;
+  // Score each FAQ item and return the best match only if it meets minimum threshold
+  const scoredMatches = faqItems.map(item => {
+    const question = (item.name || "").toLowerCase();
+    let score = 0;
+    
+    // Exact phrase match (highest score)
+    if (question.includes(queryLower)) {
+      score = 100;
+      console.log(`[DEBUG] Exact phrase match (score 100): "${question}"`);
+    }
+    // All query words present in order (high score)
+    else if (queryWords.length > 0 && queryWords.every(word => question.includes(word))) {
+      // Check if words appear in order
+      const wordsInOrder = queryWords.every((word, idx) => {
+        const prevWord = idx > 0 ? queryWords[idx - 1] : null;
+        const wordPos = question.indexOf(word);
+        const prevPos = prevWord ? question.indexOf(prevWord) : -1;
+        return wordPos >= 0 && (prevPos === -1 || wordPos >= prevPos);
+      });
+      score = wordsInOrder ? 80 : 60;
+      console.log(`[DEBUG] All words match ${wordsInOrder ? 'in order' : ''} (score ${score}): "${question}"`);
+    }
+    // Partial match with significant overlap
+    else if (queryWords.length > 0) {
+      const questionWords = question.split(/\s+/).filter(w => w.length > 2);
+      const matchingWords = queryWords.filter(qw => 
+        questionWords.some(qw2 => qw2.includes(qw) || qw.includes(qw2))
+      );
+      const matchRatio = matchingWords.length / queryWords.length;
+      
+      if (matchRatio >= 0.7) {
+        score = 50; // Good overlap
+        console.log(`[DEBUG] High overlap (${(matchRatio * 100).toFixed(0)}%, score 50): "${question}"`);
+      } else if (matchRatio >= 0.5) {
+        score = 30; // Moderate overlap
+        console.log(`[DEBUG] Moderate overlap (${(matchRatio * 100).toFixed(0)}%, score 30): "${question}"`);
+      }
+    }
+    
+    return { item, score, question };
+  }).filter(m => m.score > 0);
+  
+  // Sort by score descending
+  scoredMatches.sort((a, b) => b.score - a.score);
+  
+  // Only return if best match meets minimum quality threshold
+  if (scoredMatches.length > 0 && scoredMatches[0].score >= 50) {
+    console.log(`[DEBUG] Best match found (score ${scoredMatches[0].score}): "${scoredMatches[0].question}"`);
+    return scoredMatches[0].item;
+  }
+  
+  console.log(`[DEBUG] No match found above quality threshold (best score: ${scoredMatches[0]?.score || 0})`);
+  return null;
 }
  
 // Helper function to extract and clean answer text
@@ -963,11 +981,16 @@ function extractAndCleanAnswer(primaryQuestion) {
  answerText = answerText.replace(/<[^>]*>/g, '').trim();
  answerText = cleanResponseText(answerText);
  
- // Validate that answer is relevant - check for Q7/Q8 format that might be wrong
- // If answer contains multiple Q/A pairs and doesn't match query, it's likely wrong
- if (answerText.match(/Q\d+:/g) && answerText.match(/Q\d+:/g).length > 1) {
-   console.log(`[WARN] extractAndCleanAnswer: Answer contains multiple Q/A pairs, may be incorrectly matched`);
-   // Return null to prevent wrong answers
+ // Validate answer quality - reject if it contains multiple Q/A pairs (wrong FAQ extracted)
+ const qaPairs = answerText.match(/Q\d+:/g);
+ if (qaPairs && qaPairs.length > 1) {
+   console.log(`[WARN] extractAndCleanAnswer: Answer contains ${qaPairs.length} Q/A pairs - rejecting as incorrectly matched`);
+   return null;
+ }
+ 
+ // Reject if answer is too short or appears to be wrong format
+ if (answerText.length < 50) {
+   console.log(`[WARN] extractAndCleanAnswer: Answer too short (${answerText.length} chars) - rejecting`);
    return null;
  }
  
@@ -1405,7 +1428,6 @@ function getEquipmentAnswer() {
 function getTechnicalAnswers(lc) {
   // Group technical answer functions to reduce complexity
   const basicAnswers = [
-    () => getGoldenHourAnswer(lc),
     () => getJpegRawAnswer(lc),
     () => getEditRawAnswer(lc),
     () => getExposureTriangleAnswer(lc),
@@ -1423,7 +1445,8 @@ function getTechnicalAnswers(lc) {
     () => getLensComparisonAnswer(lc),
     () => getDepthOfFieldAnswer(lc),
     () => getSharpnessAnswer(lc),
-    () => getImageQualityAnswer(lc)
+    () => getImageQualityAnswer(lc),
+    () => getGoldenHourAnswer(lc)
   ];
   
   for (const getAnswer of basicAnswers) {
@@ -1883,11 +1906,27 @@ function tryHardcodedAnswer(lc) {
 
 // Helper function to prepare query data
 function prepareQueryData(query) {
- const lc = (query || "").toLowerCase();
- const queryWords = lc.split(" ").filter(w => w.length > 2);
- const exactTerm = lc.replace(/^what\s+is\s+/, "").trim();
- 
- return { lc, queryWords, exactTerm };
+  const lc = (query || "").toLowerCase();
+  const queryWords = lc.split(" ").filter(w => w.length > 2);
+  
+  // Extract exact term by removing common question prefixes
+  // This helps match FAQ questions better
+  let exactTerm = lc
+    .replace(/^(what|when|where|why|how|who|which|can|do|does|is|are|will|would)\s+(is|are|was|were|do|does|did|can|could|will|would|should|the|a|an)\s+/i, "")
+    .replace(/^(what|when|where|why|how|who|which)\s+/i, "")
+    .trim();
+  
+  // If we removed too much, try simpler extraction
+  if (exactTerm.length < 3) {
+    exactTerm = lc.replace(/^(what|when|where|why|how|who|which)\s+/i, "").trim();
+  }
+  
+  // If still too short, use the full query minus question words
+  if (exactTerm.length < 3) {
+    exactTerm = queryWords.join(" ");
+  }
+  
+  return { lc, queryWords, exactTerm };
 }
 
 // Helper function to log debug information
