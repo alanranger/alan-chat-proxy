@@ -53,10 +53,11 @@
   - ⚠️ Event information: Comprehensive coverage (dates, locations, pricing, requirements)
 
 #### Related Information Quality
-- **Articles**: 95% of responses include relevant articles
-- **Services**: 50% of responses include service suggestions (improved from 33%)
-- **Events**: 60% of event-related queries include event suggestions
-- **Multi-Type Responses**: 56% of responses include multiple types of related info (articles + services + events)
+- **Articles**: 91% of responses include relevant articles (improved from 88%)
+- **Services**: 62% of responses include service suggestions (improved from 50%)
+- **Events**: 18% of event-related queries include event suggestions
+- **Products**: 10% of responses include product suggestions (NEW! - improved from 0%)
+- **Multi-Type Responses**: 64% of responses include multiple types (improved from 56%)
 
 #### User Intent Matching
 - **Business Information Queries**: 90% accuracy (services, policies, contact info)
