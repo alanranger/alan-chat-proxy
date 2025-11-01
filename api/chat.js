@@ -6789,6 +6789,76 @@ function findMostRelevantArticle(articles, query) {
 
 // Helper: Generate evidence-based answer (Low Complexity)
 // Helper function to generate article-based answer
+// Helper: Extract main concept from query for FAQ matching (Complexity: Low)
+function extractMainConcept(query) {
+  const qlc = query.toLowerCase().replace(/["""]/g, '').trim();
+  return qlc.replace(/^(what is|what's|what are|what's the|how does|how do|why is|why are|when should|when do|where is|where are)\s+/i, '').trim();
+}
+
+// Helper: Try to extract FAQ answer from JSON-LD (Complexity: Low)
+function tryExtractFaqAnswer(bestArticle, concept) {
+  const faqAnswer = extractAnswerFromJsonLd(bestArticle, concept);
+  if (faqAnswer) {
+    console.log(`[SUCCESS] Generated FAQ answer from article: "${faqAnswer.substring(0, 100)}..."`);
+    return faqAnswer;
+  }
+  return null;
+}
+
+// Helper: Try to extract answer from article description for "what is" queries (Complexity: Low)
+function tryExtractFromDescriptionForWhatIs(bestArticle, query, qlc) {
+  if (!qlc.includes('what is') && !qlc.includes('what\'s')) return null;
+  
+  const articleDescription = bestArticle.meta_description || bestArticle.description;
+  if (!articleDescription || articleDescription.trim().length <= 50) return null;
+  
+  console.log(`[SUCCESS] Extracting answer from article description for "what is" query`);
+  const extracted = extractAnswerFromArticleDescription(bestArticle, query);
+  if (extracted && extracted.trim().length > 50) {
+    return extracted;
+  }
+  return null;
+}
+
+// Helper: Try to extract from most relevant article (Complexity: Low)
+function tryExtractFromMostRelevantArticle(articles, query) {
+  if (articles.length <= 1) return null;
+  
+  const relevantArticle = findMostRelevantArticle(articles, query);
+  if (!relevantArticle) return null;
+  
+  const articleDescription = relevantArticle.meta_description || relevantArticle.description;
+  if (!articleDescription || articleDescription.trim().length <= 50) return null;
+  
+  const extracted = extractAnswerFromArticleDescription(relevantArticle, query);
+  if (extracted && extracted.trim().length > 50) {
+    console.log(`[SUCCESS] Extracted answer from most relevant article`);
+    return extracted;
+  }
+  return null;
+}
+
+// Helper: Try to use article description as last resort (Complexity: Low)
+function tryUseArticleDescriptionAsFallback(bestArticle, query) {
+  const articleDescription = bestArticle.meta_description || bestArticle.description;
+  if (!articleDescription || articleDescription.trim().length <= 50) return null;
+  
+  if (!filterRelevantContent(articleDescription, query)) return null;
+  
+  const cleanDescription = cleanResponseText(articleDescription);
+  if (cleanDescription && cleanDescription.trim().length > 50) {
+    console.log(`[SUCCESS] Using article description as answer`);
+    return cleanDescription.substring(0, 500);
+  }
+  return null;
+}
+
+// Helper: Generate generic fallback answer (Complexity: Low)
+function generateGenericArticleFallback(bestArticle) {
+  console.log(`[FALLBACK] No extractable content found, using generic response with article link`);
+  return `Based on Alan Ranger's expertise, here's what you need to know about your question.\n\n*For detailed information, read the full guide: ${bestArticle.page_url}*`;
+}
+
 function generateArticleAnswer(articles, query = '') {
   if (!articles || articles.length === 0) {
     console.log(`[WARN] generateArticleAnswer: No articles provided`);
@@ -6797,60 +6867,21 @@ function generateArticleAnswer(articles, query = '') {
   
   const bestArticle = articles[0];
   const qlc = query.toLowerCase().replace(/["""]/g, '').trim();
+  const concept = extractMainConcept(query);
   
-  // Extract the main concept from the query for FAQ matching
-  const concept = qlc.replace(/^(what is|what's|what are|what's the|how does|how do|why is|why are|when should|when do|where is|where are)\s+/i, '').trim();
+  const faqAnswer = tryExtractFaqAnswer(bestArticle, concept);
+  if (faqAnswer) return faqAnswer;
   
-  // Try to extract FAQ content from json_ld_data first
-  const faqAnswer = extractAnswerFromJsonLd(bestArticle, concept);
-  if (faqAnswer) {
-    console.log(`[SUCCESS] Generated FAQ answer from article: "${faqAnswer.substring(0, 100)}..."`);
-    return faqAnswer;
-  }
+  const whatIsAnswer = tryExtractFromDescriptionForWhatIs(bestArticle, query, qlc);
+  if (whatIsAnswer) return whatIsAnswer;
   
-  // Try to extract from article description/meta_description for "what is" queries
-  if (qlc.includes('what is') || qlc.includes('what\'s')) {
-    const articleDescription = bestArticle.meta_description || bestArticle.description;
-    if (articleDescription && articleDescription.trim().length > 50) {
-      console.log(`[SUCCESS] Extracting answer from article description for "what is" query`);
-      const extracted = extractAnswerFromArticleDescription(bestArticle, query);
-      if (extracted && extracted.trim().length > 50) {
-        return extracted;
-      }
-    }
-  }
+  const relevantAnswer = tryExtractFromMostRelevantArticle(articles, query);
+  if (relevantAnswer) return relevantAnswer;
   
-  // Try to find most relevant article and extract from description
-  if (articles.length > 1) {
-    const relevantArticle = findMostRelevantArticle(articles, query);
-    if (relevantArticle) {
-      const articleDescription = relevantArticle.meta_description || relevantArticle.description;
-      if (articleDescription && articleDescription.trim().length > 50) {
-        const extracted = extractAnswerFromArticleDescription(relevantArticle, query);
-        if (extracted && extracted.trim().length > 50) {
-          console.log(`[SUCCESS] Extracted answer from most relevant article`);
-          return extracted;
-        }
-      }
-    }
-  }
+  const descriptionAnswer = tryUseArticleDescriptionAsFallback(bestArticle, query);
+  if (descriptionAnswer) return descriptionAnswer;
   
-  // Last resort: Check if we have any description content before using generic
-  const articleDescription = bestArticle.meta_description || bestArticle.description;
-  if (articleDescription && articleDescription.trim().length > 50) {
-    // Filter to ensure relevance
-    if (filterRelevantContent(articleDescription, query)) {
-      const cleanDescription = cleanResponseText(articleDescription);
-      if (cleanDescription && cleanDescription.trim().length > 50) {
-        console.log(`[SUCCESS] Using article description as answer`);
-        return cleanDescription.substring(0, 500); // Limit length
-      }
-    }
-  }
-  
-  // Only use generic fallback if we truly have no content
-  console.log(`[FALLBACK] No extractable content found, using generic response with article link`);
-  return `Based on Alan Ranger's expertise, here's what you need to know about your question.\n\n*For detailed information, read the full guide: ${bestArticle.page_url}*`;
+  return generateGenericArticleFallback(bestArticle);
 }
 
 // Helper function to generate equipment service answer
