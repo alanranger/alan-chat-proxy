@@ -10163,37 +10163,10 @@ function buildDebugInfo(ragResult, composedResponse) {
 async function sendRagSuccessResponse(res, ragResult, context) {
   console.log(`[SUCCESS] RAG-First success: ${ragResult.confidence} confidence, ${ragResult.answerLength} chars`);
   
-  // Ensure structured object exists with proper format
-  if (!ragResult.structured) {
-    ragResult.structured = {
-      intent: ragResult.type || 'advice',
-      articles: [],
-      services: [],
-      events: [],
-      products: []
-    };
-  }
-  
-  // Ensure arrays exist
-  if (!Array.isArray(ragResult.structured.articles)) ragResult.structured.articles = [];
-  if (!Array.isArray(ragResult.structured.services)) ragResult.structured.services = [];
-  if (!Array.isArray(ragResult.structured.events)) ragResult.structured.events = [];
-  if (!Array.isArray(ragResult.structured.products)) ragResult.structured.products = [];
-  
-  // Convert sources array to structured format if sources is an array of URLs
-  if (Array.isArray(ragResult.sources) && ragResult.sources.length > 0 && ragResult.structured.articles.length === 0) {
-    // If we have sources URLs but no articles, try to find articles by URL
-    try {
-      // Note: This is a fallback - ideally sources should already be objects
-      // For now, we'll rely on enrichment to add proper articles
-      console.log(`[ENRICH] Found ${ragResult.sources.length} source URLs, will enrich with proper objects`);
-    } catch (e) {
-      console.warn(`[ENRICH] Could not convert sources: ${e.message}`);
-    }
-  }
-  
   initializeStructuredObject(ragResult);
   handleSourcesConversion(ragResult);
+  
+  // Enrich structured data with related information
   const client = supabaseAdmin();
   if (context.query) {
     ragResult.structured = await enrichAdviceWithRelatedInfo(client, context.query, ragResult.structured);
