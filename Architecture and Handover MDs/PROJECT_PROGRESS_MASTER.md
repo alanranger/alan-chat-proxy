@@ -97,6 +97,10 @@
 - **Target Completeness**: 70%+ (currently 56%)
 - **Target User Satisfaction**: Track via analytics feedback scores
 
+### 🔧 Technical Remaining Issues
+- **High-complexity functions still need refactoring**: sendEventsResponse (28), handleEventsPipeline (15), handleServiceQueries (55), etc.
+- **Helper functions exceeding limits**: hasSpecificHardcodedAnswer (10), enrichTechnicalAnswerWithArticles (12), isCourseContentQuery (11), etc.
+
 ## Milestone Tracking
 - System Performance Excellence achieved (per README)
 - Testing reliability improvements ✅
