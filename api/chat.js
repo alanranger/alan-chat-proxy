@@ -10096,11 +10096,56 @@ function initializeStructuredObject(ragResult) {
   if (!Array.isArray(ragResult.structured.products)) ragResult.structured.products = [];
 }
 
+// Helper: Convert sources URLs to article objects
+async function convertSourcesUrlsToArticles(client, sourcesUrls) {
+  if (!Array.isArray(sourcesUrls) || sourcesUrls.length === 0) {
+    return [];
+  }
+  
+  try {
+    // Extract URLs from sources array
+    const urls = sourcesUrls
+      .filter(url => typeof url === 'string' && url.includes('alanranger.com'))
+      .slice(0, 12); // Limit to 12 articles
+    
+    if (urls.length === 0) {
+      return [];
+    }
+    
+    // Query articles by URLs
+    const { data, error } = await client
+      .from('v_articles_unified')
+      .select('id, title, page_url, categories, tags, image_url, publish_date, description, json_ld_data, last_seen, kind, source_type')
+      .in('page_url', urls)
+      .limit(12);
+    
+    if (error) {
+      console.warn(`[ENRICH] Error fetching articles by URL: ${error.message}`);
+      return [];
+    }
+    
+    if (data && data.length > 0) {
+      console.log(`[ENRICH] Converted ${data.length} URLs to article objects`);
+      return data.map(article => normalizeArticle(article));
+    }
+    
+    return [];
+  } catch (e) {
+    console.warn(`[ENRICH] Error converting URLs to articles: ${e.message}`);
+    return [];
+  }
+}
+
 // Helper: Handle sources conversion for enrichment
-function handleSourcesConversion(ragResult) {
+async function handleSourcesConversion(ragResult, client) {
   if (Array.isArray(ragResult.sources) && ragResult.sources.length > 0 && ragResult.structured.articles.length === 0) {
     try {
-      console.log(`[ENRICH] Found ${ragResult.sources.length} source URLs, will enrich with proper objects`);
+      console.log(`[ENRICH] Found ${ragResult.sources.length} source URLs, converting to article objects`);
+      const articles = await convertSourcesUrlsToArticles(client, ragResult.sources);
+      if (articles && articles.length > 0) {
+        ragResult.structured.articles = articles;
+        console.log(`[ENRICH] Added ${articles.length} articles from sources URLs`);
+      }
     } catch (e) {
       console.warn(`[ENRICH] Could not convert sources: ${e.message}`);
     }
@@ -10164,10 +10209,11 @@ async function sendRagSuccessResponse(res, ragResult, context) {
   console.log(`[SUCCESS] RAG-First success: ${ragResult.confidence} confidence, ${ragResult.answerLength} chars`);
   
   initializeStructuredObject(ragResult);
-  handleSourcesConversion(ragResult);
   
   // Enrich structured data with related information
   const client = supabaseAdmin();
+  await handleSourcesConversion(ragResult, client);
+  
   if (context.query) {
     ragResult.structured = await enrichAdviceWithRelatedInfo(client, context.query, ragResult.structured);
   }
