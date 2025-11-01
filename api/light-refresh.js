@@ -15,81 +15,114 @@ function send(res, status, obj){
   res.status(status).send(JSON.stringify(obj));
 }
 
+function supabaseAdmin() {
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
+  if (!url || !key) throw new Error('Missing SUPABASE_URL or KEY');
+  return createClient(url, key, { auth: { persistSession: false } });
+}
+
+function handleQuotedField(ctx) {
+  const { c, s, i, field } = ctx;
+  if(c==='"' && s[i+1]==='"'){ 
+    return { field: field + '"', skip: 1, inQ: true }; 
+  }
+  if(c==='"'){ 
+    return { field, skip: 0, inQ: false }; 
+  }
+  return { field: field + c, skip: 0, inQ: true };
+}
+
+function handleUnquotedField(ctx) {
+  const { c, field, row, rows } = ctx;
+  if(c==='"') {
+    return { field, row, rows, inQ: true };
+  }
+  if(c===',') {
+    row.push(field);
+    return { field: '', row, rows, inQ: false };
+  }
+  if(c==='\n') {
+    row.push(field);
+    rows.push(row);
+    return { field: '', row: [], rows, inQ: false };
+  }
+  return { field: field + c, row, rows, inQ: false };
+}
+
+function processCSVRow(row, field, rows) {
+  if(field || row.length) {
+    row.push(field);
+    rows.push(row);
+  }
+}
+
 function parseCSV(csvText){
   const s = csvText.replace(/\r/g, '');
-  const rows = []; let row=[], field='', inQ=false;
-  for (let i=0;i<s.length;i++){
-    const c=s[i];
-    if(inQ){
-      if(c==='"' && s[i+1]==='"'){ field+='"'; i++; }
-      else if(c==='"'){ inQ=false; }
-      else field+=c;
-    }else{
-      if(c==='"') inQ=true; else if(c===','){ row.push(field); field=''; }
-      else if(c==='\n'){ row.push(field); rows.push(row); row=[]; field=''; }
-      else field+=c;
-    }
+  const rows = [];
+  let row = [];
+  let field = '';
+  let inQ = false;
+  
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i];
+    const result = inQ 
+      ? handleQuotedField({ c, s, i, field })
+      : handleUnquotedField({ c, field, row, rows });
+    field = result.field;
+    i += result.skip || 0;
+    row = result.row || row;
+    inQ = result.inQ;
   }
-  if(field||row.length){ row.push(field); rows.push(row); }
+  
+  processCSVRow(row, field, rows);
   return rows;
+}
+
+async function checkSingleUrl(url, client) {
+  try {
+    const { data: existing } = await client
+      .from('url_last_processed')
+      .select('last_modified_header, last_processed_at')
+      .eq('url', url)
+      .single();
+    
+    const response = await fetch(url, { method: 'HEAD' });
+    const lastModifiedHeader = response.headers.get('last-modified');
+    
+    if (!lastModifiedHeader) {
+      return { url, changed: true };
+    }
+    
+    const lastModified = new Date(lastModifiedHeader);
+    const lastProcessed = existing ? new Date(existing.last_processed_at) : new Date(0);
+    const changed = lastModified > lastProcessed;
+    
+    await client
+      .from('url_last_processed')
+      .upsert({
+        url,
+        last_modified_header: lastModified.toISOString(),
+        last_processed_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      });
+    
+    return { url, changed };
+  } catch {
+    return { url, changed: true };
+  }
 }
 
 async function checkForChangedUrls(urls) {
   const changedUrls = [];
-  const client = supa();
+  const client = supabaseAdmin();
+  const batchSize = 50;
   
-  // Process URLs in smaller batches to avoid timeout
-  const batchSize = 50; // Smaller batches for HEAD requests
   for (let i = 0; i < urls.length; i += batchSize) {
     const batch = urls.slice(i, i + batchSize);
-    
-    // Process batch concurrently with Promise.all
-    const batchPromises = batch.map(async (url) => {
-      try {
-        // Get last processed timestamp for this URL
-        const { data: existing } = await client
-          .from('url_last_processed')
-          .select('last_modified_header, last_processed_at')
-          .eq('url', url)
-          .single();
-        
-        // Make HEAD request to check Last-Modified header
-        const response = await fetch(url, { method: 'HEAD' });
-        const lastModifiedHeader = response.headers.get('last-modified');
-        
-        if (!lastModifiedHeader) {
-          // If no Last-Modified header, assume it changed (first time or no header)
-          return { url, changed: true };
-        }
-        
-        const lastModified = new Date(lastModifiedHeader);
-        const lastProcessed = existing ? new Date(existing.last_processed_at) : new Date(0);
-        
-        // If Last-Modified is newer than our last processed time, URL has changed
-        const changed = lastModified > lastProcessed;
-        
-        // Update our tracking record
-        await client
-          .from('url_last_processed')
-          .upsert({
-            url,
-            last_modified_header: lastModified.toISOString(),
-            last_processed_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          });
-          
-        return { url, changed };
-        
-      } catch (e) {
-        // If we can't check, assume it changed to be safe
-        return { url, changed: true };
-      }
-    });
-    
-    // Wait for batch to complete
+    const batchPromises = batch.map(url => checkSingleUrl(url, client));
     const batchResults = await Promise.all(batchPromises);
     
-    // Add changed URLs to our result
     batchResults.forEach(result => {
       if (result.changed) {
         changedUrls.push(result.url);
@@ -100,21 +133,14 @@ async function checkForChangedUrls(urls) {
   return changedUrls;
 }
 
-async function readUrlsFromRepo(){
-  let content = null;
-  try {
-    content = await fs.readFile(CSV_PATH, 'utf8');
-  } catch (e) {
-    // Fallback: fetch from GitHub raw if local path isn't packaged in the serverless bundle
-    try {
-      const rawUrl = 'https://raw.githubusercontent.com/alanranger/alan-chat-proxy/main/CSVSs%20from%20website/06%20-%20site%20urls%20-%20Sheet1.csv';
-      const resp = await fetch(rawUrl);
-      if (!resp.ok) throw new Error(`raw_fetch_http_${resp.status}`);
-      content = await resp.text();
-    } catch (e2) {
-      throw e; // bubble original error to report ENOENT
-    }
-  }
+async function fetchCsvFromGitHub() {
+  const rawUrl = 'https://raw.githubusercontent.com/alanranger/alan-chat-proxy/main/CSVSs%20from%20website/06%20-%20site%20urls%20-%20Sheet1.csv';
+  const resp = await fetch(rawUrl);
+  if (!resp.ok) throw new Error(`raw_fetch_http_${resp.status}`);
+  return resp.text();
+}
+
+function extractUrlsFromCsv(content) {
   const rows = parseCSV(content);
   if(rows.length<2) return [];
   const headers = rows[0].map(h=>h.toLowerCase());
@@ -124,142 +150,250 @@ async function readUrlsFromRepo(){
   return [...new Set(urls)];
 }
 
-function need(k){
-  const v = process.env[k];
-  if(!v || !String(v).trim()) throw new Error(`missing_env:${k}`);
-  return v;
+async function readUrlsFromRepo(){
+  let content = null;
+  try {
+    content = await fs.readFile(CSV_PATH, 'utf8');
+  } catch {
+    content = await fetchCsvFromGitHub();
+  }
+  return extractUrlsFromCsv(content);
 }
 
-function supa(){
-  return createClient(need('SUPABASE_URL'), need('SUPABASE_SERVICE_ROLE_KEY'), { auth: { persistSession: false } });
+function buildUrlsToCheck(urls, cameraCourseUrl, maxUrlsToCheck) {
+  const urlsToCheck = [cameraCourseUrl];
+  for (const url of urls) {
+    if (url !== cameraCourseUrl && urlsToCheck.length < maxUrlsToCheck) {
+      urlsToCheck.push(url);
+    }
+  }
+  return urlsToCheck;
 }
 
-export default async function handler(req, res){
-  try{
-    const action = String(req.query.action||'').toLowerCase();
-    if(!action) return send(res, 400, { ok:false, error:'bad_request', detail:'missing action' });
-
-    if(action==='urls'){
-      const urls = await readUrlsFromRepo();
-      return send(res, 200, { ok:true, count:urls.length, sample:urls.slice(0,10) });
-    }
-
-    if(action==='run' || action==='manual'){
-      const startedAt = new Date().toISOString();
-      let urls = [];
-      let changedUrls = [];
-      let chunks = [];
-      let ingested = 0;
-      let failed = 0;
-      let error = null;
-
-      try {
-        urls = await readUrlsFromRepo();
-        
-        // Check which URLs have changed since last run
-        // For now, prioritize the camera course URL and limit to avoid timeout
-        const cameraCourseUrl = 'https://www.alanranger.com/photography-services-near-me/beginners-photography-course';
-        const maxUrlsToCheck = 50; // Smaller limit to avoid timeout
-        
-        // Always check the camera course URL first
-        const urlsToCheck = [cameraCourseUrl];
-        
-        // Add other URLs up to the limit
-        for (const url of urls) {
-          if (url !== cameraCourseUrl && urlsToCheck.length < maxUrlsToCheck) {
-            urlsToCheck.push(url);
-          }
-        }
-        
-        changedUrls = await checkForChangedUrls(urlsToCheck);
-        
-        const base = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : `http://localhost:3000`;
-        const token = process.env.INGEST_TOKEN || '';
-        const protectionBypass = process.env.VERCEL_AUTOMATION_BYPASS_SECRET || process.env.VERCEL_PROTECTION_BYPASS || process.env.PROTECTION_BYPASS_TOKEN || '';
-
-        if (protectionBypass && token && changedUrls.length > 0) {
-          const batchSize = 20; // Process changed URLs in batches
-          for(let i=0;i<changedUrls.length;i+=batchSize){
-            const part = changedUrls.slice(i, i+batchSize);
-            const r = await fetch(`${base}/api/ingest`, {
-              method:'POST',
-              headers:{
-                'Content-Type':'application/json',
-                Authorization:`Bearer ${token}`,
-                'x-vercel-protection-bypass': protectionBypass
-              },
-              body: JSON.stringify({ csvUrls: part })
-            });
-            const bodyText = await r.text();
-            let j = null; try { j = JSON.parse(bodyText); } catch {}
-            if (r.ok && j && j.ok){ 
-              ingested += (j.ingested || part.length); 
-              chunks.push({ idx:i, count: part.length, ok:true, urls: part }); 
-            } else { 
-              failed += part.length; 
-              chunks.push({ idx:i, count: part.length, ok:false, error: (j && (j.error||j.detail)) || bodyText, urls: part }); 
-            }
-          }
-          // Finalize mappings after all batches
-          try{
-            await fetch(`${base}/api/tools?action=finalize`, { method:'POST', headers:{ Authorization:`Bearer ${token}`, 'x-vercel-protection-bypass': protectionBypass } });
-          }catch{}
-        } else {
-          chunks.push({ 
-            note: `Bypass token: ${protectionBypass ? 'present' : 'missing'}, Ingest token: ${token ? 'present' : 'missing'}, Changed URLs: ${changedUrls.length}` 
-          });
-        }
-      } catch (e) {
-        error = String(e?.message || e);
-        chunks.push({ error });
-      }
-
-      const finishedAt = new Date().toISOString();
-      try{
-        const client = supa();
-        await client.from('light_refresh_runs').insert([{
-          started_at: startedAt,
-          finished_at: finishedAt,
-          urls_total: urls.length,
-          urls_changed: changedUrls.length,
-          ingested_count: ingested,
-          failed_count: failed,
-          batches_json: chunks
-        }]);
-      }catch(e){}
-
-      return send(res, 200, { 
-        ok:true, 
-        started_at: startedAt, 
-        finished_at: finishedAt, 
-        urls: urls.length, 
-        ingested, 
-        failed, 
-        batches: chunks,
-        error,
-        mode: (process.env.VERCEL_AUTOMATION_BYPASS_SECRET || process.env.VERCEL_PROTECTION_BYPASS || process.env.PROTECTION_BYPASS_TOKEN) && (process.env.INGEST_TOKEN || '') ? 'ingest' : 'log-only'
-      });
-    }
-
-    if(action==='status'){
-      try{
-        const client = supa();
-        const { data, error } = await client
-          .from('light_refresh_runs')
-          .select('*')
-          .order('started_at', { ascending: false })
-          .limit(parseInt(req.query.limit || '10', 10));
-        if (error) return send(res, 500, { ok:false, error: 'supabase_error', detail: error.message });
-        return send(res, 200, { ok:true, rows: data||[] });
-      }catch(e){
-        return send(res, 500, { ok:false, error:'server_error', detail:String(e?.message||e) });
-      }
-    }
-
-    return send(res, 400, { ok:false, error:'bad_request', detail:'unknown action' });
-  }catch(e){
-    return send(res, 500, { ok:false, error:'server_error', detail: String(e?.message||e) });
+function parseIngestResponse(bodyText) {
+  try {
+    return JSON.parse(bodyText);
+  } catch (parseErr) {
+    console.warn('Failed to parse ingest response:', parseErr);
+    return null;
   }
 }
 
+function createSuccessBatch(j, part, i) {
+  const count = j.ingested || (j.results ? j.results.filter(r => r.ok).length : part.length);
+  return {
+    idx: i,
+    count: part.length,
+    ok: true,
+    ingested: count,
+    total: j.total || part.length,
+    urls: part
+  };
+}
 
+function createFailedBatch(batchData) {
+  const { j, part, i, bodyText, status } = batchData;
+  return {
+    idx: i,
+    count: part.length,
+    ok: false,
+    error: (j && (j.error || j.detail)) || bodyText || `HTTP ${status}`,
+    urls: part
+  };
+}
+
+function processIngestBatch(response) {
+  const { r, j, part, i, bodyText } = response;
+  if (r.ok && j && j.ok) {
+    return createSuccessBatch(j, part, i);
+  }
+  return createFailedBatch({ j, part, i, bodyText, status: r.status });
+}
+
+async function processSingleBatch(part, i, config) {
+  const { base, token, protectionBypass } = config;
+  const r = await fetch(`${base}/api/ingest`, {
+    method:'POST',
+    headers:{
+      'Content-Type':'application/json',
+      Authorization:`Bearer ${token}`,
+      'x-vercel-protection-bypass': protectionBypass
+    },
+    body: JSON.stringify({ csvUrls: part })
+  });
+  
+  const bodyText = await r.text();
+  const j = parseIngestResponse(bodyText);
+  return processIngestBatch({ r, j, part, i, bodyText });
+}
+
+async function processIngestBatches(config) {
+  const { changedUrls, base, token, protectionBypass } = config;
+  const chunks = [];
+  let ingested = 0;
+  let failed = 0;
+  const batchSize = 20;
+  
+  for(let i = 0; i < changedUrls.length; i += batchSize) {
+    const part = changedUrls.slice(i, i + batchSize);
+    const batchResult = await processSingleBatch(part, i, { base, token, protectionBypass });
+    
+    if (batchResult.ok) {
+      ingested += batchResult.ingested;
+    } else {
+      failed += batchResult.count;
+    }
+    chunks.push(batchResult);
+  }
+  
+  return { chunks, ingested, failed };
+}
+
+async function finalizeMappings(config) {
+  const { base, token, protectionBypass } = config;
+  try {
+    const finalizeResp = await fetch(`${base}/api/tools?action=finalize`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+        'x-vercel-protection-bypass': protectionBypass
+      }
+    });
+    if (!finalizeResp.ok) {
+      const errorText = await finalizeResp.text().catch(() => '');
+      console.warn('Finalize failed:', finalizeResp.status, errorText);
+    }
+  } catch (finalizeErr) {
+    console.warn('Finalize error:', finalizeErr.message);
+  }
+}
+
+function getConfig() {
+  const base = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : `http://localhost:3000`;
+  const token = process.env.INGEST_TOKEN || '';
+  const protectionBypass = process.env.VERCEL_AUTOMATION_BYPASS_SECRET || process.env.VERCEL_PROTECTION_BYPASS || process.env.PROTECTION_BYPASS_TOKEN || '';
+  return { base, token, protectionBypass };
+}
+
+async function processIngestion(changedUrls, config) {
+  const batchResults = await processIngestBatches({ ...config, changedUrls });
+  await finalizeMappings(config);
+  return batchResults;
+}
+
+function logRunResult(data) {
+  try {
+    const client = supabaseAdmin();
+    return client.from('light_refresh_runs').insert([data]);
+  } catch {
+    return Promise.resolve();
+  }
+}
+
+async function executeRunLogic() {
+  const urls = await readUrlsFromRepo();
+  const cameraCourseUrl = 'https://www.alanranger.com/photography-services-near-me/beginners-photography-course';
+  const urlsToCheck = buildUrlsToCheck(urls, cameraCourseUrl, 50);
+  const changedUrls = await checkForChangedUrls(urlsToCheck);
+  const config = getConfig();
+
+  if (config.protectionBypass && config.token && changedUrls.length > 0) {
+    return await processIngestion(changedUrls, config);
+  }
+  return {
+    chunks: [{
+      note: `Bypass token: ${config.protectionBypass ? 'present' : 'missing'}, Ingest token: ${config.token ? 'present' : 'missing'}, Changed URLs: ${changedUrls.length}`
+    }],
+    ingested: 0,
+    failed: 0,
+    urls: urls.length,
+    changedUrls: changedUrls.length
+  };
+}
+
+function buildResponse(res, result, timestamps) {
+  return send(res, 200, {
+    ok: true,
+    started_at: timestamps.startedAt,
+    finished_at: timestamps.finishedAt,
+    urls: result.urls,
+    ingested: result.ingested,
+    failed: result.failed,
+    batches: result.chunks,
+    error: result.error,
+    mode: getConfig().protectionBypass && getConfig().token ? 'ingest' : 'log-only'
+  });
+}
+
+async function handleRunAction(req, res) {
+  const startedAt = new Date().toISOString();
+  let result = { chunks: [], ingested: 0, failed: 0, urls: 0, changedUrls: 0, error: null };
+
+  try {
+    const runResult = await executeRunLogic();
+    result = { ...runResult, error: null };
+  } catch (e) {
+    result.error = String(e?.message || e);
+    result.chunks.push({ error: result.error });
+  }
+
+  const finishedAt = new Date().toISOString();
+  await logRunResult({
+    started_at: startedAt,
+    finished_at: finishedAt,
+    urls_total: result.urls,
+    urls_changed: result.changedUrls,
+    ingested_count: result.ingested,
+    failed_count: result.failed,
+    batches_json: result.chunks
+  });
+
+  return buildResponse(res, result, { startedAt, finishedAt });
+}
+
+async function handleUrlsAction(req, res) {
+  const urls = await readUrlsFromRepo();
+  return send(res, 200, { ok: true, count: urls.length, sample: urls.slice(0, 10) });
+}
+
+async function handleStatusAction(req, res) {
+  try {
+    const client = supabaseAdmin();
+    const { data, error } = await client
+      .from('light_refresh_runs')
+      .select('*')
+      .order('started_at', { ascending: false })
+      .limit(parseInt(req.query.limit || '10', 10));
+    if (error) return send(res, 500, { ok: false, error: 'supabase_error', detail: error.message });
+    return send(res, 200, { ok: true, rows: data || [] });
+  } catch (e) {
+    return send(res, 500, { ok: false, error: 'server_error', detail: String(e?.message || e) });
+  }
+}
+
+function routeAction(action) {
+  const ACTION_HANDLERS = {
+    urls: handleUrlsAction,
+    run: handleRunAction,
+    manual: handleRunAction,
+    status: handleStatusAction
+  };
+  return ACTION_HANDLERS[action];
+}
+
+export default async function handler(req, res) {
+  try {
+    const action = String(req.query.action || '').toLowerCase();
+    if (!action) return send(res, 400, { ok: false, error: 'bad_request', detail: 'missing action' });
+
+    const handlerFn = routeAction(action);
+    if (handlerFn) {
+      return await handlerFn(req, res);
+    }
+
+    return send(res, 400, { ok: false, error: 'bad_request', detail: 'unknown action' });
+  } catch (e) {
+    return send(res, 500, { ok: false, error: 'server_error', detail: String(e?.message || e) });
+  }
+}
