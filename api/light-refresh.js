@@ -1,5 +1,5 @@
 // /api/light-refresh.js
-// Lightweight hourly refresh: read URLs from repo CSV and re-ingest changed content (simple mode: re-ingest all), then finalize mappings.
+// Lightweight refresh: read URLs from repo CSV and re-ingest changed content (runs every 8 hours via Vercel Cron), then finalize mappings.
 // GET /api/light-refresh?action=run
 // GET /api/light-refresh?action=urls
 
