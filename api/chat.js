@@ -8778,25 +8778,125 @@ async function handleEventRoutingQuery(client, query, isEquipmentQuestion) {
   return null;
 }
 
+// Helper: Check if query should route to events instead of services (Complexity: Low)
+function shouldRouteToEvents(query, qlcService, isFreeCourseQuery, isEquipmentQuestion, isPaymentPlanQuery) {
+  const businessCategory = detectBusinessCategory(query || '');
+  const courseLogistics = !isEquipmentQuestion && /\b(course|beginners|lightroom|camera\s+course|weeks|how\s+many\s+weeks|syllabus|schedule)\b/i.test(query || '');
+  const eventCues = /\b(workshop|workshops|event|photowalk|next\s+.*workshop|where\s+.*workshop|when\s+.*workshop|autumn\s+workshops|devon\s+workshop|bluebell\s+workshop|how\s+long.*workshop|bluebell|autumn|spring|summer|winter)\b/i.test(query || '');
+  
+  const isWhatCoursesQuery = /\b(what\s+courses|what\s+photography\s+courses|courses\s+do\s+you\s+offer|courses\s+do\s+you\s+have)\b/i.test(query || '');
+  if (isWhatCoursesQuery && !isFreeCourseQuery) return true;
+  
+  const isCourseOfferQuery = !isFreeCourseQuery && /\b(do\s+you\s+offer|do\s+you\s+do|do\s+you\s+have|do\s+you\s+run|offer.*course|run.*course|have.*course)\b/i.test(query || '') && 
+                            /\b(course|courses|class|classes|lightroom|beginners|beginner|portrait|photography\s+course)\b/i.test(query || '');
+  
+  const isCourseTypeQuery = !isFreeCourseQuery && (
+                            (/\b(lightroom|post-processing|photo\s+editing|beginners|beginner|portrait|foundation|intermediate|advanced)\b/i.test(query || '') &&
+                             /\b(course|courses|class|classes|workshop|vs|versus|difference|difference between)\b/i.test(query || '')) ||
+                            (/\b(lightroom|post-processing)\b/i.test(query || '') && /\b(vs|versus|difference|difference between)\b/i.test(query || ''))
+  );
+  
+  const isCoursePaymentQuery = !isFreeCourseQuery && !isPaymentPlanQuery && 
+                               !/(instalment|installment|instalments|installments)/i.test(query || '') &&
+                               /\b(pay|payment|book|booking|price|cost)\b/i.test(query || '') &&
+                               /\b(course|courses|class|classes)\b/i.test(query || '');
+  
+  const isCourseSuitabilityQuery = !isFreeCourseQuery && /\b(suitable|compatible|need|required|prerequisite|for|cover|covers|include|includes)\b/i.test(query || '') &&
+                                   /\b(course|courses|class|classes|beginners|beginner|lightroom|portrait)\b/i.test(query || '');
+  
+  if (!isFreeCourseQuery && !isEquipmentQuestion && !isPaymentPlanQuery) {
+    const isWhenQuery = /\b(when|where|next|upcoming|schedule)\b/i.test(query || '') && /\b(workshop|course|event|session)\b/i.test(query || '');
+    const courseLogisticsKeywords = /\b(need|needed|required|laptop|weeks|week|duration|how\s+many|equipment|bring|brings|prerequisite|requirement|what\s+do\s+i|do\s+i\s+need)\b/i;
+    const isCourseLogisticsQuery = courseLogistics && courseLogisticsKeywords.test(query || '');
+    
+    if (businessCategory === 'Event Queries' || 
+        isCourseLogisticsQuery || isCourseOfferQuery || isCourseTypeQuery || 
+        isCoursePaymentQuery || isCourseSuitabilityQuery ||
+        (courseLogistics && isWhenQuery) || eventCues || isWhenQuery) {
+      return true;
+    }
+  }
+  
+  return false;
+}
+
+// Helper: Handle free course query enrichment (Complexity: Low)
+async function enrichFreeCourseAnswer(client, qlcService, serviceResponse) {
+  const freeCourseKeywords = [
+    'free online photography course',
+    'photography academy',
+    'free photography course',
+    'online photography course',
+    'free academy',
+    'course add-ons'
+  ];
+  const freeCourseServices = await findServices(client, { keywords: freeCourseKeywords, limit: 10 });
+  const freeCourseArticles = await findArticles(client, { keywords: freeCourseKeywords, limit: 10 });
+  
+  const services = (freeCourseServices || []).filter(s => 
+    (s.page_url || s.url || '').includes('free-online-photography-course') ||
+    (s.title || '').toLowerCase().includes('free online photography course') ||
+    (s.title || '').toLowerCase().includes('photography academy')
+  );
+  
+  const articles = (freeCourseArticles || []).filter(a => 
+    (a.page_url || a.url || '').includes('free-online-photography-course') ||
+    (a.title || '').toLowerCase().includes('free online photography course') ||
+    (a.title || '').toLowerCase().includes('photography academy')
+  );
+  
+  let enrichedAnswer = serviceResponse;
+  
+  try {
+    const { data: faqChunks } = await client
+      .from('page_chunks')
+      .select('chunk_text, url')
+      .eq('url', 'https://www.alanranger.com/free-online-photography-course')
+      .or('chunk_text.ilike.%FREQUENTLY ASKED QUESTIONS%,chunk_text.ilike.%Is it really free%,chunk_text.ilike.%How do I sign up%,chunk_text.ilike.%How long does it take%')
+      .limit(3);
+    
+    if (faqChunks && faqChunks.length > 0) {
+      const faqContent = faqChunks
+        .map(chunk => {
+          const text = chunk.chunk_text || '';
+          const faqMatch = text.match(/(?:Is it really free\?|How do I sign up\?|How long does it take\?|Can I download|Do I need|Can I do the course)[\s\S]{0,300}/i);
+          return faqMatch ? faqMatch[0] : null;
+        })
+        .filter(Boolean)
+        .join('\n\n');
+      
+      if (faqContent && faqContent.length > 50) {
+        if (qlcService.includes('really free') || qlcService.includes('is it free')) {
+          const freeMatch = faqContent.match(/Is it really free\?[\s\S]{0,200}/i);
+          if (freeMatch) enrichedAnswer = serviceResponse + '\n\n' + freeMatch[0].trim();
+        } else if (qlcService.includes('subscribe') || qlcService.includes('sign up') || qlcService.includes('how do i join') || qlcService.includes('how to join')) {
+          const signupMatch = faqContent.match(/How do I sign up\?[\s\S]{0,300}/i) || 
+                            faqContent.match(/sign up[\s\S]{0,200}button[\s\S]{0,200}register/i);
+          if (signupMatch) enrichedAnswer = serviceResponse + '\n\n' + signupMatch[0].trim();
+        } else if (qlcService.includes('how long') || qlcService.includes('duration') || qlcService.includes('take')) {
+          const durationMatch = faqContent.match(/How long does it take\?[\s\S]{0,200}/i);
+          if (durationMatch) enrichedAnswer = serviceResponse + '\n\n' + durationMatch[0].trim();
+        }
+      }
+    }
+  } catch (chunkError) {
+    console.log(`[DEBUG] Error searching chunks for free course: ${chunkError.message}`);
+  }
+  
+  return { enrichedAnswer, services, articles };
+}
+
 // Helper: Handle service queries (Complexity: Low)
 async function handleServiceQueries(client, query) {
   const qlcService = query.toLowerCase();
   
-  // DEBUG: Track what's happening
   const debugInfo = {
     query: query,
     qlcService: qlcService,
     steps: []
   };
   
-  // CRITICAL: Early exit for event queries - these should be handled by handleEventRoutingQuery()
-  // Check if this is an event query using the same logic as handleEventRoutingQuery
   const isEquipmentQuestion = /\b(what\s+(sort\s+of\s+)?camera|what\s+(gear|equipment)|tripod|lens|memory\s+card)\b/i.test(query || '');
-  const businessCategory = detectBusinessCategory(query || '');
-  const courseLogistics = !isEquipmentQuestion && /\b(course|beginners|lightroom|camera\s+course|weeks|how\s+many\s+weeks|syllabus|schedule)\b/i.test(query || '');
-  const eventCues = /\b(workshop|workshops|event|photowalk|next\s+.*workshop|where\s+.*workshop|when\s+.*workshop|autumn\s+workshops|devon\s+workshop|bluebell\s+workshop|how\s+long.*workshop|bluebell|autumn|spring|summer|winter)\b/i.test(query || '');
-  
-  // Check if this is a free course query - these should use SERVICE_PATTERNS
   const isFreeCourseQuery = qlcService.includes('free online photography course') || 
                             (qlcService.includes('free course') && qlcService.includes('photography')) ||
                             (qlcService.includes('photography academy') && qlcService.includes('free')) ||
@@ -8804,67 +8904,11 @@ async function handleServiceQueries(client, query) {
                             (qlcService.includes('really free') && qlcService.includes('online photography course')) ||
                             (qlcService.includes('certificate') && qlcService.includes('photography course'));
   
-  // Queries asking what courses are offered - should route to events to show available courses
-  // Check this FIRST before any service pattern matching
-  const isWhatCoursesQuery = /\b(what\s+courses|what\s+photography\s+courses|courses\s+do\s+you\s+offer|courses\s+do\s+you\s+have)\b/i.test(query || '');
-  if (isWhatCoursesQuery && !isFreeCourseQuery) {
-    console.log(`[SKIP] handleServiceQueries: "What courses" query detected, routing to events: "${query}"`);
-    return null; // Let handleEventRoutingQuery handle it
-  }
-  
-  // Expanded course detection - queries about offering/doing/having specific courses
-  const isCourseOfferQuery = !isFreeCourseQuery && /\b(do\s+you\s+offer|do\s+you\s+do|do\s+you\s+have|do\s+you\s+run|offer.*course|run.*course|have.*course)\b/i.test(query || '') && 
-                            /\b(course|courses|class|classes|lightroom|beginners|beginner|portrait|photography\s+course)\b/i.test(query || '');
-  
-  // Course type queries - queries mentioning specific course types (Lightroom, post-processing, etc.)
-  // These often ask "what is X vs Y" where X/Y are course topics, or mention course types
-  const isCourseTypeQuery = !isFreeCourseQuery && (
-                            (/\b(lightroom|post-processing|photo\s+editing|beginners|beginner|portrait|foundation|intermediate|advanced)\b/i.test(query || '') &&
-                             /\b(course|courses|class|classes|workshop|vs|versus|difference|difference between)\b/i.test(query || '')) ||
-                            (/\b(lightroom|post-processing)\b/i.test(query || '') && /\b(vs|versus|difference|difference between)\b/i.test(query || ''))
-  );
-  
-  // Payment plan queries (Pick N Mix) should route to services, not events
-  // Check this FIRST before course payment detection
-  // Match both singular and plural forms of instalment/installment
   const isPaymentPlanQuery = /(pick.*n.*mix|payment.*plan|instalment.*plan|installment.*plan|pay.*instalment|pay.*installment|pay.*in.*instalment|pay.*in.*installment|instalment|installment|instalments|installments)/i.test(query || '');
   
-  // Payment/booking queries about courses - BUT exclude payment plan queries (these should route to services)
-  // If it's a payment plan query, don't treat it as a course payment query
-  // Also exclude queries that mention instalments/installments - these are payment plan queries
-  const isCoursePaymentQuery = !isFreeCourseQuery && !isPaymentPlanQuery && 
-                               !/(instalment|installment|instalments|installments)/i.test(query || '') &&
-                               /\b(pay|payment|book|booking|price|cost)\b/i.test(query || '') &&
-                               /\b(course|courses|class|classes)\b/i.test(query || '');
-  
-  // Course suitability/compatibility queries
-  const isCourseSuitabilityQuery = !isFreeCourseQuery && /\b(suitable|compatible|need|required|prerequisite|for|cover|covers|include|includes)\b/i.test(query || '') &&
-                                   /\b(course|courses|class|classes|beginners|beginner|lightroom|portrait)\b/i.test(query || '');
-  
-  // CRITICAL: Check course-related queries BEFORE SERVICE_PATTERNS to prevent false matches
-  // This must happen BEFORE service pattern matching and database lookup to catch course queries
-  // BUT: Payment plan queries should NOT be routed to events - they should go to services
-  if (!isFreeCourseQuery && !isEquipmentQuestion && !isPaymentPlanQuery) {
-    const isWhenQuery = /\b(when|where|next|upcoming|schedule)\b/i.test(query || '') && /\b(workshop|course|event|session)\b/i.test(query || '');
-    
-    // Course logistics keywords - queries asking about course requirements/features/duration
-    const courseLogisticsKeywords = /\b(need|needed|required|laptop|weeks|week|duration|how\s+many|equipment|bring|brings|prerequisite|requirement|what\s+do\s+i|do\s+i\s+need)\b/i;
-    const isCourseLogisticsQuery = courseLogistics && courseLogisticsKeywords.test(query || '');
-    
-    // If this looks like an event query, skip service handling and let event routing handle it
-    // Course logistics queries should route to events even without "when/where" keywords
-    if (businessCategory === 'Event Queries' || 
-        isCourseLogisticsQuery ||  // Course logistics queries (need laptop, weeks, etc.)
-        isCourseOfferQuery ||      // Queries about offering/doing courses
-        isCourseTypeQuery ||       // Queries about specific course types
-        isCoursePaymentQuery ||    // Payment/booking queries about courses (but NOT payment plans)
-        isCourseSuitabilityQuery || // Course suitability/compatibility queries
-        (courseLogistics && isWhenQuery) || 
-        eventCues || 
-        isWhenQuery) {
-      console.log(`[SKIP] handleServiceQueries: Event/course query detected (before SERVICE_PATTERNS), skipping service handling: "${query}"`);
-      return null; // Let handleEventRoutingQuery handle it
-    }
+  if (shouldRouteToEvents(query, qlcService, isFreeCourseQuery, isEquipmentQuestion, isPaymentPlanQuery)) {
+    console.log(`[SKIP] handleServiceQueries: Event/course query detected, skipping service handling: "${query}"`);
+    return null;
   }
   
   // CRITICAL: Check if this is a technical/about/person query BEFORE SERVICE_PATTERNS
@@ -8929,7 +8973,7 @@ async function handleServiceQueries(client, query) {
     debugInfo.steps.push(`SERVICE_PATTERNS matched, returning service response`);
     
     // For free course and certificate queries, fetch the service/article to show in related info
-    const isFreeCourseQuery = qlcService.includes('free online photography course') || 
+    const isFreeCourseQueryInPattern = qlcService.includes('free online photography course') || 
                               (qlcService.includes('free course') && qlcService.includes('photography')) ||
                               (qlcService.includes('photography academy') && qlcService.includes('free')) ||
                               (qlcService.includes('subscribe') && qlcService.includes('free')) ||
@@ -8945,89 +8989,17 @@ async function handleServiceQueries(client, query) {
     let services = [];
     let enrichedAnswer = serviceResponse;
     
-    if (isFreeCourseQuery) {
-      // Try to find the free course service/article using multiple search terms
-      const freeCourseKeywords = [
-        'free online photography course',
-        'photography academy',
-        'free photography course',
-        'online photography course',
-        'free academy',
-        'course add-ons'
-      ];
-      const freeCourseServices = await findServices(client, { keywords: freeCourseKeywords, limit: 10 });
-      const freeCourseArticles = await findArticles(client, { keywords: freeCourseKeywords, limit: 10 });
-      
-      // Filter for the specific free course page
-      services = (freeCourseServices || []).filter(s => 
-        (s.page_url || s.url || '').includes('free-online-photography-course') ||
-        (s.title || '').toLowerCase().includes('free online photography course') ||
-        (s.title || '').toLowerCase().includes('photography academy')
-      );
-      
-      articles = (freeCourseArticles || []).filter(a => 
-        (a.page_url || a.url || '').includes('free-online-photography-course') ||
-        (a.title || '').toLowerCase().includes('free online photography course') ||
-        (a.title || '').toLowerCase().includes('photography academy')
-      );
-      
-      // Also search page_chunks for FAQ content to enrich the answer
-      try {
-        const { data: faqChunks, error: chunksError } = await client
-          .from('page_chunks')
-          .select('chunk_text, url')
-          .eq('url', 'https://www.alanranger.com/free-online-photography-course')
-          .or('chunk_text.ilike.%FREQUENTLY ASKED QUESTIONS%,chunk_text.ilike.%Is it really free%,chunk_text.ilike.%How do I sign up%,chunk_text.ilike.%How long does it take%')
-          .limit(3);
-        
-        if (!chunksError && faqChunks && faqChunks.length > 0) {
-          console.log(`[DEBUG] Found ${faqChunks.length} FAQ chunks for free course enrichment`);
-          // Extract FAQ content from chunks
-          const faqContent = faqChunks
-            .map(chunk => {
-              const text = chunk.chunk_text || '';
-              // Extract FAQ sections
-              const faqMatch = text.match(/(?:Is it really free\?|How do I sign up\?|How long does it take\?|Can I download|Do I need|Can I do the course)[\s\S]{0,300}/i);
-              return faqMatch ? faqMatch[0] : null;
-            })
-            .filter(Boolean)
-            .join('\n\n');
-          
-          if (faqContent && faqContent.length > 50) {
-            // Enhance answer with FAQ details if query asks specific questions
-            if (qlcService.includes('really free') || qlcService.includes('is it free')) {
-              const freeMatch = faqContent.match(/Is it really free\?[\s\S]{0,200}/i);
-              if (freeMatch) {
-                enrichedAnswer = serviceResponse + '\n\n' + freeMatch[0].trim();
-              }
-            } else if (qlcService.includes('subscribe') || qlcService.includes('sign up') || qlcService.includes('how do i join') || qlcService.includes('how to join')) {
-              // Look for signup instructions in FAQ
-              const signupMatch = faqContent.match(/How do I sign up\?[\s\S]{0,300}/i) || 
-                                  faqContent.match(/sign up[\s\S]{0,200}button[\s\S]{0,200}register/i);
-              if (signupMatch) {
-                enrichedAnswer = serviceResponse + '\n\n' + signupMatch[0].trim();
-              }
-            } else if (qlcService.includes('how long') || qlcService.includes('duration') || qlcService.includes('take')) {
-              const durationMatch = faqContent.match(/How long does it take\?[\s\S]{0,200}/i);
-              if (durationMatch) {
-                enrichedAnswer = serviceResponse + '\n\n' + durationMatch[0].trim();
-              }
-            }
-          }
-        }
-      } catch (chunkError) {
-        console.log(`[DEBUG] Error searching chunks for free course: ${chunkError.message}`);
-      }
-      
+    if (isFreeCourseQueryInPattern) {
+      const enrichment = await enrichFreeCourseAnswer(client, qlcService, serviceResponse);
+      enrichedAnswer = enrichment.enrichedAnswer;
+      services = enrichment.services;
+      articles = enrichment.articles;
       console.log(`[DEBUG] Found ${services.length} services and ${articles.length} articles for free course`);
     } else if (isCertificateQuery) {
-      // For certificate queries, fetch course-related services/articles
       const courseServices = await findServices(client, { keywords: ['photography course', 'course'], limit: 5 });
       const courseArticles = await findArticles(client, { keywords: ['photography course', 'course'], limit: 5 });
-      
       services = (courseServices || []).slice(0, 3);
       articles = (courseArticles || []).slice(0, 3);
-      
       console.log(`[DEBUG] Found ${services.length} services and ${articles.length} articles for certificate query`);
     }
     
