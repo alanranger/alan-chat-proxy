@@ -1,7 +1,5 @@
 # PROJECT_PROGRESS_MASTER.md
 
-# PROJECT_PROGRESS_MASTER.md
-
 ## Latest Snapshot
 - **1 Nov 2025** — SonarQube refactoring complete: Fixed 2 SonarQube issues (argument count mismatch, cognitive complexity violation). Reduced `sendRagSuccessResponse()` complexity from 20 to ≤15 by extracting 4 helper functions. Verified with 40Q test: 100% success (40/40) - no regressions
 - **1 Nov 2025** — Feature improvements complete: Removed article cap for equipment/technical questions, added histogram answer, removed URLs from all hardcoded answers
