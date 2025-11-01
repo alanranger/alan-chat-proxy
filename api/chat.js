@@ -7035,8 +7035,8 @@ function tryUseArticleDescriptionAsFallback(bestArticle, query) {
 
 // Helper: Generate generic fallback answer (Complexity: Low)
 function generateGenericArticleFallback(bestArticle) {
-  console.log(`[FALLBACK] No extractable content found, using generic response with article link`);
-  return `Based on Alan Ranger's expertise, here's what you need to know about your question.\n\n*For detailed information, read the full guide: ${bestArticle.page_url}*`;
+  console.log(`[FALLBACK] No extractable content found, using generic response`);
+  return `You can find more detailed information in my guides on this topic.\n\n`;
 }
 
 function generateArticleAnswer(articles, query = '') {
@@ -8681,7 +8681,7 @@ function handleRagFallback(query) {
  };
  } else if (/refund|cancellation|policy/i.test(query.toLowerCase())) {
  return {
- answer: `Alan Ranger has a clear cancellation and refund policy for all courses and workshops. Here are the key details:\n\n**Cancellation Policy:**\nâ€¢ Full refund if cancelled 14+ days before the event\nâ€¢ 50% refund if cancelled 7-13 days before\nâ€¢ No refund for cancellations within 7 days\n\n**Rescheduling:**\nâ€¢ Free rescheduling if requested 7+ days in advance\nâ€¢ Weather-related cancellations are fully refundable\n\nFor specific details or to discuss your situation, please contact Alan directly.\n\n*Contact Alan: https://www.alanranger.com/contact*`,
+ answer: `Alan Ranger has a clear cancellation and refund policy for all courses and workshops. Here are the key details:\n\n**Cancellation Policy:**\n• Full refund if cancelled 14+ days before the event\n• 50% refund if cancelled 7-13 days before\n• No refund for cancellations within 7 days\n\n**Rescheduling:**\n• Free rescheduling if requested 7+ days in advance\n• Weather-related cancellations are fully refundable\n\nFor specific details or to discuss your situation, please contact Alan directly through the contact form on his website.`,
  type: "advice"
  };
  } else {
