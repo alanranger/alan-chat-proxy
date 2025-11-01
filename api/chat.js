@@ -10192,7 +10192,8 @@ async function sendRagSuccessResponse(res, ragResult, context) {
     }
   }
   
-  // Enrich structured data with related information (always enrich for better diversity)
+  initializeStructuredObject(ragResult);
+  handleSourcesConversion(ragResult);
   const client = supabaseAdmin();
   if (context.query) {
     ragResult.structured = await enrichAdviceWithRelatedInfo(client, context.query, ragResult.structured);
@@ -10258,26 +10259,7 @@ logAnswer(
    confidence: composedResponse.confidence,
    sources: composedResponse.sources,
    structured: composedResponse.structured,
-   debugInfo: {
-     ...(ragResult.debugInfo || {}), // Preserve debug info from ragResult
-     intent: ragResult.debugInfo?.intent || "rag_first",
-     classification: ragResult.debugInfo?.classification || "direct_answer",
-     confidence: composedResponse.confidence,
-     totalMatches: composedResponse.totalMatches,
-     chunksFound: composedResponse.chunksFound,
-     entitiesFound: composedResponse.entitiesFound,
-     entityTitles: composedResponse.entities?.map(e => e.title) || [],
-     approach: ragResult.debugInfo?.approach || "rag_first_hybrid",
-     debugLogs: [
-       "DEPLOYMENT TEST V2 - This should appear in response",
-       `Answer length: ${composedResponse.answer?.length || 0}`,
-       `Answer preview: ${composedResponse.answer?.substring(0, 50) || 'NO ANSWER'}...`,
-       `Chunks found: ${composedResponse.chunksFound || 0}`,
-       `Entities found: ${composedResponse.entitiesFound || 0}`,
-       ...(composedResponse.debugLogs || []),
-       ...(ragResult.debugInfo?.debugLogs || [])
-     ]
-   }
+    debugInfo: buildDebugInfo(ragResult, composedResponse)
  });
  }
  
