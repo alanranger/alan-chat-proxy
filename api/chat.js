@@ -8687,6 +8687,53 @@ async function handleEquipmentQuery(client, query) {
   };
 }
 
+// Helper: Check if query is a technical query type (Complexity: Low)
+function isTechnicalQueryType(qlc, businessCategory, technicalResponse, isFreeCourseQuery) {
+  if (isFreeCourseQuery) return false;
+  
+  if (businessCategory === 'Technical Photography Concepts' || businessCategory === 'Technical Advice') {
+    return true;
+  }
+  
+  if (technicalResponse !== null) {
+    return true;
+  }
+  
+  if (qlc.includes('what is') && (
+    qlc.includes('exposure') || qlc.includes('iso') || 
+    qlc.includes('aperture') || qlc.includes('shutter') ||
+    qlc.includes('raw') || qlc.includes('white balance') ||
+    qlc.includes('depth of field') || qlc.includes('hdr') ||
+    qlc.includes('long exposure') || qlc.includes('flash') ||
+    qlc.includes('composition') || qlc.includes('edit raw')
+  )) {
+    return true;
+  }
+  
+  if (qlc.includes('how do i')) {
+    if (qlc.includes('edit') || qlc.includes('improve') ||
+        qlc.includes('use flash') || qlc.includes('improve my photography') ||
+        qlc.includes('improve my composition') || qlc.includes('photography skills') ||
+        qlc.includes('print') || qlc.includes('resize') || qlc.includes('back up') ||
+        qlc.includes('backup') || qlc.includes('3-2-1') ||
+        (qlc.includes('photo') && (qlc.includes('print') || qlc.includes('backup') || qlc.includes('size'))) ||
+        (qlc.includes('shoot') && qlc.includes('low light')) ||
+        qlc.includes('shoot in low light')) {
+      return true;
+    }
+  }
+  
+  if (qlc.includes('low light') && (qlc.includes('shoot') || qlc.includes('photography'))) {
+    return true;
+  }
+  
+  if (qlc.includes('improve') && qlc.includes('photography') && qlc.includes('skills')) {
+    return true;
+  }
+  
+  return false;
+}
+
 // Helper: Handle event routing queries (Complexity: Low)
 async function handleEventRoutingQuery(client, query, isEquipmentQuestion) {
   // Skip event routing for free course queries - these should be handled by service patterns
@@ -8828,31 +8875,7 @@ async function handleServiceQueries(client, query) {
   debugInfo.steps.push(`qlcService="${qlcService}"`);
   debugInfo.steps.push(`isFreeCourseQuery=${isFreeCourseQuery}`);
   
-  const isTechnicalQuery = !isFreeCourseQuery && (
-                           businessCategory === 'Technical Photography Concepts' || 
-                           businessCategory === 'Technical Advice' ||
-                           technicalResponse !== null ||
-                           (qlcService.includes('what is') && (
-                             qlcService.includes('exposure') || qlcService.includes('iso') || 
-                             qlcService.includes('aperture') || qlcService.includes('shutter') ||
-                             qlcService.includes('raw') || qlcService.includes('white balance') ||
-                             qlcService.includes('depth of field') || qlcService.includes('hdr') ||
-                             qlcService.includes('long exposure') || qlcService.includes('flash') ||
-                             qlcService.includes('composition') || qlcService.includes('edit raw')
-                           )) ||
-                           (qlcService.includes('how do i') && (
-                             qlcService.includes('edit') || qlcService.includes('improve') ||
-                             qlcService.includes('use flash') || qlcService.includes('improve my photography') ||
-                             qlcService.includes('improve my composition') || qlcService.includes('photography skills') ||
-                             qlcService.includes('print') || qlcService.includes('resize') || qlcService.includes('back up') ||
-                             qlcService.includes('backup') || qlcService.includes('3-2-1') ||
-                             (qlcService.includes('photo') && (qlcService.includes('print') || qlcService.includes('backup') || qlcService.includes('size'))) ||
-                             (qlcService.includes('shoot') && qlcService.includes('low light')) ||
-                             qlcService.includes('shoot in low light')
-                           )) ||
-                           (qlcService.includes('low light') && (qlcService.includes('shoot') || qlcService.includes('photography'))) ||
-                           (qlcService.includes('improve') && qlcService.includes('photography') && qlcService.includes('skills'))
-  );
+  const isTechnicalQuery = isTechnicalQueryType(qlcService, businessCategory, technicalResponse, isFreeCourseQuery);
   
   debugInfo.steps.push(`isTechnicalQuery=${isTechnicalQuery}`);
   debugInfo.steps.push(`Pattern check: 'how do i'=${qlcService.includes('how do i')}, 'shoot'=${qlcService.includes('shoot')}, 'low light'=${qlcService.includes('low light')}`);
@@ -9241,20 +9264,7 @@ async function tryRagFirst(client, query) {
     }
   };
   
-  const isTechnicalQuery = technicalResponse !== null ||
-                           (qlcTech.includes('how do i') && (
-                             (qlcTech.includes('shoot') && qlcTech.includes('low light')) ||
-                             qlcTech.includes('shoot in low light') ||
-                             (qlcTech.includes('low light') && (qlcTech.includes('shoot') || qlcTech.includes('photography')))
-                           )) ||
-                           (qlcTech.includes('what is') && (
-                             qlcTech.includes('exposure') || qlcTech.includes('iso') || 
-                             qlcTech.includes('aperture') || qlcTech.includes('shutter') ||
-                             qlcTech.includes('raw') || qlcTech.includes('white balance') ||
-                             qlcTech.includes('depth of field') || qlcTech.includes('hdr') ||
-                             qlcTech.includes('long exposure') || qlcTech.includes('flash') ||
-                             qlcTech.includes('composition') || qlcTech.includes('edit raw')
-                           ));
+  const isTechnicalQuery = isTechnicalQueryType(qlcTech, null, technicalResponse, false);
   
   debugInfo.isTechnicalQuery = isTechnicalQuery;
   console.log(`[DEBUG] tryRagFirst: isTechnicalQuery=${isTechnicalQuery}`);
