@@ -4,6 +4,16 @@ _Alan Ranger — Chat AI Bot / alan-chat-proxy_
 
 ---
 
+## ⚠️ **CRITICAL: COMPLEXITY VALIDATION BEFORE EVERY COMMIT**
+**MANDATORY CHECKLIST** (see `COMPLEXITY_VALIDATION_CHECKLIST.md` for full protocol):
+- [ ] Run complexity check: `npx eslint api/chat.js --rule='complexity: [2, 15]' --format=compact 2>&1 | findstr /C:"complexity"`
+- [ ] Verify NO functions exceed complexity 15
+- [ ] If violations found: STOP, refactor immediately, test with 40Q, then continue
+- [ ] NEVER add nested conditions/loops without extracting to helper functions
+- [ ] ALWAYS extract helpers BEFORE modifying functions already at complexity 14-15
+
+---
+
 ## 🧩 Overview
 This file replaces the old `AI_TODO_LIST_2025-01-23.md` as the **current active scratchpad** for ongoing development.  
 It is used for:

@@ -16,9 +16,17 @@
 
 ### 3. **CODE QUALITY STANDARDS**
 - **ALWAYS run lint after code changes** to detect new issues
-- Never create complex functions (cognitive complexity > 8)
-- Never create functions with too many statements (> 15)
-- Refactor immediately if linting fails
+- **MANDATORY Complexity Limits**: Maximum cognitive complexity of 15 per function
+- **Pre-Commit Validation**: ALWAYS run complexity check before committing:
+  ```bash
+  npx eslint api/chat.js --rule='complexity: [2, 15]' --format=compact 2>&1 | findstr /C:"complexity"
+  ```
+- **Complexity Violation Protocol**: If ANY function exceeds 15, STOP all work, refactor immediately, test with 40Q, then continue
+- **Refactoring Strategy**: Extract helper functions BEFORE modifying complex functions - never add complexity
+- **Never create complex functions** (cognitive complexity > 15) - extract helpers instead
+- **Never create functions with too many statements** (> 20)
+- **Refactor immediately if linting fails**
+- **See**: `COMPLEXITY_VALIDATION_CHECKLIST.md` for detailed validation protocol
 
 ### 4. **TESTING PROTOCOL**
 - **ALWAYS ask before running tests after code changes**
