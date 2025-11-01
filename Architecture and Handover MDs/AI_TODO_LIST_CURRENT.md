@@ -95,6 +95,76 @@ All older references or notes can be found inside `/Archive/AI_TODO_LIST_2025-01
 | 🔸 High | **Test Script Path Updates** | All testing scripts now save to `/testing-scripts/test results/` correctly | Cursor | ✅ Complete |
 | ⚙️ Medium | **Interactive Testing Check** | Verify if interactive-testing.html has dual scoring system (Bot Response + Related) | Cursor | ✅ Complete |
 | ⚙️ Medium | **Review Debug Scripts** | Identify duplicates and propose merges where safe. | Cursor | Pending |
+| 🔸 High | **Store Structured Response in Analytics** | Update logAnswer calls to pass structured_response data so analytics dashboard can display related information tiles | Cursor | Pending |
+
+---
+
+## 📋 Detailed Instructions for Pending Tasks
+
+### **Store Structured Response in Analytics** (High Priority)
+
+**Objective**: Update `logAnswer()` calls in `api/chat.js` to pass the `structured_response` parameter so the analytics dashboard can display related information tiles (articles, services, events, products).
+
+**Current Status**: 
+- ✅ Database column `structured_response` (JSONB) has been added to `chat_interactions` table
+- ✅ `logAnswer()` function signature already accepts `structuredResponse` parameter (line 151)
+- ✅ Analytics dashboard (`analytics.html`) is ready to display related information tiles
+- ❌ `logAnswer()` calls are NOT passing the structured response data
+
+**Required Changes**:
+
+1. **In `sendEventsResponse()` function (around line 6307)**:
+   - The function already has access to `context.structured` object (line 6286-6291)
+   - Update the `logAnswer()` call to pass `context.structured` as the 9th parameter:
+   ```javascript
+   logAnswer(
+     context.sessionId,
+     context.query,
+     formattedAnswer,
+     'events',
+     context.confidence,
+     responseTimeMs,
+     sourcesArray,
+     context.pageContext,
+     context.structured  // ← ADD THIS: pass the structured response
+   )
+   ```
+
+2. **In `sendRagSuccessResponse()` function (around line 9548)**:
+   - The function already has access to `composedResponse.structured` (line 9566)
+   - Update the `logAnswer()` call to pass `composedResponse.structured` as the 9th parameter:
+   ```javascript
+   logAnswer(
+     context.sessionId,
+     context.query,
+     composedResponse.answer,
+     ragResult.debugInfo?.intent || 'rag_first',
+     composedResponse.confidence,
+     responseTimeMs,
+     sourcesArray,
+     context.pageContext,
+     composedResponse.structured  // ← ADD THIS: pass the structured response
+   )
+   ```
+
+**Testing**:
+- After deployment, ask a question in the chat interface
+- Go to analytics dashboard → Questions tab → Click "View" on the question
+- Verify that related information tiles (articles, services, events) are displayed below the answer
+- Check that the data matches what was shown in the original chat response
+
+**Note**: The `structured_response` should contain the same structure as the API response `structured` field:
+```javascript
+{
+  intent: "events" | "advice" | "rag_first" | etc,
+  topic: "keywords",
+  articles: [...],
+  services: [...],
+  events: [...],
+  products: [...],
+  pills: [...]
+}
+```
 
 ---
 

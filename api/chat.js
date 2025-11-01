@@ -6304,16 +6304,17 @@ function sendEventsResponse(context) {
  if (context.sessionId && context.query) {
    const responseTimeMs = context.started ? Date.now() - context.started : null;
    const sourcesArray = context.eventList?.map(e => e.page_url || e.event_url).filter(Boolean) || [];
-   logAnswer(
-     context.sessionId,
-     context.query,
-     formattedAnswer,
-     'events',
-     context.confidence,
-     responseTimeMs,
-     sourcesArray,
-     context.pageContext
-   ).catch(err => console.warn('Failed to log events answer:', err.message));
+  logAnswer(
+    context.sessionId,
+    context.query,
+    formattedAnswer,
+    'events',
+    context.confidence,
+    responseTimeMs,
+    sourcesArray,
+    context.pageContext,
+    context.structured  // ← ADDED: pass structured response for analytics
+  ).catch(err => console.warn('Failed to log events answer:', err.message));
  }
 }
 
@@ -9527,16 +9528,17 @@ function sendRagSuccessResponse(res, ragResult, context) {
  // Log the complete interaction with answer
  const responseTimeMs = context.started ? Date.now() - context.started : null;
  const sourcesArray = ragResult.sources?.articles ? ragResult.sources.articles.map(a => a.url || a.page_url) : [];
- logAnswer(
-   context.sessionId,
-   context.query,
-   composedResponse.answer,
-   ragResult.debugInfo?.intent || 'rag_first',
-   composedResponse.confidence,
-   responseTimeMs,
-   sourcesArray,
-   context.pageContext
- ).catch(err => console.warn('Failed to log answer:', err.message));
+logAnswer(
+  context.sessionId,
+  context.query,
+  composedResponse.answer,
+  ragResult.debugInfo?.intent || 'rag_first',
+  composedResponse.confidence,
+  responseTimeMs,
+  sourcesArray,
+  context.pageContext,
+  composedResponse.structured  // ← ADDED: pass structured response for analytics
+).catch(err => console.warn('Failed to log answer:', err.message));
 
  return res.status(200).json({
    ok: true,
