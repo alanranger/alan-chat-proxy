@@ -1358,6 +1358,7 @@ function getTechnicalAnswers(lc) {
  getFlashPhotographyAnswer(lc) ||
  getLowLightAnswer(lc) ||
  getImprovePhotographySkillsAnswer(lc) ||
+ getHistogramAnswer(lc) ||
  // getFilterAnswer(lc) || // DISABLED: Let RAG system handle filter queries
  getDepthOfFieldAnswer(lc) ||
  getSharpnessAnswer(lc) ||
@@ -1439,6 +1440,14 @@ function getDepthOfFieldAnswer(lc) {
  return null;
  }
  
+// Helper function for histogram
+function getHistogramAnswer(lc) {
+  if (lc.includes("histogram")) {
+    return `**What is a Histogram?** A histogram is a graph that shows the distribution of light and dark tones in your image. It's displayed on your camera's LCD screen or in photo editing software.\n\n**How to Read a Histogram:**\n- **Left side**: Shadows/dark tones\n- **Middle**: Midtones\n- **Right side**: Highlights/bright tones\n\n**What to Look For:**\n- **Good exposure**: Histogram spread across the graph without touching the edges\n- **Overexposed**: Histogram bunched up against the right edge (clipped highlights)\n- **Underexposed**: Histogram bunched up against the left edge (clipped shadows)\n\n**How to Use It:**\n- Check your histogram after taking a photo to verify exposure\n- Adjust your camera settings (aperture, shutter speed, ISO) if the histogram shows clipping\n- In post-processing, use the histogram to guide your exposure adjustments\n\nLearning to read histograms helps you achieve proper exposure and avoid losing detail in highlights or shadows.\n\n`;
+  }
+  return null;
+}
+
 // Helper function for long exposure
 function getLongExposureAnswer(lc) {
   if (lc.includes("long exposure")) {

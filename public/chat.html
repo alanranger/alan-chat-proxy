@@ -1842,6 +1842,11 @@ function pickArticles(structured, query, topic){
   const toks = tokenize2(q);
   const KEY_BONUS = new Set(['tripod','tripods','head','ballhead','levelling','recommend','recommendation','recommendations','equipment']);
   
+  // Check if this is an equipment or technical question - remove article cap for these
+  const isEquipmentQuery = KEY_BONUS.some(k => q.includes(k)) || q.includes('equipment') || q.includes('tripod') || q.includes('camera') || q.includes('lens');
+  const isTechnicalQuery = q.includes('what is') || q.includes('how do') || q.includes('exposure') || q.includes('iso') || q.includes('aperture') || q.includes('shutter');
+  const shouldShowAllArticles = isEquipmentQuery || isTechnicalQuery;
+  
   const score = (a)=>{
     const title = (articleTitle(a)||'').toLowerCase();
     const url = (articleUrl(a)||'').toLowerCase();
@@ -1896,7 +1901,8 @@ function pickArticles(structured, query, topic){
     result.push(...articles);
   });
   
-  return result.slice(0,6);
+  // Remove article cap for equipment/technical questions, keep 6 limit for others
+  return shouldShowAllArticles ? result : result.slice(0,6);
 }
 function renderArticlesBlock(structured, query){
   // Skip articles block for simple follow-up questions (but not for legitimate technical/advice queries)
