@@ -59,10 +59,10 @@ All older references or notes can be found inside `/Archive/AI_TODO_LIST_2025-01
 ## 🚧 Active Tasks (Current Focus)
 | Priority | Task | Description | Owner | Status |
 |-----------|------|--------------|-------|--------|
-| 🔴 P1 | **Fix Course Logistics Routing** | Q17 (laptop for lightroom course), Q20 (weeks for beginners course) - route to events not services | Cursor | In Progress |
+| 🔴 P1 | **Fix Course Logistics Routing** | ✅ Q17 (laptop for lightroom course), Q20 (weeks for beginners course) - route to events not services | Cursor | ✅ Complete |
 | 🔴 P1 | **Fix Missing Initial Responses** | ✅ Q27 (exposure triangle) - FIXED | Cursor | ✅ Complete |
 | 🔴 P1 | **Fix Missing Initial Responses** | ✅ Q36 (free course subscribe) - FIXED | Cursor | ✅ Complete |
-| 🔴 P1 | **Fix Wrong Routing** | Course logistics queries need early exit logic adjustment in handleServiceQueries | Cursor | In Progress |
+| 🔴 P1 | **Fix Wrong Routing** | ✅ Course logistics queries need early exit logic adjustment in handleServiceQueries | Cursor | ✅ Complete |
 | 🟡 P2 | **Remove Article Cap** | Q7 (tripod) should show ALL related articles - remove 6-article cap for equipment/technical questions | Cursor | Pending |
 | 🟡 P2 | **Fix Service/Landing Tiles** | Some questions missing service tiles or should use landing pages for person queries | Cursor | Pending |
 | 🟡 P2 | **Improve Article Relevance** | Wrong articles shown, better matches exist - improve scoring algorithm | Cursor | Pending |
@@ -95,7 +95,7 @@ All older references or notes can be found inside `/Archive/AI_TODO_LIST_2025-01
 | 🔸 High | **Test Script Path Updates** | All testing scripts now save to `/testing-scripts/test results/` correctly | Cursor | ✅ Complete |
 | ⚙️ Medium | **Interactive Testing Check** | Verify if interactive-testing.html has dual scoring system (Bot Response + Related) | Cursor | ✅ Complete |
 | ⚙️ Medium | **Review Debug Scripts** | Identify duplicates and propose merges where safe. | Cursor | Pending |
-| 🔸 High | **Store Structured Response in Analytics** | Update logAnswer calls to pass structured_response data so analytics dashboard can display related information tiles | Cursor | Pending |
+| 🔸 High | **Store Structured Response in Analytics** | ✅ Update logAnswer calls to pass structured_response data so analytics dashboard can display related information tiles | Cursor | ✅ Complete |
 
 ---
 
