@@ -2352,18 +2352,14 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
         
         // Parse structured_response if it exists (may come as string or object)
         let structuredResponse = null;
-        let debugInfo = '';
         if (latestInteraction.structured_response) {
           try {
             structuredResponse = typeof latestInteraction.structured_response === 'string' 
               ? JSON.parse(latestInteraction.structured_response)
               : latestInteraction.structured_response;
-            debugInfo = `✅ Parsed structured_response: Articles=${structuredResponse?.articles?.length || 0}, Services=${structuredResponse?.services?.length || 0}, Events=${structuredResponse?.events?.length || 0}`;
           } catch (e) {
-            debugInfo = `❌ Failed to parse structured_response: ${e.message}`;
+            // Silently fail - structured_response will remain null
           }
-        } else {
-          debugInfo = `⚠️ No structured_response found. Available keys: ${Object.keys(latestInteraction).join(', ')}`;
         }
         
         // Fetch feedback data for this question
@@ -2470,8 +2466,7 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
                   <h4>Answer:</h4>
                   <div class="answer-text">${formatAnswer(latestInteraction.answer || 'No answer available')}</div>
                 </div>
-                ${debugInfo ? `<div style="margin: 15px 0; padding: 10px; background: #1a1f2e; border-left: 4px solid #3b82f6; border-radius: 4px; font-size: 12px; color: #9ca3af;"><strong>Debug:</strong> ${debugInfo}</div>` : ''}
-                ${structuredResponse ? renderRelatedInformation(structuredResponse) : '<div style="margin: 15px 0; padding: 10px; background: #1a1f2e; border-left: 4px solid #ef4444; border-radius: 4px; font-size: 12px; color: #9ca3af;">⚠️ No related information available</div>'}
+                ${structuredResponse ? renderRelatedInformation(structuredResponse) : ''}
                 <div class="qa-metadata">
                   <p><strong>Frequency:</strong> ${answeredInteractions.length} time(s) asked</p>
                   <p><strong>Last Asked:</strong> ${new Date(latestInteraction.created_at).toLocaleString()}</p>
