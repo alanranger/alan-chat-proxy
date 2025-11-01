@@ -427,6 +427,69 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
     .help-box li { margin: 6px 0; }
     .help-box p { margin: 8px 0 0 0; }
 
+    /* Related Information Tiles */
+    .related-info-section {
+      margin-top: 20px;
+      padding: 15px;
+      background: #1a1f2e;
+      border-radius: 8px;
+    }
+
+    .related-info-section h4 {
+      color: #f9fafb;
+      margin-bottom: 15px;
+      font-size: 18px;
+    }
+
+    .articles-grid, .services-grid, .events-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    .article-card, .service-card, .event-card {
+      background: #1a1f2e;
+      border: 1px solid #2a3441;
+      border-radius: 8px;
+      padding: 16px;
+      transition: all 0.2s ease;
+    }
+
+    .article-card:hover, .service-card:hover, .event-card:hover {
+      border-color: #10b981;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.15);
+    }
+
+    .article-card h5, .service-card h5, .event-card h5 {
+      margin: 0 0 8px 0;
+      font-size: 16px;
+    }
+
+    .article-card a, .service-card a, .event-card a {
+      color: #10b981;
+      text-decoration: none;
+    }
+
+    .article-card a:hover, .service-card a:hover, .event-card a:hover {
+      color: #34d399;
+      text-decoration: underline;
+    }
+
+    .article-description, .service-description, .event-details {
+      color: #d1d5db;
+      font-size: 14px;
+      margin: 8px 0;
+      line-height: 1.5;
+    }
+
+    .event-meta, .article-meta {
+      color: #9ca3af;
+      font-size: 12px;
+      margin-top: 8px;
+    }
+
     /* Modal styles */
     .modal-overlay {
       position: fixed;
@@ -444,7 +507,7 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
     .modal-content {
       background: #1f2937;
       border-radius: 8px;
-      max-width: 800px;
+      max-width: 1000px;
       max-height: 80vh;
       width: 90%;
       overflow: hidden;
@@ -2154,6 +2217,123 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
       return formatted;
     }
 
+    // Helper function to escape HTML
+    function escapeHTML(str) {
+      if (!str) return '';
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    // Render articles block
+    function renderArticlesBlock(articles) {
+      if (!articles || !Array.isArray(articles) || articles.length === 0) return '';
+      
+      const articlesHTML = articles.slice(0, 6).map(article => {
+        const href = article.page_url || article.source_url || article.url || '#';
+        const title = article.title || 'Article';
+        const description = article.description || article.meta_description || '';
+        const shortDesc = description.length > 160 ? description.substring(0, 160) + '...' : description;
+        const displayDate = article.display_date || (article.last_seen ? new Date(article.last_seen).toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: 'numeric' }) : '');
+        
+        return `
+          <div class="article-card">
+            <h5><a href="${href}" target="_blank" rel="noopener">${escapeHTML(title)}</a></h5>
+            ${shortDesc ? `<div class="article-description">${escapeHTML(shortDesc)}</div>` : ''}
+            ${displayDate ? `<div class="article-meta">📅 ${displayDate}</div>` : ''}
+          </div>
+        `;
+      }).join('');
+      
+      return `
+        <div class="related-info-section">
+          <h4>📚 Related Photography Guides</h4>
+          <div class="articles-grid">${articlesHTML}</div>
+        </div>
+      `;
+    }
+
+    // Render services block
+    function renderServicesBlock(services) {
+      if (!services || !Array.isArray(services) || services.length === 0) return '';
+      
+      const servicesHTML = services.slice(0, 6).map(service => {
+        const href = service.page_url || service.source_url || service.url || '#';
+        const title = service.title || 'Service';
+        const description = service.description || service.meta_description || '';
+        const shortDesc = description.length > 160 ? description.substring(0, 160) + '...' : description;
+        
+        return `
+          <div class="service-card">
+            <h5><a href="${href}" target="_blank" rel="noopener">${escapeHTML(title)}</a></h5>
+            ${shortDesc ? `<div class="service-description">${escapeHTML(shortDesc)}</div>` : ''}
+          </div>
+        `;
+      }).join('');
+      
+      return `
+        <div class="related-info-section">
+          <h4>🎯 Photography Services</h4>
+          <div class="services-grid">${servicesHTML}</div>
+        </div>
+      `;
+    }
+
+    // Render events block
+    function renderEventsBlock(events) {
+      if (!events || !Array.isArray(events) || events.length === 0) return '';
+      
+      const eventsHTML = events.slice(0, 6).map(event => {
+        const href = event.event_url || event.page_url || event.source_url || event.url || '#';
+        const title = event.title || 'Event';
+        const location = event.location || '';
+        const dateStart = event.date_start ? new Date(event.date_start).toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: 'numeric' }) : '';
+        const price = event.price_gbp ? `From: £${event.price_gbp}` : '';
+        
+        return `
+          <div class="event-card">
+            <h5><a href="${href}" target="_blank" rel="noopener">${escapeHTML(title)}</a></h5>
+            <div class="event-details">
+              ${dateStart ? `<div>📅 ${dateStart}</div>` : ''}
+              ${location ? `<div>📍 ${escapeHTML(location)}</div>` : ''}
+              ${price ? `<div>💰 ${price}</div>` : ''}
+            </div>
+          </div>
+        `;
+      }).join('');
+      
+      return `
+        <div class="related-info-section">
+          <h4>📅 Photography Workshops & Events</h4>
+          <div class="events-grid">${eventsHTML}</div>
+        </div>
+      `;
+    }
+
+    // Render related information from structured_response
+    function renderRelatedInformation(structured) {
+      if (!structured || typeof structured !== 'object') return '';
+      
+      let html = '';
+      
+      // Render articles
+      if (structured.articles && Array.isArray(structured.articles)) {
+        html += renderArticlesBlock(structured.articles);
+      }
+      
+      // Render services
+      if (structured.services && Array.isArray(structured.services)) {
+        html += renderServicesBlock(structured.services);
+      }
+      
+      // Render events
+      if (structured.events && Array.isArray(structured.events)) {
+        html += renderEventsBlock(structured.events);
+      }
+      
+      return html;
+    }
+
     // View question details
     async function viewQuestion(questionText) {
       try {
@@ -2169,6 +2349,25 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
         // Interactions already filtered to answered only by backend; compute frequency from answered items
         const answeredInteractions = interactions.filter(i => i.answer);
         const latestInteraction = answeredInteractions[0] || interactions[0];
+        
+        // Parse structured_response if it exists (may come as string or object)
+        let structuredResponse = null;
+        if (latestInteraction.structured_response) {
+          try {
+            structuredResponse = typeof latestInteraction.structured_response === 'string' 
+              ? JSON.parse(latestInteraction.structured_response)
+              : latestInteraction.structured_response;
+            console.log('✅ Parsed structured_response:', structuredResponse);
+            console.log('   Articles:', structuredResponse?.articles?.length || 0);
+            console.log('   Services:', structuredResponse?.services?.length || 0);
+            console.log('   Events:', structuredResponse?.events?.length || 0);
+          } catch (e) {
+            console.warn('Failed to parse structured_response:', e);
+          }
+        } else {
+          console.log('⚠️  No structured_response found in latestInteraction');
+          console.log('   Latest interaction keys:', Object.keys(latestInteraction));
+        }
         
         // Fetch feedback data for this question
         let feedbackData = null;
@@ -2274,6 +2473,7 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
                   <h4>Answer:</h4>
                   <div class="answer-text">${formatAnswer(latestInteraction.answer || 'No answer available')}</div>
                 </div>
+                ${structuredResponse ? renderRelatedInformation(structuredResponse) : ''}
                 <div class="qa-metadata">
                   <p><strong>Frequency:</strong> ${answeredInteractions.length} time(s) asked</p>
                   <p><strong>Last Asked:</strong> ${new Date(latestInteraction.created_at).toLocaleString()}</p>
