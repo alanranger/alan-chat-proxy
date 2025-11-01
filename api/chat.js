@@ -1359,11 +1359,23 @@ function getTechnicalAnswers(lc) {
  getLowLightAnswer(lc) ||
  getImprovePhotographySkillsAnswer(lc) ||
  getHistogramAnswer(lc) ||
+ getLensComparisonAnswer(lc) ||
  // getFilterAnswer(lc) || // DISABLED: Let RAG system handle filter queries
  getDepthOfFieldAnswer(lc) ||
  getSharpnessAnswer(lc) ||
  getImageQualityAnswer(lc) ||
  null;
+}
+
+// Helper function for lens comparison (prime vs zoom)
+function getLensComparisonAnswer(lc) {
+  if ((lc.includes("prime") && lc.includes("zoom")) || 
+      (lc.includes("difference") && lc.includes("lens")) ||
+      (lc.includes("prime") && lc.includes("zoom") && lc.includes("difference")) ||
+      (lc.includes("zoom") && lc.includes("prime") && lc.includes("difference"))) {
+    return `**Prime vs Zoom Lenses**: Prime lenses have a fixed focal length (e.g., 50mm) and typically offer better image quality and wider apertures for low light. Zoom lenses (e.g., 24-70mm) provide flexibility but may be heavier and have smaller maximum apertures. Prime lenses are great for learning composition and achieving shallow depth of field, while zoom lenses offer convenience for travel and varied shooting situations.\n\n`;
+  }
+  return null;
 }
 
 // Helper function for editing RAW files
@@ -8863,68 +8875,75 @@ function shouldRouteToEvents(query, qlcService, isFreeCourseQuery, isEquipmentQu
 
 // Helper: Handle free course query enrichment (Complexity: Low)
 async function enrichFreeCourseAnswer(client, qlcService, serviceResponse) {
-  const freeCourseKeywords = [
-    'free online photography course',
-    'photography academy',
-    'free photography course',
-    'online photography course',
-    'free academy',
-    'course add-ons'
-  ];
-  const freeCourseServices = await findServices(client, { keywords: freeCourseKeywords, limit: 10 });
-  const freeCourseArticles = await findArticles(client, { keywords: freeCourseKeywords, limit: 10 });
-  
-  const services = (freeCourseServices || []).filter(s => 
-    (s.page_url || s.url || '').includes('free-online-photography-course') ||
-    (s.title || '').toLowerCase().includes('free online photography course') ||
-    (s.title || '').toLowerCase().includes('photography academy')
-  );
-  
-  const articles = (freeCourseArticles || []).filter(a => 
-    (a.page_url || a.url || '').includes('free-online-photography-course') ||
-    (a.title || '').toLowerCase().includes('free online photography course') ||
-    (a.title || '').toLowerCase().includes('photography academy')
-  );
-  
-  let enrichedAnswer = serviceResponse;
-  
   try {
-    const { data: faqChunks } = await client
-      .from('page_chunks')
-      .select('chunk_text, url')
-      .eq('url', 'https://www.alanranger.com/free-online-photography-course')
-      .or('chunk_text.ilike.%FREQUENTLY ASKED QUESTIONS%,chunk_text.ilike.%Is it really free%,chunk_text.ilike.%How do I sign up%,chunk_text.ilike.%How long does it take%')
-      .limit(3);
+    const freeCourseKeywords = [
+      'free online photography course',
+      'photography academy',
+      'free photography course',
+      'online photography course',
+      'free academy',
+      'course add-ons'
+    ];
+    const freeCourseServices = await findServices(client, { keywords: freeCourseKeywords, limit: 10 });
+    const freeCourseArticles = await findArticles(client, { keywords: freeCourseKeywords, limit: 10 });
     
-    if (faqChunks && faqChunks.length > 0) {
-      const faqContent = faqChunks
-        .map(chunk => {
-          const text = chunk.chunk_text || '';
-          const faqMatch = text.match(/(?:Is it really free\?|How do I sign up\?|How long does it take\?|Can I download|Do I need|Can I do the course)[\s\S]{0,300}/i);
-          return faqMatch ? faqMatch[0] : null;
-        })
-        .filter(Boolean)
-        .join('\n\n');
+    const services = (freeCourseServices || []).filter(s => 
+      (s.page_url || s.url || '').includes('free-online-photography-course') ||
+      (s.title || '').toLowerCase().includes('free online photography course') ||
+      (s.title || '').toLowerCase().includes('photography academy')
+    );
+    
+    const articles = (freeCourseArticles || []).filter(a => 
+      (a.page_url || a.url || '').includes('free-online-photography-course') ||
+      (a.title || '').toLowerCase().includes('free online photography course') ||
+      (a.title || '').toLowerCase().includes('photography academy')
+    );
+    
+    let enrichedAnswer = serviceResponse;
+    
+    try {
+      const { data: faqChunks } = await client
+        .from('page_chunks')
+        .select('chunk_text, url')
+        .eq('url', 'https://www.alanranger.com/free-online-photography-course')
+        .or('chunk_text.ilike.%FREQUENTLY ASKED QUESTIONS%,chunk_text.ilike.%Is it really free%,chunk_text.ilike.%How do I sign up%,chunk_text.ilike.%How long does it take%')
+        .limit(3);
       
-      if (faqContent && faqContent.length > 50) {
-        if (qlcService.includes('really free') || qlcService.includes('is it free')) {
-          const freeMatch = faqContent.match(/Is it really free\?[\s\S]{0,200}/i);
-          if (freeMatch) enrichedAnswer = serviceResponse + '\n\n' + freeMatch[0].trim();
-        } else if (qlcService.includes('subscribe') || qlcService.includes('sign up') || qlcService.includes('how do i join') || qlcService.includes('how to join')) {
-          const signupMatch = faqContent.match(/How do I sign up\?[\s\S]{0,300}/i) || 
-                            faqContent.match(/sign up[\s\S]{0,200}button[\s\S]{0,200}register/i);
-          if (signupMatch) enrichedAnswer = serviceResponse + '\n\n' + signupMatch[0].trim();
-        } else if (qlcService.includes('how long') || qlcService.includes('duration') || qlcService.includes('take')) {
-          const durationMatch = faqContent.match(/How long does it take\?[\s\S]{0,200}/i);
-          if (durationMatch) enrichedAnswer = serviceResponse + '\n\n' + durationMatch[0].trim();
+      if (faqChunks && faqChunks.length > 0) {
+        const faqContent = faqChunks
+          .map(chunk => {
+            const text = chunk.chunk_text || '';
+            const faqMatch = text.match(/(?:Is it really free\?|How do I sign up\?|How long does it take\?|Can I download|Do I need|Can I do the course)[\s\S]{0,300}/i);
+            return faqMatch ? faqMatch[0] : null;
+          })
+          .filter(Boolean)
+          .join('\n\n');
+        
+        if (faqContent && faqContent.length > 50) {
+          if (qlcService.includes('really free') || qlcService.includes('is it free')) {
+            const freeMatch = faqContent.match(/Is it really free\?[\s\S]{0,200}/i);
+            if (freeMatch) enrichedAnswer = serviceResponse + '\n\n' + freeMatch[0].trim();
+          } else if (qlcService.includes('subscribe') || qlcService.includes('sign up') || qlcService.includes('how do i join') || qlcService.includes('how to join')) {
+            const signupMatch = faqContent.match(/How do I sign up\?[\s\S]{0,300}/i) || 
+                              faqContent.match(/sign up[\s\S]{0,200}button[\s\S]{0,200}register/i);
+            if (signupMatch) enrichedAnswer = serviceResponse + '\n\n' + signupMatch[0].trim();
+          } else if (qlcService.includes('how long') || qlcService.includes('duration') || qlcService.includes('take')) {
+            const durationMatch = faqContent.match(/How long does it take\?[\s\S]{0,200}/i);
+            if (durationMatch) enrichedAnswer = serviceResponse + '\n\n' + durationMatch[0].trim();
+          }
         }
       }
+    } catch (chunkError) {
+      console.log(`[DEBUG] Error searching chunks for free course: ${chunkError.message}`);
     }
-  } catch (chunkError) {
-    console.log(`[DEBUG] Error searching chunks for free course: ${chunkError.message}`);
+    
+    return { enrichedAnswer, services: services || [], articles: articles || [] };
+  } catch (error) {
+    console.error(`[ERROR] enrichFreeCourseAnswer failed:`, error.message);
+    console.error(`[ERROR] Stack:`, error.stack);
+    // Return safe fallback
+    return { enrichedAnswer: serviceResponse, services: [], articles: [] };
   }
-  
-  return { enrichedAnswer, services, articles };
 }
 
 // Helper: Handle service queries (Complexity: Low)
@@ -8937,166 +8956,189 @@ async function handleServiceQueries(client, query) {
     steps: []
   };
   
-  const isEquipmentQuestion = /\b(what\s+(sort\s+of\s+)?camera|what\s+(gear|equipment)|tripod|lens|memory\s+card)\b/i.test(query || '');
-  const isFreeCourseQuery = qlcService.includes('free online photography course') || 
-                            (qlcService.includes('free course') && qlcService.includes('photography')) ||
-                            (qlcService.includes('photography academy') && qlcService.includes('free')) ||
-                            (qlcService.includes('subscribe') && (qlcService.includes('free') || qlcService.includes('online photography course'))) ||
-                            (qlcService.includes('really free') && qlcService.includes('online photography course')) ||
-                            (qlcService.includes('certificate') && qlcService.includes('photography course'));
-  
-  const isPaymentPlanQuery = /(pick.*n.*mix|payment.*plan|instalment.*plan|installment.*plan|pay.*instalment|pay.*installment|pay.*in.*instalment|pay.*in.*installment|instalment|installment|instalments|installments)/i.test(query || '');
-  
-  if (shouldRouteToEvents(query, qlcService, isFreeCourseQuery, isEquipmentQuestion, isPaymentPlanQuery)) {
-    console.log(`[SKIP] handleServiceQueries: Event/course query detected, skipping service handling: "${query}"`);
-    return null;
-  }
-  
-  // CRITICAL: Check if this is a technical/about/person query BEFORE SERVICE_PATTERNS
-  // These queries should route to their specific handlers, not service lookup
-  // BUT: Free course queries should NOT be skipped (they need SERVICE_PATTERNS)
-  const technicalResponse = getTechnicalAnswers(qlcService);
-  debugInfo.steps.push(`getTechnicalAnswers returned: ${technicalResponse ? 'HAS ANSWER (' + technicalResponse.length + ' chars)' : 'null'}`);
-  debugInfo.steps.push(`qlcService="${qlcService}"`);
-  debugInfo.steps.push(`isFreeCourseQuery=${isFreeCourseQuery}`);
-  
-  const isTechnicalQuery = isTechnicalQueryType(qlcService, businessCategory, technicalResponse, isFreeCourseQuery);
-  
-  debugInfo.steps.push(`isTechnicalQuery=${isTechnicalQuery}`);
-  debugInfo.steps.push(`Pattern check: 'how do i'=${qlcService.includes('how do i')}, 'shoot'=${qlcService.includes('shoot')}, 'low light'=${qlcService.includes('low light')}`);
-  debugInfo.steps.push(`Pattern match: 'shoot AND low light'=${qlcService.includes('shoot') && qlcService.includes('low light')}`);
-  
-  const isPersonQuery = !isFreeCourseQuery && (
-                        businessCategory === 'Person Queries' ||
-                        (qlcService.includes('alan ranger') && (qlcService.includes('based') || qlcService.includes('where')))
-  );
-  
-  if (isTechnicalQuery || isPersonQuery) {
-    debugInfo.steps.push(`RETURNING NULL - Technical/person query detected`);
-    console.log(`[SKIP] handleServiceQueries: Technical/person query detected, returning null: "${query}"`);
-    return null; // Return null so callers can correctly detect this should be handled elsewhere
-  }
-  
-  const isTypesServiceQuery = (qlcService.includes("types") || qlcService.includes("what kind")) && 
+  try {
+    const isEquipmentQuestion = /\b(what\s+(sort\s+of\s+)?camera|what\s+(gear|equipment)|tripod|lens|memory\s+card)\b/i.test(query || '');
+    const isFreeCourseQuery = qlcService.includes('free online photography course') || 
+                              (qlcService.includes('free course') && qlcService.includes('photography')) ||
+                              (qlcService.includes('photography academy') && qlcService.includes('free')) ||
+                              (qlcService.includes('subscribe') && (qlcService.includes('free') || qlcService.includes('online photography course'))) ||
+                              (qlcService.includes('really free') && qlcService.includes('online photography course')) ||
+                              (qlcService.includes('certificate') && qlcService.includes('photography course'));
+    
+    const isPaymentPlanQuery = /(pick.*n.*mix|payment.*plan|instalment.*plan|installment.*plan|pay.*instalment|pay.*installment|pay.*in.*instalment|pay.*in.*installment|instalment|installment|instalments|installments)/i.test(query || '');
+    
+    if (shouldRouteToEvents(query, qlcService, isFreeCourseQuery, isEquipmentQuestion, isPaymentPlanQuery)) {
+      console.log(`[SKIP] handleServiceQueries: Event/course query detected, skipping service handling: "${query}"`);
+      return null;
+    }
+    
+    // CRITICAL: Check if this is a technical/about/person query BEFORE SERVICE_PATTERNS
+    // These queries should route to their specific handlers, not service lookup
+    // BUT: Free course queries should NOT be skipped (they need SERVICE_PATTERNS)
+    const businessCategory = detectBusinessCategory(query);
+    const technicalResponse = getTechnicalAnswers(qlcService);
+    debugInfo.steps.push(`getTechnicalAnswers returned: ${technicalResponse ? 'HAS ANSWER (' + technicalResponse.length + ' chars)' : 'null'}`);
+    debugInfo.steps.push(`qlcService="${qlcService}"`);
+    debugInfo.steps.push(`isFreeCourseQuery=${isFreeCourseQuery}`);
+    debugInfo.steps.push(`businessCategory="${businessCategory}"`);
+    
+    const isTechnicalQuery = isTechnicalQueryType(qlcService, businessCategory, technicalResponse, isFreeCourseQuery);
+    
+    debugInfo.steps.push(`isTechnicalQuery=${isTechnicalQuery}`);
+    debugInfo.steps.push(`Pattern check: 'how do i'=${qlcService.includes('how do i')}, 'shoot'=${qlcService.includes('shoot')}, 'low light'=${qlcService.includes('low light')}`);
+    debugInfo.steps.push(`Pattern match: 'shoot AND low light'=${qlcService.includes('shoot') && qlcService.includes('low light')}`);
+    
+    const isPersonQuery = !isFreeCourseQuery && (
+                          businessCategory === 'Person Queries' ||
+                          (qlcService.includes('alan ranger') && (qlcService.includes('based') || qlcService.includes('where')))
+    );
+    
+    if (isTechnicalQuery || isPersonQuery) {
+      debugInfo.steps.push(`RETURNING NULL - Technical/person query detected`);
+      console.log(`[SKIP] handleServiceQueries: Technical/person query detected, returning null: "${query}"`);
+      return null; // Return null so callers can correctly detect this should be handled elsewhere
+    }
+    
+    const isTypesServiceQuery = (qlcService.includes("types") || qlcService.includes("what kind")) && 
                                qlcService.includes("services") && 
                                qlcService.includes("photography");
 
-  if (isTypesServiceQuery) {
-    console.log(`🎯 Types of services query detected, routing to service database lookup: "${query}"`);
-    const services = await findServices(client, { keywords: [], limit: 24 });
-    if (services && services.length > 0) {
-      console.log(`🎯 Found ${services.length} services for types query`);
+    if (isTypesServiceQuery) {
+      console.log(`🎯 Types of services query detected, routing to service database lookup: "${query}"`);
+      const services = await findServices(client, { keywords: [], limit: 24 });
+      if (services && services.length > 0) {
+        console.log(`🎯 Found ${services.length} services for types query`);
+        return {
+          success: true,
+          confidence: 0.8,
+          answer: generateServiceAnswer(services, query),
+          type: "services",
+          sources: { services: services },
+          structured: {
+            intent: "services",
+            topic: "photography services",
+            services: services,
+            events: [],
+            products: [],
+            articles: []
+          }
+        };
+      }
+    }
+    
+    // Check SERVICE_PATTERNS AFTER technical check
+    const serviceResponse = getServiceAnswers(qlcService);
+    debugInfo.steps.push(`getServiceAnswers returned: ${serviceResponse ? 'HAS ANSWER (' + serviceResponse.length + ' chars)' : 'null'}`);
+    
+    if (serviceResponse) {
+      console.log(`[DEBUG] handleServiceQueries: Pattern matched! Query="${query}", Response snippet="${serviceResponse.substring(0, 100)}..."`);
+      console.log(`🎯 Service pattern matched for: "${query}"`);
+      debugInfo.steps.push(`SERVICE_PATTERNS matched, returning service response`);
+      
+      // For free course and certificate queries, fetch the service/article to show in related info
+      const isFreeCourseQueryInPattern = qlcService.includes('free online photography course') || 
+                                (qlcService.includes('free course') && qlcService.includes('photography')) ||
+                                (qlcService.includes('photography academy') && qlcService.includes('free')) ||
+                                (qlcService.includes('subscribe') && qlcService.includes('free')) ||
+                                qlcService.includes('free photography course') ||
+                                (qlcService.includes('free academy') && qlcService.includes('photography')) ||
+                                (qlcService.includes('online photography course') && !qlcService.includes('beginners') && !qlcService.includes('lightroom')) ||
+                                qlcService.includes('course add-ons') || qlcService.includes('course addons');
+      
+      const isCertificateQuery = (qlcService.includes('certificate') || qlcService.includes('certification') || qlcService.includes('exams and certification')) && 
+                                 (qlcService.includes('course') || qlcService.includes('online course'));
+      
+      let articles = [];
+      let services = [];
+      let enrichedAnswer = serviceResponse;
+      
+      if (isFreeCourseQueryInPattern) {
+        try {
+          const enrichment = await enrichFreeCourseAnswer(client, qlcService, serviceResponse);
+          enrichedAnswer = enrichment.enrichedAnswer;
+          services = enrichment.services || [];
+          articles = enrichment.articles || [];
+          console.log(`[DEBUG] Found ${services.length} services and ${articles.length} articles for free course`);
+        } catch (enrichError) {
+          console.error(`[ERROR] enrichFreeCourseAnswer failed for "${query}":`, enrichError.message);
+          // Continue with original serviceResponse if enrichment fails
+        }
+      } else if (isCertificateQuery) {
+        try {
+          const courseServices = await findServices(client, { keywords: ['photography course', 'course'], limit: 5 });
+          const courseArticles = await findArticles(client, { keywords: ['photography course', 'course'], limit: 5 });
+          services = (courseServices || []).slice(0, 3);
+          articles = (courseArticles || []).slice(0, 3);
+          console.log(`[DEBUG] Found ${services.length} services and ${articles.length} articles for certificate query`);
+        } catch (certError) {
+          console.error(`[ERROR] Certificate query enrichment failed for "${query}":`, certError.message);
+        }
+      }
+      
       return {
         success: true,
         confidence: 0.8,
-        answer: generateServiceAnswer(services, query),
+        answer: enrichedAnswer,
+        type: "advice",
+        sources: { 
+          articles: articles,
+          services: services
+        },
+        structured: {
+          intent: "advice",
+          articles: articles,
+          services: services,
+          events: [],
+          products: []
+        },
+        debugInfo: debugInfo
+      };
+    }
+    
+    console.log(`[DEBUG] handleServiceQueries: No pattern match, trying database lookup with keywords`);
+    debugInfo.steps.push(`SERVICE_PATTERNS did not match, proceeding to database lookup`);
+
+    const keywords = extractKeywords(query);
+    debugInfo.steps.push(`Database lookup with keywords: ${keywords.join(', ')}`);
+    const dbServices = await findServices(client, { keywords, limit: 24 });
+    if (dbServices && dbServices.length > 0) {
+      const answer = generateServiceAnswer(dbServices, query);
+      debugInfo.steps.push(`Database lookup returned ${dbServices.length} services, answer length=${answer.length}`);
+      debugInfo.steps.push(`RETURNING SERVICE RESPONSE`);
+      return {
+        success: true,
+        confidence: 0.7,
+        answer: answer,
         type: "services",
-        sources: { services: services },
+        sources: { services: dbServices },
         structured: {
           intent: "services",
-          topic: "photography services",
-          services: services,
+          services: dbServices,
           events: [],
           products: [],
           articles: []
-        }
+        },
+        debugInfo: debugInfo
       };
     }
-  }
-  
-  // Check SERVICE_PATTERNS AFTER technical check
-  const serviceResponse = getServiceAnswers(qlcService);
-  debugInfo.steps.push(`getServiceAnswers returned: ${serviceResponse ? 'HAS ANSWER (' + serviceResponse.length + ' chars)' : 'null'}`);
-  
-  if (serviceResponse) {
-    console.log(`[DEBUG] handleServiceQueries: Pattern matched! Query="${query}", Response snippet="${serviceResponse.substring(0, 100)}..."`);
-    console.log(`🎯 Service pattern matched for: "${query}"`);
-    debugInfo.steps.push(`SERVICE_PATTERNS matched, returning service response`);
     
-    // For free course and certificate queries, fetch the service/article to show in related info
-    const isFreeCourseQueryInPattern = qlcService.includes('free online photography course') || 
-                              (qlcService.includes('free course') && qlcService.includes('photography')) ||
-                              (qlcService.includes('photography academy') && qlcService.includes('free')) ||
-                              (qlcService.includes('subscribe') && qlcService.includes('free')) ||
-                              qlcService.includes('free photography course') ||
-                              (qlcService.includes('free academy') && qlcService.includes('photography')) ||
-                              (qlcService.includes('online photography course') && !qlcService.includes('beginners') && !qlcService.includes('lightroom')) ||
-                              qlcService.includes('course add-ons') || qlcService.includes('course addons');
-    
-    const isCertificateQuery = (qlcService.includes('certificate') || qlcService.includes('certification') || qlcService.includes('exams and certification')) && 
-                               (qlcService.includes('course') || qlcService.includes('online course'));
-    
-    let articles = [];
-    let services = [];
-    let enrichedAnswer = serviceResponse;
-    
-    if (isFreeCourseQueryInPattern) {
-      const enrichment = await enrichFreeCourseAnswer(client, qlcService, serviceResponse);
-      enrichedAnswer = enrichment.enrichedAnswer;
-      services = enrichment.services;
-      articles = enrichment.articles;
-      console.log(`[DEBUG] Found ${services.length} services and ${articles.length} articles for free course`);
-    } else if (isCertificateQuery) {
-      const courseServices = await findServices(client, { keywords: ['photography course', 'course'], limit: 5 });
-      const courseArticles = await findArticles(client, { keywords: ['photography course', 'course'], limit: 5 });
-      services = (courseServices || []).slice(0, 3);
-      articles = (courseArticles || []).slice(0, 3);
-      console.log(`[DEBUG] Found ${services.length} services and ${articles.length} articles for certificate query`);
-    }
-    
+    debugInfo.steps.push(`No services found, returning null`);
+    return { 
+      success: false, 
+      debugInfo: debugInfo,
+      reason: 'No services found'
+    };
+  } catch (error) {
+    console.error(`[ERROR] handleServiceQueries failed for "${query}":`, error.message);
+    console.error(`[ERROR] Stack:`, error.stack);
+    debugInfo.error = error.message;
+    debugInfo.errorStack = error.stack;
     return {
-      success: true,
-      confidence: 0.8,
-      answer: enrichedAnswer,
-      type: "advice",
-      sources: { 
-        articles: articles,
-        services: services
-      },
-      structured: {
-        intent: "advice",
-        articles: articles,
-        services: services,
-        events: [],
-        products: []
-      },
-      debugInfo: debugInfo
+      success: false,
+      debugInfo: debugInfo,
+      reason: 'Unhandled error in handleServiceQueries'
     };
   }
-  
-  console.log(`[DEBUG] handleServiceQueries: No pattern match, trying database lookup with keywords`);
-  debugInfo.steps.push(`SERVICE_PATTERNS did not match, proceeding to database lookup`);
-
-  const keywords = extractKeywords(query);
-  debugInfo.steps.push(`Database lookup with keywords: ${keywords.join(', ')}`);
-  const dbServices = await findServices(client, { keywords, limit: 24 });
-  if (dbServices && dbServices.length > 0) {
-    const answer = generateServiceAnswer(dbServices, query);
-    debugInfo.steps.push(`Database lookup returned ${dbServices.length} services, answer length=${answer.length}`);
-    debugInfo.steps.push(`RETURNING SERVICE RESPONSE`);
-    return {
-      success: true,
-      confidence: 0.7,
-      answer: answer,
-      type: "services",
-      sources: { services: dbServices },
-      structured: {
-        intent: "services",
-        services: dbServices,
-        events: [],
-        products: [],
-        articles: []
-      },
-      debugInfo: debugInfo
-    };
-  }
-  
-  debugInfo.steps.push(`No services found, returning null`);
-  return { 
-    success: false, 
-    debugInfo: debugInfo,
-    reason: 'No services found'
-  };
 }
 
 // Helper: Handle technical queries with article enrichment (Complexity: Low)
