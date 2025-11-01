@@ -6238,24 +6238,66 @@ async function handleClarificationResponse(context) {
  return false;
  }
  
+// Helper: Check if duration query (Complexity: Low)
+function isDurationQuery(query, lc) {
+  return (lc.includes('how long') && lc.includes('workshop')) || 
+         /\b(2\.5\s?hr|2\.5\s?hours|4\s?hr|4\s?hours|one[-\s]?day|1\s?day|two[-\s]?day|multi[-\s]?day|residential)\b/i.test(query);
+}
+
+// Helper: Check if B&B query (Complexity: Low)
+function isBnBQuery(lc) {
+  return (lc.includes('b&b') || lc.includes('bb') || lc.includes('bed and breakfast') || lc.includes('accommodation')) &&
+         (lc.includes('include') || lc.includes('included') || lc.includes('residential') || lc.includes('multi-day') || lc.includes('multiday'));
+}
+
+// Helper: Generate B&B answer line (Complexity: Low)
+function generateBnBAnswerLine(events) {
+  const hasMultiDay = events.some((e) => {
+    try { return categorizeWorkshopDuration(e) === 'Multi‑day (2–5 days)'; } catch { return false; }
+  });
+  return hasMultiDay
+    ? 'Yes—all multi‑day workshops include transport and B&B in the price. '
+    : 'Multi‑day workshops typically include transport and B&B in the price.';
+}
+
+// Helper: Apply quality analysis to event response (Complexity: Low)
+function applyEventQualityAnalysis(context, formattedAnswer) {
+  if (!context.query || !formattedAnswer) return;
+  
+  console.log(`🔍 Applying quality analysis to event response for: "${context.query}"`);
+  try {
+    if (!context.qualityIndicators) {
+      context.qualityIndicators = {
+        hasDirectAnswer: false,
+        hasRelevantEvents: false,
+        hasRelevantArticles: false,
+        hasActionableInfo: false,
+        responseCompleteness: 0,
+        responseAccuracy: 0
+      };
+    }
+    
+    analyzeResponseContent(formattedAnswer, [], context);
+    const newConfidence = finalizeConfidence(context.query, context);
+    console.log(`🎯 Event confidence updated: ${(newConfidence * 100).toFixed(1)}% (was ${(context.confidence * 100).toFixed(1)}%)`);
+    context.confidence = newConfidence;
+  } catch (error) {
+    console.log(`❌ Error in event quality analysis: ${error.message}`);
+  }
+}
+
 // Helper function to send final events response
 function sendEventsResponse(context) {
   // Check for duration-intent queries BEFORE generating the answer
   const query = context.query || "";
   const lc = query.toLowerCase();
-  const isDurationQuery = (
-    lc.includes('how long') && lc.includes('workshop')
-  ) || /\b(2\.5\s?hr|2\.5\s?hours|4\s?hr|4\s?hours|one[-\s]?day|1\s?day|two[-\s]?day|multi[-\s]?day|residential)\b/i.test(query);
-  // Detect B&B inclusion intent (keep simple and explicit)
-  const isBnBQuery = (
-    lc.includes('b&b') || lc.includes('bb') || lc.includes('bed and breakfast') || lc.includes('accommodation')
-  ) && (lc.includes('include') || lc.includes('included') || lc.includes('residential') || lc.includes('multi-day') || lc.includes('multiday'));
+  const isDuration = isDurationQuery(query, lc);
+  const isBnB = isBnBQuery(lc);
   
-  console.log(`🎭 sendEventsResponse: isDurationQuery=${isDurationQuery} for query="${query}"`);
+  console.log(`🎭 sendEventsResponse: isDurationQuery=${isDuration} for query="${query}"`);
   
-  // Generate the formatted answer - use duration-specific answer if applicable
   let formattedAnswer;
-  if (isDurationQuery) {
+  if (isDuration) {
     // Create a response-like object for generateWorkshopDurationAnswer
     const responseObj = {
       structured: { events: context.eventList || [] },
@@ -6267,46 +6309,14 @@ function sendEventsResponse(context) {
     formattedAnswer = generateEventAnswerMarkdown(context.eventList, query);
   }
 
-  // If user asked about B&B inclusion, prepend a direct, data-derived statement
-  if (isBnBQuery) {
+  if (isBnB) {
     const events = Array.isArray(context.eventList) ? context.eventList : [];
-    const hasMultiDay = events.some((e) => {
-      try { return categorizeWorkshopDuration(e) === 'Multi‑day (2–5 days)'; } catch { return false; }
-    });
-    const bnbLine = hasMultiDay
-      ? 'Yes—all multi‑day workshops include transport and B&B in the price. '
-      : 'Multi‑day workshops typically include transport and B&B in the price.';
+    const bnbLine = generateBnBAnswerLine(events);
     const guideLine = 'See individual workshop event cards for current prices.';
     formattedAnswer = `${bnbLine}${guideLine}\n\n${formattedAnswer}`;
   }
  
- // Apply quality analysis to recalculate confidence based on new criteria
- if (context.query && formattedAnswer) {
- console.log(`ðŸ” Applying quality analysis to event response for: "${context.query}"`);
- try {
- // Initialize quality indicators if they don't exist
- if (!context.qualityIndicators) {
- context.qualityIndicators = {
- hasDirectAnswer: false,
- hasRelevantEvents: false,
- hasRelevantArticles: false,
- hasActionableInfo: false,
- responseCompleteness: 0,
- responseAccuracy: 0
- };
- }
- 
- // Analyze the formatted response content
- analyzeResponseContent(formattedAnswer, [], context);
- 
- // Recalculate confidence based on quality indicators
- const newConfidence = finalizeConfidence(context.query, context);
- console.log(`ðŸŽ¯ Event confidence updated: ${(newConfidence * 100).toFixed(1)}% (was ${(context.confidence * 100).toFixed(1)}%)`);
- context.confidence = newConfidence;
- } catch (error) {
- console.log(`âŒ Error in event quality analysis: ${error.message}`);
- }
- }
+  applyEventQualityAnalysis(context, formattedAnswer);
  
  context.res.status(200).json({
  ok: true,
@@ -6744,6 +6754,60 @@ async function handleClarificationQuery(context) {
  }
 }
 
+// Helper: Extract main concept from query for scoring (Complexity: Low)
+function extractMainConceptForScoring(queryLower) {
+  const conceptMatch = queryLower.match(/what is (.+?)(\?|$|and|or|how)/i);
+  return conceptMatch ? conceptMatch[1].trim() : queryLower.replace(/^(what is|what's|how do|how can)\s+/i, '').trim();
+}
+
+// Helper: Score title matches (Complexity: Low)
+function scoreTitleMatches(title, conceptWords, mainConcept) {
+  let score = 0;
+  for (const word of conceptWords) {
+    if (title.includes(word)) score += 10;
+  }
+  if (title.includes(mainConcept)) score += 20;
+  return score;
+}
+
+// Helper: Score URL matches (Complexity: Low)
+function scoreUrlMatches(url, mainConcept) {
+  const urlSlug = mainConcept.replace(/\s+/g, '-');
+  return url.includes(urlSlug) ? 15 : 0;
+}
+
+// Helper: Score description matches (Complexity: Low)
+function scoreDescriptionMatches(description, conceptWords, mainConcept) {
+  let score = 0;
+  for (const word of conceptWords) {
+    if (description.includes(word)) score += 3;
+  }
+  if (description.includes(mainConcept)) score += 10;
+  return score;
+}
+
+// Helper: Score keyword matches (Complexity: Low)
+function scoreKeywordMatches(title, description, queryWords) {
+  let score = 0;
+  for (const word of queryWords) {
+    if (title.includes(word)) score += 5;
+    if (description.includes(word)) score += 2;
+  }
+  return score;
+}
+
+// Helper: Apply mismatch penalties (Complexity: Low)
+function applyMismatchPenalties(title, mainConcept) {
+  let penalty = 0;
+  if (mainConcept.includes('long exposure') && !title.includes('long') && title.includes('exposure')) {
+    penalty -= 30;
+  }
+  if (mainConcept.includes('exposure triangle') && !title.includes('triangle') && !title.includes('exposure triangle')) {
+    penalty -= 30;
+  }
+  return penalty;
+}
+
 // Helper function to score article relevance to a query
 function scoreArticleRelevance(article, query) {
   const queryLower = query.toLowerCase().replace(/["""]/g, '').trim();
@@ -6752,42 +6816,15 @@ function scoreArticleRelevance(article, query) {
   const url = (article.page_url || article.url || '').toLowerCase();
   const description = ((article.meta_description || article.description) || '').toLowerCase();
   
-  let score = 0;
-  
-  // Extract main concept from query (e.g., "long exposure" from "what is long exposure")
-  const conceptMatch = queryLower.match(/what is (.+?)(\?|$|and|or|how)/i);
-  const mainConcept = conceptMatch ? conceptMatch[1].trim() : queryLower.replace(/^(what is|what's|how do|how can)\s+/i, '').trim();
+  const mainConcept = extractMainConceptForScoring(queryLower);
   const conceptWords = mainConcept.split(/\s+/).filter(w => w.length > 2);
   
-  // Title matches - highest weight
-  for (const word of conceptWords) {
-    if (title.includes(word)) score += 10;
-  }
-  if (title.includes(mainConcept)) score += 20;
-  
-  // URL matches - high weight
-  const urlSlug = mainConcept.replace(/\s+/g, '-');
-  if (url.includes(urlSlug)) score += 15;
-  
-  // Description matches
-  for (const word of conceptWords) {
-    if (description.includes(word)) score += 3;
-  }
-  if (description.includes(mainConcept)) score += 10;
-  
-  // Keyword matches in title/description
-  for (const word of queryWords) {
-    if (title.includes(word)) score += 5;
-    if (description.includes(word)) score += 2;
-  }
-  
-  // Penalize mismatches (e.g., "exposure" article for "long exposure" query)
-  if (mainConcept.includes('long exposure') && !title.includes('long') && title.includes('exposure')) {
-    score -= 30; // Heavy penalty for wrong article
-  }
-  if (mainConcept.includes('exposure triangle') && !title.includes('triangle') && !title.includes('exposure triangle')) {
-    score -= 30;
-  }
+  let score = 0;
+  score += scoreTitleMatches(title, conceptWords, mainConcept);
+  score += scoreUrlMatches(url, mainConcept);
+  score += scoreDescriptionMatches(description, conceptWords, mainConcept);
+  score += scoreKeywordMatches(title, description, queryWords);
+  score += applyMismatchPenalties(title, mainConcept);
   
   return score;
 }
@@ -8660,94 +8697,19 @@ async function handleEquipmentQuery(client, query) {
   const keywords = extractKeywords(query);
   const articles = await findArticles(client, { keywords, limit: 25 });
   
-  // Check if this is a recommendation query - use direct equipment recommendations
   const qlc = query.toLowerCase();
   const isRecommendationQuery = qlc.includes('recommend') || qlc.includes('suggest') || qlc.includes('best') || qlc.includes('should i buy');
   
   if (isRecommendationQuery && articles && articles.length > 0) {
     const equipmentType = extractEquipmentTypeFromQuery(query);
-    if (equipmentType) {
-      console.log(`🎯 Recommendation query detected for ${equipmentType}, using generateDirectEquipmentRecommendation`);
-      const recommendation = generateDirectEquipmentRecommendation(equipmentType, articles, query);
-      if (recommendation && recommendation.trim().length > 0) {
-        return {
-          success: true,
-          confidence: 0.8,
-          answer: recommendation,
-          type: "advice",
-          sources: { articles: articles },
-          structured: {
-            intent: "advice",
-            articles: articles,
-            events: [],
-            products: [],
-            services: []
-          }
-        };
-      }
-    }
+    const recommendationResult = await handleRecommendationQuery(client, query, articles, equipmentType);
+    if (recommendationResult) return recommendationResult;
   }
   
-  // Try RAG extraction from articles for non-recommendation queries
-  if (articles && articles.length > 0) {
-    const articleAnswer = generateArticleAnswer(articles, query);
-    if (articleAnswer && articleAnswer.trim().length > 0) {
-      return {
-        success: true,
-        confidence: 0.8,
-        answer: articleAnswer,
-        type: "advice",
-        sources: { articles: articles },
-        structured: {
-          intent: "advice",
-          articles: articles,
-          events: [],
-          products: [],
-          services: []
-        }
-      };
-    }
-  }
+  const ragResult = handleRagExtraction(articles, query);
+  if (ragResult) return ragResult;
   
-  // Fallback for recommendation queries without articles
-  if (isRecommendationQuery) {
-    const equipmentType = extractEquipmentTypeFromQuery(query);
-    if (equipmentType === 'tripod') {
-      return {
-        success: true,
-        confidence: 0.8,
-        answer: "For tripods, I recommend lightweight carbon fiber models for travel, or sturdy aluminum for studio work. Look for features like quick-release plates and adjustable leg angles.",
-        type: "advice",
-        sources: { articles: [] },
-        structured: {
-          intent: "advice",
-          articles: [],
-          events: [],
-          products: [],
-          services: []
-        }
-      };
-    }
-  }
-  
-  // Generic fallback
-  const genericEquipmentAnswer = qlc.includes("camera") 
-    ? "For my courses and workshops, any DSLR or mirrorless camera with manual controls will work perfectly. The key is having aperture, shutter speed, and ISO control. I have detailed guides covering specific recommendations and technical details."
-    : "I can help you choose the right photography equipment. I have detailed guides covering specific recommendations and technical details for various photography gear.";
-  return {
-    success: true,
-    confidence: 0.8,
-    answer: genericEquipmentAnswer,
-    type: "advice",
-    sources: { articles: [] },
-    structured: {
-      intent: "advice",
-      articles: [],
-      events: [],
-      products: [],
-      services: []
-    }
-  };
+  return generateEquipmentFallback(qlc, isRecommendationQuery);
 }
 
 // Helper: Check if query is a technical query type (Complexity: Low)
