@@ -8686,7 +8686,7 @@ function handleRagFallback(query) {
  };
  } else {
  return {
- answer: `I'd be happy to help you with your photography questions. For specific information about your query, please contact Alan Ranger directly or visit his website for more details.\n\n*Contact Alan: https://www.alanranger.com/contact*`,
+      answer: `I'd be happy to help you with your photography questions. For specific information about your query, please contact Alan Ranger directly or visit his website for more details.\n\nYou can reach Alan through the contact form on his website.`,
  type: "advice"
  };
  }
