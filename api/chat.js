@@ -8688,6 +8688,93 @@ async function handleAboutAlanQuery(client, query) {
   return null;
 }
 
+// Helper: Handle recommendation query (Complexity: Low)
+async function handleRecommendationQuery(client, query, articles, equipmentType) {
+  if (!equipmentType) return null;
+  
+  console.log(`🎯 Recommendation query detected for ${equipmentType}, using generateDirectEquipmentRecommendation`);
+  const recommendation = generateDirectEquipmentRecommendation(equipmentType, articles, query);
+  if (recommendation && recommendation.trim().length > 0) {
+    return {
+      success: true,
+      confidence: 0.8,
+      answer: recommendation,
+      type: "advice",
+      sources: { articles: articles },
+      structured: {
+        intent: "advice",
+        articles: articles,
+        events: [],
+        products: [],
+        services: []
+      }
+    };
+  }
+  return null;
+}
+
+// Helper: Handle RAG extraction from articles (Complexity: Low)
+function handleRagExtraction(articles, query) {
+  if (!articles || articles.length === 0) return null;
+  
+  const articleAnswer = generateArticleAnswer(articles, query);
+  if (articleAnswer && articleAnswer.trim().length > 0) {
+    return {
+      success: true,
+      confidence: 0.8,
+      answer: articleAnswer,
+      type: "advice",
+      sources: { articles: articles },
+      structured: {
+        intent: "advice",
+        articles: articles,
+        events: [],
+        products: [],
+        services: []
+      }
+    };
+  }
+  return null;
+}
+
+// Helper: Generate fallback answer (Complexity: Low)
+function generateEquipmentFallback(qlc, isRecommendationQuery) {
+  if (isRecommendationQuery) {
+    return {
+      success: true,
+      confidence: 0.8,
+      answer: "For tripods, I recommend lightweight carbon fiber models for travel, or sturdy aluminum for studio work. Look for features like quick-release plates and adjustable leg angles.",
+      type: "advice",
+      sources: { articles: [] },
+      structured: {
+        intent: "advice",
+        articles: [],
+        events: [],
+        products: [],
+        services: []
+      }
+    };
+  }
+  
+  const genericEquipmentAnswer = qlc.includes("camera") 
+    ? "For my courses and workshops, any DSLR or mirrorless camera with manual controls will work perfectly. The key is having aperture, shutter speed, and ISO control. I have detailed guides covering specific recommendations and technical details."
+    : "I can help you choose the right photography equipment. I have detailed guides covering specific recommendations and technical details for various photography gear.";
+  return {
+    success: true,
+    confidence: 0.8,
+    answer: genericEquipmentAnswer,
+    type: "advice",
+    sources: { articles: [] },
+    structured: {
+      intent: "advice",
+      articles: [],
+      events: [],
+      products: [],
+      services: []
+    }
+  };
+}
+
 // Helper: Handle equipment questions (Complexity: Low)
 async function handleEquipmentQuery(client, query) {
   const isEquipmentQuestion = /\b(what\s+(sort\s+of\s+)?camera|what\s+(gear|equipment)|tripod|lens|memory\s+card)\b/i.test(query || '');
