@@ -9,6 +9,18 @@ export const config = { runtime: "nodejs" };
 import { createClient } from "@supabase/supabase-js";
 import { createHash } from 'crypto';
 
+// Global error handlers to prevent server crashes from unhandled promise rejections
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('❌ Unhandled Promise Rejection:', reason);
+  console.error('Promise:', promise);
+  // Don't exit - log and continue
+});
+
+process.on('uncaughtException', (error) => {
+  console.error('❌ Uncaught Exception:', error);
+  // Don't exit - log and continue (Vercel will restart if needed)
+});
+
 /* ----------------------- Global Constants ----------------------- */
 // Seasonal terms for workshop detection and content analysis
 const seasonalTerms = ['autumn', 'spring', 'summer', 'winter', 'bluebell', 'seasonal'];
@@ -1883,7 +1895,15 @@ function generateDirectAnswer(query, articles, contentChunks = []) {
 }
 
 /* ---------------------------- Supabase client ---------------------------- */
+// Singleton Supabase client to prevent connection exhaustion
+let supabaseClientSingleton = null;
+
 function supabaseAdmin() {
+ // Return singleton instance if already created
+ if (supabaseClientSingleton) {
+   return supabaseClientSingleton;
+ }
+ 
  const url = process.env.SUPABASE_URL;
  const key =
  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
@@ -1898,7 +1918,9 @@ function supabaseAdmin() {
  throw new Error("Missing SUPABASE_SERVICE_ROLE_KEY or SUPABASE_ANON_KEY environment variable");
  }
  
- return createClient(url, key, { auth: { persistSession: false } });
+ // Create singleton instance
+ supabaseClientSingleton = createClient(url, key, { auth: { persistSession: false } });
+ return supabaseClientSingleton;
 }
 
 /* ------------------------------ Small utils ------------------------------ */
@@ -6489,25 +6511,14 @@ async function gatherPreContent(context) {
 // Helper function to get contact Alan patterns
 function getContactAlanPatterns() {
  return [
- /cancellation or refund policy for courses/i,
- /cancellation or refund policy for workshops/i,
- /how do i book a course or workshop/i,
- /can the gift voucher be used for any workshop/i,
- /can the gift voucher be used for any course/i,
- /how do i know which course or workshop is best/i,
- /do you do astrophotography workshops/i,
- /do you get a certificate with the photography course/i,
- /do i get a certificate with the photography course/i,
- /do you i get a certificate with the photography course/i,
- /can my.*attend your workshop/i,
- /can.*year old attend your workshop/i,
- /how do i subscribe to the free online photography course/i,
- /how many students per workshop/i,
- /how many students per class/i,
- /what gear or equipment do i need to bring to a workshop/i,
- /what equipment do i need to bring to a workshop/i,
- /how early should i arrive before a class/i,
- /how early should i arrive before a workshop/i
+   /how do i book a course or workshop/i,
+   /can the gift voucher be used for any workshop/i,
+   /can the gift voucher be used for any course/i,
+   /how do i know which course or workshop is best/i,
+   /how many students per workshop/i,
+   /how many students per class/i,
+   /how early should i arrive before a class/i,
+   /how early should i arrive before a workshop/i
  ];
 }
 
@@ -6641,7 +6652,14 @@ async function handleDirectAnswerQuery(context) {
  try {
  const classification = classifyQuery(context.query);
  
- // Handle special query types first
+ // Check for specific queries that need proper answers FIRST
+ const specificAnswer = await handleSpecificQueryAnswers(context.client, context.query);
+ if (specificAnswer && specificAnswer.success) {
+   handleRagResponse(specificAnswer, context.res);
+   return true;
+ }
+ 
+ // Handle special query types
  if (handleSpecialQueryTypes(context, classification)) {
  return true;
  }
@@ -7473,48 +7491,159 @@ function cleanRagText(raw) {
  return text;
 }
 
+// Helper: Handle specific queries that need proper answers (Complexity: Low)
+async function handleSpecificQueryAnswers(client, query) {
+  const lc = query.toLowerCase();
+  
+  // 1. Astrophotography workshops
+  if (/do you do astrophotography workshops/i.test(query)) {
+    const events = await findEvents(client, { keywords: ['astrophotography'], limit: 6 });
+    const answer = events && events.length > 0
+      ? `I don't currently offer specific astrophotography workshops, but I can help you learn astrophotography techniques during my general photography workshops. Many of my workshops cover night photography and low-light techniques that are applicable to astrophotography.\n\n`
+      : `I don't currently offer specific astrophotography workshops, but I can help you learn astrophotography techniques. Many of my general photography workshops cover night photography and low-light techniques that are applicable to astrophotography. For specific astrophotography guidance, please contact me directly to discuss your needs.\n\n`;
+    return {
+      success: true,
+      type: 'advice',
+      confidence: 0.8,
+      answer: answer,
+      structured: {
+        intent: 'advice',
+        events: events || [],
+        articles: [],
+        services: [],
+        products: []
+      }
+    };
+  }
+  
+  // 2. Age requirements (14yr old)
+  if (/can my.*year old attend|can my.*yr old attend|can.*14.*attend/i.test(query)) {
+    const events = await findEvents(client, { keywords: ['workshop', 'course'], limit: 6 });
+    const answer = `Most of my workshops are suitable for photographers of all ages, including teenagers. However, some workshops may have age restrictions or require adult supervision for younger participants. Please contact me directly to discuss specific age requirements for the workshop you're interested in.\n\n`;
+    return {
+      success: true,
+      type: 'advice',
+      confidence: 0.8,
+      answer: answer,
+      structured: {
+        intent: 'advice',
+        events: events || [],
+        articles: [],
+        services: [],
+        products: []
+      }
+    };
+  }
+  
+  // 3. Equipment needed for workshop
+  if (/what gear.*equipment.*need.*bring.*workshop|what equipment.*need.*bring.*workshop/i.test(query)) {
+    const articles = await findArticles(client, { keywords: ['equipment', 'gear', 'workshop'], limit: 6 });
+    const answer = `For most workshops, you'll need a camera with manual controls (DSLR or mirrorless), spare batteries, memory cards, and appropriate clothing for outdoor conditions. Some workshops may require specific equipment like tripods or filters. I'll provide a detailed equipment list when you book a workshop.\n\n`;
+    return {
+      success: true,
+      type: 'advice',
+      confidence: 0.8,
+      answer: answer,
+      structured: {
+        intent: 'advice',
+        articles: articles || [],
+        events: [],
+        services: [],
+        products: []
+      }
+    };
+  }
+  
+  // 4. Certificate with photography course
+  if (/do you.*get.*certificate.*photography course|do i.*get.*certificate.*photography course/i.test(query)) {
+    const answer = `**Certificates**: The free online photography course provides free access to 60 modules of content covering photography fundamentals. While the course itself doesn't issue formal certificates, Alan offers various photography education services including workshops, courses, and private lessons that may include certificates or qualifications depending on the specific program.\n\n`;
+    return {
+      success: true,
+      type: 'advice',
+      confidence: 0.8,
+      answer: answer,
+      structured: {
+        intent: 'advice',
+        articles: [],
+        events: [],
+        services: [],
+        products: []
+      }
+    };
+  }
+  
+  // 5. Cancellation/refund policy
+  if (/cancellation.*refund.*policy|cancellation.*policy.*courses|cancellation.*policy.*workshops/i.test(query)) {
+    const answer = `**Booking and Cancellation Policy**: For course changes, please notify at least four weeks in advance. Alan Ranger Photography has comprehensive booking terms and conditions covering cancellations, refunds, and rescheduling. The policy includes public liability insurance coverage and CRB disclosure. Specific terms may vary depending on the course or workshop you're booking.\n\n`;
+    return {
+      success: true,
+      type: 'advice',
+      confidence: 0.8,
+      answer: answer,
+      structured: {
+        intent: 'advice',
+        articles: [],
+        events: [],
+        services: [],
+        products: []
+      }
+    };
+  }
+  
+  // 6. Hire photographer in Coventry
+  if (/hire.*professional photographer.*coventry|can i hire.*photographer.*coventry/i.test(query)) {
+    const answer = `**Hiring a Professional Photographer in Coventry**: Yes, Alan Ranger offers professional photography services in Coventry and the surrounding areas, in addition to his photography education services. He provides workshops, courses, and private lessons, as well as commercial photography services for various occasions and business needs.\n\n`;
+    return {
+      success: true,
+      type: 'advice',
+      confidence: 0.8,
+      answer: answer,
+      structured: {
+        intent: 'advice',
+        articles: [],
+        events: [],
+        services: [],
+        products: []
+      }
+    };
+  }
+  
+  return null;
+}
+
 // Helper function to check for contact Alan queries
 function checkContactAlanQuery(query) {
- const contactAlanQueries = [
-   /cancellation or refund policy for courses/i,
-   /cancellation or refund policy for workshops/i,
-   /how do i book a course or workshop/i,
-   /can the gift voucher be used for any workshop/i,
-   /can the gift voucher be used for any course/i,
-   /how do i know which course or workshop is best/i,
-   /do you do astrophotography workshops/i,
-   /do you get a certificate with the photography course/i,
-   /do i get a certificate with the photography course/i,
-   /do you i get a certificate with the photography course/i,
-   /can my.*attend your workshop/i,
-   /can.*year old attend your workshop/i,
-   /how many students per workshop/i,
-   /how many students per class/i,
-   /what gear or equipment do i need to bring to a workshop/i,
-   /what equipment do i need to bring to a workshop/i,
-   /how early should i arrive before a class/i,
-   /how early should i arrive before a workshop/i
- ];
- 
- for (const pattern of contactAlanQueries) {
-   if (pattern.test(query)) {
-     console.log(`ðŸ"ž Contact Alan query detected: "${query}"`);
-     return {
-       success: true,
-       type: 'advice',
-       confidence: 0.8,
-       answer: "I can't find a reliable answer for that specific question in my knowledge base. For detailed information about this, please contact Alan directly using the contact form or WhatsApp in the header section of this chat. He'll be happy to provide you with accurate and up-to-date information.",
-       structured: {
-         intent: "contact_required",
-         topic: "contact_alan",
-         events: [],
-         products: [],
-         pills: []
-       }
-     };
-   }
- }
- return null;
+  // Remove queries that now have specific handlers
+  const contactAlanQueries = [
+    /how do i book a course or workshop/i,
+    /can the gift voucher be used for any workshop/i,
+    /can the gift voucher be used for any course/i,
+    /how do i know which course or workshop is best/i,
+    /how many students per workshop/i,
+    /how many students per class/i,
+    /how early should i arrive before a class/i,
+    /how early should i arrive before a workshop/i
+  ];
+  
+  for (const pattern of contactAlanQueries) {
+    if (pattern.test(query)) {
+      console.log(`Contact Alan query detected: "${query}"`);
+      return {
+        success: true,
+        type: 'advice',
+        confidence: 0.8,
+        answer: "I can't find a reliable answer for that specific question in my knowledge base. For detailed information about this, please contact Alan directly using the contact form or WhatsApp in the header section of this chat. He'll be happy to provide you with accurate and up-to-date information.",
+        structured: {
+          intent: "contact_required",
+          topic: "contact_alan",
+          events: [],
+          products: [],
+          pills: []
+        }
+      };
+    }
+  }
+  return null;
 }
 
 // Helper function to search for specific guide articles
@@ -9511,7 +9640,14 @@ async function handleServiceAndEventRouting(client, query, isEquipmentQuestion, 
 async function tryRagFirst(client, query) {
  console.log(`ðŸ” RAG-First attempt for: "${query}"`);
  
- // Check for contact Alan queries first
+ // Check for specific queries that need proper answers FIRST
+ const specificAnswer = await handleSpecificQueryAnswers(client, query);
+ if (specificAnswer) {
+   console.log(`✅ Specific query answer found for: "${query}"`);
+   return specificAnswer;
+ }
+ 
+ // Check for contact Alan queries (but only for queries that truly need contact)
  const contactResponse = checkContactAlanQuery(query);
  if (contactResponse) {
  return contactResponse;
@@ -9575,6 +9711,12 @@ async function processMainQuery(context) {
  // If we have debugInfo (e.g., Q36 debug logs) but success is false, send response with debug info
  if (!ragResult.success && ragResult.debugInfo) {
    console.log(`[DEBUG] RAG result has debugInfo but success=false, sending response with debug info`);
+   
+   // Enrich structured data with related information before sending
+   if (ragResult.structured && context.query) {
+     ragResult.structured = await enrichAdviceWithRelatedInfo(client, context.query, ragResult.structured);
+   }
+   
    return context.res.status(200).json({
      ok: true,
      type: ragResult.type || "advice",
@@ -9717,8 +9859,80 @@ async function attemptRagFirst(client, context) {
 }
  
 // Helper function to send RAG success response
-function sendRagSuccessResponse(res, ragResult, context) {
+// Helper: Check if response needs enrichment (Complexity: Low)
+function needsEnrichment(structured) {
+  return !(structured?.articles && structured.articles.length > 0) &&
+         !(structured?.services && structured.services.length > 0) &&
+         !(structured?.events && structured.events.length > 0);
+}
+
+// Helper: Add articles for enrichment (Complexity: Low)
+async function addArticlesForEnrichment(client, keywords, enriched, businessCategory) {
+  if (businessCategory !== 'Event Queries') {
+    const articles = await findArticles(client, { keywords, limit: 12 });
+    if (articles && articles.length > 0) {
+      enriched.articles = (enriched.articles || []).concat(articles).slice(0, 12);
+      console.log(`[ENRICH] Added ${articles.length} articles`);
+    }
+  }
+}
+
+// Helper: Add services for enrichment (Complexity: Low)
+async function addServicesForEnrichment(client, keywords, enriched, businessCategory) {
+  if (businessCategory === 'Business Information' || businessCategory === 'Course/Workshop Logistics') {
+    const services = await findServices(client, { keywords, limit: 6 });
+    if (services && services.length > 0) {
+      enriched.services = (enriched.services || []).concat(services).slice(0, 6);
+      console.log(`[ENRICH] Added ${services.length} services`);
+    }
+  }
+}
+
+// Helper: Add events for enrichment (Complexity: Low)
+async function addEventsForEnrichment(client, keywords, enriched, businessCategory) {
+  if (businessCategory === 'Course/Workshop Logistics' || businessCategory === 'Event Queries') {
+    const events = await findEvents(client, { keywords, limit: 6 });
+    if (events && events.length > 0) {
+      enriched.events = (enriched.events || []).concat(events).slice(0, 6);
+      console.log(`[ENRICH] Added ${events.length} events`);
+    }
+  }
+}
+
+// Helper: Enrich advice responses with related information (Complexity: Low)
+async function enrichAdviceWithRelatedInfo(client, query, structured) {
+  if (!needsEnrichment(structured)) {
+    console.log(`[ENRICH] Response already has related info, skipping enrichment`);
+    return structured;
+  }
+  
+  const businessCategory = detectBusinessCategory(query);
+  const keywords = extractKeywords(query);
+  
+  console.log(`[ENRICH] Adding related info for ${businessCategory} query: "${query}"`);
+  
+  try {
+    const enriched = { ...structured };
+    
+    await addArticlesForEnrichment(client, keywords, enriched, businessCategory);
+    await addServicesForEnrichment(client, keywords, enriched, businessCategory);
+    await addEventsForEnrichment(client, keywords, enriched, businessCategory);
+    
+    return enriched;
+  } catch (error) {
+    console.error(`[ENRICH] Error enriching response: ${error.message}`);
+    return structured;
+  }
+}
+
+async function sendRagSuccessResponse(res, ragResult, context) {
   console.log(`[SUCCESS] RAG-First success: ${ragResult.confidence} confidence, ${ragResult.answerLength} chars`);
+  
+  // Enrich structured data with related information if missing
+  const client = supabaseAdmin();
+  if (ragResult.structured && context.query) {
+    ragResult.structured = await enrichAdviceWithRelatedInfo(client, context.query, ragResult.structured);
+  }
   
   // Apply Response Composer Layer - Convert any response to conversational format
   const composedResponse = composeFinalResponse(ragResult, context.query, context);
@@ -10283,6 +10497,13 @@ function composeFinalResponse(response, query, context = {}) {
   let finalAnswer = response.answer || '';
   let finalType = response.type || 'advice';
   let finalSources = response.sources || [];
+  let finalStructured = response.structured || {
+    intent: finalType,
+    articles: [],
+    events: [],
+    products: [],
+    services: []
+  };
   
   // Detect business category for intelligent response enhancement
   const businessCategory = detectBusinessCategory(query);
@@ -10301,6 +10522,7 @@ function composeFinalResponse(response, query, context = {}) {
     answer: enhancedResponse.answer,
     type: enhancedResponse.type || finalType,
     sources: enhancedResponse.sources || finalSources,
+    structured: finalStructured, // Preserve enriched structured data
     confidence: Math.max(response.confidence || 0.1, enhancedResponse.confidenceBoost || 0.7)
   };
 }

@@ -35,7 +35,8 @@ async function testQuery(queryObj, testName) {
       headers: {
         'Content-Type': 'application/json',
         'Content-Length': Buffer.byteLength(postData)
-      }
+      },
+      timeout: 30000 // 30 second timeout to detect server crashes
     };
 
     const req = http.request(options, (res) => {
@@ -70,9 +71,15 @@ async function testQuery(queryObj, testName) {
     });
 
     req.on('error', (error) => {
-      reject(new Error(`Request failed: ${error.message}`));
+      reject(new Error(`Request failed: ${error.message || 'Connection error - server may have crashed'}`));
     });
 
+    req.on('timeout', () => {
+      req.destroy();
+      reject(new Error(`Request timeout after 30s - server may be unresponsive`));
+    });
+
+    req.setTimeout(30000); // Set timeout
     req.write(postData);
     req.end();
   });
