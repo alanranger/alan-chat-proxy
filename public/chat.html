@@ -2307,52 +2307,49 @@ function createConfidenceFooter(__rounded) {
 function setupConfidencePillHandlers(confId, payload, s, heuristic, __rounded) {
   setTimeout(() => {
     const confEl = document.getElementById(confId);
-    if (confEl) {
-      confEl.addEventListener('click', ()=>{
-        const old = document.getElementById('reason-pop'); 
-        if (old) old.remove();
-        
-        const box = document.createElement('div'); 
-        box.id = 'reason-pop'; 
-        box.className = 'reason-pop';
-        box.innerHTML = `<button class="close" aria-label="Close">×</button><h4>Answer Debug Info</h4><pre class="json"></pre><div style="margin-top:8px;display:flex;gap:8px;justify-content:flex-end"><button id="reason-copy" class="send" style="padding:6px 10px">Copy log</button></div>`;
-        
-        const pre = box.querySelector('pre.json');
-        pre.textContent = JSON.stringify(payload, null, 2);
-        document.body.appendChild(box);
-        
-        const closeBtn = box.querySelector('.close');
-        const copyBtn = box.querySelector('#reason-copy');
-        closeBtn.addEventListener('click', ()=>box.remove());
-        copyBtn.addEventListener('click', ()=>navigator.clipboard.writeText(pre.textContent).then(()=>copyBtn.textContent='Copied!'));
-      });
+    if (!confEl) {
+      console.warn(`Confidence pill element ${confId} not found`);
+      return;
     }
-  }, 100);
-
-  // Clickable reasoning popover
-  const confEl = document.getElementById(confId);
-  if (confEl) {
-    confEl.addEventListener('click', ()=>{
+    
+    // Remove any existing listeners by cloning the element
+    const newConfEl = confEl.cloneNode(true);
+    confEl.parentNode.replaceChild(newConfEl, confEl);
+    
+    newConfEl.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      
       const old = document.getElementById('reason-pop'); 
       if (old) old.remove();
       
       const box = document.createElement('div'); 
       box.id = 'reason-pop'; 
       box.className = 'reason-pop';
-      box.innerHTML = `<button class="close" aria-label="Close">×</button><h4>Confidence reasoning</h4><pre class="json"></pre><div style="margin-top:8px;display:flex;gap:8px;justify-content:flex-end"><button id="reason-copy" class="send" style="padding:6px 10px">Copy log</button></div>`;
+      box.innerHTML = `<button class="close" aria-label="Close">×</button><h4>Answer Debug Info</h4><pre class="json"></pre><div style="margin-top:8px;display:flex;gap:8px;justify-content:flex-end"><button id="reason-copy" class="send" style="padding:6px 10px">Copy log</button></div>`;
       
-      const pre = box.querySelector('pre');
-      const data = { structured: s, debug: payload.debug||payload.debugInfo||{}, heuristic: heuristic, final: __rounded };
+      const pre = box.querySelector('pre.json');
+      const data = { 
+        structured: s, 
+        debug: payload.debug||payload.debugInfo||{}, 
+        heuristic: heuristic, 
+        final: __rounded,
+        fullPayload: payload
+      };
       setDebugJSON(pre, data, { maxLen: 2000, maxItems: 50 });
       
-      box.querySelector('#reason-copy').addEventListener('click', async ()=>{
+      document.body.appendChild(box);
+      
+      const closeBtn = box.querySelector('.close');
+      const copyBtn = box.querySelector('#reason-copy');
+      closeBtn.addEventListener('click', ()=>box.remove());
+      copyBtn.addEventListener('click', async ()=>{
         try {
           const text = pre.textContent||'';
           if (navigator.clipboard?.writeText) {
             await navigator.clipboard.writeText(text);
-          } else if (navigator.clipboard && window.ClipboardItem) {
-            const blob = new Blob([text], { type: 'text/plain' });
-            await navigator.clipboard.write([new ClipboardItem({ 'text/plain': blob })]);
+            copyBtn.textContent = 'Copied!';
+            setTimeout(() => { copyBtn.textContent = 'Copy log'; }, 2000);
           } else {
             const ta = document.createElement('textarea');
             ta.value = text; 
@@ -2360,18 +2357,16 @@ function setupConfidencePillHandlers(confId, payload, s, heuristic, __rounded) {
             ta.select(); 
             document.execCommand('copy'); 
             document.body.removeChild(ta);
+            copyBtn.textContent = 'Copied!';
+            setTimeout(() => { copyBtn.textContent = 'Copy log'; }, 2000);
           }
-          confEl.textContent = confEl.textContent.replace('Confidence','Copied');
-          setTimeout(()=>{ confEl.textContent = `Confidence: ${__rounded}%`; }, 1200);
-        } catch(e) {
-          alert('Copy failed. Select the text and press Ctrl/Cmd+C.');
+        } catch (err) {
+          console.error('Failed to copy:', err);
+          copyBtn.textContent = 'Failed';
         }
       });
-      
-      box.querySelector('.close').addEventListener('click', ()=> box.remove());
-      document.body.appendChild(box);
     });
-  }
+  }, 100);
 }
 
 // Helper function to setup feedback buttons
