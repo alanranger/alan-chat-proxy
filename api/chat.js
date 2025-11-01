@@ -10037,7 +10037,7 @@ async function addServicesForEnrichment(client, keywords, enriched, businessCate
     businessCategory === 'Course/Workshop Logistics' ||
     businessCategory === 'General Queries' ||
     // Keyword-based matching for common service queries
-    /\b(gift|voucher|certificate|booking|book|contact|service|course|workshop|lesson|mentoring|tutoring|tutorial|training|help|support|assistance)\b/i.test(query || '');
+    /\b(gift|voucher|certificate|booking|book|contact|service|course|workshop|lesson|mentoring|tutoring|tutorial|training|help|support|assistance|consultation|session|photography service|commercial|product photography|portrait|wedding|event photography|corporate|business|professional)\b/i.test(query || '');
   
   if (shouldAddServices) {
     const services = await findServices(client, { keywords, limit: 6 });
