@@ -18,6 +18,8 @@ All older references or notes can be found inside `/Archive/AI_TODO_LIST_2025-01
 ## ✅ Recently Completed (Last 2 Weeks)
 | Date | Completed Item | Notes |
 |------|-----------------|-------|
+| 1 Nov 2025 | **Complexity Refactoring Complete** | ✅ 5 high-complexity functions refactored: detectBusinessCategory (120→≤15), tryRagFirst (42→≤15), handleTechnicalQueries (28→≤15), generateEventAnswerMarkdown (30→≤15), generateArticleAnswer (30→≤15) - all verified with 40Q tests, no regressions |
+| 1 Nov 2025 | **Helper Functions Extracted** | ✅ 28 helper functions extracted across 5 refactored functions - all maintain ≤15 complexity |
 | 1 Nov 2025 | **Analytics Dashboard Updates** | Updated analytics.html structure to match chat.html (meta tags, fonts, CSS variables, JSON-LD, GA4), all tabs verified working |
 | 1 Nov 2025 | **Insights Tab Fixed** | Created /api/chat-improvement.js endpoint, refactored to meet complexity rules, all 8 endpoints tested and working |
 | 1 Nov 2025 | **Light-Refresh Modernization** | Refactored light-refresh.js to use supabaseAdmin() pattern, improved error handling, updated schedule to every 8 hours |
@@ -59,10 +61,13 @@ All older references or notes can be found inside `/Archive/AI_TODO_LIST_2025-01
 ## 🚧 Active Tasks (Current Focus)
 | Priority | Task | Description | Owner | Status |
 |-----------|------|--------------|-------|--------|
+| 🔴 P1 | **Complexity Refactoring** | ✅ 5 high-complexity functions refactored to ≤15 complexity - all verified with 40Q tests | Cursor | ✅ Complete |
 | 🔴 P1 | **Fix Course Logistics Routing** | ✅ Q17 (laptop for lightroom course), Q20 (weeks for beginners course) - route to events not services | Cursor | ✅ Complete |
 | 🔴 P1 | **Fix Missing Initial Responses** | ✅ Q27 (exposure triangle) - FIXED | Cursor | ✅ Complete |
 | 🔴 P1 | **Fix Missing Initial Responses** | ✅ Q36 (free course subscribe) - FIXED | Cursor | ✅ Complete |
 | 🔴 P1 | **Fix Wrong Routing** | ✅ Course logistics queries need early exit logic adjustment in handleServiceQueries | Cursor | ✅ Complete |
+| 🟡 P2 | **Refactor Remaining High Complexity** | Refactor remaining functions with complexity >15: sendEventsResponse (28), handleEventsPipeline (15), handleServiceQueries (55), handleEventRoutingQuery (22), enrichFreeCourseAnswer (21), etc. | Cursor | Pending |
+| 🟡 P2 | **Refactor Helper Functions** | Refactor helper functions that exceed limits: hasSpecificHardcodedAnswer (10), enrichTechnicalAnswerWithArticles (12), isCourseContentQuery (11), handleTechnicalQueryRouting (11), handleServiceAndEventRouting (10), etc. | Cursor | Pending |
 | 🟡 P2 | **Remove Article Cap** | Q7 (tripod) should show ALL related articles - remove 6-article cap for equipment/technical questions | Cursor | Pending |
 | 🟡 P2 | **Fix Service/Landing Tiles** | Some questions missing service tiles or should use landing pages for person queries | Cursor | Pending |
 | 🟡 P2 | **Improve Article Relevance** | Wrong articles shown, better matches exist - improve scoring algorithm | Cursor | Pending |
@@ -71,6 +76,7 @@ All older references or notes can be found inside `/Archive/AI_TODO_LIST_2025-01
 | 🟡 P2 | **Remove URLs from Responses** | Clean up hardcoded answers to remove inline URLs | Cursor | Pending |
 | 🟢 P3 | **Free Course Edge Case** | Special routing for "free online photography course" queries | Cursor | Pending |
 | 🟢 P3 | **Event Selection Criteria** | Improve logging/transparency for event filtering | Cursor | Pending |
+| 🔸 High | **Complexity Standards** | ✅ All future code changes must maintain ≤15 complexity - no increases allowed | Cursor | ✅ Complete |
 | 🔸 High | **40Q Baseline Saved** | ✅ Nov 1 baseline established - baseline-40-question-interactive-subset-2025-11-01T13-32-45-780Z.json | Cursor | ✅ Complete |
 | 🔸 High | **Testing Infrastructure** | ✅ Automatic regression detection, side-by-side comparisons, detailed analysis reports | Cursor | ✅ Complete |
 | 🔸 High | **Q36 Subscribe Fix** | ✅ Pattern matching working, returns proper answer instead of generic fallback | Cursor | ✅ Complete |
