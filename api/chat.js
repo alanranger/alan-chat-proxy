@@ -9202,6 +9202,96 @@ async function processRagFallback(client, query) {
   }
 }
 
+// Helper: Handle technical query routing in tryRagFirst (Complexity: Low)
+async function handleTechnicalQueryRouting(client, query, qlcTech, debugInfo) {
+  const technicalResponse = getTechnicalAnswers(qlcTech);
+  const isTechnicalQuery = isTechnicalQueryType(qlcTech, null, technicalResponse, false);
+  
+  if (isTechnicalQuery) {
+    console.log(`[ROUTE] tryRagFirst: Technical query detected, routing to technical handler: "${query}"`);
+    const technical = await handleTechnicalQueries(client, query);
+    if (technical && technical.success) {
+      if (technical.debugInfo) {
+        technical.debugInfo.tryRagFirst = debugInfo;
+      } else {
+        technical.debugInfo = { tryRagFirst: debugInfo };
+      }
+      return technical;
+    }
+    if (technical && technical.debugInfo) {
+      debugInfo.handleTechnicalQueries = technical.debugInfo;
+    }
+  }
+  
+  return { isTechnicalQuery, technicalResponse };
+}
+
+// Helper: Handle specific query types (contact, gift voucher, about Alan, equipment) (Complexity: Low)
+async function handleSpecificQueryTypes(client, query) {
+  const contactInfo = handleContactInfoQuery(query);
+  if (contactInfo) return contactInfo;
+  
+  const giftVoucher = handleGiftVoucherQuery(query);
+  if (giftVoucher) return giftVoucher;
+  
+  const aboutAlan = await handleAboutAlanQuery(client, query);
+  if (aboutAlan) return aboutAlan;
+  
+  const equipment = await handleEquipmentQuery(client, query);
+  if (equipment) return equipment;
+  
+  return null;
+}
+
+// Helper: Handle payment plan query routing (Complexity: Low)
+async function handlePaymentPlanRouting(client, query) {
+  const isPaymentPlanQuery = /(pick.*n.*mix|payment.*plan|instalment.*plan|installment.*plan|pay.*instalment|pay.*installment|pay.*in.*instalment|pay.*in.*installment|instalment|installment|instalments|installments)/i.test(query || '');
+  
+  if (isPaymentPlanQuery) {
+    console.log(`[ROUTE] Payment plan query detected, routing to services: "${query}"`);
+    const services = await handleServiceQueries(client, query);
+    if (services) {
+      return services;
+    }
+    return {
+      success: true,
+      confidence: 0.7,
+      answer: "I offer \"Pick N Mix\" payment plans to help spread the cost of courses and workshops. For details about payment plans and instalments, please contact Alan directly using the contact form or WhatsApp in the header section of this chat.",
+      answer_markdown: "I offer \"Pick N Mix\" payment plans to help spread the cost of courses and workshops. For details about payment plans and instalments, please contact Alan directly using the contact form or WhatsApp in the header section of this chat.",
+      type: "services",
+      sources: { services: [] },
+      structured: { intent: "services", services: [], events: [], products: [], articles: [] }
+    };
+  }
+  
+  return null;
+}
+
+// Helper: Handle service and event routing (Complexity: Low)
+async function handleServiceAndEventRouting(client, query, isEquipmentQuestion, isTechnicalQuery, debugInfo) {
+  if (!isTechnicalQuery) {
+    const services = await handleServiceQueries(client, query);
+    if (services && services.success) {
+      return services;
+    }
+    if (services && services.debugInfo) {
+      debugInfo.handleServiceQueries = services.debugInfo;
+    }
+  }
+  
+  const eventRouting = await handleEventRoutingQuery(client, query, isEquipmentQuestion);
+  if (eventRouting) return eventRouting;
+  
+  if (isTechnicalQuery) {
+    const technical = await handleTechnicalQueries(client, query);
+    if (technical && technical.success) {
+      return technical;
+    }
+  }
+  
+  return null;
+}
+
 async function tryRagFirst(client, query) {
  console.log(`ðŸ” RAG-First attempt for: "${query}"`);
  
