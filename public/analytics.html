@@ -509,21 +509,98 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
       overflow-wrap: break-word;
     }
 
-    .event-details {
-      color: #d1d5db;
-      font-size: 14px;
-      margin: 8px 0;
-      line-height: 1.5;
-      word-wrap: break-word;
-      overflow-wrap: break-word;
-      flex: 1;
+    .event-card {
       display: flex;
       flex-direction: column;
     }
 
-    .event-details > div {
-      margin: 4px 0;
+    .event-content {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+
+    .event-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 12px;
+    }
+
+    .event-title {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 600;
+      flex: 1;
+    }
+
+    .event-title a {
+      color: #10b981;
+      text-decoration: none;
+    }
+
+    .event-title a:hover {
+      color: #34d399;
+      text-decoration: underline;
+    }
+
+    .event-type-badge {
+      background: #065f46;
+      color: #10b981;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 600;
+      margin-left: 8px;
+      white-space: nowrap;
+    }
+
+    .event-details {
+      color: #d1d5db;
+      font-size: 13px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      flex: 1;
+    }
+
+    .event-date,
+    .event-time,
+    .event-location,
+    .event-participants,
+    .event-fitness,
+    .event-experience,
+    .event-equipment {
+      font-size: 13px;
+      color: #d1d5db;
       white-space: normal;
+    }
+
+    .event-price {
+      background: #0b6b57;
+      color: #a7f3d0;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 600;
+      margin-top: 8px;
+      display: inline-block;
+      width: fit-content;
+    }
+
+    .product-book-btn {
+      display: inline-block;
+      padding: 8px 16px;
+      border-radius: 4px;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 14px;
+      transition: all 0.2s ease;
+    }
+
+    .product-book-btn:hover {
+      opacity: 0.9;
+      transform: translateY(-1px);
     }
 
     .event-meta, .article-meta {
@@ -549,7 +626,7 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
     .modal-content {
       background: #1f2937;
       border-radius: 8px;
-      max-width: 100%;
+      max-width: 1400px;
       max-height: 95vh;
       width: 98%;
       margin: 0 auto;
@@ -2359,24 +2436,167 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
       `;
     }
 
+    // Helper function to format date
+    function fmtDate(dateStr) {
+      if (!dateStr) return '';
+      try {
+        const d = new Date(dateStr);
+        return d.toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: 'numeric' });
+      } catch {
+        return '';
+      }
+    }
+
+    // Helper function to format event date range
+    function formatEventDateRange(e) {
+      const whenStart = fmtDate(e.date_start);
+      let when = whenStart;
+      
+      try {
+        const startDay = new Date(e.date_start);
+        const endDay = e.date_end ? new Date(e.date_end) : null;
+        const sameDay = endDay && startDay.toDateString() === endDay.toDateString();
+        if (endDay && !sameDay) {
+          when = `${whenStart} – ${fmtDate(e.date_end)}`;
+        }
+      } catch {}
+      
+      return when;
+    }
+
+    // Helper function to format event time info
+    function formatEventTimeInfo(e) {
+      if (e.start_time && e.end_time) {
+        const short = (s) => String(s).slice(0, 5);
+        return `<div class="event-time">🕐 ${escapeHTML(short(e.start_time))} - ${escapeHTML(short(e.end_time))}</div>`;
+      }
+      
+      if (e._csv_start_time && e._csv_end_time) {
+        const short = (s) => String(s).slice(0, 5);
+        return `<div class="event-time">🕐 ${escapeHTML(short(e._csv_start_time))} - ${escapeHTML(short(e._csv_end_time))}</div>`;
+      }
+      
+      if (e.date_start && e.date_end) {
+        const startTime = e.date_start.split('T')[1]?.substring(0, 5) || '';
+        const endTime = e.date_end.split('T')[1]?.substring(0, 5) || '';
+        if (startTime && endTime) {
+          return `<div class="event-time">🕐 ${startTime} - ${endTime}</div>`;
+        }
+      }
+      
+      return '';
+    }
+
+    // Helper function to get event type info
+    function getEventTypeInfo(e) {
+      let eventType = 'Event';
+      let eventTypeIcon = '📅';
+      
+      if (e.csv_type === 'course_events') {
+        eventType = 'Course';
+        eventTypeIcon = '🎓';
+      } else if (e.csv_type === 'workshop_events') {
+        eventType = 'Workshop';
+        eventTypeIcon = '🔧';
+      }
+      
+      if (e.categories && Array.isArray(e.categories)) {
+        const categories = e.categories.map(c => String(c).toLowerCase());
+        if (categories.some(c => c.includes('lightroom') || c.includes('photo-editing'))) {
+          eventType = 'Lightroom Course';
+          eventTypeIcon = '🎨';
+        } else if (categories.some(c => c.includes('beginners') || c.includes('beginner'))) {
+          eventType = 'Beginners Course';
+          eventTypeIcon = '🎓';
+        }
+      }
+      
+      let durationIndicator = '';
+      if (e.categories && Array.isArray(e.categories)) {
+        const categories = e.categories.map(c => String(c).toLowerCase());
+        if (categories.includes('2.5hrs-4hrs') || categories.includes('2.5hr-4hr')) {
+          durationIndicator = '⏱️ 2.5hr - 4hr';
+        } else if (categories.includes('1-day')) {
+          durationIndicator = '⏱️ 1 day';
+        } else if (categories.includes('2-5-days') || categories.includes('multi-day')) {
+          durationIndicator = '🏠 Multi-day';
+        }
+      }
+      
+      if (!durationIndicator && e.date_start && e.date_end) {
+        const start = new Date(e.date_start);
+        const end = new Date(e.date_end);
+        const durationHours = (end - start) / (1000 * 60 * 60);
+        if (durationHours >= 2.5 && durationHours <= 4) {
+          durationIndicator = '⏱️ 2.5hr - 4hr';
+        } else if (durationHours >= 6 && durationHours <= 8) {
+          durationIndicator = '⏱️ 1 day';
+        } else if (durationHours > 24) {
+          durationIndicator = '🏠 Multi-day';
+        }
+      }
+      
+      const residentialIndicator = durationIndicator;
+      return { eventType, eventTypeIcon, residentialIndicator };
+    }
+
+    // Helper function to check if event is multi-day workshop
+    function isMultiDayWorkshop(e) {
+      if (e.categories && Array.isArray(e.categories)) {
+        const categories = e.categories.map(c => String(c).toLowerCase());
+        if (categories.includes('2-5-days') || categories.includes('multi-day') || categories.includes('residential')) {
+          return true;
+        }
+      }
+      
+      if (e.date_start && e.date_end) {
+        const start = new Date(e.date_start);
+        const end = new Date(e.date_end);
+        const durationHours = (end - start) / (1000 * 60 * 60);
+        if (durationHours > 24) {
+          return true;
+        }
+      }
+      
+      return false;
+    }
+
     // Render events block
     function renderEventsBlock(events) {
       if (!events || !Array.isArray(events) || events.length === 0) return '';
       
       const eventsHTML = events.slice(0, 6).map(event => {
-        const href = event.event_url || event.page_url || event.source_url || event.url || '#';
-        const title = event.title || 'Event';
-        const location = event.location || '';
-        const dateStart = event.date_start ? new Date(event.date_start).toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: 'numeric' }) : '';
+        const when = formatEventDateRange(event);
+        const href = event.href || event.event_url || event.page_url || event.source_url || event.url || '#';
+        const where = event.location ? `${escapeHTML(event.location)}` : '';
+        const title = event.title ? `${escapeHTML(event.title)}` : '';
         const price = event.price_gbp ? `From: £${event.price_gbp}` : '';
+        const timeInfo = formatEventTimeInfo(event);
+        const { eventType, eventTypeIcon, residentialIndicator } = getEventTypeInfo(event);
+        const isMultiDay = isMultiDayWorkshop(event);
         
         return `
           <div class="event-card">
-            <h5><a href="${href}" target="_blank" rel="noopener">${escapeHTML(title)}</a></h5>
-            <div class="event-details">
-              ${dateStart ? `<div>📅 ${dateStart}</div>` : ''}
-              ${location ? `<div>📍 ${escapeHTML(location)}</div>` : ''}
-              ${price ? `<div>💰 ${price}</div>` : ''}
+            <div class="event-content">
+              <div class="event-header">
+                <h4 class="event-title">
+                  <a href="${href}" target="_blank" rel="noopener">${title || 'Photography Event'}</a>
+                </h4>
+                <div class="event-type-badge">${eventTypeIcon} ${eventType} ${residentialIndicator}</div>
+              </div>
+              <div class="event-details">
+                <div class="event-date">📅 ${when}</div>
+                ${timeInfo}
+                ${where ? `<div class="event-location">📍 ${where}</div>` : ''}
+                ${event.participants ? `<div class="event-participants">👥 ${event.participants} participants</div>` : ''}
+                ${event.fitness_level ? `<div class="event-fitness">🏃 Fitness Level: ${event.fitness_level}</div>` : ''}
+                ${event.experience_level ? `<div class="event-experience">🎯 Experience: ${event.experience_level}</div>` : ''}
+                ${event.experience ? `<div class="event-experience">🎯 Experience - Level: ${escapeHTML(event.experience)}</div>` : ''}
+                ${event.equipment_needed ? `<div class="event-equipment">📷 Equipment Needed: ${escapeHTML(event.equipment_needed)}</div>` : ''}
+                ${isMultiDay ? `<div class="event-equipment">🚗 Transport + B&B included</div>` : ''}
+                ${price ? `<div class="event-price">💰 ${price}</div>` : ''}
+              </div>
+              ${href && href !== '#' ? `<div style="margin-top:12px"><a class="product-book-btn" style="background:#F15A22;border-color:#F15A22;color:#000000" href="${href}" target="_blank" rel="noopener">More Info →</a></div>` : ''}
             </div>
           </div>
         `;
