@@ -1,5 +1,5 @@
 # 🧠 AI_TODO_LIST_CURRENT.md  
-_Last updated: 1 Nov 2025 23:15_  
+_Last updated: 2 Nov 2025 09:45_  
 _Alan Ranger — Chat AI Bot / alan-chat-proxy_
 
 ---
@@ -28,6 +28,9 @@ All older references or notes can be found inside `/Archive/AI_TODO_LIST_2025-01
 ## ✅ Recently Completed (Last 2 Weeks)
 | Date | Completed Item | Notes |
 |------|-----------------|-------|
+| 2 Nov 2025 | **Analytics Dashboard Navigation Improvements** | ✅ Added next/previous navigation buttons to question detail modal. Shows position indicator "Question X/Y" in header. Navigation respects current sort order. Users can now scroll through all questions without closing modal. CSS styling added for modal footer layout |
+| 2 Nov 2025 | **Analytics Questions Limit Increased** | ✅ Increased questions API limit from 20 to 1000 in `api/analytics.js`. All questions now available in analytics dashboard. Navigation works through all questions, not just first 20 |
+| 2 Nov 2025 | **Admin Panel Review** | ✅ Reviewed admin.html - no updates needed. All functionality still working correctly. Admin panel is transparent to recent backend/UI changes |
 | 1 Nov 2025 | **Priority 1 Low-Hanging Fruit Fixes Complete** | ✅ All 4 Priority 1 fixes implemented and verified: (1) Convert sources URLs to article objects - Coverage 97% → 100%, (2) Remove URLs from generic fallbacks - Cleaner UX, (3) Add product enrichment - Products 0% → 10%, (4) Improve service intent matching - Expanded keywords. Quality Score improved from 78.3% → 80.6% (+2.3 points). Verified with 430Q test: 100% success (430/430), no regressions. Coverage: 100%, Diversity: 64%, Products: 10%, Completeness: 45.3% |
 | 1 Nov 2025 | **SonarQube Refactoring Issues Fixed** | ✅ Fixed 2 SonarQube refactoring issues: (1) Removed extra argument from `addArticlesForEnrichment()` call, (2) Reduced cognitive complexity of `sendRagSuccessResponse()` from 20 to ≤15 by extracting 4 helper functions: `initializeStructuredObject()`, `handleSourcesConversion()`, `performQualityAnalysis()`, `buildDebugInfo()`. Verified with 40Q test: 100% success (40/40) - no regressions |
 | 1 Nov 2025 | **Server Crash Fix & Response Quality Improvements** | ✅ Fixed server crash after ~19 requests: Added singleton Supabase client, global error handlers, HTTP timeouts. Fixed 6 specific questions (astrophotography, 14yr old, gear equipment, certificate, cancellation policy, hire photographer) with proper answers. Added `enrichAdviceWithRelatedInfo()` to automatically add related content. 430Q test: 100% success (430/430), deployed to production |
