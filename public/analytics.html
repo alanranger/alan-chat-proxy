@@ -1187,6 +1187,7 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
     let questionsSortDirection = 'desc';
     let sessionsSortColumn = 'started_at';
     let sessionsSortDirection = 'desc';
+    let sortedQuestionsList = []; // Store sorted questions for navigation
 
     // Sorting functions
     function sortQuestions(column) {
@@ -1272,7 +1273,10 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
         return 0;
       });
       
-      sortedData.forEach(q => {
+      // Store sorted list for navigation
+      sortedQuestionsList = sortedData;
+      
+      sortedData.forEach((q, index) => {
           const row = document.createElement('tr');
         // Best-effort derive a representative page from recent interactions if available
         const page = (q.page_context && (q.page_context.pathname || q.page_context.url)) || q.last_page || '';
@@ -1282,7 +1286,7 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
             <td><span class="badge ${q.avg_confidence >= 0.8 ? 'badge-success' : q.avg_confidence >= 0.5 ? 'badge-warning' : 'badge-error'}">${(q.avg_confidence * 100).toFixed(1)}%</span></td>
           <td>${new Date(q.last_seen).toLocaleString()}</td>
           <td>${page ? `<span class="badge">${page}</span>` : '-'}</td>
-          <td><button class="btn btn-secondary" onclick="viewQuestion('${q.question_text.replace(/'/g, "\\'")}')">View</button></td>
+          <td><button class="btn btn-secondary" onclick="viewQuestion('${q.question_text.replace(/'/g, "\\'")}', ${index})">View</button></td>
           `;
           tbody.appendChild(row);
         });
@@ -2735,8 +2739,14 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
     }
 
     // View question details
-    async function viewQuestion(questionText) {
+    async function viewQuestion(questionText, questionIndex = null) {
       try {
+        // Find question index if not provided
+        if (questionIndex === null) {
+          questionIndex = sortedQuestionsList.findIndex(q => q.question_text === questionText);
+          if (questionIndex === -1) questionIndex = null;
+        }
+        
         const data = await apiCall('question_detail', { question: questionText });
         const { interactions } = data.question;
         
@@ -2751,13 +2761,19 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
         const feedbackData = await fetchFeedbackForQuestion(latestInteraction.question);
         const feedbackHTML = createFeedbackHTML(feedbackData);
         
+        // Determine if we can navigate
+        const canGoPrevious = questionIndex !== null && questionIndex > 0;
+        const canGoNext = questionIndex !== null && questionIndex < sortedQuestionsList.length - 1;
+        const currentPos = questionIndex !== null ? `${questionIndex + 1} / ${sortedQuestionsList.length}` : '';
+        
         // Create a modal to show the question and answer
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
+        modal.setAttribute('data-current-index', questionIndex !== null ? questionIndex : -1);
         modal.innerHTML = `
           <div class="modal-content">
             <div class="modal-header">
-              <h3>Question & Answer</h3>
+              <h3>Question & Answer${currentPos ? ` <span style="color: #9ca3af; font-size: 14px; font-weight: normal;">(${currentPos})</span>` : ''}</h3>
               <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">&times;</button>
             </div>
             <div class="modal-body">
@@ -2782,7 +2798,15 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
               </div>
             </div>
             <div class="modal-footer">
-              <button class="btn btn-secondary" onclick="this.closest('.modal-overlay').remove()">Close</button>
+              <div>
+                ${canGoPrevious ? `<button class="btn btn-secondary" onclick="navigateQuestion(${questionIndex - 1})">← Previous</button>` : ''}
+              </div>
+              <div>
+                <button class="btn btn-secondary" onclick="this.closest('.modal-overlay').remove()">Close</button>
+              </div>
+              <div>
+                ${canGoNext ? `<button class="btn btn-secondary" onclick="navigateQuestion(${questionIndex + 1})">Next →</button>` : ''}
+              </div>
             </div>
           </div>
         `;
@@ -2792,6 +2816,27 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
       } catch (error) {
         showError('Failed to load question details: ' + error.message);
       }
+    }
+    
+    // Navigate to next/previous question
+    async function navigateQuestion(newIndex) {
+      if (newIndex < 0 || newIndex >= sortedQuestionsList.length) {
+        return;
+      }
+      
+      const question = sortedQuestionsList[newIndex];
+      if (!question) {
+        return;
+      }
+      
+      // Remove current modal
+      const currentModal = document.querySelector('.modal-overlay');
+      if (currentModal) {
+        currentModal.remove();
+      }
+      
+      // Open new question
+      await viewQuestion(question.question_text, newIndex);
     }
 
     // View session details
