@@ -10118,6 +10118,55 @@ async function addEventsForEnrichment(client, keywords, enriched, businessCatego
   }
 }
 
+// Helper: Check if structured object has any related info (Complexity: Low)
+function hasAnyRelatedInfo(enriched) {
+  return (enriched.articles && enriched.articles.length > 0) ||
+         (enriched.services && enriched.services.length > 0) ||
+         (enriched.events && enriched.events.length > 0) ||
+         (enriched.products && enriched.products.length > 0);
+}
+
+// Helper: Add fallback articles if no related info found (Complexity: Low)
+async function addFallbackArticles(client, keywords, enriched) {
+  console.log(`[ENRICH] No related info found, trying broader article search`);
+  const articles = await findArticles(client, { keywords, limit: 8 });
+  if (articles && articles.length > 0) {
+    enriched.articles = articles;
+    console.log(`[ENRICH] Added ${articles.length} articles as fallback`);
+    return true;
+  }
+  
+  // Last resort: try even broader search with single keyword
+  if (keywords.length > 0) {
+    const broadArticles = await findArticles(client, { keywords: [keywords[0]], limit: 6 });
+    if (broadArticles && broadArticles.length > 0) {
+      enriched.articles = broadArticles;
+      console.log(`[ENRICH] Added ${broadArticles.length} articles from broad search`);
+      return true;
+    }
+  }
+  
+  return false;
+}
+
+// Helper: Add enrichment items based on what's missing (Complexity: Low)
+async function addMissingEnrichmentItems(client, keywords, enriched, businessCategory, query) {
+  // Add services if missing
+  if (!enriched.services || enriched.services.length === 0) {
+    await addServicesForEnrichment(client, keywords, enriched, businessCategory, query);
+  }
+  
+  // Add events if missing
+  if (!enriched.events || enriched.events.length === 0) {
+    await addEventsForEnrichment(client, keywords, enriched, businessCategory, query);
+  }
+  
+  // Add products if missing
+  if (!enriched.products || enriched.products.length === 0) {
+    await addProductsForEnrichment(client, keywords, enriched, businessCategory, query);
+  }
+}
+
 // Helper: Enrich advice responses with related information (Complexity: Low)
 async function enrichAdviceWithRelatedInfo(client, query, structured) {
   // Always enrich to improve diversity - even if some related info exists
@@ -10140,45 +10189,12 @@ async function enrichAdviceWithRelatedInfo(client, query, structured) {
     // Always try to add articles (unless pure event query)
     await addArticlesForEnrichment(client, keywords, enriched, businessCategory);
     
-    // Add services if missing or query suggests services
-    if (!enriched.services || enriched.services.length === 0) {
-      await addServicesForEnrichment(client, keywords, enriched, businessCategory, query);
-    }
-    
-    // Add events if missing or query suggests events
-    if (!enriched.events || enriched.events.length === 0) {
-      await addEventsForEnrichment(client, keywords, enriched, businessCategory, query);
-    }
-    
-    // Add products if missing or query suggests equipment/products
-    if (!enriched.products || enriched.products.length === 0) {
-      await addProductsForEnrichment(client, keywords, enriched, businessCategory, query);
-    }
+    // Add missing enrichment items
+    await addMissingEnrichmentItems(client, keywords, enriched, businessCategory, query);
     
     // Ensure we have at least one type of related info
-    const hasAnyRelatedInfo = 
-      (enriched.articles && enriched.articles.length > 0) ||
-      (enriched.services && enriched.services.length > 0) ||
-      (enriched.events && enriched.events.length > 0) ||
-      (enriched.products && enriched.products.length > 0);
-    
-    if (!hasAnyRelatedInfo) {
-      console.log(`[ENRICH] No related info found, trying broader article search`);
-      // Fallback: try broader article search
-      const articles = await findArticles(client, { keywords, limit: 8 });
-      if (articles && articles.length > 0) {
-        enriched.articles = articles;
-        console.log(`[ENRICH] Added ${articles.length} articles as fallback`);
-      } else {
-        // Last resort: try even broader search with single keyword
-        if (keywords.length > 0) {
-          const broadArticles = await findArticles(client, { keywords: [keywords[0]], limit: 6 });
-          if (broadArticles && broadArticles.length > 0) {
-            enriched.articles = broadArticles;
-            console.log(`[ENRICH] Added ${broadArticles.length} articles from broad search`);
-          }
-        }
-      }
+    if (!hasAnyRelatedInfo(enriched)) {
+      await addFallbackArticles(client, keywords, enriched);
     }
     
     return enriched;
