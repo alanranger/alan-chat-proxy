@@ -166,11 +166,11 @@ Create or update documentation for:
 
 ### 2. Unused Files
 - **`chat-rag.js`**: 
-  - Option A: Archive to `/Archive/api/` folder
-  - Option B: Remove if confirmed not needed (functionality merged into chat.js)
+  - ✅ **ARCHIVED** to `/Archive/api/chat-rag.js`
+  - Functionality merged into chat.js via `tryRagFirst()` function
 - **`proxy.js`**: 
-  - Option A: Archive to `/Archive/api/` folder
-  - Option B: Remove if Botsonic integration is no longer used
+  - ✅ **ARCHIVED** to `/Archive/api/proxy.js`
+  - Botsonic integration no longer used
 
 ### 3. Create API Reference Document
 Create a comprehensive API reference document (`Architecture and Handover MDs/API_REFERENCE.md`) that includes:
