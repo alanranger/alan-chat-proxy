@@ -9382,6 +9382,8 @@ async function handleServicePatternResponse(client, query, qlcService, serviceRe
   const isFreeCoursePattern = isFreeCourseQueryInPattern(qlcService);
   const isCertificateQuery = (qlcService.includes('certificate') || qlcService.includes('certification') || qlcService.includes('exams and certification')) && 
                              (qlcService.includes('course') || qlcService.includes('online course'));
+  const isPersonalisedFeedbackQuery = (qlcService.includes('personalised feedback') || qlcService.includes('personalized feedback')) && 
+                                       (qlcService.includes('image') || qlcService.includes('photo') || qlcService.includes('get') || qlcService.includes('how'));
   
   let articles = [];
   let services = [];
@@ -9406,6 +9408,35 @@ async function handleServicePatternResponse(client, query, qlcService, serviceRe
       console.log(`[DEBUG] Found ${services.length} services and ${articles.length} articles for certificate query`);
     } catch (certError) {
       console.error(`[ERROR] Certificate query enrichment failed for "${query}":`, certError.message);
+    }
+  } else if (isPersonalisedFeedbackQuery) {
+    try {
+      // Fetch online zoom 1-2-1 and face-to-face private lessons services
+      const privateServices = await findServices(client, { keywords: ['private', '1-2-1', 'online', 'zoom', 'face-to-face'], limit: 10 });
+      if (privateServices && privateServices.length > 0) {
+        // Filter to include online/zoom and face-to-face services
+        const onlineServices = privateServices.filter(s => {
+          const title = `${s.title || ''} ${s.norm_title || ''}`.toLowerCase();
+          const url = `${s.page_url || s.url || ''}`.toLowerCase();
+          const combined = `${title} ${url}`;
+          return /online|zoom|1-2-1|one[- ]to[- ]one/i.test(combined);
+        });
+        const faceToFaceServices = privateServices.filter(s => {
+          const title = `${s.title || ''} ${s.norm_title || ''}`.toLowerCase();
+          const url = `${s.page_url || s.url || ''}`.toLowerCase();
+          const combined = `${title} ${url}`;
+          return /face[- ]to[- ]face|private|1-2-1|one[- ]to[- ]one/i.test(combined) && !/online|zoom/i.test(combined);
+        });
+        // Combine and deduplicate
+        const allServices = [...onlineServices, ...faceToFaceServices];
+        const uniqueServices = allServices.filter((s, index, self) => 
+          index === self.findIndex(t => (t.page_url || t.url) === (s.page_url || s.url))
+        );
+        services = uniqueServices.slice(0, 6);
+        console.log(`[DEBUG] Found ${services.length} services for personalised feedback query (${onlineServices.length} online, ${faceToFaceServices.length} face-to-face)`);
+      }
+    } catch (feedbackError) {
+      console.error(`[ERROR] Personalised feedback query enrichment failed for "${query}":`, feedbackError.message);
     }
   }
   
