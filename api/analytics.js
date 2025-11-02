@@ -110,12 +110,12 @@ export default async function handler(req, res) {
 
       case 'questions':
         {
-          // Get top questions
+          // Get top questions - increased limit to show all questions
           const { data: topQuestions, error: questionsError } = await supa
             .from('chat_question_frequency')
             .select('*')
             .order('frequency', { ascending: false })
-            .limit(20);
+            .limit(1000);
 
           if (questionsError) throw new Error(`Top questions failed: ${questionsError.message}`);
 
