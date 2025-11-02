@@ -669,8 +669,88 @@ export default async function handler(req, res) {
           });
         }
 
+      case 'pill_clicks':
+        {
+          const { days = 7 } = req.query || {};
+          const sinceIso = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+
+          // Get all pill click events
+          const { data: pillEvents, error: eventsError } = await supa
+            .from('chat_events')
+            .select('*')
+            .eq('event_type', 'pill_click')
+            .gte('created_at', sinceIso)
+            .order('created_at', { ascending: false });
+
+          if (eventsError) throw new Error(`Pill clicks fetch failed: ${eventsError.message}`);
+
+          // Aggregate by pill type and label
+          const byType = {};
+          const byLabel = {};
+          const bySession = {};
+          let totalClicks = 0;
+
+          (pillEvents || []).forEach(event => {
+            const eventData = event.event_data || {};
+            const pillType = eventData.pill_type || 'unknown';
+            const pillLabel = eventData.pill_label || 'Unknown';
+            const sessionId = event.session_id;
+
+            totalClicks++;
+
+            // Count by type
+            byType[pillType] = (byType[pillType] || 0) + 1;
+
+            // Count by label
+            byLabel[pillLabel] = (byLabel[pillLabel] || 0) + 1;
+
+            // Count unique sessions per type
+            if (!bySession[pillType]) bySession[pillType] = new Set();
+            bySession[pillType].add(sessionId);
+          });
+
+          // Convert session sets to counts
+          const sessionsByType = {};
+          Object.keys(bySession).forEach(type => {
+            sessionsByType[type] = bySession[type].size;
+          });
+
+          // Get total unique sessions with pill clicks
+          const uniqueSessions = new Set((pillEvents || []).map(e => e.session_id));
+          const totalSessions = uniqueSessions.size;
+
+          // Calculate click-through rate (sessions with pill clicks / total sessions)
+          const { count: totalSessionsCount } = await supa
+            .from('chat_sessions')
+            .select('*', { count: 'exact', head: true })
+            .gte('started_at', sinceIso);
+          
+          const clickThroughRate = totalSessionsCount > 0 
+            ? (totalSessions / totalSessionsCount * 100).toFixed(1)
+            : 0;
+
+          return sendJSON(res, 200, {
+            ok: true,
+            pillClicks: {
+              totalClicks,
+              totalSessions,
+              clickThroughRate: parseFloat(clickThroughRate),
+              clicksByType: byType,
+              clicksByLabel: byLabel,
+              sessionsByType: sessionsByType,
+              recentClicks: (pillEvents || []).slice(0, 50).map(e => ({
+                session_id: e.session_id,
+                pill_type: e.event_data?.pill_type || 'unknown',
+                pill_label: e.event_data?.pill_label || 'Unknown',
+                pill_url: e.event_data?.pill_url || null,
+                clicked_at: e.created_at
+              }))
+            }
+          });
+        }
+
       default:
-        return sendJSON(res, 400, { error: 'bad_request', detail: 'Invalid action. Use: overview, questions, sessions, session_detail, question_detail, performance, insights, feedback, feedback_submit, admin_counts, admin_preview, admin_delete, admin_clear_all' });
+        return sendJSON(res, 400, { error: 'bad_request', detail: 'Invalid action. Use: overview, questions, sessions, session_detail, question_detail, performance, insights, feedback, feedback_submit, admin_counts, admin_preview, admin_delete, admin_clear_all, pill_clicks' });
     }
 
   } catch (err) {

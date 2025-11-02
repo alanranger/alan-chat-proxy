@@ -856,6 +856,7 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
       <div class="tab" onclick="showTab('performance')">Performance</div>
       <div class="tab" onclick="showTab('insights')">Insights</div>
       <div class="tab" onclick="showTab('feedback')">Feedback</div>
+      <div class="tab" onclick="showTab('pill-clicks')">Pill Clicks</div>
       <div class="tab" onclick="showTab('admin')">Admin</div>
     </div>
 
@@ -1032,6 +1033,57 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
       </div>
     </div>
 
+    <!-- Pill Clicks Tab Content -->
+    <div id="pill-clicks" class="tab-content">
+      <div class="card">
+        <h3>📱 Pill Click Analytics</h3>
+        <p>Track when users click on Contact, WhatsApp, or response pills in the chat interface.</p>
+        
+        <div class="admin-section">
+          <h4>📊 Pill Click Overview</h4>
+          <div class="grid grid-4">
+            <div class="metric-card">
+              <div class="metric-value" id="pill-total-clicks">-</div>
+              <div class="metric-label">Total Clicks</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-value" id="pill-total-sessions">-</div>
+              <div class="metric-label">Sessions with Clicks</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-value" id="pill-click-through-rate">-</div>
+              <div class="metric-label">Click-Through Rate</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-value" id="pill-days-filter">7</div>
+              <div class="metric-label">Days Filter</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="admin-section">
+          <h4>📈 Clicks by Type</h4>
+          <div id="pill-clicks-by-type" class="card">
+            <p>Loading...</p>
+          </div>
+        </div>
+
+        <div class="admin-section">
+          <h4>🏷️ Clicks by Label</h4>
+          <div id="pill-clicks-by-label" class="card">
+            <p>Loading...</p>
+          </div>
+        </div>
+
+        <div class="admin-section">
+          <h4>🕐 Recent Clicks</h4>
+          <div id="pill-recent-clicks" class="card">
+            <p>Loading...</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Admin Tab Content -->
     <div id="admin" class="tab-content">
       <div class="card">
@@ -1134,6 +1186,7 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
         case 'performance': loadPerformance(); break;
         case 'insights': loadInsights(); break;
         case 'feedback': loadFeedback(); break;
+        case 'pill-clicks': loadPillClicks(); break;
         case 'admin': loadAdmin(); break;
       }
     }
@@ -2969,6 +3022,83 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
       document.querySelector('.container').insertBefore(errorDiv, document.querySelector('.tabs'));
       
       setTimeout(() => errorDiv.remove(), 5000);
+    }
+
+    // Pill Clicks functions
+    async function loadPillClicks() {
+      try {
+        const data = await apiCall('pill_clicks');
+        const { pillClicks } = data;
+        
+        if (!pillClicks) {
+          document.getElementById('pill-total-clicks').textContent = '0';
+          document.getElementById('pill-total-sessions').textContent = '0';
+          document.getElementById('pill-click-through-rate').textContent = '0%';
+          return;
+        }
+        
+        // Update overview metrics
+        document.getElementById('pill-total-clicks').textContent = pillClicks.totalClicks || 0;
+        document.getElementById('pill-total-sessions').textContent = pillClicks.totalSessions || 0;
+        document.getElementById('pill-click-through-rate').textContent = (pillClicks.clickThroughRate || 0).toFixed(1) + '%';
+        
+        // Render clicks by type
+        const byTypeDiv = document.getElementById('pill-clicks-by-type');
+        const clicksByType = pillClicks.clicksByType || {};
+        const sessionsByType = pillClicks.sessionsByType || {};
+        
+        if (Object.keys(clicksByType).length === 0) {
+          byTypeDiv.innerHTML = '<p>No pill clicks recorded yet.</p>';
+        } else {
+          let html = '<table class="table"><thead><tr><th>Pill Type</th><th>Clicks</th><th>Sessions</th></tr></thead><tbody>';
+          Object.entries(clicksByType).sort((a, b) => b[1] - a[1]).forEach(([type, count]) => {
+            const sessions = sessionsByType[type] || 0;
+            html += `<tr><td><strong>${type.charAt(0).toUpperCase() + type.slice(1)}</strong></td><td>${count}</td><td>${sessions}</td></tr>`;
+          });
+          html += '</tbody></table>';
+          byTypeDiv.innerHTML = html;
+        }
+        
+        // Render clicks by label
+        const byLabelDiv = document.getElementById('pill-clicks-by-label');
+        const clicksByLabel = pillClicks.clicksByLabel || {};
+        
+        if (Object.keys(clicksByLabel).length === 0) {
+          byLabelDiv.innerHTML = '<p>No pill clicks by label recorded yet.</p>';
+        } else {
+          let html = '<table class="table"><thead><tr><th>Pill Label</th><th>Clicks</th></tr></thead><tbody>';
+          Object.entries(clicksByLabel).sort((a, b) => b[1] - a[1]).forEach(([label, count]) => {
+            html += `<tr><td><strong>${label}</strong></td><td>${count}</td></tr>`;
+          });
+          html += '</tbody></table>';
+          byLabelDiv.innerHTML = html;
+        }
+        
+        // Render recent clicks
+        const recentDiv = document.getElementById('pill-recent-clicks');
+        const recentClicks = pillClicks.recentClicks || [];
+        
+        if (recentClicks.length === 0) {
+          recentDiv.innerHTML = '<p>No recent pill clicks recorded.</p>';
+        } else {
+          let html = '<table class="table"><thead><tr><th>Time</th><th>Type</th><th>Label</th><th>Session</th></tr></thead><tbody>';
+          recentClicks.forEach(click => {
+            const date = new Date(click.clicked_at);
+            const timeStr = date.toLocaleString();
+            html += `<tr>
+              <td>${timeStr}</td>
+              <td>${click.pill_type}</td>
+              <td><strong>${click.pill_label}</strong></td>
+              <td><code style="font-size: 0.85em;">${click.session_id.substring(0, 20)}...</code></td>
+            </tr>`;
+          });
+          html += '</tbody></table>';
+          recentDiv.innerHTML = html;
+        }
+        
+      } catch (error) {
+        showError('Failed to load pill clicks data: ' + error.message);
+      }
     }
 
     // Admin functions

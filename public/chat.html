@@ -788,8 +788,8 @@ pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;backgro
           <p class="sub">
             Alan's AI assistant. Ask about workshops, tuition, or photography. Can't help? Contact Alan:
             <span class="pill-inline">
-              <a class="pill pill--brand" target="_blank" rel="noopener" href="https://www.alanranger.com/contact-us-alan-ranger-photography">Email</a>
-              <a class="pill pill--wa" target="_blank" rel="noopener" href="https://wa.me/447817017994">WhatsApp</a>
+              <a class="pill pill--brand" target="_blank" rel="noopener" href="https://www.alanranger.com/contact-us-alan-ranger-photography" onclick="trackPillClick('contact', 'Email', 'https://www.alanranger.com/contact-us-alan-ranger-photography');">Email</a>
+              <a class="pill pill--wa" target="_blank" rel="noopener" href="https://wa.me/447817017994" onclick="trackPillClick('whatsapp', 'WhatsApp', 'https://wa.me/447817017994');">WhatsApp</a>
             </span>
           </p>
         </div>
@@ -2270,8 +2270,12 @@ function renderActionPills(pills) {
     a.className = 'pill' + (p.priority ? ' priority' : '') + (p.secondary ? ' secondary' : ''); 
     a.href = p.url || p.href || '#'; a.target = '_blank'; a.rel = 'noopener';
     a.textContent = p.label || p.text || 'Open';
+    // Add click tracking for response pills
+    const pillUrl = p.url || p.href || '#';
+    const pillLabel = p.label || p.text || 'Open';
+    a.addEventListener('click', () => trackPillClick('response', pillLabel, pillUrl));
     wrap.appendChild(a);
-  });
+  }); 
   
   addBubble(wrap.outerHTML);
 }
@@ -2531,6 +2535,39 @@ window.addEventListener('beforeunload', () => {
     }).catch(err => console.warn('Session end logging failed:', err));
   }
 });
+
+// Track pill clicks (contact/WhatsApp/response pills)
+async function trackPillClick(pillType, pillLabel, pillUrl) {
+  try {
+    const eventData = {
+      pill_type: pillType, // 'contact', 'whatsapp', or 'response'
+      pill_label: pillLabel,
+      pill_url: pillUrl,
+      page_url: window.location.href,
+      timestamp: new Date().toISOString()
+    };
+
+    // Log to chat_events via chat-log endpoint
+    await fetch('/api/chat-log', {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlnenZ3YnZndm16dnZ6b2NsdWZ4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NzY3NzkyOCwiZXhwIjoyMDczMjUzOTI4fQ.W9tkTSYu6Wml0mUr-gJD6hcLMZDcbaYYaOsyDXuwd8M'
+      },
+      body: JSON.stringify({
+        action: 'event',
+        data: {
+          sessionId: sessionId,
+          eventType: 'pill_click',
+          eventData: eventData
+        }
+      }),
+      keepalive: true // Allow request to complete even if page unloads
+    }).catch(err => console.warn('Pill click logging failed:', err));
+  } catch (error) {
+    console.warn('Error tracking pill click:', error);
+  }
+}
 
 // Feedback functions
 async function submitFeedback(rating, reason, userFeedbackText, query, payload, confidence, intent) {
