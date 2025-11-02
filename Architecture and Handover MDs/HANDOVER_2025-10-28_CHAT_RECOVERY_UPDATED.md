@@ -1,5 +1,5 @@
 # alan-chat-proxy Handover — 28 Oct 2025
-_Last updated: 1 Nov 2025 21:05 by Cursor AI (server crash fix, response quality improvements, 430Q baseline deployed)_
+_Last updated: 2 Nov 2025 by Cursor AI (service links for personalised feedback, complexity refactoring)_
 
 ---
 
@@ -10,16 +10,18 @@ This document was generated following the **loss of active chat history in Curso
 - **100% Success Rate**: All 430 questions pass with no 500 errors or timeouts ✅
 - **Server Stability**: Fixed crash after ~19 requests - singleton Supabase client prevents connection exhaustion ✅
 - **Response Quality**: Fixed 6 specific questions, added related info enrichment ✅
+- **Service Links**: Personalised feedback queries now automatically display online Zoom 1-2-1 and face-to-face private lesson service tiles ✅
+- **Code Quality**: Complexity refactoring complete - enrichAdviceWithRelatedInfo reduced from 21 to ≤15 ✅
 - **40Q Test Quality**: 92.5% quality pass rate (100% success, 3 routing issues remaining)
 - **Response Composer Layer**: Intelligent wrapper implemented for all 8 business logic categories ✅
 - **Interactive Testing Ready**: Updated HTML with 40-question subset and copy buttons ✅
 - **Critical Issues Resolved**: Fixed infinite loops, 500 errors, timeout issues, and server crashes ✅
-- **Latest Fixes (1 Nov 2025 21:05)**: Server crash fix, 6 specific question handlers, related info enrichment ✅
+- **Latest Fixes (2 Nov 2025)**: Service links for personalised feedback, complexity refactoring ✅
 - **Analytics Dashboard**: Fully operational with all tabs working, Insights tab fixed, structure aligned ✅
 - **Light-Refresh**: Modernized and optimized, runs every 8 hours, fully compliant with complexity rules ✅
 - **Debug Code Cleanup**: All Q36 debug code removed from production ✅
 - **Current Baseline**: Nov 1, 2025 baseline established for regression testing ✅
-- **Deployment**: Latest fixes (server crash, response quality) committed and pushed to GitHub main branch ✅
+- **Deployment**: Latest fixes (service links, complexity refactoring) committed and pushed to GitHub main branch ✅
 - **430Q Baseline**: Comprehensive baseline test completed - 430/430 questions passing (100% success) ✅
 
 It is intended to serve as the **primary recovery anchor** for Cursor AI or any subsequent system reinitialization.

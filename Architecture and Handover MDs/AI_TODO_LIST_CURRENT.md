@@ -1,5 +1,5 @@
 # 🧠 AI_TODO_LIST_CURRENT.md  
-_Last updated: 2 Nov 2025 09:45_  
+_Last updated: 2 Nov 2025_  
 _Alan Ranger — Chat AI Bot / alan-chat-proxy_
 
 ---
@@ -28,6 +28,9 @@ All older references or notes can be found inside `/Archive/AI_TODO_LIST_2025-01
 ## ✅ Recently Completed (Last 2 Weeks)
 | Date | Completed Item | Notes |
 |------|-----------------|-------|
+| 2 Nov 2025 | **Complexity Refactoring: enrichAdviceWithRelatedInfo** | ✅ Reduced cognitive complexity from 21 to ≤15 by extracting 3 helper functions: `hasAnyRelatedInfo()`, `addFallbackArticles()`, `addMissingEnrichmentItems()`. Functionality preserved, code more maintainable. Committed and deployed | 
+| 2 Nov 2025 | **Service Links for Personalised Feedback Queries** | ✅ Added automatic service link enrichment for "personalised feedback" queries. Now displays online Zoom 1-2-1 and face-to-face private lesson service tiles. Enhanced `handleServicePatternResponse()` to detect and fetch relevant services. Committed and deployed |
+| 2 Nov 2025 | **40Q Test & Side-by-Side Comparison** | ✅ Ran 40Q test against localhost, generated side-by-side CSV comparison. All 40 questions passing (100% success rate). Comparison file: side-by-side-40q-1762074970051.csv |
 | 2 Nov 2025 | **Analytics Dashboard Navigation Improvements** | ✅ Added next/previous navigation buttons to question detail modal. Shows position indicator "Question X/Y" in header. Navigation respects current sort order. Users can now scroll through all questions without closing modal. CSS styling added for modal footer layout |
 | 2 Nov 2025 | **Analytics Questions Limit Increased** | ✅ Increased questions API limit from 20 to 1000 in `api/analytics.js`. All questions now available in analytics dashboard. Navigation works through all questions, not just first 20 |
 | 2 Nov 2025 | **Admin Panel Review** | ✅ Reviewed admin.html - no updates needed. All functionality still working correctly. Admin panel is transparent to recent backend/UI changes |
@@ -86,6 +89,8 @@ All older references or notes can be found inside `/Archive/AI_TODO_LIST_2025-01
 | Priority | Task | Description | Owner | Status |
 |-----------|------|--------------|-------|--------|
 | 🔴 P1 | **Complexity Refactoring** | ✅ 5 high-complexity functions refactored to ≤15 complexity - all verified with 40Q tests | Cursor | ✅ Complete |
+| 🔴 P1 | **Add Service Links for Personalised Feedback** | ✅ Added service link enrichment for "personalised feedback" queries - now displays online Zoom 1-2-1 and face-to-face private lesson service tiles | Cursor | ✅ Complete |
+| 🔴 P1 | **Refactor enrichAdviceWithRelatedInfo Complexity** | ✅ Reduced cognitive complexity from 21 to ≤15 by extracting 3 helper functions | Cursor | ✅ Complete |
 | 🔴 P1 | **Fix Server Crash After ~19 Requests** | ✅ Fixed: Added singleton Supabase client, global error handlers, HTTP timeouts. 430Q test: 100% success (430/430) | Cursor | ✅ Complete |
 | 🔴 P1 | **Fix 6 Specific Question Responses** | ✅ Fixed: astrophotography, 14yr old, gear equipment, certificate, cancellation policy, hire photographer - now return specific answers instead of generic fallbacks | Cursor | ✅ Complete |
 | 🔴 P1 | **Add Related Information Enrichment** | ✅ Added `enrichAdviceWithRelatedInfo()` to automatically add related articles/services/events to responses that lack them | Cursor | ✅ Complete |
@@ -111,6 +116,8 @@ All older references or notes can be found inside `/Archive/AI_TODO_LIST_2025-01
 | 🔸 High | **Critical Fixes Document** | CRITICAL_FIXES_AND_TESTING_STRATEGY.md created with prioritized fixes | Cursor | ✅ Complete |
 | 🔸 High | **Service Rendering Fix** | Interactive testing now matches live chat service tile display | Cursor | ✅ Complete |
 | 🔸 High | **Add Missing Hardcoded Answers** | Add hardcoded answers for 'what is histogram' and 'what is long exposure photography' | Cursor | Pending |
+| 🔸 High | **Complexity Refactoring: enrichAdviceWithRelatedInfo** | ✅ Reduced cognitive complexity from 21 to ≤15 by extracting helper functions - deployed Nov 2, 2025 | Cursor | ✅ Complete |
+| 🔸 High | **Service Links for Personalised Feedback** | ✅ Added automatic service link enrichment - online Zoom 1-2-1 and face-to-face private lessons now displayed - deployed Nov 2, 2025 | Cursor | ✅ Complete |
 | 🔸 High | **System Stability Achieved** | 430-question test completed with 100% success rate - no more 500 errors or timeouts | Cursor | ✅ Complete |
 | 🔸 High | **Server Crash Fix Deployed** | Singleton Supabase client prevents connection exhaustion, global error handlers catch unhandled rejections - deployed Nov 1, 2025 | Cursor | ✅ Complete |
 | 🔸 High | **430Q Baseline Established** | Comprehensive baseline test: 430/430 questions passing (100%), avg confidence 76.8%, all fixes verified | Cursor | ✅ Complete |
