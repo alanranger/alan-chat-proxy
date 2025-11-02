@@ -2798,7 +2798,7 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
         modal.innerHTML = `
           <div class="modal-content">
             <div class="modal-header">
-              <h3>Question & Answer${currentPos ? ` <span style="color: #9ca3af; font-size: 14px; font-weight: normal;">(${currentPos})</span>` : ''}</h3>
+              <h3>Question & Answer${currentPos ? ` <span style="color: #9ca3af; font-size: 14px; font-weight: normal;">(Question ${currentPos})</span>` : ''}</h3>
               <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">&times;</button>
             </div>
             <div class="modal-body">
