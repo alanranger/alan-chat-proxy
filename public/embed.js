@@ -89,14 +89,14 @@
     
     // Create img element for default SVG
     const img = doc.createElement('img');
-    img.src = '/Icons/ai-chat-badge-default-3d.svg';
+    img.src = '/icons/ai-chat-badge-default-3d.svg';
     img.alt = 'AI Chat';
     img.className = 'chat-icon-default';
     btn.appendChild(img);
     
     // Create img element for hover SVG (hidden by default)
     const imgHover = doc.createElement('img');
-    imgHover.src = '/Icons/ai-chat-badge-hover-3d.svg';
+    imgHover.src = '/icons/ai-chat-badge-hover-3d.svg';
     imgHover.alt = 'AI Chat';
     imgHover.className = 'chat-icon-hover';
     imgHover.style.display = 'none';
