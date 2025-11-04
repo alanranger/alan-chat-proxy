@@ -1,5 +1,5 @@
 <!-- Alan Ranger Assistant: embed launcher -->
-<script async src="https://alan-chat-proxy.vercel.app/embed.js?v=3"
+<script async src="https://alan-chat-proxy.vercel.app/embed.js?v=4"
         data-chat-src="https://alan-chat-proxy.vercel.app/chat.html"
         data-position="br"
         data-color="#4CAF50"
