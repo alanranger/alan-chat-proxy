@@ -50,7 +50,7 @@
     style.id = 'alan-chat-embed-styles';
     style.textContent = `
       #alan-chat-launcher{position:fixed;z-index:2147483000;display:flex;align-items:center;justify-content:center;width:84px;height:84px;color:#fff;cursor:pointer;background:transparent;border:none;outline:none;box-shadow:none;animation:pulsate 3s ease-in-out infinite;}
-      #alan-chat-launcher svg,#alan-chat-launcher .svg-container{display:block;width:100%;height:100%;}
+      #alan-chat-launcher svg,#alan-chat-launcher .svg-container{display:block;width:100%;height:100%;pointer-events:none;}
       #alan-chat-launcher:hover{animation:wiggle 0.5s ease-in-out infinite;}
       @keyframes pulsate{0%,100%{transform:scale(1);}50%{transform:scale(1.1);}}
       @keyframes wiggle{0%,100%{transform:translate(0,0) rotate(0deg);}25%{transform:translate(-2px,-2px) rotate(-2deg);}75%{transform:translate(2px,2px) rotate(2deg);}}
@@ -99,19 +99,27 @@
     svgContainer.innerHTML = defaultSVG;
     btn.appendChild(svgContainer);
     
-    // Store hover SVG in data attribute
-    btn.dataset.hoverSvg = hoverSVG;
-    btn.dataset.defaultSvg = defaultSVG;
+    // Store SVGs for easy access
+    let isHovered = false;
     
     // Handle hover to swap SVGs
-    btn.addEventListener('mouseenter', () => {
+    btn.addEventListener('mouseenter', function() {
+      isHovered = true;
       svgContainer.innerHTML = hoverSVG;
     });
-    btn.addEventListener('mouseleave', () => {
+    
+    btn.addEventListener('mouseleave', function() {
+      isHovered = false;
       svgContainer.innerHTML = defaultSVG;
     });
     
-    btn.addEventListener('click', openPanel);
+    // Click handler - use capture phase to ensure it fires
+    btn.addEventListener('click', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      openPanel();
+    }, true);
+    
     doc.body.appendChild(btn);
   }
 
