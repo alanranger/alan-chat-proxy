@@ -50,7 +50,7 @@
     style.id = 'alan-chat-embed-styles';
     style.textContent = `
       #alan-chat-launcher{position:fixed;z-index:2147483000;display:flex;align-items:center;justify-content:center;width:84px;height:84px;color:#fff;cursor:pointer;background:transparent;border:none;outline:none;box-shadow:none;animation:pulsate 3s ease-in-out infinite;}
-      #alan-chat-launcher svg,#alan-chat-launcher img{display:block;width:100%;height:100%;}
+      #alan-chat-launcher svg,#alan-chat-launcher .svg-container{display:block;width:100%;height:100%;}
       #alan-chat-launcher:hover{animation:wiggle 0.5s ease-in-out infinite;}
       @keyframes pulsate{0%,100%{transform:scale(1);}50%{transform:scale(1.1);}}
       @keyframes wiggle{0%,100%{transform:translate(0,0) rotate(0deg);}25%{transform:translate(-2px,-2px) rotate(-2deg);}75%{transform:translate(2px,2px) rotate(2deg);}}
@@ -87,29 +87,28 @@
     if (cfg.position === 'bl') { btn.style.left = off; btn.style.bottom = off; }
     else { btn.style.right = off; btn.style.bottom = off; }
     
-    // Create img element for default SVG
-    const img = doc.createElement('img');
-    img.src = '/icons/ai-chat-badge-default-3d.svg';
-    img.alt = 'AI Chat';
-    img.className = 'chat-icon-default';
-    btn.appendChild(img);
+    // Default SVG (inline)
+    const defaultSVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" role="img" aria-label="AI Chat Default"><g fill="#000F5B"><circle cx="60" cy="60" r="50"/><polygon points="90,96 108,110 100,88"/></g><rect x="58" y="56" width="36" height="24" rx="6" fill="#E57200"/><polygon points="78,80 88,86 88,80" fill="#E57200"/><g fill="#000F5B" transform="translate(2,2)"><path d="M24 34 h56 a6 6 0 0 1 6 6 v18 a6 6 0 0 1 -6 6 h-36 l-8 8 -2 -8 h-10 a6 6 0 0 1 -6 -6 v-18 a6 6 0 0 1 6 -6 z"/></g><g fill="#E57200"><path d="M24 34 h56 a6 6 0 0 1 6 6 v18 a6 6 0 0 1 -6 6 h-36 l-8 8 -2 -8 h-10 a6 6 0 0 1 -6 -6 v-18 a6 6 0 0 1 6 -6 z"/></g><text x="52" y="50" fill="#FFFFFF" font-size="14" font-family="system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial" text-anchor="middle" dominant-baseline="middle">Chat</text></svg>';
     
-    // Create img element for hover SVG (hidden by default)
-    const imgHover = doc.createElement('img');
-    imgHover.src = '/icons/ai-chat-badge-hover-3d.svg';
-    imgHover.alt = 'AI Chat';
-    imgHover.className = 'chat-icon-hover';
-    imgHover.style.display = 'none';
-    btn.appendChild(imgHover);
+    // Hover SVG (inline)
+    const hoverSVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" role="img" aria-label="AI Chat Hover"><g fill="#E57200"><circle cx="60" cy="60" r="50"/><polygon points="90,96 108,110 100,88"/></g><rect x="58" y="56" width="36" height="24" rx="6" fill="#000F5B"/><polygon points="78,80 88,86 88,80" fill="#000F5B"/><g fill="#E57200" transform="translate(2,2)"><path d="M24 34 h56 a6 6 0 0 1 6 6 v18 a6 6 0 0 1 -6 6 h-36 l-8 8 -2 -8 h-10 a6 6 0 0 1 -6 -6 v-18 a6 6 0 0 1 6 -6 z"/></g><g fill="#000F5B"><path d="M24 34 h56 a6 6 0 0 1 6 6 v18 a6 6 0 0 1 -6 6 h-36 l-8 8 -2 -8 h-10 a6 6 0 0 1 -6 -6 v-18 a6 6 0 0 1 6 -6 z"/></g><text x="52" y="50" fill="#FFFFFF" font-size="14" font-family="system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial" text-anchor="middle" dominant-baseline="middle">Chat</text></svg>';
     
-    // Handle hover to swap images
+    // Create container for SVGs
+    const svgContainer = doc.createElement('div');
+    svgContainer.className = 'svg-container';
+    svgContainer.innerHTML = defaultSVG;
+    btn.appendChild(svgContainer);
+    
+    // Store hover SVG in data attribute
+    btn.dataset.hoverSvg = hoverSVG;
+    btn.dataset.defaultSvg = defaultSVG;
+    
+    // Handle hover to swap SVGs
     btn.addEventListener('mouseenter', () => {
-      img.style.display = 'none';
-      imgHover.style.display = 'block';
+      svgContainer.innerHTML = hoverSVG;
     });
     btn.addEventListener('mouseleave', () => {
-      img.style.display = 'block';
-      imgHover.style.display = 'none';
+      svgContainer.innerHTML = defaultSVG;
     });
     
     btn.addEventListener('click', openPanel);
