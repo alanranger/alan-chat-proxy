@@ -3,7 +3,7 @@
   Usage (Squarespace Global Header or Footer):
   <script async src="/embed.js" data-chat-src="/chat.html" data-position="br" data-color="#000F5B"></script>
   
-  Version: 2025-11-02-v3 (Narrower chat bubble with more left padding)
+  Version: 2025-11-02-v4 (Updated SVG files - M32, h46, text x=55)
 
   Optional data-attributes:
     data-chat-src  - absolute or relative URL to chat.html (default: /chat.html)
@@ -89,11 +89,11 @@
     if (cfg.position === 'bl') { btn.style.left = off; btn.style.bottom = off; }
     else { btn.style.right = off; btn.style.bottom = off; }
     
-    // Default SVG (inline) - updated from ai-chat-badge-default-3d.svg (narrower bubble, more left padding)
-    const defaultSVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" role="img" aria-label="AI Chat Default"><g fill="#000F5B"><circle cx="60" cy="60" r="50"/><polygon points="90,96 108,110 100,88"/></g><rect x="58" y="56" width="36" height="24" rx="6" fill="#E57200"/><polygon points="78,80 88,86 88,80" fill="#E57200"/><g fill="#000F5B" transform="translate(2,2)"><path d="M36 34 h36 a6 6 0 0 1 6 6 v18 a6 6 0 0 1 -6 6 h-24 l-8 8 -2 -8 h-10 a6 6 0 0 1 -6 -6 v-18 a6 6 0 0 1 6 -6 z"/></g><g fill="#E57200"><path d="M36 34 h36 a6 6 0 0 1 6 6 v18 a6 6 0 0 1 -6 6 h-24 l-8 8 -2 -8 h-10 a6 6 0 0 1 -6 -6 v-18 a6 6 0 0 1 6 -6 z"/></g><text x="52" y="50" fill="#FFFFFF" font-size="14" font-family="system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial" text-anchor="middle" dominant-baseline="middle">Chat</text></svg>';
+    // Default SVG (inline) - updated from ai-chat-badge-default-3d.svg (latest version)
+    const defaultSVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" role="img" aria-label="AI Chat Default"><g fill="#000F5B"><circle cx="60" cy="60" r="50"/><polygon points="90,96 108,110 100,88"/></g><rect x="58" y="56" width="36" height="24" rx="6" fill="#E57200"/><polygon points="78,80 88,86 88,80" fill="#E57200"/><g fill="#000F5B" transform="translate(2,2)"><path d="M32 34 h46 a6 6 0 0 1 6 6 v18 a6 6 0 0 1 -6 6 h-28 l-8 8 -2 -8 h-8 a6 6 0 0 1 -6 -6 v-18 a6 6 0 0 1 6 -6 z"/></g><g fill="#E57200"><path d="M32 34 h46 a6 6 0 0 1 6 6 v18 a6 6 0 0 1 -6 6 h-28 l-8 8 -2 -8 h-8 a6 6 0 0 1 -6 -6 v-18 a6 6 0 0 1 6 -6 z"/></g><text x="55" y="50" fill="#FFFFFF" font-size="14" font-family="system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial" text-anchor="middle" dominant-baseline="middle">Chat</text></svg>';
     
-    // Hover SVG (inline) - updated from ai-chat-badge-hover-3d.svg (narrower bubble, more left padding)
-    const hoverSVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" role="img" aria-label="AI Chat Hover"><g fill="#E57200"><circle cx="60" cy="60" r="50"/><polygon points="90,96 108,110 100,88"/></g><rect x="58" y="56" width="36" height="24" rx="6" fill="#000F5B"/><polygon points="78,80 88,86 88,80" fill="#000F5B"/><g fill="#E57200" transform="translate(2,2)"><path d="M36 34 h36 a6 6 0 0 1 6 6 v18 a6 6 0 0 1 -6 6 h-24 l-8 8 -2 -8 h-10 a6 6 0 0 1 -6 -6 v-18 a6 6 0 0 1 6 -6 z"/></g><g fill="#000F5B"><path d="M36 34 h36 a6 6 0 0 1 6 6 v18 a6 6 0 0 1 -6 6 h-24 l-8 8 -2 -8 h-10 a6 6 0 0 1 -6 -6 v-18 a6 6 0 0 1 6 -6 z"/></g><text x="52" y="50" fill="#FFFFFF" font-size="14" font-family="system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial" text-anchor="middle" dominant-baseline="middle">Chat</text></svg>';
+    // Hover SVG (inline) - updated from ai-chat-badge-hover-3d.svg (latest version)
+    const hoverSVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" role="img" aria-label="AI Chat Hover"><g fill="#E57200"><circle cx="60" cy="60" r="50"/><polygon points="90,96 108,110 100,88"/></g><rect x="58" y="56" width="36" height="24" rx="6" fill="#000F5B"/><polygon points="78,80 88,86 88,80" fill="#000F5B"/><g fill="#E57200" transform="translate(2,2)"><path d="M32 34 h46 a6 6 0 0 1 6 6 v18 a6 6 0 0 1 -6 6 h-28 l-8 8 -2 -8 h-8 a6 6 0 0 1 -6 -6 v-18 a6 6 0 0 1 6 -6 z"/></g><g fill="#000F5B"><path d="M32 34 h46 a6 6 0 0 1 6 6 v18 a6 6 0 0 1 -6 6 h-28 l-8 8 -2 -8 h-8 a6 6 0 0 1 -6 -6 v-18 a6 6 0 0 1 6 -6 z"/></g><text x="55" y="50" fill="#FFFFFF" font-size="14" font-family="system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial" text-anchor="middle" dominant-baseline="middle">Chat</text></svg>';
     
     // Create container for SVGs
     const svgContainer = doc.createElement('div');
