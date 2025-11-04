@@ -1,12 +1,12 @@
 /*
   Lightweight embed script to launch the Alan Ranger Assistant chat UI on any site.
   Usage (Squarespace Global Header or Footer):
-  <script async src="/embed.js" data-chat-src="/chat.html" data-position="br" data-color="#1a237e"></script>
+  <script async src="/embed.js" data-chat-src="/chat.html" data-position="br" data-color="#000F5B"></script>
 
   Optional data-attributes:
     data-chat-src  - absolute or relative URL to chat.html (default: /chat.html)
     data-position  - br | bl (bottom-right default, bottom-left alternative)
-    data-color     - hex color for launcher background (default: #1a237e - deep blue/purple)
+    data-color     - hex color for launcher background (default: #000F5B - navy blue, overridden by SVG)
     data-size      - desktop max width/height in px (e.g., 420x640)
     data-offset    - CSS margin from edges (default: 20)
 */
@@ -19,7 +19,7 @@
   const cfg = {
     chatSrc: scriptEl.getAttribute('data-chat-src') || '/chat.html',
     position: (scriptEl.getAttribute('data-position') || 'br').toLowerCase(),
-    color: scriptEl.getAttribute('data-color') || '#1a237e',
+    color: scriptEl.getAttribute('data-color') || '#000F5B',
     size: scriptEl.getAttribute('data-size') || '420x640',
     offset: parseInt(scriptEl.getAttribute('data-offset') || '20', 10),
     ga4: scriptEl.getAttribute('data-ga4-id') || ''
@@ -49,8 +49,11 @@
     const style = doc.createElement('style');
     style.id = 'alan-chat-embed-styles';
     style.textContent = `
-      #alan-chat-launcher{position:fixed;z-index:2147483000;display:flex;align-items:center;justify-content:center;border-radius:999px;box-shadow:0 4px 18px rgba(0,0,0,0.3);width:56px;height:56px;color:#fff;cursor:pointer;}
-      #alan-chat-launcher:hover{filter:brightness(1.05)}
+      #alan-chat-launcher{position:fixed;z-index:2147483000;display:flex;align-items:center;justify-content:center;border-radius:999px;box-shadow:0 4px 18px rgba(0,0,0,0.3);width:56px;height:56px;color:#fff;cursor:pointer;background:transparent;}
+      #alan-chat-launcher:hover circle{fill:#E57200;filter:drop-shadow(0 0 6px rgba(229,114,0,.6));}
+      #alan-chat-launcher:hover path{fill:#000F5B;}
+      #alan-chat-launcher svg{display:block;width:100%;height:100%;}
+      #alan-chat-launcher circle,#alan-chat-launcher path{transition:filter .2s ease,fill .2s ease;}
       #alan-chat-frame-wrap{position:fixed;z-index:2147482999;display:none;background:rgba(0,0,0,0.35);} 
       #alan-chat-panel{position:absolute;background:#111;border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,0.45);overflow:hidden;border:1px solid rgba(255,255,255,0.08);min-width:400px;min-height:300px;max-width:90vw;max-height:90vh;}
       #alan-chat-panel .drag-handle{position:absolute;top:0;left:0;right:0;height:40px;cursor:move;z-index:5;background:transparent;}
@@ -79,11 +82,11 @@
     const btn = doc.createElement('div');
     btn.id = 'alan-chat-launcher';
     btn.setAttribute('aria-label','Open Alan Ranger Assistant');
-    btn.style.background = cfg.color;
+    btn.style.background = 'transparent';
     const off = cfg.offset + 'px';
     if (cfg.position === 'bl') { btn.style.left = off; btn.style.bottom = off; }
     else { btn.style.right = off; btn.style.bottom = off; }
-    btn.innerHTML = '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><g><rect x="3" y="5" width="9" height="7" rx="2" fill="#FF8C42" opacity="0.85"/><polygon points="3,12 1,14 3,14" fill="#FF8C42" opacity="0.85"/><rect x="6" y="3" width="10" height="8" rx="2" fill="#FF8C42"/><polygon points="6,11 4,13 6,13" fill="#FF8C42"/></g></svg>';
+    btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-label="Chat"><defs><filter id="bubbleShadow" x="-50%" y="-50%" width="200%" height="200%"><feOffset dx="0.8" dy="1.2" in="SourceAlpha" result="off"/><feGaussianBlur in="off" stdDeviation="1.4" result="blur"/><feColorMatrix in="blur" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.35 0" result="shadow"/><feMerge><feMergeNode in="shadow"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs><circle cx="50" cy="50" r="48" fill="#000F5B"/><g filter="url(#bubbleShadow)" fill="#E57200"><path d="M26 43a6 6 0 0 1 6-6h24a6 6 0 0 1 6 6v10a6 6 0 0 1-6 6H38l-6.2 4.6V59h-0.2a6 6 0 0 1-6-6V43z" transform="translate(0,1)"/></g><g filter="url(#bubbleShadow)" fill="#E57200"><path d="M46 37a6 6 0 0 1 6-6h18a6 6 0 0 1 6 6v11a6 6 0 0 1-6 6h-2v4.4L63 54H52a6 6 0 0 1-6-6V37z"/></g></svg>';
     btn.addEventListener('click', openPanel);
     doc.body.appendChild(btn);
   }
