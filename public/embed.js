@@ -49,13 +49,11 @@
     const style = doc.createElement('style');
     style.id = 'alan-chat-embed-styles';
     style.textContent = `
-      #alan-chat-launcher{position:fixed;z-index:2147483000;display:flex;align-items:center;justify-content:center;width:84px;height:84px;color:#fff;cursor:pointer;background:transparent;border:none;outline:none;box-shadow:none;}
-      #alan-chat-launcher svg{display:block;width:100%;height:100%;}
-      #alan-chat-launcher .outer-bubble circle,#alan-chat-launcher .outer-bubble polygon{transition:fill .2s ease,filter .2s ease;}
-      #alan-chat-launcher .inner-bubble-upper rect,#alan-chat-launcher .inner-bubble-upper polygon,#alan-chat-launcher .inner-bubble-lower rect,#alan-chat-launcher .inner-bubble-lower polygon{transition:fill .2s ease;}
-      #alan-chat-launcher:hover .outer-bubble{filter:url(#glow);}
-      #alan-chat-launcher:hover .outer-bubble circle,#alan-chat-launcher:hover .outer-bubble polygon{fill:#E57200!important;}
-      #alan-chat-launcher:hover .inner-bubble-upper rect,#alan-chat-launcher:hover .inner-bubble-upper polygon,#alan-chat-launcher:hover .inner-bubble-lower rect,#alan-chat-launcher:hover .inner-bubble-lower polygon{fill:#000F5B!important;}
+      #alan-chat-launcher{position:fixed;z-index:2147483000;display:flex;align-items:center;justify-content:center;width:84px;height:84px;color:#fff;cursor:pointer;background:transparent;border:none;outline:none;box-shadow:none;animation:pulsate 3s ease-in-out infinite;}
+      #alan-chat-launcher svg,#alan-chat-launcher img{display:block;width:100%;height:100%;}
+      #alan-chat-launcher:hover{animation:wiggle 0.5s ease-in-out infinite;}
+      @keyframes pulsate{0%,100%{transform:scale(1);}50%{transform:scale(1.1);}}
+      @keyframes wiggle{0%,100%{transform:translate(0,0) rotate(0deg);}25%{transform:translate(-2px,-2px) rotate(-2deg);}75%{transform:translate(2px,2px) rotate(2deg);}}
       #alan-chat-frame-wrap{position:fixed;z-index:2147482999;display:none;background:rgba(0,0,0,0.35);} 
       #alan-chat-panel{position:absolute;background:#111;border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,0.45);overflow:hidden;border:1px solid rgba(255,255,255,0.08);min-width:400px;min-height:300px;max-width:90vw;max-height:90vh;}
       #alan-chat-panel .drag-handle{position:absolute;top:0;left:0;right:0;height:40px;cursor:move;z-index:5;background:transparent;}
@@ -88,7 +86,32 @@
     const off = cfg.offset + 'px';
     if (cfg.position === 'bl') { btn.style.left = off; btn.style.bottom = off; }
     else { btn.style.right = off; btn.style.bottom = off; }
-    btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" role="img" aria-label="AI Chat"><defs><filter id="bubbleShadow" x="-50%" y="-50%" width="200%" height="200%"><feOffset dx="0.8" dy="1.2" in="SourceAlpha" result="off"/><feGaussianBlur in="off" stdDeviation="1.4" result="blur"/><feColorMatrix type="matrix" in="blur" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.35 0" result="shadow"/><feMerge><feMergeNode in="shadow"/><feMergeNode in="SourceGraphic"/></feMerge></filter><filter id="glow" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur in="SourceAlpha" stdDeviation="3" result="g"/><feMerge><feMergeNode in="g"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs><g class="outer-bubble" fill="#000F5B"><circle cx="60" cy="60" r="50"/><polygon points="90,96 108,110 100,88"/></g><g filter="url(#bubbleShadow)" class="inner-bubble-upper"><rect x="26" y="34" width="48" height="26" rx="6" fill="#E57200"/><polygon points="36,60 36,55 31,55" fill="#E57200"/><text x="50" y="47" fill="#FFFFFF" font-size="12.5" font-family="system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial" text-anchor="middle" dominant-baseline="middle">Chat</text></g><g filter="url(#bubbleShadow)" class="inner-bubble-lower"><rect x="58" y="54" width="34" height="22" rx="6" fill="#E57200"/><polygon points="78,76 86,82 86,76" fill="#E57200"/></g></svg>';
+    
+    // Create img element for default SVG
+    const img = doc.createElement('img');
+    img.src = '/Icons/ai-chat-badge-default-3d.svg';
+    img.alt = 'AI Chat';
+    img.className = 'chat-icon-default';
+    btn.appendChild(img);
+    
+    // Create img element for hover SVG (hidden by default)
+    const imgHover = doc.createElement('img');
+    imgHover.src = '/Icons/ai-chat-badge-hover-3d.svg';
+    imgHover.alt = 'AI Chat';
+    imgHover.className = 'chat-icon-hover';
+    imgHover.style.display = 'none';
+    btn.appendChild(imgHover);
+    
+    // Handle hover to swap images
+    btn.addEventListener('mouseenter', () => {
+      img.style.display = 'none';
+      imgHover.style.display = 'block';
+    });
+    btn.addEventListener('mouseleave', () => {
+      img.style.display = 'block';
+      imgHover.style.display = 'none';
+    });
+    
     btn.addEventListener('click', openPanel);
     doc.body.appendChild(btn);
   }
