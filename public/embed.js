@@ -1,12 +1,12 @@
 /*
   Lightweight embed script to launch the Alan Ranger Assistant chat UI on any site.
   Usage (Squarespace Global Header or Footer):
-  <script async src="/embed.js" data-chat-src="/chat.html" data-position="br" data-color="#4CAF50"></script>
+  <script async src="/embed.js" data-chat-src="/chat.html" data-position="br" data-color="#0d3b66"></script>
 
   Optional data-attributes:
     data-chat-src  - absolute or relative URL to chat.html (default: /chat.html)
     data-position  - br | bl (bottom-right default, bottom-left alternative)
-    data-color     - hex color for launcher background (default: #4CAF50)
+    data-color     - hex color for launcher background (default: #0d3b66 - dark blue)
     data-size      - desktop max width/height in px (e.g., 420x640)
     data-offset    - CSS margin from edges (default: 20)
 */
@@ -19,7 +19,7 @@
   const cfg = {
     chatSrc: scriptEl.getAttribute('data-chat-src') || '/chat.html',
     position: (scriptEl.getAttribute('data-position') || 'br').toLowerCase(),
-    color: scriptEl.getAttribute('data-color') || '#4CAF50',
+    color: scriptEl.getAttribute('data-color') || '#0d3b66',
     size: scriptEl.getAttribute('data-size') || '420x640',
     offset: parseInt(scriptEl.getAttribute('data-offset') || '20', 10),
     ga4: scriptEl.getAttribute('data-ga4-id') || ''
@@ -83,7 +83,7 @@
     const off = cfg.offset + 'px';
     if (cfg.position === 'bl') { btn.style.left = off; btn.style.bottom = off; }
     else { btn.style.right = off; btn.style.bottom = off; }
-    btn.innerHTML = '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 3C7.03 3 3 6.58 3 11c0 2.02.93 3.84 2.47 5.19-.1.88-.44 2.34-1.39 3.86 0 0 2.02-.22 4.02-1.74.03-.02.05-.03.08-.05 1.12.38 2.33.59 3.64.59 4.97 0 9-3.58 9-8s-4.03-8-9-8z" fill="currentColor"/></svg>';
+    btn.innerHTML = '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><g><rect x="3" y="4" width="10" height="8" rx="2" fill="#FF8C42" opacity="0.9"/><path d="M3 12l-2 2v-2h2z" fill="#FF8C42" opacity="0.9"/><rect x="7" y="2" width="11" height="9" rx="2" fill="#FF8C42"/><path d="M7 11l-2 2v-2h2z" fill="#FF8C42"/></g></svg>';
     btn.addEventListener('click', openPanel);
     doc.body.appendChild(btn);
   }
