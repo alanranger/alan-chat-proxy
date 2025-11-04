@@ -1,12 +1,12 @@
 /*
   Lightweight embed script to launch the Alan Ranger Assistant chat UI on any site.
   Usage (Squarespace Global Header or Footer):
-  <script async src="/embed.js" data-chat-src="/chat.html" data-position="br" data-color="#0d3b66"></script>
+  <script async src="/embed.js" data-chat-src="/chat.html" data-position="br" data-color="#1a237e"></script>
 
   Optional data-attributes:
     data-chat-src  - absolute or relative URL to chat.html (default: /chat.html)
     data-position  - br | bl (bottom-right default, bottom-left alternative)
-    data-color     - hex color for launcher background (default: #0d3b66 - dark blue)
+    data-color     - hex color for launcher background (default: #1a237e - deep blue/purple)
     data-size      - desktop max width/height in px (e.g., 420x640)
     data-offset    - CSS margin from edges (default: 20)
 */
@@ -19,7 +19,7 @@
   const cfg = {
     chatSrc: scriptEl.getAttribute('data-chat-src') || '/chat.html',
     position: (scriptEl.getAttribute('data-position') || 'br').toLowerCase(),
-    color: scriptEl.getAttribute('data-color') || '#0d3b66',
+    color: scriptEl.getAttribute('data-color') || '#1a237e',
     size: scriptEl.getAttribute('data-size') || '420x640',
     offset: parseInt(scriptEl.getAttribute('data-offset') || '20', 10),
     ga4: scriptEl.getAttribute('data-ga4-id') || ''
@@ -83,7 +83,7 @@
     const off = cfg.offset + 'px';
     if (cfg.position === 'bl') { btn.style.left = off; btn.style.bottom = off; }
     else { btn.style.right = off; btn.style.bottom = off; }
-    btn.innerHTML = '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><g><rect x="3" y="4" width="10" height="8" rx="2" fill="#FF8C42" opacity="0.9"/><path d="M3 12l-2 2v-2h2z" fill="#FF8C42" opacity="0.9"/><rect x="7" y="2" width="11" height="9" rx="2" fill="#FF8C42"/><path d="M7 11l-2 2v-2h2z" fill="#FF8C42"/></g></svg>';
+    btn.innerHTML = '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><g><rect x="3" y="5" width="9" height="7" rx="2" fill="#FF8C42" opacity="0.85"/><polygon points="3,12 1,14 3,14" fill="#FF8C42" opacity="0.85"/><rect x="6" y="3" width="10" height="8" rx="2" fill="#FF8C42"/><polygon points="6,11 4,13 6,13" fill="#FF8C42"/></g></svg>';
     btn.addEventListener('click', openPanel);
     doc.body.appendChild(btn);
   }
