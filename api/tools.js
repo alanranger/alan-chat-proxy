@@ -435,12 +435,16 @@ export default async function handler(req, res) {
             const headerBase = ['event_url','subtype','product_url','product_title','price_gbp','availability','date_start','date_end','start_time','end_time','event_location','map_method'];
 
             async function fetchRows(selectStr){
-              const { data, error } = await supa
-                .from('v_event_product_final_guarded')
-                .select(selectStr)
-                .order('event_url', { ascending: true })
-                .limit(5000);
-              return { data, error };
+              try {
+                const { data, error } = await supa
+                  .from('v_event_product_final_enhanced')
+                  .select(selectStr)
+                  .order('event_url', { ascending: true })
+                  .limit(5000);
+                return { data, error };
+              } catch (err) {
+                return { data: null, error: { message: String(err?.message || err), code: 'FETCH_ERROR' } };
+              }
             }
 
             // Try with extended columns first; if the columns don't exist yet, fall back
@@ -448,12 +452,19 @@ export default async function handler(req, res) {
             let header = headerWith;
             let r = await fetchRows(extendedSelect);
             if (r.error) {
+              console.error('Export error (extended):', r.error);
               // fallback without extended columns
               header = headerBase;
               r = await fetchRows(baseSelect);
               if (r.error) {
-                console.error('Export error:', r.error);
-                return sendJSON(res, 500, { error:'supabase_error', detail:r.error.message });
+                console.error('Export error (base):', r.error);
+                // Return detailed error as JSON so client can see it
+                return sendJSON(res, 500, { 
+                  error:'supabase_error', 
+                  detail: r.error.message || String(r.error),
+                  code: r.error.code || 'UNKNOWN',
+                  hint: 'Check if v_event_product_final_enhanced view exists and has required columns'
+                });
               }
             }
             rows = r.data || [];
@@ -595,9 +606,9 @@ export default async function handler(req, res) {
     // --- export_reconcile: compare exported mappings vs event CSV view ---
     if (req.method === 'GET' && action === 'export_reconcile') {
       try {
-        // Load mappings (guarded final view)
+        // Load mappings (final enhanced view)
         const { data: mapRows, error: mapErr } = await supa
-          .from('v_event_product_final_guarded')
+          .from('v_event_product_final_enhanced')
           .select('event_url,subtype,product_url,product_title,price_gbp,availability,date_start,date_end,start_time,end_time')
           .limit(5000);
         if (mapErr) return sendJSON(res, 500, { error: 'supabase_error', detail: mapErr.message });

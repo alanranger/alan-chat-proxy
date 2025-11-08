@@ -2182,7 +2182,17 @@
     async function exportMappings(){
       try{
         const resp = await fetch('/api/tools?action=export', { headers: { 'Authorization': `Bearer ${getToken()}` } });
-        if (!resp.ok){ addResult(`❌ Export failed: ${resp.status}`, 'error'); return; }
+        if (!resp.ok){
+          // Try to get error details from JSON response
+          let errorMsg = `❌ Export failed: ${resp.status}`;
+          try {
+            const errorData = await resp.json();
+            if (errorData.detail) errorMsg += ` - ${errorData.detail}`;
+            if (errorData.hint) errorMsg += ` (${errorData.hint})`;
+          } catch {}
+          addResult(errorMsg, 'error');
+          return;
+        }
         const blob = await resp.blob();
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
