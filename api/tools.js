@@ -437,7 +437,7 @@ export default async function handler(req, res) {
             async function fetchRows(selectStr){
               try {
                 const { data, error } = await supa
-                  .from('v_event_product_final_enhanced')
+                  .from('v_events_for_chat')
                   .select(selectStr)
                   .order('event_url', { ascending: true })
                   .limit(5000);
@@ -463,7 +463,7 @@ export default async function handler(req, res) {
                   error:'supabase_error', 
                   detail: r.error.message || String(r.error),
                   code: r.error.code || 'UNKNOWN',
-                  hint: 'Check if v_event_product_final_enhanced view exists and has required columns'
+                  hint: 'Check if v_events_for_chat view exists and has required columns'
                 });
               }
             }
@@ -606,9 +606,9 @@ export default async function handler(req, res) {
     // --- export_reconcile: compare exported mappings vs event CSV view ---
     if (req.method === 'GET' && action === 'export_reconcile') {
       try {
-        // Load mappings (final enhanced view)
+        // Load mappings (events for chat view)
         const { data: mapRows, error: mapErr } = await supa
-          .from('v_event_product_final_enhanced')
+          .from('v_events_for_chat')
           .select('event_url,subtype,product_url,product_title,price_gbp,availability,date_start,date_end,start_time,end_time')
           .limit(5000);
         if (mapErr) return sendJSON(res, 500, { error: 'supabase_error', detail: mapErr.message });
