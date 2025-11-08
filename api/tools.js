@@ -426,29 +426,37 @@ export default async function handler(req, res) {
         // --- export: CSV of v_event_product_final_enhanced (proper lineage view with all fields) ---
         if (req.method === 'GET' && action === 'export') {
           try{
+            // Base columns that should always exist
+            const baseSelect = 'event_url,subtype,product_url,product_title,price_gbp,availability,date_start,date_end,start_time,end_time,event_location,map_method';
+            // Extended columns that may not exist
+            const extendedSelect = baseSelect + ',confidence,participants,fitness_level,event_title,json_price,json_availability,price_currency';
+            
             const headerWith = ['event_url','subtype','product_url','product_title','price_gbp','availability','date_start','date_end','start_time','end_time','event_location','map_method','confidence','participants','fitness_level','event_title','json_price','json_availability','price_currency'];
-            const headerBase = ['event_url','subtype','product_url','product_title','price_gbp','availability','date_start','date_end','start_time','end_time','event_location','map_method','participants','fitness_level','event_title','json_price','json_availability','price_currency'];
+            const headerBase = ['event_url','subtype','product_url','product_title','price_gbp','availability','date_start','date_end','start_time','end_time','event_location','map_method'];
 
             async function fetchRows(selectStr){
-            const { data, error } = await supa
-              .from('v_event_product_final_guarded')
+              const { data, error } = await supa
+                .from('v_event_product_final_guarded')
                 .select(selectStr)
                 .order('event_url', { ascending: true })
                 .limit(5000);
               return { data, error };
             }
 
-        // Try with confidence first; if the column doesn't exist yet, fall back
-        let rows = [];
-        let header = headerWith;
-        let r = await fetchRows('event_url,subtype,product_url,product_title,price_gbp,availability,date_start,date_end,start_time,end_time,event_location,map_method,confidence');
-        if (r.error) {
-          // fallback without confidence
-          header = headerBase;
-          r = await fetchRows('event_url,subtype,product_url,product_title,price_gbp,availability,date_start,date_end,start_time,end_time,event_location,map_method');
-          if (r.error) return sendJSON(res, 500, { error:'supabase_error', detail:r.error.message });
-        }
-        rows = r.data || [];
+            // Try with extended columns first; if the columns don't exist yet, fall back
+            let rows = [];
+            let header = headerWith;
+            let r = await fetchRows(extendedSelect);
+            if (r.error) {
+              // fallback without extended columns
+              header = headerBase;
+              r = await fetchRows(baseSelect);
+              if (r.error) {
+                console.error('Export error:', r.error);
+                return sendJSON(res, 500, { error:'supabase_error', detail:r.error.message });
+              }
+            }
+            rows = r.data || [];
 
         // Overwrite date/time strictly from page_entities (CSV-derived), no tz conversion
         try {
@@ -486,14 +494,23 @@ export default async function handler(req, res) {
         } catch {}
 
         const esc = (v) => {
-          const s = (v==null?'':String(v));
+          const s = (v==null || v===undefined ? '' : String(v));
           return /[",\n]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s;
         };
-        const csv = [header.join(',')].concat(rows.map(r => header.map(k => esc(r[k])).join(','))).join('\n');
+        
+        // Ensure header only includes columns that exist in the data (if rows exist)
+        let finalHeader = header;
+        if (rows.length > 0) {
+          const availableColumns = Object.keys(rows[0]);
+          finalHeader = header.filter(col => availableColumns.includes(col));
+        }
+        
+        const csv = [finalHeader.join(',')].concat(rows.map(r => finalHeader.map(k => esc(r[k] || '')).join(','))).join('\n');
         res.setHeader('Content-Type', 'text/csv; charset=utf-8');
         res.setHeader('Content-Disposition', 'attachment; filename="event_product_mappings.csv"');
         return res.status(200).send(csv);
       }catch(e){
+        console.error('Export mappings error:', e);
         return sendJSON(res, 500, { error:'server_error', detail:String(e?.message||e) });
       }
     }
