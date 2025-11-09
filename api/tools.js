@@ -274,10 +274,10 @@ export default async function handler(req, res) {
         if (!counts) {
           // Fallback to view counts directly
           const { count: total } = await supa
-            .from('v_event_product_final_enhanced')
+            .from('v_events_for_chat')
             .select('*', { head: true, count: 'exact' });
           const { count: mapped } = await supa
-            .from('v_event_product_final_enhanced')
+            .from('v_events_for_chat')
             .select('*', { head: true, count: 'exact' })
             .not('product_url', 'is', null);
           counts = { total: total || 0, mapped: mapped || 0 };
@@ -302,10 +302,29 @@ export default async function handler(req, res) {
           };
         } catch {}
 
-        // We cannot read cron.job via REST; expose configured schedule note
-        const schedule = '23:00 daily';
-        const tz = 'Europe/London (assumed)';
-        return sendJSON(res, 200, { ok: true, schedule, tz, counts, parity });
+        // Check last cron run from light_refresh_runs table
+        let lastRun = null;
+        try {
+          const { data: runs } = await supa
+            .from('light_refresh_runs')
+            .select('started_at, finished_at, ingested_count, failed_count, urls_changed')
+            .order('started_at', { ascending: false })
+            .limit(1);
+          if (runs && runs.length > 0) {
+            lastRun = {
+              started_at: runs[0].started_at,
+              finished_at: runs[0].finished_at,
+              ingested: runs[0].ingested_count || 0,
+              failed: runs[0].failed_count || 0,
+              urls_changed: runs[0].urls_changed || 0
+            };
+          }
+        } catch {}
+
+        // Vercel cron schedule: every 8 hours (0 */8 * * *)
+        const schedule = 'Every 8 hours (0 */8 * * *)';
+        const tz = 'UTC (Vercel default)';
+        return sendJSON(res, 200, { ok: true, schedule, tz, counts, parity, lastRun });
       } catch (e) {
         return sendJSON(res, 500, { error: 'server_error', detail: String(e?.message||e) });
       }
