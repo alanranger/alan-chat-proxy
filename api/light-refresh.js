@@ -83,7 +83,7 @@ async function fetchUrlLastModified(url) {
   try {
     const response = await fetch(url, { 
       method: 'HEAD',
-      signal: AbortSignal.timeout(5000) // 5 second timeout per URL
+      signal: AbortSignal.timeout(2000) // 2 second timeout per URL (reduced for faster processing)
     });
     const lastModifiedHeader = response.headers.get('last-modified');
     return { url, lastModifiedHeader, error: null };
