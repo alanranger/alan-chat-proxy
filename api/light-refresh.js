@@ -331,14 +331,19 @@ function logRunResult(data) {
   }
 }
 
-async function executeRunLogic(forceBatchIndex = null) {
+async function executeRunLogic(forceBatchIndex = null, maxUrls = null) {
   const urls = await readUrlsFromRepo();
   const cameraCourseUrl = 'https://www.alanranger.com/photography-services-near-me/beginners-photography-course';
   
   // Use rotating batch system: 3 batches, runs every 4 hours
   const totalBatches = 3;
   const batchIndex = forceBatchIndex !== null ? forceBatchIndex : getBatchIndex();
-  const urlsToCheck = buildUrlsToCheck(urls, cameraCourseUrl, batchIndex, totalBatches);
+  let urlsToCheck = buildUrlsToCheck(urls, cameraCourseUrl, batchIndex, totalBatches);
+  
+  // Limit URLs for testing if maxUrls is specified
+  if (maxUrls && maxUrls > 0) {
+    urlsToCheck = urlsToCheck.slice(0, maxUrls);
+  }
   
   const changedUrls = await checkForChangedUrls(urlsToCheck);
   const config = getConfig();
@@ -384,7 +389,9 @@ async function handleRunAction(req, res) {
   try {
     // Allow forcing a specific batch via query parameter (for testing)
     const forceBatch = req.query.batch !== undefined ? parseInt(req.query.batch, 10) : null;
-    const runResult = await executeRunLogic(forceBatch);
+    // Allow limiting URLs for testing (e.g., ?maxUrls=30)
+    const maxUrls = req.query.maxUrls !== undefined ? parseInt(req.query.maxUrls, 10) : null;
+    const runResult = await executeRunLogic(forceBatch, maxUrls);
     result = { ...runResult, error: null };
   } catch (e) {
     result.error = String(e?.message || e);
