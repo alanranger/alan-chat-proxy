@@ -308,13 +308,13 @@ function logRunResult(data) {
   }
 }
 
-async function executeRunLogic() {
+async function executeRunLogic(forceBatchIndex = null) {
   const urls = await readUrlsFromRepo();
   const cameraCourseUrl = 'https://www.alanranger.com/photography-services-near-me/beginners-photography-course';
   
   // Use rotating batch system: 3 batches, runs every 4 hours
   const totalBatches = 3;
-  const batchIndex = getBatchIndex();
+  const batchIndex = forceBatchIndex !== null ? forceBatchIndex : getBatchIndex();
   const urlsToCheck = buildUrlsToCheck(urls, cameraCourseUrl, batchIndex, totalBatches);
   
   const changedUrls = await checkForChangedUrls(urlsToCheck);
@@ -359,7 +359,9 @@ async function handleRunAction(req, res) {
   let result = { chunks: [], ingested: 0, failed: 0, urls: 0, changedUrls: 0, error: null };
 
   try {
-    const runResult = await executeRunLogic();
+    // Allow forcing a specific batch via query parameter (for testing)
+    const forceBatch = req.query.batch !== undefined ? parseInt(req.query.batch, 10) : null;
+    const runResult = await executeRunLogic(forceBatch);
     result = { ...runResult, error: null };
   } catch (e) {
     result.error = String(e?.message || e);
