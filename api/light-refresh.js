@@ -79,55 +79,78 @@ function parseCSV(csvText){
   return rows;
 }
 
-async function checkSingleUrl(url, client) {
+async function fetchUrlLastModified(url) {
   try {
-    const { data: existing } = await client
-      .from('url_last_processed')
-      .select('last_modified_header, last_processed_at')
-      .eq('url', url)
-      .single();
-    
-    const response = await fetch(url, { method: 'HEAD' });
+    const response = await fetch(url, { 
+      method: 'HEAD',
+      signal: AbortSignal.timeout(5000) // 5 second timeout per URL
+    });
     const lastModifiedHeader = response.headers.get('last-modified');
+    return { url, lastModifiedHeader, error: null };
+  } catch (error) {
+    return { url, lastModifiedHeader: null, error: error.message };
+  }
+}
+
+async function checkForChangedUrls(urls) {
+  const client = supabaseAdmin();
+  const changedUrls = [];
+  const now = new Date().toISOString();
+  
+  // Step 1: Batch fetch all existing records in one query
+  const { data: existingRecords } = await client
+    .from('url_last_processed')
+    .select('url, last_modified_header, last_processed_at')
+    .in('url', urls);
+  
+  const existingMap = new Map();
+  (existingRecords || []).forEach(record => {
+    existingMap.set(record.url, record);
+  });
+  
+  // Step 2: Fetch all last-modified headers in parallel (no batching limit)
+  const urlChecks = await Promise.all(urls.map(url => fetchUrlLastModified(url)));
+  
+  // Step 3: Process results and prepare batch upsert
+  const upsertData = [];
+  
+  for (const check of urlChecks) {
+    const { url, lastModifiedHeader, error } = check;
+    const existing = existingMap.get(url);
     
-    if (!lastModifiedHeader) {
-      return { url, changed: true };
+    if (error || !lastModifiedHeader) {
+      // If we can't get last-modified, assume changed
+      changedUrls.push(url);
+      upsertData.push({
+        url,
+        last_modified_header: null,
+        last_processed_at: now,
+        updated_at: now
+      });
+      continue;
     }
     
     const lastModified = new Date(lastModifiedHeader);
     const lastProcessed = existing ? new Date(existing.last_processed_at) : new Date(0);
     const changed = lastModified > lastProcessed;
     
+    if (changed) {
+      changedUrls.push(url);
+    }
+    
+    upsertData.push({
+      url,
+      last_modified_header: lastModified.toISOString(),
+      last_processed_at: now,
+      updated_at: now
+    });
+  }
+  
+  // Step 4: Batch upsert all updates in one operation
+  if (upsertData.length > 0) {
     await client
       .from('url_last_processed')
-      .upsert({
-        url,
-        last_modified_header: lastModified.toISOString(),
-        last_processed_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      });
-    
-    return { url, changed };
-  } catch {
-    return { url, changed: true };
-  }
-}
-
-async function checkForChangedUrls(urls) {
-  const changedUrls = [];
-  const client = supabaseAdmin();
-  const batchSize = 50;
-  
-  for (let i = 0; i < urls.length; i += batchSize) {
-    const batch = urls.slice(i, i + batchSize);
-    const batchPromises = batch.map(url => checkSingleUrl(url, client));
-    const batchResults = await Promise.all(batchPromises);
-    
-    batchResults.forEach(result => {
-      if (result.changed) {
-        changedUrls.push(result.url);
-      }
-    });
+      .upsert(upsertData, { onConflict: 'url' });
   }
   
   return changedUrls;
