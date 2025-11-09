@@ -321,8 +321,8 @@ export default async function handler(req, res) {
           }
         } catch {}
 
-        // Vercel cron schedule: every 8 hours (0 */8 * * *)
-        const schedule = 'Every 8 hours (0 */8 * * *)';
+        // Vercel cron schedule: every 4 hours (0 */4 * * *) - 3 batches covering all URLs daily
+        const schedule = 'Every 4 hours (0 */4 * * *) - 3 rotating batches';
         const tz = 'UTC (Vercel default)';
         return sendJSON(res, 200, { ok: true, schedule, tz, counts, parity, lastRun });
       } catch (e) {

@@ -160,13 +160,30 @@ async function readUrlsFromRepo(){
   return extractUrlsFromCsv(content);
 }
 
-function buildUrlsToCheck(urls, cameraCourseUrl, maxUrlsToCheck) {
+function getBatchIndex() {
+  // Calculate which batch we're on based on hour of day
+  // Runs every 4 hours: 0-3 = batch 0, 4-7 = batch 1, 8-11 = batch 2, 12-15 = batch 0, etc.
+  const hour = new Date().getUTCHours();
+  return Math.floor((hour % 12) / 4); // Cycles through 0, 1, 2 every 12 hours
+}
+
+function buildUrlsToCheck(urls, cameraCourseUrl, batchIndex, totalBatches) {
+  // Always include the camera course URL
   const urlsToCheck = [cameraCourseUrl];
-  for (const url of urls) {
-    if (url !== cameraCourseUrl && urlsToCheck.length < maxUrlsToCheck) {
-      urlsToCheck.push(url);
-    }
+  
+  // Filter out the camera course URL from the main list
+  const otherUrls = urls.filter(url => url !== cameraCourseUrl);
+  
+  // Calculate batch size (divide remaining URLs across batches)
+  const batchSize = Math.ceil(otherUrls.length / totalBatches);
+  const startIndex = batchIndex * batchSize;
+  const endIndex = Math.min(startIndex + batchSize, otherUrls.length);
+  
+  // Add URLs for this batch
+  for (let i = startIndex; i < endIndex; i++) {
+    urlsToCheck.push(otherUrls[i]);
   }
+  
   return urlsToCheck;
 }
 
@@ -294,7 +311,12 @@ function logRunResult(data) {
 async function executeRunLogic() {
   const urls = await readUrlsFromRepo();
   const cameraCourseUrl = 'https://www.alanranger.com/photography-services-near-me/beginners-photography-course';
-  const urlsToCheck = buildUrlsToCheck(urls, cameraCourseUrl, 50);
+  
+  // Use rotating batch system: 3 batches, runs every 4 hours
+  const totalBatches = 3;
+  const batchIndex = getBatchIndex();
+  const urlsToCheck = buildUrlsToCheck(urls, cameraCourseUrl, batchIndex, totalBatches);
+  
   const changedUrls = await checkForChangedUrls(urlsToCheck);
   const config = getConfig();
 
@@ -303,11 +325,14 @@ async function executeRunLogic() {
   }
   return {
     chunks: [{
-      note: `Bypass token: ${config.protectionBypass ? 'present' : 'missing'}, Ingest token: ${config.token ? 'present' : 'missing'}, Changed URLs: ${changedUrls.length}`
+      note: `Batch ${batchIndex + 1}/${totalBatches}: Bypass token: ${config.protectionBypass ? 'present' : 'missing'}, Ingest token: ${config.token ? 'present' : 'missing'}, URLs checked: ${urlsToCheck.length}, Changed URLs: ${changedUrls.length}`
     }],
     ingested: 0,
     failed: 0,
     urls: urls.length,
+    urlsChecked: urlsToCheck.length,
+    batchIndex: batchIndex,
+    totalBatches: totalBatches,
     changedUrls: changedUrls.length
   };
 }
@@ -318,6 +343,9 @@ function buildResponse(res, result, timestamps) {
     started_at: timestamps.startedAt,
     finished_at: timestamps.finishedAt,
     urls: result.urls,
+    urlsChecked: result.urlsChecked || 0,
+    batchIndex: result.batchIndex,
+    totalBatches: result.totalBatches,
     ingested: result.ingested,
     failed: result.failed,
     batches: result.chunks,
@@ -343,6 +371,9 @@ async function handleRunAction(req, res) {
     started_at: startedAt,
     finished_at: finishedAt,
     urls_total: result.urls,
+    urls_checked: result.urlsChecked || 0,
+    batch_index: result.batchIndex,
+    total_batches: result.totalBatches,
     urls_changed: result.changedUrls,
     ingested_count: result.ingested,
     failed_count: result.failed,
