@@ -1842,7 +1842,7 @@
 
 
       // Batch processing with throttling
-      const BATCH_SIZE = 10; // increased for faster processing with SMALL plan
+      const BATCH_SIZE = 3; // reduced to prevent Vercel function timeouts (10 parallel requests cause function to timeout)
       const BATCH_DELAY = 2000; // keep conservative delay
       const TIMEOUT_MS = 45000; // allow longer than backend timeout (30s + processing time)
       let completed = 0;
