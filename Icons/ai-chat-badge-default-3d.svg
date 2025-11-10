@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" role="img" aria-label="AI Chat Default">
+  <!-- Outer navy speech bubble with tail at 5 o'clock -->
+  <g fill="#000F5B">
+    <circle cx="60" cy="60" r="50"/>
+    <polygon points="90,96 108,110 100,88"/>
+  </g>
+
+  <!-- Lower orange bubble -->
+  <rect x="58" y="56" width="36" height="24" rx="6" fill="#E57200"/>
+  <polygon points="78,80 88,86 88,80" fill="#E57200"/>
+
+  <!-- Top orange bubble shadow (hard offset 2px down/right) -->
+  <g fill="#000F5B" transform="translate(2,2)">
+    <path d="M32 34 h46 a6 6 0 0 1 6 6 v18 a6 6 0 0 1 -6 6 h-28 l-8 8 -2 -8 h-8 a6 6 0 0 1 -6 -6 v-18 a6 6 0 0 1 6 -6 z"/>
+  </g>
+
+  <!-- Top orange bubble with tail and text -->
+  <g fill="#E57200">
+    <path d="M32 34 h46 a6 6 0 0 1 6 6 v18 a6 6 0 0 1 -6 6 h-28 l-8 8 -2 -8 h-8 a6 6 0 0 1 -6 -6 v-18 a6 6 0 0 1 6 -6 z"/>
+  </g>
+  <text x="55" y="50" fill="#FFFFFF" font-size="14" font-family="system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial" text-anchor="middle" dominant-baseline="middle">
+    Chat
+  </text>
+</svg>
