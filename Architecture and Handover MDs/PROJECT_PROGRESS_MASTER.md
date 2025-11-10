@@ -1,6 +1,10 @@
 # PROJECT_PROGRESS_MASTER.md
 
 ## Latest Snapshot
+- **10 Nov 2025** — JSON-LD Product Entity Creation: Modified ingest code to create Product entities when Product JSON-LD is present. Product entities now properly stored with price, availability, currency. Both Event and Product entities coexist. Regression test: 100% success rate, +1.2% confidence improvement, better routing for course queries
+- **10 Nov 2025** — ETag-Based Change Detection: Implemented ETag header support in light-refresh Edge Function for change detection when last-modified headers unavailable. All URLs now have change detection capability
+- **10 Nov 2025** — Event-Product Mapping Export Fix: Fixed bug where dates were incorrectly overwritten for multi-date events. All dates now correct in mappings CSV
+- **10 Nov 2025** — View Deduplication: Added DISTINCT ON clauses to prevent duplicate rows in v_events_for_chat and v_products_unified_open views
 - **2 Nov 2025** — Analytics dashboard improvements: Added next/previous navigation buttons to question detail modal with position indicator "Question X/Y". Increased questions API limit from 20 to 1000 to show all questions. Verified admin panel needs no updates
 - **1 Nov 2025** — Priority 1 Low-Hanging Fruit fixes complete: All 4 Priority 1 fixes implemented and verified. Quality Score improved from 78.3% → 80.6% (+2.3 points). Coverage: 97% → 100%, Products: 0% → 10%, Diversity: 60% → 64%, Completeness: 42% → 45.3%. Verified with 430Q test: 100% success (430/430) - no regressions
 - **1 Nov 2025** — SonarQube refactoring complete: Fixed 2 SonarQube issues (argument count mismatch, cognitive complexity violation). Reduced `sendRagSuccessResponse()` complexity from 20 to ≤15 by extracting 4 helper functions. Verified with 40Q test: 100% success (40/40) - no regressions

@@ -28,6 +28,10 @@ All older references or notes can be found inside `/Archive/AI_TODO_LIST_2025-01
 ## ✅ Recently Completed (Last 2 Weeks)
 | Date | Completed Item | Notes |
 |------|-----------------|-------|
+| 10 Nov 2025 | **JSON-LD Product Entity Creation** | ✅ Modified `api/ingest.js` to create Product entities when Product JSON-LD is present, even if other JSON-LD types exist. Product entities now properly stored with price, availability, currency. Both Event and Product entities coexist. Verified with regression test: 100% success rate, +1.2% confidence improvement |
+| 10 Nov 2025 | **ETag-Based Change Detection** | ✅ Implemented ETag header support in `light-refresh` Edge Function for change detection when `last-modified` headers unavailable. Added `etag_header` column to `url_last_processed` table. Edge Function now checks ETag as fallback. All URLs now have change detection capability |
+| 10 Nov 2025 | **Event-Product Mapping Export Fix** | ✅ Fixed bug in `api/tools.js` export function where dates were incorrectly overwritten for multi-date events. Changed Map key from `url` to `url|date` to ensure correct date preservation. Verified with audit: all dates correct, no missing events except past ones |
+| 10 Nov 2025 | **View Deduplication** | ✅ Added `DISTINCT ON` clauses to `v_events_for_chat` and `v_products_unified_open` views to prevent duplicate rows. Ensures unique event/product representation in chat system |
 | 2 Nov 2025 | **Complexity Refactoring: enrichAdviceWithRelatedInfo** | ✅ Reduced cognitive complexity from 21 to ≤15 by extracting 3 helper functions: `hasAnyRelatedInfo()`, `addFallbackArticles()`, `addMissingEnrichmentItems()`. Functionality preserved, code more maintainable. Committed and deployed | 
 | 2 Nov 2025 | **Service Links for Personalised Feedback Queries** | ✅ Added automatic service link enrichment for "personalised feedback" queries. Now displays online Zoom 1-2-1 and face-to-face private lesson service tiles. Enhanced `handleServicePatternResponse()` to detect and fetch relevant services. Committed and deployed |
 | 2 Nov 2025 | **40Q Test & Side-by-Side Comparison** | ✅ Ran 40Q test against localhost, generated side-by-side CSV comparison. All 40 questions passing (100% success rate). Comparison file: side-by-side-40q-1762074970051.csv |
@@ -98,6 +102,9 @@ All older references or notes can be found inside `/Archive/AI_TODO_LIST_2025-01
 | 🔴 P1 | **Fix Missing Initial Responses** | ✅ Q27 (exposure triangle) - FIXED | Cursor | ✅ Complete |
 | 🔴 P1 | **Fix Missing Initial Responses** | ✅ Q36 (free course subscribe) - FIXED | Cursor | ✅ Complete |
 | 🔴 P1 | **Fix Wrong Routing** | ✅ Course logistics queries need early exit logic adjustment in handleServiceQueries | Cursor | ✅ Complete |
+| 🔴 P1 | **JSON-LD Product Entity Creation** | ✅ Modified ingest code to create Product entities when Product JSON-LD present. Both Event and Product entities now coexist. Verified: 100% success rate, improved routing | Cursor | ✅ Complete |
+| 🔴 P1 | **ETag Change Detection** | ✅ Implemented ETag header support in light-refresh Edge Function. All URLs now have change detection capability | Cursor | ✅ Complete |
+| 🔴 P1 | **Event-Product Mapping Export Fix** | ✅ Fixed date overwrite bug in export function. All dates now correct in mappings CSV | Cursor | ✅ Complete |
 | 🟡 P2 | **Refactor Remaining High Complexity** | Refactor remaining functions with complexity >15: sendEventsResponse (28), handleEventsPipeline (15), handleServiceQueries (55), handleEventRoutingQuery (22), enrichFreeCourseAnswer (21), etc. | Cursor | Pending |
 | 🟡 P2 | **Refactor Helper Functions** | Refactor helper functions that exceed limits: hasSpecificHardcodedAnswer (10), enrichTechnicalAnswerWithArticles (12), isCourseContentQuery (11), handleTechnicalQueryRouting (11), handleServiceAndEventRouting (10), etc. | Cursor | Pending |
 | 🟡 P2 | **Remove Article Cap** | Q7 (tripod) should show ALL related articles - remove 6-article cap for equipment/technical questions | Cursor | Pending |

@@ -918,6 +918,69 @@ async function ingestSingleUrl(url, supa, options = {}) {
           }];
       }
       
+      // Also create a Product entity if Product JSON-LD exists and is different from the "best" one
+      const productJsonLd = jsonLd.find((item, idx) => {
+        const itemType = (item['@type'] || '').toLowerCase();
+        return itemType === 'product' && idx !== bestIdx;
+      });
+      
+      if (productJsonLd && !options.dryRun) {
+        const productIdx = jsonLd.indexOf(productJsonLd);
+        const productKind = 'product';
+        const productTitle = productJsonLd.headline || productJsonLd.title || productJsonLd.name || chosenTitle || null;
+        const productDescription = enhancedDescriptions[productIdx] || productJsonLd.description || enhancedDescription || null;
+        const productEntityHash = sha1(url + JSON.stringify(productJsonLd) + productIdx);
+        
+        // Always add Product entity to entities array - the later code will handle update vs insert
+        entities.push({
+            url: url,
+            kind: productKind,
+            title: productTitle,
+            description: productDescription,
+            meta_description: extractMetaDescription(html),
+            date_start: null, // Products don't have dates
+            date_end: null,
+            location: null, // Products don't have locations
+            price: productJsonLd.offers?.price || productJsonLd.offers?.[0]?.price || null,
+            price_currency: productJsonLd.offers?.priceCurrency || productJsonLd.offers?.[0]?.priceCurrency || 'GBP',
+            availability: productJsonLd.offers?.availability || productJsonLd.offers?.[0]?.availability || null,
+            sku: productJsonLd.sku || null,
+            provider: productJsonLd.brand?.name || productJsonLd.provider?.name || productJsonLd.publisher?.name || 'Alan Ranger Photography',
+            source_url: url,
+            raw: productJsonLd,
+            entity_hash: productEntityHash,
+            last_seen: new Date().toISOString(),
+            // CSV metadata fields
+            csv_type: csvMetadata?.csv_type || null,
+            csv_metadata_id: csvMetadata?.id || null,
+            categories: csvMetadata?.categories || null,
+            tags: csvMetadata?.tags ? csvMetadata.tags.map(t => cleanHTMLText(t)) : null,
+            publish_date: csvMetadata?.publish_date || null,
+            start_date: null,
+            end_date: null,
+            start_time: null,
+            end_time: null,
+            location_name: null,
+            location_address: null,
+            location_city_state_zip: null,
+            excerpt: csvMetadata?.excerpt ? cleanHTMLText(csvMetadata.excerpt) : null,
+            image_url: (Array.isArray(productJsonLd.image) ? productJsonLd.image[0] : productJsonLd.image) || (csvMetadata?.image_url ? cleanHTMLText(csvMetadata.image_url) : null),
+            json_ld_data: csvMetadata?.json_ld_data || null,
+            workflow_state: csvMetadata?.workflow_state ? cleanHTMLText(csvMetadata.workflow_state) : null,
+            // Structured data fields
+            participants: null,
+            experience_level: null,
+            equipment_needed: null,
+            location_address: null,
+            time_schedule: null,
+            fitness_level: null,
+            what_to_bring: null,
+            course_duration: null,
+            instructor_info: null,
+            availability_status: structuredData?.availability_status || null
+          });
+      }
+      
       if (!options.dryRun) {
         // For events with multiple dates: check for existing by (url, kind, date_start) instead of just (url, kind)
         for (const e of entities) {
