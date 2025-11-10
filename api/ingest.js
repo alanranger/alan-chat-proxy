@@ -519,7 +519,9 @@ async function ingestSingleUrl(url, supa, options = {}) {
     const chunks = chunkText(text);
     
     // Find and merge CSV metadata for this URL (handle multiple records intelligently)
+    // For events: if multiple csv_metadata entries have different dates, we'll create multiple entities
     let csvMetadata = null;
+    let csvMetadataList = []; // Store all metadata entries for multi-date event handling
     try {
       const { data: metadataList } = await supa
         .from('csv_metadata')
@@ -527,6 +529,7 @@ async function ingestSingleUrl(url, supa, options = {}) {
         .eq('url', url);
       
       if (metadataList && metadataList.length > 0) {
+        csvMetadataList = metadataList; // Store all entries
         // Prefer landing_service_pages over older sources, then prefer rows with kind
         const preferred = [...metadataList].sort((a,b)=>{
           const aPr = (a.csv_type==='landing_service_pages'?2: a.kind?1:0);
@@ -789,72 +792,150 @@ async function ingestSingleUrl(url, supa, options = {}) {
         ? (metaTitle || htmlTitle || h1Title || jsonldTitle)
         : (jsonldTitle || metaTitle || htmlTitle || h1Title);
 
-      const entities = [{
-        url: url,
-        kind: finalKind,
-        title: chosenTitle || null,
-        description: enhancedDescription,
-        meta_description: extractMetaDescription(html),
-        date_start: csvMetadata?.start_date && csvMetadata?.start_time 
-          ? `${csvMetadata.start_date}T${csvMetadata.start_time}.000Z`
-          : (bestJsonLd.datePublished || bestJsonLd.startDate || null),
-        date_end: csvMetadata?.end_date && csvMetadata?.end_time 
-          ? `${csvMetadata.end_date}T${csvMetadata.end_time}.000Z`
-          : (bestJsonLd.endDate || null),
-        location: bestJsonLd.location?.name || bestJsonLd.location?.address || null,
-        price: bestJsonLd.offers?.price || null,
-        price_currency: bestJsonLd.offers?.priceCurrency || null,
-        availability: bestJsonLd.offers?.availability || null,
-        sku: bestJsonLd.sku || null,
-        provider: bestJsonLd.provider?.name || bestJsonLd.publisher?.name || 'Alan Ranger Photography',
-        source_url: url,
-        raw: bestJsonLd,
-        entity_hash: sha1(url + JSON.stringify(bestJsonLd) + bestIdx),
-          last_seen: new Date().toISOString(),
-          // CSV metadata fields - CLEANED - ALL FIELDS NOW EXIST IN PAGE_ENTITIES
-          csv_type: csvMetadata?.csv_type || null,
-          csv_metadata_id: csvMetadata?.id || null,
-          categories: csvMetadata?.categories || null,
-          tags: csvMetadata?.tags ? csvMetadata.tags.map(t => cleanHTMLText(t)) : null,
-          publish_date: csvMetadata?.publish_date || null,
-          start_date: csvMetadata?.start_date || null,
-          end_date: csvMetadata?.end_date || null,
-          start_time: csvMetadata?.start_time || null,
-          end_time: csvMetadata?.end_time || null,
-          location_name: csvMetadata?.location_name ? cleanHTMLText(csvMetadata.location_name) : null,
-          location_address: csvMetadata?.location_address ? cleanHTMLText(csvMetadata.location_address) : null,
-          location_city_state_zip: csvMetadata?.location_city_state_zip ? cleanHTMLText(csvMetadata.location_city_state_zip) : null,
-          excerpt: csvMetadata?.excerpt ? cleanHTMLText(csvMetadata.excerpt) : null,
-          image_url: csvMetadata?.image_url ? cleanHTMLText(csvMetadata.image_url) : null,
-          json_ld_data: csvMetadata?.json_ld_data || null,
-          workflow_state: csvMetadata?.workflow_state ? cleanHTMLText(csvMetadata.workflow_state) : null,
-          // NEW STRUCTURED DATA FIELDS - Extract from page content
-          participants: structuredData?.participants || null,
-          experience_level: structuredData?.experience_level || null,
-          equipment_needed: structuredData?.equipment_needed || null,
-          location_address: structuredData?.location_address || null,
-          time_schedule: structuredData?.time_schedule || null,
-          fitness_level: structuredData?.fitness_level || null,
-          what_to_bring: structuredData?.what_to_bring || null,
-          course_duration: structuredData?.course_duration || null,
-          instructor_info: structuredData?.instructor_info || null,
-          availability_status: structuredData?.availability_status || null
-        }];
+      // For events: if multiple csv_metadata entries have different dates, create multiple entities
+      let entities = [];
+      if (finalKind === 'event' && csvMetadataList && csvMetadataList.length > 1) {
+        // Check if there are multiple entries with different dates
+        const uniqueDates = new Set();
+        csvMetadataList.forEach(m => {
+          if (m.start_date) uniqueDates.add(m.start_date);
+        });
+        
+        if (uniqueDates.size > 1) {
+          // Create one entity per unique date from csv_metadata
+          csvMetadataList.forEach(meta => {
+            if (meta.start_date) {
+              const dateStart = meta.start_date && meta.start_time 
+                ? `${meta.start_date}T${meta.start_time}.000Z`
+                : (bestJsonLd.datePublished || bestJsonLd.startDate || null);
+              const dateEnd = meta.end_date && meta.end_time 
+                ? `${meta.end_date}T${meta.end_time}.000Z`
+                : (bestJsonLd.endDate || null);
+              
+              entities.push({
+                url: url,
+                kind: finalKind,
+                title: (meta.title && meta.title.trim()) || chosenTitle || null,
+                description: enhancedDescription,
+                meta_description: extractMetaDescription(html),
+                date_start: dateStart,
+                date_end: dateEnd,
+                location: bestJsonLd.location?.name || bestJsonLd.location?.address || meta.location_name || null,
+                price: bestJsonLd.offers?.price || null,
+                price_currency: bestJsonLd.offers?.priceCurrency || null,
+                availability: bestJsonLd.offers?.availability || null,
+                sku: bestJsonLd.sku || null,
+                provider: bestJsonLd.provider?.name || bestJsonLd.publisher?.name || 'Alan Ranger Photography',
+                source_url: url,
+                raw: bestJsonLd,
+                entity_hash: sha1(url + JSON.stringify(bestJsonLd) + bestIdx + meta.start_date),
+                last_seen: new Date().toISOString(),
+                // CSV metadata fields - use this specific metadata entry
+                csv_type: meta.csv_type || null,
+                csv_metadata_id: meta.id || null,
+                categories: meta.categories || null,
+                tags: meta.tags ? meta.tags.map(t => cleanHTMLText(t)) : null,
+                publish_date: meta.publish_date || null,
+                start_date: meta.start_date || null,
+                end_date: meta.end_date || null,
+                start_time: meta.start_time || null,
+                end_time: meta.end_time || null,
+                location_name: meta.location_name ? cleanHTMLText(meta.location_name) : null,
+                location_address: meta.location_address ? cleanHTMLText(meta.location_address) : null,
+                location_city_state_zip: meta.location_city_state_zip ? cleanHTMLText(meta.location_city_state_zip) : null,
+                excerpt: meta.excerpt ? cleanHTMLText(meta.excerpt) : null,
+                image_url: meta.image_url ? cleanHTMLText(meta.image_url) : null,
+                json_ld_data: meta.json_ld_data || null,
+                workflow_state: meta.workflow_state ? cleanHTMLText(meta.workflow_state) : null,
+                // NEW STRUCTURED DATA FIELDS - Extract from page content
+                participants: structuredData?.participants || null,
+                experience_level: structuredData?.experience_level || null,
+                equipment_needed: structuredData?.equipment_needed || null,
+                time_schedule: structuredData?.time_schedule || null,
+                fitness_level: structuredData?.fitness_level || null,
+                what_to_bring: structuredData?.what_to_bring || null,
+                course_duration: structuredData?.course_duration || null,
+                instructor_info: structuredData?.instructor_info || null,
+                availability_status: structuredData?.availability_status || null
+              });
+            }
+          });
+        }
+      }
+      
+      // If no multi-date entities were created, use the original single-entity logic
+      if (entities.length === 0) {
+        entities = [{
+          url: url,
+          kind: finalKind,
+          title: chosenTitle || null,
+          description: enhancedDescription,
+          meta_description: extractMetaDescription(html),
+          date_start: csvMetadata?.start_date && csvMetadata?.start_time 
+            ? `${csvMetadata.start_date}T${csvMetadata.start_time}.000Z`
+            : (bestJsonLd.datePublished || bestJsonLd.startDate || null),
+          date_end: csvMetadata?.end_date && csvMetadata?.end_time 
+            ? `${csvMetadata.end_date}T${csvMetadata.end_time}.000Z`
+            : (bestJsonLd.endDate || null),
+          location: bestJsonLd.location?.name || bestJsonLd.location?.address || null,
+          price: bestJsonLd.offers?.price || null,
+          price_currency: bestJsonLd.offers?.priceCurrency || null,
+          availability: bestJsonLd.offers?.availability || null,
+          sku: bestJsonLd.sku || null,
+          provider: bestJsonLd.provider?.name || bestJsonLd.publisher?.name || 'Alan Ranger Photography',
+          source_url: url,
+          raw: bestJsonLd,
+          entity_hash: sha1(url + JSON.stringify(bestJsonLd) + bestIdx),
+            last_seen: new Date().toISOString(),
+            // CSV metadata fields - CLEANED - ALL FIELDS NOW EXIST IN PAGE_ENTITIES
+            csv_type: csvMetadata?.csv_type || null,
+            csv_metadata_id: csvMetadata?.id || null,
+            categories: csvMetadata?.categories || null,
+            tags: csvMetadata?.tags ? csvMetadata.tags.map(t => cleanHTMLText(t)) : null,
+            publish_date: csvMetadata?.publish_date || null,
+            start_date: csvMetadata?.start_date || null,
+            end_date: csvMetadata?.end_date || null,
+            start_time: csvMetadata?.start_time || null,
+            end_time: csvMetadata?.end_time || null,
+            location_name: csvMetadata?.location_name ? cleanHTMLText(csvMetadata.location_name) : null,
+            location_address: csvMetadata?.location_address ? cleanHTMLText(csvMetadata.location_address) : null,
+            location_city_state_zip: csvMetadata?.location_city_state_zip ? cleanHTMLText(csvMetadata.location_city_state_zip) : null,
+            excerpt: csvMetadata?.excerpt ? cleanHTMLText(csvMetadata.excerpt) : null,
+            image_url: csvMetadata?.image_url ? cleanHTMLText(csvMetadata.image_url) : null,
+            json_ld_data: csvMetadata?.json_ld_data || null,
+            workflow_state: csvMetadata?.workflow_state ? cleanHTMLText(csvMetadata.workflow_state) : null,
+            // NEW STRUCTURED DATA FIELDS - Extract from page content
+            participants: structuredData?.participants || null,
+            experience_level: structuredData?.experience_level || null,
+            equipment_needed: structuredData?.equipment_needed || null,
+            location_address: structuredData?.location_address || null,
+            time_schedule: structuredData?.time_schedule || null,
+            fitness_level: structuredData?.fitness_level || null,
+            what_to_bring: structuredData?.what_to_bring || null,
+            course_duration: structuredData?.course_duration || null,
+            instructor_info: structuredData?.instructor_info || null,
+            availability_status: structuredData?.availability_status || null
+          }];
+      }
       
       if (!options.dryRun) {
-        // Merge strategy: always update existing entity for same (url, kind)
-        // Rationale: event pages get rescheduled with same URL; dates/times must refresh
+        // For events with multiple dates: check for existing by (url, kind, date_start) instead of just (url, kind)
         for (const e of entities) {
-          // Fetch by natural key (url + kind); assume one primary entity per page
+          // For events, check by (url, kind, date_start) to allow multiple events per URL
           let existing = null;
           try {
-            const resSel = await supa
+            let query = supa
               .from('page_entities')
               .select('*')
               .eq('url', e.url)
-              .eq('kind', e.kind)
-              .limit(1)
-              .maybeSingle();
+              .eq('kind', e.kind);
+            
+            // For events with date_start, also match by date_start to find the correct entity
+            if (e.kind === 'event' && e.date_start) {
+              query = query.eq('date_start', e.date_start);
+            }
+            
+            const resSel = await query.limit(1).maybeSingle();
             existing = resSel?.data || null;
           } catch {}
 
