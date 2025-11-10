@@ -413,12 +413,16 @@ function normalizeKind(item, url) {
 
 /* ========== single URL ingestion ========== */
 async function ingestSingleUrl(url, supa, options = {}) {
+  const startTime = Date.now();
   let stage = 'fetch';
   try {
+    const fetchStart = Date.now();
     const res = await fetchPage(url);
     const html = await res.text();
+    console.log(`[TIMING] ${url}: fetch took ${Date.now() - fetchStart}ms`);
     
     stage = 'extract_text';
+    const extractStart = Date.now();
     const text = htmlToText(html, {
       wordwrap: false,
       selectors: [
@@ -433,8 +437,10 @@ async function ingestSingleUrl(url, supa, options = {}) {
         { selector: '.social', format: 'skip' }
       ]
     });
+    console.log(`[TIMING] ${url}: extract_text took ${Date.now() - extractStart}ms (html: ${html.length} chars, text: ${text.length} chars)`);
     
     stage = 'store_raw_html';
+    const storeHtmlStart = Date.now();
     const contentHash = generateContentHash(html);
     try {
       const { error } = await supa.from('page_html').upsert({
@@ -456,9 +462,12 @@ async function ingestSingleUrl(url, supa, options = {}) {
       console.error('Exception storing raw HTML:', e);
       // Continue processing even if raw HTML storage fails
     }
+    console.log(`[TIMING] ${url}: store_raw_html took ${Date.now() - storeHtmlStart}ms`);
     
     stage = 'extract_jsonld';
+    const jsonLdStart = Date.now();
     const jsonLd = extractJSONLD(html);
+    console.log(`[TIMING] ${url}: extract_jsonld took ${Date.now() - jsonLdStart}ms (found ${jsonLd ? jsonLd.length : 0} objects)`);
     
       // Prioritize JSON-LD objects for better entity selection (v2)
       if (jsonLd && jsonLd.length > 1) {
@@ -535,10 +544,14 @@ async function ingestSingleUrl(url, supa, options = {}) {
     const h1Title = h1Match ? h1Match[1].replace(/<[^>]*>/g, '').trim() : null;
     
     stage = 'chunk_text';
+    const chunkStart = Date.now();
     const chunks = chunkText(text);
+    console.log(`[TIMING] ${url}: chunk_text took ${Date.now() - chunkStart}ms (created ${chunks.length} chunks)`);
     
     // Find and merge CSV metadata for this URL (handle multiple records intelligently)
     // For events: if multiple csv_metadata entries have different dates, we'll create multiple entities
+    stage = 'fetch_csv_metadata';
+    const csvMetaStart = Date.now();
     let csvMetadata = null;
     let csvMetadataList = []; // Store all metadata entries for multi-date event handling
     try {
@@ -586,6 +599,7 @@ async function ingestSingleUrl(url, supa, options = {}) {
     } catch (e) {
       // No CSV metadata found for this URL - that's okay
     }
+    console.log(`[TIMING] ${url}: fetch_csv_metadata took ${Date.now() - csvMetaStart}ms`);
     
     // Debug: Log if Equipment Needed is in the text
     try {
@@ -602,6 +616,7 @@ async function ingestSingleUrl(url, supa, options = {}) {
     } catch (e) {} // Ignore errors
     
     stage = 'store_chunks';
+    const storeChunksStart = Date.now();
     const chunkInserts = chunks.map(chunkText => {
       // Clean chunk content to prevent JSON syntax errors
       const cleanChunk = chunkText
