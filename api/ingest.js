@@ -1007,23 +1007,48 @@ async function ingestSingleUrl(url, supa, options = {}) {
       }
       
       if (!options.dryRun) {
-        // BATCH: Fetch all existing entities in one query to avoid sequential SELECTs
+        // BATCH: Fetch only the specific entities we need (by URL, kind, and date_start for events)
         const existingEntitiesMap = new Map();
         try {
-          const urlSet = new Set(entities.map(e => e.url));
-          const kindSet = new Set(entities.map(e => e.kind));
+          // For events with dates, fetch only matching date_start values to avoid fetching all historical entities
+          const eventDates = entities.filter(e => e.kind === 'event' && e.date_start).map(e => e.date_start);
+          const nonEventEntities = entities.filter(e => e.kind !== 'event' || !e.date_start);
           
-          // Fetch all existing entities for this URL and kind(s) in one query
-          let query = supa
-            .from('page_entities')
-            .select('*')
-            .in('url', Array.from(urlSet))
-            .in('kind', Array.from(kindSet));
+          // Build queries: one for events with specific dates, one for non-events
+          const queries = [];
           
-          const { data: existingEntities } = await query;
+          if (eventDates.length > 0) {
+            // Fetch events matching specific dates
+            const url = entities[0].url; // All entities have same URL
+            queries.push(
+              supa
+                .from('page_entities')
+                .select('*')
+                .eq('url', url)
+                .eq('kind', 'event')
+                .in('date_start', eventDates)
+            );
+          }
+          
+          if (nonEventEntities.length > 0) {
+            // Fetch non-event entities (or events without dates)
+            const url = entities[0].url;
+            const kinds = [...new Set(nonEventEntities.map(e => e.kind))];
+            queries.push(
+              supa
+                .from('page_entities')
+                .select('*')
+                .eq('url', url)
+                .in('kind', kinds)
+            );
+          }
+          
+          // Execute all queries in parallel
+          const results = await Promise.all(queries);
+          const existingEntities = results.flatMap(r => r.data || []);
           
           // Build map: key = "url|kind|date_start" for events, "url|kind" for others
-          (existingEntities || []).forEach(ex => {
+          existingEntities.forEach(ex => {
             const key = (ex.kind === 'event' && ex.date_start) 
               ? `${ex.url}|${ex.kind}|${ex.date_start}`
               : `${ex.url}|${ex.kind}`;
