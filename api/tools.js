@@ -692,7 +692,47 @@ export default async function handler(req, res) {
       }
     }
 
-    // --- reconcile_services: ingest missing service entities from csv_metadata ---
+    // --- reconcile_services: get list of missing service entities (for frontend processing) ---
+    if (req.method === 'GET' && action === 'reconcile_services') {
+      try {
+        const { data: svcRows, error: svcErr } = await supa
+          .from('csv_metadata')
+          .select('id, url')
+          .eq('csv_type', 'landing_service_pages')
+          .eq('kind', 'service');
+        if (svcErr) return sendJSON(res, 500, { error: 'supabase_error', detail: svcErr.message });
+
+        const csvIds = (svcRows || []).map(r => r.id);
+        if (csvIds.length === 0) {
+          return sendJSON(res, 200, { ok: true, message: 'No service rows found in csv_metadata', urls: [], total: 0 });
+        }
+
+        const { data: existing, error: existErr } = await supa
+          .from('page_entities')
+          .select('csv_metadata_id')
+          .eq('csv_type', 'landing_service_pages')
+          .in('csv_metadata_id', csvIds);
+        if (existErr) return sendJSON(res, 500, { error: 'supabase_error', detail: existErr.message });
+
+        const present = new Set((existing || []).map(r => r.csv_metadata_id));
+        const toCreate = (svcRows || []).filter(r => !present.has(r.id));
+        
+        const urls = toCreate.map(r => String(r.url || '').replace(/\/$/, '')).filter(u => u);
+        
+        return sendJSON(res, 200, {
+          ok: true,
+          urls: urls,
+          total: urls.length,
+          total_services: svcRows.length,
+          already_existed: svcRows.length - toCreate.length,
+          missing: toCreate.length
+        });
+      } catch (err) {
+        return sendJSON(res, 500, { error: 'server_error', detail: err.message });
+      }
+    }
+
+    // --- reconcile_services: ingest missing service entities from csv_metadata (legacy - processes all) ---
     if (req.method === 'POST' && action === 'reconcile_services') {
       try {
         // Import ingestSingleUrl function directly
@@ -837,7 +877,7 @@ export default async function handler(req, res) {
     }
 
     // Unknown/unsupported
-    return sendJSON(res, 404, { error: 'not_found', detail: 'Use action=health|verify|get_urls|counts|parity|cron_status|export|export_unmapped|export_reconcile (GET) or action=search|finalize|aggregate_analytics|reconcile_services (POST)' });
+    return sendJSON(res, 404, { error: 'not_found', detail: 'Use action=health|verify|get_urls|counts|parity|cron_status|export|export_unmapped|export_reconcile|reconcile_services (GET) or action=search|finalize|aggregate_analytics|reconcile_services (POST)' });
   } catch (e) {
     return sendJSON(res, 500, { error: 'server_error', detail: String(e?.message || e) });
   }

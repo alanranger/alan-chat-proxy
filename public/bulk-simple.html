@@ -2076,50 +2076,112 @@
       hideOverlayProgress();
     }
 
-    // Reconcile Services: ingest missing service entities
+    // Reconcile Services: ingest missing service entities with progress tracking
     async function reconcileServices() {
       addResult('🔧 Starting service reconciliation...');
       document.getElementById('stepReconcile').style.background = '#FF9800';
-      document.getElementById('stepReconcile').textContent = 'Status: running';
-      showOverlayProgress('Reconciling services…', 1);
+      document.getElementById('stepReconcile').textContent = 'Status: checking...';
       
       try {
         const token = getToken();
-        const resp = await fetch('/api/tools?action=reconcile_services', {
-          method: 'POST',
+        
+        // Step 1: Get list of missing services
+        const listResp = await fetch('/api/tools?action=reconcile_services', {
+          method: 'GET',
           headers: { 
             'Content-Type': 'application/json', 
             'Authorization': `Bearer ${token}` 
-          },
-          body: JSON.stringify({})
+          }
         });
         
-        const text = await resp.text();
-        let result;
+        const listText = await listResp.text();
+        let listResult;
         try { 
-          result = JSON.parse(text); 
+          listResult = JSON.parse(listText); 
         } catch { 
-          result = { ok: false, raw: text }; 
+          listResult = { ok: false, raw: listText }; 
         }
         
-        if (!resp.ok || !result?.ok) {
-          addResult(`❌ Reconciliation failed: ${result?.error || resp.status} ${result?.detail || ''}`, 'error');
+        if (!listResp.ok || !listResult?.ok) {
+          addResult(`❌ Failed to get service list: ${listResult?.error || listResp.status} ${listResult?.detail || ''}`, 'error');
           document.getElementById('stepReconcile').textContent = 'Status: failed';
           document.getElementById('stepReconcile').style.background = '#a62';
-          hideOverlayProgress();
           return;
         }
         
-        addResult(`✅ Reconciliation complete: ${result.ingested || 0} succeeded, ${result.failed || 0} failed`, 'success');
-        addResult(`📊 Total services: ${result.total_services || 0}, Missing: ${result.total || 0}, Already existed: ${result.already_existed || 0}`, 'info');
+        const missingUrls = listResult.urls || [];
+        const totalServices = listResult.total_services || 0;
+        const alreadyExisted = listResult.already_existed || 0;
         
-        if (result.message) {
-          addResult(`ℹ️ ${result.message}`, 'info');
+        if (missingUrls.length === 0) {
+          addResult(`✅ All services already have entities! (${totalServices} total, ${alreadyExisted} already existed)`, 'success');
+          document.getElementById('stepReconcile').textContent = 'Status: complete';
+          document.getElementById('stepReconcile').style.background = '#2a6';
+          return;
         }
         
-        document.getElementById('stepReconcile').textContent = `Status: ${result.ingested || 0} ingested`;
+        addResult(`📊 Found ${missingUrls.length} missing services (${totalServices} total, ${alreadyExisted} already existed)`, 'info');
+        addResult(`🔄 Processing ${missingUrls.length} services in batches...`, 'info');
+        
+        document.getElementById('stepReconcile').textContent = 'Status: processing...';
+        showOverlayProgress(`Reconciling services: 0/${missingUrls.length}`, missingUrls.length);
+        
+        // Step 2: Process services in batches with progress updates
+        const batchSize = 5;
+        let successCount = 0;
+        let failCount = 0;
+        const results = [];
+        
+        for (let i = 0; i < missingUrls.length; i += batchSize) {
+          const batch = missingUrls.slice(i, i + batchSize);
+          const processed = i + batch.length;
+          const percentage = Math.round((processed / missingUrls.length) * 100);
+          
+          // Update progress
+          updateOverlayProgress(processed, missingUrls.length);
+          document.getElementById('stepReconcile').textContent = `Status: ${processed}/${missingUrls.length} (${percentage}%)`;
+          
+          // Process batch
+          const batchPromises = batch.map(async (url) => {
+            try {
+              const ingestResp = await apiCall('/api/ingest', { url }, { timeoutMs: 65000 });
+              if (ingestResp && ingestResp.ok) {
+                successCount++;
+                return { url, ok: true };
+              } else {
+                failCount++;
+                return { url, ok: false, error: ingestResp?.error || 'unknown' };
+              }
+            } catch (e) {
+              failCount++;
+              return { url, ok: false, error: e.message };
+            }
+          });
+          
+          const batchResults = await Promise.all(batchPromises);
+          results.push(...batchResults);
+          
+          // Log batch progress
+          const batchSuccess = batchResults.filter(r => r.ok).length;
+          const batchFail = batchResults.filter(r => !r.ok).length;
+          addResult(`📦 Batch ${Math.floor(i/batchSize) + 1}: ${batchSuccess} succeeded, ${batchFail} failed (${processed}/${missingUrls.length} - ${percentage}%)`, 'info');
+          
+          // Small delay between batches
+          if (i + batchSize < missingUrls.length) {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
+        }
+        
+        // Final update
+        updateOverlayProgress(missingUrls.length, missingUrls.length);
+        document.getElementById('stepReconcile').textContent = `Status: ${successCount} ingested`;
         document.getElementById('stepReconcile').style.background = '#2a6';
-        showToast('Service reconciliation complete ✓', 2000);
+        
+        addResult(`✅ Reconciliation complete!`, 'success');
+        addResult(`📊 Results: ${successCount} succeeded, ${failCount} failed out of ${missingUrls.length} missing services`, 'success');
+        addResult(`📈 Total: ${totalServices} services (${alreadyExisted} already existed, ${missingUrls.length} were missing, ${successCount} now ingested)`, 'info');
+        
+        showToast(`Service reconciliation complete: ${successCount}/${missingUrls.length} succeeded ✓`, 3000);
         updateParityPill();
         
       } catch (e) {
