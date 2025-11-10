@@ -285,55 +285,118 @@ async function fetchPage(url) {
 }
 
 /* ========== JSON-LD extraction ========== */
-function extractJSONLD(html) {
-  const jsonLdMatches = html.match(/<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gis);
-  if (!jsonLdMatches) return null;
+async function extractJSONLD(html, baseUrl = null) {
+  // Find all script tags with type="application/ld+json"
+  const scriptTagRegex = /<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gis;
+  const jsonLdMatches = html.match(scriptTagRegex);
+  
+  // Also find script tags with src attribute (external JSON-LD)
+  const externalScriptRegex = /<script[^>]*type=["']application\/ld\+json["'][^>]*src=["']([^"']+)["'][^>]*>/gi;
+  const externalMatches = [];
+  let match;
+  while ((match = externalScriptRegex.exec(html)) !== null) {
+    externalMatches.push(match[1]);
+  }
   
   const jsonLdObjects = [];
-  for (const match of jsonLdMatches) {
-    let jsonContent = match.replace(/<script[^>]*>/i, '').replace(/<\/script>/i, '').trim();
-    // Harden: strip HTML comments, CDATA, and try to repair common issues
-    jsonContent = jsonContent
-      .replace(/<!--([\s\S]*?)-->/g, '')
-      .replace(/\/\*[\s\S]*?\*\//g, '')
-      .replace(/<!\[CDATA\[/g, '').replace(/\]\]>/g, '')
-      .trim();
+  
+  // Process inline JSON-LD (content between script tags)
+  if (jsonLdMatches) {
+    for (const match of jsonLdMatches) {
+      let jsonContent = match.replace(/<script[^>]*>/i, '').replace(/<\/script>/i, '').trim();
+      
+      // Skip if empty (might be external script)
+      if (!jsonContent) continue;
+      
+      // Harden: strip HTML comments, CDATA, and try to repair common issues
+      jsonContent = jsonContent
+        .replace(/<!--([\s\S]*?)-->/g, '')
+        .replace(/\/\*[\s\S]*?\*\//g, '')
+        .replace(/<!\[CDATA\[/g, '').replace(/\]\]>/g, '')
+        .trim();
 
-    const attempts = [];
-    attempts.push(jsonContent);
-    // If raw content isn't valid JSON, try to isolate the main object/array
-    const firstBrace = jsonContent.indexOf('{');
-    const firstBracket = jsonContent.indexOf('[');
-    const start = (firstBracket !== -1 && (firstBracket < firstBrace || firstBrace === -1)) ? firstBracket : firstBrace;
-    if (start !== -1) {
-      const lastBrace = jsonContent.lastIndexOf('}');
-      const lastBracket = jsonContent.lastIndexOf(']');
-      const end = Math.max(lastBrace, lastBracket);
-      if (end > start) {
-        let sliced = jsonContent.slice(start, end + 1);
-        // Remove trailing commas before } or ]
-        sliced = sliced.replace(/,\s*([}\]])/g, '$1');
-        attempts.push(sliced);
+      const attempts = [];
+      attempts.push(jsonContent);
+      // If raw content isn't valid JSON, try to isolate the main object/array
+      const firstBrace = jsonContent.indexOf('{');
+      const firstBracket = jsonContent.indexOf('[');
+      const start = (firstBracket !== -1 && (firstBracket < firstBrace || firstBrace === -1)) ? firstBracket : firstBrace;
+      if (start !== -1) {
+        const lastBrace = jsonContent.lastIndexOf('}');
+        const lastBracket = jsonContent.lastIndexOf(']');
+        const end = Math.max(lastBrace, lastBracket);
+        if (end > start) {
+          let sliced = jsonContent.slice(start, end + 1);
+          // Remove trailing commas before } or ]
+          sliced = sliced.replace(/,\s*([}\]])/g, '$1');
+          attempts.push(sliced);
+        }
+      }
+
+      let parsedOk = false;
+      for (const candidate of attempts) {
+        try {
+          const parsed = JSON.parse(candidate);
+          if (Array.isArray(parsed)) {
+            jsonLdObjects.push(...parsed);
+          } else {
+            jsonLdObjects.push(parsed);
+          }
+          parsedOk = true;
+          break;
+        } catch (e) {
+          // keep trying next strategy
+        }
+      }
+      if (!parsedOk) {
+        console.warn('Failed to parse JSON-LD block after repairs. First 80 chars:', jsonContent.slice(0, 80));
       }
     }
-
-    let parsedOk = false;
-    for (const candidate of attempts) {
+  }
+  
+  // Process external JSON-LD files (from src attribute)
+  if (externalMatches.length > 0) {
+    for (const srcUrl of externalMatches) {
       try {
-        const parsed = JSON.parse(candidate);
-      if (Array.isArray(parsed)) {
-        jsonLdObjects.push(...parsed);
-      } else {
-        jsonLdObjects.push(parsed);
+        // Resolve relative URLs
+        let fullUrl = srcUrl;
+        if (baseUrl && !srcUrl.startsWith('http://') && !srcUrl.startsWith('https://')) {
+          try {
+            const base = new URL(baseUrl);
+            fullUrl = new URL(srcUrl, base).href;
+          } catch (e) {
+            console.warn(`Failed to resolve relative URL ${srcUrl} with base ${baseUrl}`);
+            continue;
+          }
+        }
+        
+        // Fetch external JSON-LD file
+        const response = await fetch(fullUrl, {
+          headers: {
+            'Accept': 'application/json, application/ld+json, */*'
+          },
+          signal: AbortSignal.timeout(5000) // 5 second timeout
+        });
+        
+        if (!response.ok) {
+          console.warn(`Failed to fetch external JSON-LD from ${fullUrl}: ${response.status} ${response.statusText}`);
+          continue;
+        }
+        
+        const jsonText = await response.text();
+        const parsed = JSON.parse(jsonText);
+        
+        if (Array.isArray(parsed)) {
+          jsonLdObjects.push(...parsed);
+        } else {
+          jsonLdObjects.push(parsed);
+        }
+        
+        console.log(`✅ Fetched and parsed external JSON-LD from ${fullUrl}`);
+      } catch (e) {
+        console.warn(`Failed to fetch/parse external JSON-LD from ${srcUrl}: ${e.message}`);
+        // Continue processing other external files
       }
-        parsedOk = true;
-        break;
-    } catch (e) {
-        // keep trying next strategy
-      }
-    }
-    if (!parsedOk) {
-      console.warn('Failed to parse JSON-LD block after repairs. First 80 chars:', jsonContent.slice(0, 80));
     }
   }
   
@@ -439,7 +502,7 @@ async function ingestSingleUrl(url, supa, options = {}) {
     }
     
     stage = 'extract_jsonld';
-    const jsonLd = extractJSONLD(html);
+    const jsonLd = await extractJSONLD(html, url);
     
       // Prioritize JSON-LD objects for better entity selection (v2)
       if (jsonLd && jsonLd.length > 1) {
