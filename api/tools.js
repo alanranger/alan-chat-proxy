@@ -488,6 +488,18 @@ export default async function handler(req, res) {
             }
             rows = r.data || [];
 
+        // Deduplicate rows: remove exact duplicates based on event_url + date_start + product_url
+        // This fixes the issue where every event appears twice in the export
+        const seen = new Set();
+        rows = rows.filter(row => {
+          const key = `${row.event_url}|${row.date_start || ''}|${row.product_url || ''}`;
+          if (seen.has(key)) {
+            return false; // Skip duplicate
+          }
+          seen.add(key);
+          return true;
+        });
+
         // Overwrite date/time strictly from page_entities (CSV-derived), no tz conversion
         try {
           const norm = (u) => (u||'').replace(/\/+$/,'');
@@ -519,6 +531,16 @@ export default async function handler(req, res) {
                 }
               }
               return row;
+            });
+            // Deduplicate again after date update (in case date update created duplicates)
+            const seenAfter = new Set();
+            rows = rows.filter(row => {
+              const key = `${row.event_url}|${row.date_start || ''}|${row.product_url || ''}`;
+              if (seenAfter.has(key)) {
+                return false;
+              }
+              seenAfter.add(key);
+              return true;
             });
           }
         } catch {}
