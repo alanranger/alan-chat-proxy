@@ -885,7 +885,14 @@
         const text = await response.text();
         try { return JSON.parse(text); } catch { return { ok: response.ok, status: response.status, text }; }
       } catch (error) {
-        addResult(`❌ API Error: ${error.message}`, 'error');
+        // Provide better error messages for abort/timeout
+        let errorMsg = error.message;
+        if (error.name === 'AbortError') {
+          errorMsg = 'Request timeout (frontend aborted after ' + (timeoutMs / 1000) + 's)';
+        } else if (error.message === 'signal is aborted without reason') {
+          errorMsg = 'Request timeout (aborted)';
+        }
+        addResult(`❌ API Error: ${errorMsg}`, 'error');
         return null;
       }
     }
@@ -1844,7 +1851,7 @@
       // Batch processing with throttling
       const BATCH_SIZE = 10; // restored to original working value
       const BATCH_DELAY = 2000; // keep conservative delay
-      const TIMEOUT_MS = 45000; // allow longer than backend timeout (30s + processing time)
+      const TIMEOUT_MS = 65000; // allow longer than backend function timeout (60s + buffer)
       let completed = 0;
 
       async function processBatch(batchEntries, batchIndex) {
