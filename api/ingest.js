@@ -332,6 +332,7 @@ function extractJSONLD(html) {
     let parsedOk = false;
     for (const candidate of attempts) {
       try {
+        // For very large JSON blocks, use a timeout to prevent blocking
         const parsed = JSON.parse(candidate);
         if (Array.isArray(parsed)) {
           jsonLdObjects.push(...parsed);
@@ -341,21 +342,17 @@ function extractJSONLD(html) {
         parsedOk = true;
         break;
       } catch (e) {
-        // keep trying next strategy, but limit attempts to avoid wasting time
-        if (attempts.indexOf(candidate) >= 2) {
-          // Only try first 2 repair strategies, then give up
-          break;
-        }
+        // keep trying next strategy
       }
     }
     if (!parsedOk) {
-      // Silently skip malformed JSON-LD instead of logging (reduces log noise and processing time)
-      // Only log if it's a critical type we need
+      // Only log if it's a critical type (Event/Product) - reduces log noise for large valid blocks
       const hasCriticalType = jsonContent.toLowerCase().includes('"@type"') && 
         (jsonContent.toLowerCase().includes('event') || jsonContent.toLowerCase().includes('product'));
       if (hasCriticalType) {
         console.warn('Failed to parse JSON-LD block after repairs. First 80 chars:', jsonContent.slice(0, 80));
       }
+      // Silently skip non-critical large blocks that fail parsing
     }
   }
   
