@@ -1203,6 +1203,10 @@ async function ingestSingleUrl(url, supa, options = {}) {
 
     // Extract meta description for debugging
     const metaDesc = extractMetaDescription(html);
+    console.log(`[TIMING] ${url}: store_entities took ${Date.now() - storeEntitiesStart}ms`);
+    
+    const totalTime = Date.now() - startTime;
+    console.log(`[TIMING] ${url}: TOTAL ingestion took ${totalTime}ms (${(totalTime/1000).toFixed(2)}s)`);
     
     // Debug: Log meta description extraction
     console.log(`DEBUG: Meta description for ${url}:`, metaDesc ? `"${metaDesc.substring(0, 100)}..."` : 'null');
