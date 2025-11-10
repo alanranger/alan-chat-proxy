@@ -562,12 +562,25 @@ async function ingestSingleUrl(url, supa, options = {}) {
     }
     
     stage = 'extract_jsonld';
-    // First pass: detect external JSON-LD but skip fetching (to avoid timeouts in batch processing)
+    // Extract JSON-LD (skip external files during main batch to avoid timeouts)
+    // External JSON-LD will be processed separately at the end
     const jsonLdResult = await extractJSONLD(html, url, true); // skipExternal = true
-    const jsonLd = jsonLdResult && typeof jsonLdResult === 'object' && 'jsonLd' in jsonLdResult 
-      ? jsonLdResult.jsonLd 
-      : jsonLdResult;
-    const hasExternalJsonLd = jsonLdResult && typeof jsonLdResult === 'object' && jsonLdResult.hasExternal === true;
+    let jsonLd = null;
+    let hasExternalJsonLd = false;
+    
+    if (jsonLdResult) {
+      if (typeof jsonLdResult === 'object' && 'jsonLd' in jsonLdResult) {
+        // Returned object with hasExternal flag
+        jsonLd = jsonLdResult.jsonLd;
+        hasExternalJsonLd = jsonLdResult.hasExternal === true;
+      } else if (Array.isArray(jsonLdResult)) {
+        // Returned array directly (normal case)
+        jsonLd = jsonLdResult;
+      } else {
+        // Single object
+        jsonLd = [jsonLdResult];
+      }
+    }
     
       // Prioritize JSON-LD objects for better entity selection (v2)
       if (jsonLd && jsonLd.length > 1) {
