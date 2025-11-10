@@ -1352,55 +1352,47 @@ async function processBulkUpload(req, res) {
     const results = [];
     const urls = rows.slice(1).map(row => row[urlIdx]).filter(Boolean);
     
-    // Process URLs in batches of 12 for faster ingestion
-    const BATCH_SIZE = 12;
-    const batches = [];
-    for (let i = 0; i < urls.length; i += BATCH_SIZE) {
-      batches.push(urls.slice(i, i + BATCH_SIZE));
-    }
-    
-    console.log(`Processing ${urls.length} URLs in ${batches.length} batches of ${BATCH_SIZE}`);
+    // Process URLs sequentially to avoid Vercel function timeouts
+    // (Parallel processing causes timeouts when multiple 30s fetches run simultaneously)
+    console.log(`Processing ${urls.length} URLs sequentially...`);
     
     // Collect URLs with external JSON-LD to process separately at the end
     const urlsWithExternalJsonLd = [];
     
-    for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
-      const batch = batches[batchIndex];
-      console.log(`Processing batch ${batchIndex + 1}/${batches.length} (${batch.length} URLs)`);
+    // Process URLs one at a time to prevent function timeouts
+    for (let i = 0; i < urls.length; i++) {
+      const url = urls[i];
+      const progress = `[${i + 1}/${urls.length}]`;
       
-      // Process all URLs in the current batch in parallel
-      const batchPromises = batch.map(async (url) => {
-        try {
-          const result = await ingestSingleUrl(url, supa);
-          // Track URLs with external JSON-LD for later processing
-          if (result.hasExternalJsonLd) {
-            urlsWithExternalJsonLd.push(url);
-          }
-          return { url, success: true, ...result };
-        } catch (err) {
-          // Check if this is a 404 error (hidden/unpublished product)
-          const is404 = err.message && (
-            err.message.includes('404') || 
-            err.message.includes('HEAD 404') ||
-            err.message.includes('GET 404')
-          );
-          
-          if (is404) {
-            return { url, success: true, skipped: true, reason: 'Product hidden/unpublished (404)', error: err.message };
-          } else {
-            return { url, success: false, error: err.message };
-          }
+      try {
+        console.log(`${progress} Processing ${url}...`);
+        const result = await ingestSingleUrl(url, supa);
+        // Track URLs with external JSON-LD for later processing
+        if (result.hasExternalJsonLd) {
+          urlsWithExternalJsonLd.push(url);
         }
-      });
+        results.push({ url, success: true, ...result });
+        console.log(`${progress} ✅ Success: ${url}`);
+      } catch (err) {
+        // Check if this is a 404 error (hidden/unpublished product)
+        const is404 = err.message && (
+          err.message.includes('404') || 
+          err.message.includes('HEAD 404') ||
+          err.message.includes('GET 404')
+        );
+        
+        if (is404) {
+          results.push({ url, success: true, skipped: true, reason: 'Product hidden/unpublished (404)', error: err.message });
+          console.log(`${progress} ⏭️ Skipped (404): ${url}`);
+        } else {
+          results.push({ url, success: false, error: err.message });
+          console.log(`${progress} ❌ Failed: ${url} - ${err.message}`);
+        }
+      }
       
-      // Wait for all URLs in this batch to complete
-      const batchResults = await Promise.all(batchPromises);
-      results.push(...batchResults);
-      
-      // Rate limiting between batches (not between individual URLs)
-      if (batchIndex < batches.length - 1) {
-        console.log(`Batch ${batchIndex + 1} complete. Waiting 2 seconds before next batch...`);
-        await sleep(2000);
+      // Small delay between URLs to be polite to the server
+      if (i < urls.length - 1) {
+        await sleep(500);
       }
     }
     
