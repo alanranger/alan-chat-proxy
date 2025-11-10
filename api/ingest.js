@@ -371,30 +371,41 @@ async function extractJSONLD(html, baseUrl = null) {
         }
         
         // Fetch external JSON-LD file
-        const response = await fetch(fullUrl, {
-          headers: {
-            'Accept': 'application/json, application/ld+json, */*'
-          },
-          signal: AbortSignal.timeout(5000) // 5 second timeout
-        });
-        
-        if (!response.ok) {
-          console.warn(`Failed to fetch external JSON-LD from ${fullUrl}: ${response.status} ${response.statusText}`);
-          continue;
+        // Use a longer timeout for external JSON-LD files (10 seconds)
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+        try {
+          const response = await fetch(fullUrl, {
+            headers: {
+              'Accept': 'application/json, application/ld+json, */*'
+            },
+            signal: controller.signal
+          });
+          
+          if (!response.ok) {
+            console.warn(`Failed to fetch external JSON-LD from ${fullUrl}: ${response.status} ${response.statusText}`);
+            continue;
+          }
+          
+          const jsonText = await response.text();
+          const parsed = JSON.parse(jsonText);
+          
+          if (Array.isArray(parsed)) {
+            jsonLdObjects.push(...parsed);
+          } else {
+            jsonLdObjects.push(parsed);
+          }
+          
+          console.log(`✅ Fetched and parsed external JSON-LD from ${fullUrl}`);
+        } finally {
+          clearTimeout(timeoutId);
         }
-        
-        const jsonText = await response.text();
-        const parsed = JSON.parse(jsonText);
-        
-        if (Array.isArray(parsed)) {
-          jsonLdObjects.push(...parsed);
-        } else {
-          jsonLdObjects.push(parsed);
-        }
-        
-        console.log(`✅ Fetched and parsed external JSON-LD from ${fullUrl}`);
       } catch (e) {
-        console.warn(`Failed to fetch/parse external JSON-LD from ${srcUrl}: ${e.message}`);
+        if (e.name === 'AbortError') {
+          console.warn(`Timeout fetching external JSON-LD from ${srcUrl} (10s limit)`);
+        } else {
+          console.warn(`Failed to fetch/parse external JSON-LD from ${srcUrl}: ${e.message}`);
+        }
         // Continue processing other external files
       }
     }
