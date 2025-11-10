@@ -639,27 +639,42 @@ async function ingestSingleUrl(url, supa, options = {}) {
     
     if (!options.dryRun) {
       try {
-        // Delete existing chunks for this URL (fire and forget - don't block on slow deletes)
-        // Use a timeout to prevent hanging on slow deletes
+        // Delete existing chunks for this URL with timeout to prevent hanging
+        // Use Promise.race to timeout after 5 seconds
         const deletePromise = supa.from('page_chunks').delete().eq('url', url);
-        const deleteTimeout = new Promise((resolve) => setTimeout(() => resolve({ error: null }), 5000)); // 5s max for delete
-        Promise.race([deletePromise, deleteTimeout]).catch(() => {}); // Fire and forget
+        const deleteTimeout = new Promise((resolve) => setTimeout(() => resolve({ error: { message: 'Delete timeout' } }), 5000));
+        const deleteResult = await Promise.race([deletePromise, deleteTimeout]);
         
-        // Insert new chunks with ON CONFLICT handling to avoid duplicate key errors
+        // If delete timed out, log but continue - we'll handle duplicates in insert
+        if (deleteResult?.error?.message === 'Delete timeout') {
+          console.log(`⚠️ Chunk delete timed out for ${url}, proceeding with insert (will handle duplicates)`);
+        }
+        
+        // Insert new chunks with error handling to avoid duplicate key errors
         if (chunkInserts.length > 0) {
-          // Use upsert with ON CONFLICT DO NOTHING to handle duplicates gracefully
-          // This prevents errors if delete hasn't completed yet
-          const { error: chunkError } = await supa
-            .from('page_chunks')
-            .upsert(chunkInserts, { 
-              onConflict: 'url,chunk_hash',
-              ignoreDuplicates: true 
-            });
-          if (chunkError) {
-            console.error(`Chunk insert failed for ${url}:`, chunkError);
-            // Continue processing even if chunk insertion fails
-          } else {
-            console.log(`✅ Stored ${chunkInserts.length} chunks for ${url}`);
+          // Try insert, catch duplicate errors and continue
+          // The hash field has a unique constraint, so duplicates are expected if delete didn't complete
+          try {
+            const { error: chunkError } = await supa
+              .from('page_chunks')
+              .insert(chunkInserts);
+            if (chunkError) {
+              // If it's a duplicate key error, that's OK - chunks already exist or delete didn't complete
+              if (chunkError.code === '23505') {
+                console.log(`⚠️ Chunks already exist for ${url} (duplicate hash), skipping insert`);
+              } else {
+                console.error(`Chunk insert failed for ${url}:`, chunkError);
+              }
+            } else {
+              console.log(`✅ Stored ${chunkInserts.length} chunks for ${url}`);
+            }
+          } catch (insertErr) {
+            // Catch any other errors (like duplicate key violations)
+            if (insertErr.code === '23505' || (insertErr.message && insertErr.message.includes('duplicate key'))) {
+              console.log(`⚠️ Chunks already exist for ${url}, skipping insert`);
+            } else {
+              console.error(`Exception during chunk insert for ${url}:`, insertErr);
+            }
           }
         }
       } catch (e) {
