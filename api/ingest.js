@@ -996,6 +996,7 @@ export async function ingestSingleUrl(url, supa, options = {}) {
         // Always add Product entity to entities array - the later code will handle update vs insert
         entities.push({
             url: url,
+            page_url: url, // Set page_url for consistency
             kind: productKind,
             title: productTitle,
             description: productDescription,
