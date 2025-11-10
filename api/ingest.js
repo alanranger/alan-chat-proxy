@@ -874,6 +874,7 @@ export async function ingestSingleUrl(url, supa, options = {}) {
               
               entities.push({
                 url: url,
+                page_url: url, // CRITICAL: Set page_url for constraint matching
                 kind: finalKind,
                 title: (meta.title && meta.title.trim()) || chosenTitle || null,
                 description: enhancedDescription,
@@ -927,6 +928,7 @@ export async function ingestSingleUrl(url, supa, options = {}) {
       if (entities.length === 0) {
         entities = [{
           url: url,
+          page_url: url, // CRITICAL: Set page_url for constraint matching
           kind: finalKind,
           title: chosenTitle || null,
           description: enhancedDescription,
@@ -1184,57 +1186,124 @@ export async function ingestSingleUrl(url, supa, options = {}) {
             console.log(`DEBUG: Inserting entity for ${e.url} with meta_description:`, e.meta_description ? `"${e.meta_description.substring(0, 50)}..."` : 'null');
             const { error: insErr } = await supa.from('page_entities').insert([e]);
             if (insErr) {
-              // Fallback: update by (url, kind)
-              console.log(`DEBUG: Updating entity for ${e.url} with meta_description:`, e.meta_description ? `"${e.meta_description.substring(0, 50)}..."` : 'null');
-              const { error: updErr } = await supa
-                .from('page_entities')
-                .update({
-                  title: e.title,
-                  description: e.description,
-                  meta_description: e.meta_description,
-                  date_start: e.date_start,
-                  date_end: e.date_end,
-                  location: e.location,
-                  price: e.price,
-                  price_currency: e.price_currency,
-                  availability: e.availability,
-                  sku: e.sku,
-                  provider: e.provider,
-                  raw: e.raw,
-                  last_seen: e.last_seen,
-                  // CSV metadata fields - ALL FIELDS NOW EXIST IN PAGE_ENTITIES
-                  csv_type: e.csv_type,
-                  csv_metadata_id: e.csv_metadata_id,
-                  categories: e.categories,
-                  tags: e.tags,
-                  publish_date: e.publish_date,
-                  start_date: e.start_date,
-                  end_date: e.end_date,
-                  start_time: e.start_time,
-                  end_time: e.end_time,
-                  location_name: e.location_name,
-                  location_address: e.location_address,
-                  location_city_state_zip: e.location_city_state_zip,
-                  excerpt: e.excerpt,
-                  image_url: e.image_url,
-                  json_ld_data: e.json_ld_data,
-                  workflow_state: e.workflow_state,
-                  // NEW STRUCTURED DATA FIELDS
-                  participants: e.participants,
-                  experience_level: e.experience_level,
-                  equipment_needed: e.equipment_needed,
-                  location_address: e.location_address,
-                  time_schedule: e.time_schedule,
-                  fitness_level: e.fitness_level,
-                  what_to_bring: e.what_to_bring,
-                  course_duration: e.course_duration,
-                  instructor_info: e.instructor_info,
-                  availability_status: e.availability_status
-                })
-                .eq('url', e.url)
-                .eq('kind', e.kind);
-              if (updErr) throw new Error(`Entity upsert failed: ${updErr.message}`);
-              return { success: true, action: 'upserted' };
+              // Check if it's a duplicate key error for events with dates
+              const isDuplicateKey = insErr.code === '23505' || (insErr.message && insErr.message.includes('duplicate key'));
+              const isEventWithDate = e.kind === 'event' && e.date_start;
+              
+              if (isDuplicateKey && isEventWithDate) {
+                // For events with dates, the constraint uniq_events_with_date uses (kind, page_url, start_date, norm_title)
+                // If insert failed, it means an entity with (kind, page_url, start_date) already exists
+                // This is expected - the entity already exists, so we should update it
+                // CRITICAL: Match on page_url (not url) and start_date (not date_start) to match the constraint
+                const pageUrl = e.page_url || e.url; // Use page_url if available, fallback to url
+                const startDate = e.start_date || (e.date_start ? e.date_start.split('T')[0] : null); // Extract date part from date_start
+                
+                console.log(`DEBUG: Duplicate event with date detected for ${pageUrl} on ${startDate}, updating existing entity`);
+                const updateQuery = supa
+                  .from('page_entities')
+                  .update({
+                    title: e.title,
+                    description: e.description,
+                    meta_description: e.meta_description,
+                    date_start: e.date_start,
+                    date_end: e.date_end,
+                    location: e.location,
+                    price: e.price,
+                    price_currency: e.price_currency,
+                    availability: e.availability,
+                    sku: e.sku,
+                    provider: e.provider,
+                    raw: e.raw,
+                    last_seen: e.last_seen,
+                    // CSV metadata fields - ALL FIELDS NOW EXIST IN PAGE_ENTITIES
+                    csv_type: e.csv_type,
+                    csv_metadata_id: e.csv_metadata_id,
+                    categories: e.categories,
+                    tags: e.tags,
+                    publish_date: e.publish_date,
+                    start_date: e.start_date,
+                    end_date: e.end_date,
+                    start_time: e.start_time,
+                    end_time: e.end_time,
+                    location_name: e.location_name,
+                    location_address: e.location_address,
+                    location_city_state_zip: e.location_city_state_zip,
+                    excerpt: e.excerpt,
+                    image_url: e.image_url,
+                    json_ld_data: e.json_ld_data,
+                    workflow_state: e.workflow_state,
+                    // NEW STRUCTURED DATA FIELDS
+                    participants: e.participants,
+                    experience_level: e.experience_level,
+                    equipment_needed: e.equipment_needed,
+                    location_address: e.location_address,
+                    time_schedule: e.time_schedule,
+                    fitness_level: e.fitness_level,
+                    what_to_bring: e.what_to_bring,
+                    course_duration: e.course_duration,
+                    instructor_info: e.instructor_info,
+                    availability_status: e.availability_status
+                  })
+                  .eq('kind', e.kind)
+                  .eq('page_url', pageUrl) // CRITICAL: Use page_url to match constraint
+                  .eq('start_date', startDate); // CRITICAL: Use start_date (date only) to match constraint
+                
+                const { error: updErr } = await updateQuery;
+                if (updErr) throw new Error(`Entity upsert failed: ${updErr.message}`);
+                return { success: true, action: 'upserted' };
+              } else {
+                // For non-events or events without dates, fallback to update by (url, kind)
+                console.log(`DEBUG: Updating entity for ${e.url} with meta_description:`, e.meta_description ? `"${e.meta_description.substring(0, 50)}..."` : 'null');
+                const { error: updErr } = await supa
+                  .from('page_entities')
+                  .update({
+                    title: e.title,
+                    description: e.description,
+                    meta_description: e.meta_description,
+                    date_start: e.date_start,
+                    date_end: e.date_end,
+                    location: e.location,
+                    price: e.price,
+                    price_currency: e.price_currency,
+                    availability: e.availability,
+                    sku: e.sku,
+                    provider: e.provider,
+                    raw: e.raw,
+                    last_seen: e.last_seen,
+                    // CSV metadata fields - ALL FIELDS NOW EXIST IN PAGE_ENTITIES
+                    csv_type: e.csv_type,
+                    csv_metadata_id: e.csv_metadata_id,
+                    categories: e.categories,
+                    tags: e.tags,
+                    publish_date: e.publish_date,
+                    start_date: e.start_date,
+                    end_date: e.end_date,
+                    start_time: e.start_time,
+                    end_time: e.end_time,
+                    location_name: e.location_name,
+                    location_address: e.location_address,
+                    location_city_state_zip: e.location_city_state_zip,
+                    excerpt: e.excerpt,
+                    image_url: e.image_url,
+                    json_ld_data: e.json_ld_data,
+                    workflow_state: e.workflow_state,
+                    // NEW STRUCTURED DATA FIELDS
+                    participants: e.participants,
+                    experience_level: e.experience_level,
+                    equipment_needed: e.equipment_needed,
+                    location_address: e.location_address,
+                    time_schedule: e.time_schedule,
+                    fitness_level: e.fitness_level,
+                    what_to_bring: e.what_to_bring,
+                    course_duration: e.course_duration,
+                    instructor_info: e.instructor_info,
+                    availability_status: e.availability_status
+                  })
+                  .eq('url', e.url)
+                  .eq('kind', e.kind);
+                if (updErr) throw new Error(`Entity upsert failed: ${updErr.message}`);
+                return { success: true, action: 'upserted' };
+              }
             }
             return { success: true, action: 'inserted' };
           }
