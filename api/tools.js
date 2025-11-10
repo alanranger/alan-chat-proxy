@@ -504,11 +504,24 @@ export default async function handler(req, res) {
             }
             rows = r.data || [];
 
+        // Helper function to normalize date for deduplication key
+        const normalizeDate = (date) => {
+          if (!date) return '';
+          // Convert to ISO string and take just the date part (YYYY-MM-DD)
+          try {
+            const d = new Date(date);
+            return d.toISOString().split('T')[0];
+          } catch {
+            return String(date).split('T')[0];
+          }
+        };
+
         // Deduplicate rows: remove exact duplicates based on event_url + date_start + product_url
         // This fixes the issue where every event appears twice in the export
         const seen = new Set();
         rows = rows.filter(row => {
-          const key = `${row.event_url}|${row.date_start || ''}|${row.product_url || ''}`;
+          const dateKey = normalizeDate(row.date_start);
+          const key = `${row.event_url}|${dateKey}|${row.product_url || ''}`;
           if (seen.has(key)) {
             return false; // Skip duplicate
           }
@@ -548,18 +561,20 @@ export default async function handler(req, res) {
               }
               return row;
             });
-            // Deduplicate again after date update (in case date update created duplicates)
-            const seenAfter = new Set();
-            rows = rows.filter(row => {
-              const key = `${row.event_url}|${row.date_start || ''}|${row.product_url || ''}`;
-              if (seenAfter.has(key)) {
-                return false;
-              }
-              seenAfter.add(key);
-              return true;
-            });
           }
         } catch {}
+        
+        // Always deduplicate again after date update (in case date update created duplicates or changed formats)
+        const seenAfter = new Set();
+        rows = rows.filter(row => {
+          const dateKey = normalizeDate(row.date_start);
+          const key = `${row.event_url}|${dateKey}|${row.product_url || ''}`;
+          if (seenAfter.has(key)) {
+            return false;
+          }
+          seenAfter.add(key);
+          return true;
+        });
 
         const esc = (v) => {
           const s = (v==null || v===undefined ? '' : String(v));
