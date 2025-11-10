@@ -530,17 +530,34 @@ export default async function handler(req, res) {
         });
 
         // Overwrite date/time strictly from page_entities (CSV-derived), no tz conversion
+        // FIX: Match on URL+date, not just URL, since same URL can have multiple dates
         try {
           const norm = (u) => (u||'').replace(/\/+$/,'');
+          const normalizeDate = (date) => {
+            if (!date) return '';
+            try {
+              const d = new Date(date);
+              return d.toISOString().split('T')[0];
+            } catch {
+              return String(date).split('T')[0];
+            }
+          };
           const { data: eventRows, error: evErr } = await supa
             .from('page_entities')
             .select('url, date_start, date_end, raw, kind')
             .eq('kind','event')
             .limit(5000);
           if (!evErr && Array.isArray(eventRows)) {
-            const byUrl = new Map(eventRows.map(e => [norm(e.url), e]));
+            // Key by URL+date to handle multiple dates per URL
+            const byUrlAndDate = new Map(eventRows.map(e => {
+              const urlKey = norm(e.url);
+              const dateKey = normalizeDate(e.date_start);
+              return [`${urlKey}|${dateKey}`, e];
+            }));
             rows = rows.map(row => {
-              const ev = byUrl.get(norm(row.event_url));
+              const urlKey = norm(row.event_url);
+              const dateKey = normalizeDate(row.date_start);
+              const ev = byUrlAndDate.get(`${urlKey}|${dateKey}`);
               if (ev) {
                 row.date_start = ev.date_start;
                 row.date_end = ev.date_end;
