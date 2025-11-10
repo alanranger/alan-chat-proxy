@@ -297,12 +297,19 @@ function extractJSONLD(html) {
   if (!jsonLdMatches) return null;
   
   const jsonLdObjects = [];
+  const MAX_JSON_SIZE = 300000; // 300KB max - skip larger blocks to prevent timeouts (JSON.parse is synchronous and blocks)
   
   for (const match of jsonLdMatches) {
     let jsonContent = match.replace(/<script[^>]*>/i, '').replace(/<\/script>/i, '').trim();
     
     // Skip if empty
     if (!jsonContent) continue;
+    
+    // Skip if too large - JSON.parse on very large blocks can take seconds and cause timeouts
+    if (jsonContent.length > MAX_JSON_SIZE) {
+      console.warn(`Skipping JSON-LD block: too large (${jsonContent.length} chars, max ${MAX_JSON_SIZE}) - would cause timeout`);
+      continue;
+    }
     
     // Harden: strip HTML comments, CDATA, and try to repair common issues
     jsonContent = jsonContent
@@ -332,7 +339,8 @@ function extractJSONLD(html) {
     let parsedOk = false;
     for (const candidate of attempts) {
       try {
-        // For very large JSON blocks, use a timeout to prevent blocking
+        // JSON.parse is synchronous and can block for large objects
+        // We've already filtered out very large blocks above
         const parsed = JSON.parse(candidate);
         if (Array.isArray(parsed)) {
           jsonLdObjects.push(...parsed);
