@@ -4,7 +4,12 @@
       "path": "/api/light-refresh?action=run",
       "schedule": "0 */4 * * *"
     }
-  ]
+  ],
+  "functions": {
+    "api/ingest.js": {
+      "maxDuration": 60
+    }
+  }
 }
 
 

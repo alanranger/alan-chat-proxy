@@ -3,7 +3,10 @@
 // Handles both single URL ingestion and bulk NDJSON streaming
 // Replaces: bulk-upload.js, ingest-embed-replace.js
 
-export const config = { runtime: 'nodejs' };
+export const config = { 
+  runtime: 'nodejs',
+  maxDuration: 60
+};
 
 import crypto from 'node:crypto';
 import { htmlToText } from 'html-to-text';
