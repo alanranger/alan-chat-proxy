@@ -639,11 +639,22 @@ async function ingestSingleUrl(url, supa, options = {}) {
     
     if (!options.dryRun) {
       try {
-    // Delete existing chunks for this URL
-    await supa.from('page_chunks').delete().eq('url', url);
-    // Insert new chunks
-    if (chunkInserts.length > 0) {
-      const { error: chunkError } = await supa.from('page_chunks').insert(chunkInserts);
+        // Delete existing chunks for this URL (fire and forget - don't block on slow deletes)
+        // Use a timeout to prevent hanging on slow deletes
+        const deletePromise = supa.from('page_chunks').delete().eq('url', url);
+        const deleteTimeout = new Promise((resolve) => setTimeout(() => resolve({ error: null }), 5000)); // 5s max for delete
+        Promise.race([deletePromise, deleteTimeout]).catch(() => {}); // Fire and forget
+        
+        // Insert new chunks with ON CONFLICT handling to avoid duplicate key errors
+        if (chunkInserts.length > 0) {
+          // Use upsert with ON CONFLICT DO NOTHING to handle duplicates gracefully
+          // This prevents errors if delete hasn't completed yet
+          const { error: chunkError } = await supa
+            .from('page_chunks')
+            .upsert(chunkInserts, { 
+              onConflict: 'url,chunk_hash',
+              ignoreDuplicates: true 
+            });
           if (chunkError) {
             console.error(`Chunk insert failed for ${url}:`, chunkError);
             // Continue processing even if chunk insertion fails
