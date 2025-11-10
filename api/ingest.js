@@ -660,6 +660,7 @@ async function ingestSingleUrl(url, supa, options = {}) {
     }
     
     stage = 'store_entities';
+    const storeEntitiesStart = Date.now();
     if (jsonLd) {
       // Log JSON-LD objects found directly to database
       try {
