@@ -297,7 +297,8 @@ function extractJSONLD(html) {
   if (!jsonLdMatches) return null;
   
   const jsonLdObjects = [];
-  const MAX_JSON_SIZE = 300000; // 300KB max - skip larger blocks to prevent timeouts (JSON.parse is synchronous and blocks)
+  const MAX_JSON_SIZE = 2000000; // 2MB max - increased from 300KB now that reconciliation loop is removed
+  // Note: JSON.parse is synchronous and blocks, but with reconciliation removed, even 10s parse is acceptable
   
   for (const match of jsonLdMatches) {
     let jsonContent = match.replace(/<script[^>]*>/i, '').replace(/<\/script>/i, '').trim();
@@ -305,9 +306,9 @@ function extractJSONLD(html) {
     // Skip if empty
     if (!jsonContent) continue;
     
-    // Skip if too large - JSON.parse on very large blocks can take seconds and cause timeouts
+    // Skip if extremely large - prevent memory issues (2MB should handle most legitimate JSON-LD)
     if (jsonContent.length > MAX_JSON_SIZE) {
-      console.warn(`Skipping JSON-LD block: too large (${jsonContent.length} chars, max ${MAX_JSON_SIZE}) - would cause timeout`);
+      console.warn(`Skipping JSON-LD block: too large (${jsonContent.length} chars, max ${MAX_JSON_SIZE}) - may cause memory issues`);
       continue;
     }
     
@@ -1429,33 +1430,11 @@ export default async function handler(req, res) {
     stage = 'db_client';
     const supa = createClient(need('SUPABASE_URL'), need('SUPABASE_SERVICE_ROLE_KEY'));
 
-    // Reconcile: ensure each service row in csv_metadata has a page_entities row (no RPCs)
-    try {
-      const { data: svcRows } = await supa
-        .from('csv_metadata')
-        .select('id, url')
-        .eq('csv_type', 'landing_service_pages')
-        .eq('kind', 'service');
-      const csvIds = (svcRows || []).map(r => r.id);
-      if (csvIds.length) {
-        const { data: existing } = await supa
-          .from('page_entities')
-          .select('csv_metadata_id')
-          .eq('csv_type', 'landing_service_pages')
-          .in('csv_metadata_id', csvIds);
-        const present = new Set((existing || []).map(r => r.csv_metadata_id));
-        const toCreate = (svcRows || []).filter(r => !present.has(r.id));
-        if (toCreate.length) {
-          // Use the normal single-URL ingestion path so RLS/logic is respected
-          for (const r of toCreate) {
-            const u = String(r.url || '').replace(/\/$/, '');
-            try { await ingestSingleUrl(u, supa, { dryRun: false }); } catch (e) { /* continue */ }
-          }
-        }
-      }
-    } catch (reconErr) {
-      console.warn('service reconciliation skipped:', reconErr?.message || reconErr);
-    }
+    // REMOVED: Service reconciliation loop that was causing 60s timeouts
+    // This was trying to ingest 481+ missing services on EVERY single URL request
+    // Each service takes 2-3s, so 481 × 2-3s = 16-24 minutes (exceeds 60s Vercel limit)
+    // Reconciliation should be done via separate endpoint or cron job, not on every request
+    // See: testing-scripts/ROOT_CAUSE_IDENTIFIED.md for details
     
     // New mode: ingest multiple URLs from CSV files (array of URL strings)
     if (Array.isArray(csvUrls) && csvUrls.length) {
