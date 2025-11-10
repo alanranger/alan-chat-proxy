@@ -355,8 +355,10 @@ async function extractJSONLD(html, baseUrl = null) {
   }
   
   // Process external JSON-LD files (from src attribute)
+  // Use Promise.allSettled to fetch all external JSON-LD files in parallel without blocking
+  // If any fail, we continue with inline JSON-LD only
   if (externalMatches.length > 0) {
-    for (const srcUrl of externalMatches) {
+    const externalPromises = externalMatches.map(async (srcUrl) => {
       try {
         // Resolve relative URLs
         let fullUrl = srcUrl;
@@ -366,14 +368,13 @@ async function extractJSONLD(html, baseUrl = null) {
             fullUrl = new URL(srcUrl, base).href;
           } catch (e) {
             console.warn(`Failed to resolve relative URL ${srcUrl} with base ${baseUrl}`);
-            continue;
+            return null;
           }
         }
         
-        // Fetch external JSON-LD file
-        // Use a longer timeout for external JSON-LD files (10 seconds)
+        // Fetch external JSON-LD file with shorter timeout (5 seconds) to avoid blocking
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+        const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
         try {
           const response = await fetch(fullUrl, {
             headers: {
@@ -384,29 +385,39 @@ async function extractJSONLD(html, baseUrl = null) {
           
           if (!response.ok) {
             console.warn(`Failed to fetch external JSON-LD from ${fullUrl}: ${response.status} ${response.statusText}`);
-            continue;
+            return null;
           }
           
           const jsonText = await response.text();
           const parsed = JSON.parse(jsonText);
           
-          if (Array.isArray(parsed)) {
-            jsonLdObjects.push(...parsed);
-          } else {
-            jsonLdObjects.push(parsed);
-          }
-          
           console.log(`✅ Fetched and parsed external JSON-LD from ${fullUrl}`);
+          return parsed;
         } finally {
           clearTimeout(timeoutId);
         }
       } catch (e) {
         if (e.name === 'AbortError') {
-          console.warn(`Timeout fetching external JSON-LD from ${srcUrl} (10s limit)`);
+          console.warn(`Timeout fetching external JSON-LD from ${srcUrl} (5s limit) - continuing without it`);
         } else {
-          console.warn(`Failed to fetch/parse external JSON-LD from ${srcUrl}: ${e.message}`);
+          console.warn(`Failed to fetch/parse external JSON-LD from ${srcUrl}: ${e.message} - continuing without it`);
         }
-        // Continue processing other external files
+        return null; // Return null on error, don't throw
+      }
+    });
+    
+    // Wait for all external fetches to complete (or fail) without blocking
+    const externalResults = await Promise.allSettled(externalPromises);
+    
+    // Process successful results
+    for (const result of externalResults) {
+      if (result.status === 'fulfilled' && result.value) {
+        const parsed = result.value;
+        if (Array.isArray(parsed)) {
+          jsonLdObjects.push(...parsed);
+        } else {
+          jsonLdObjects.push(parsed);
+        }
       }
     }
   }
