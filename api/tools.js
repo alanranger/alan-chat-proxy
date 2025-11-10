@@ -717,7 +717,19 @@ export default async function handler(req, res) {
         const present = new Set((existing || []).map(r => r.csv_metadata_id));
         const toCreate = (svcRows || []).filter(r => !present.has(r.id));
         
-        const urls = toCreate.map(r => String(r.url || '').replace(/\/$/, '')).filter(u => u);
+        // CRITICAL: Deduplicate by URL - same URL may appear multiple times in csv_metadata
+        // We only need to ingest each unique URL once, not once per csv_metadata row
+        const urlSet = new Set();
+        const uniqueUrls = [];
+        toCreate.forEach(r => {
+          const url = String(r.url || '').replace(/\/+$/, '').trim();
+          if (url && !urlSet.has(url)) {
+            urlSet.add(url);
+            uniqueUrls.push(url);
+          }
+        });
+        
+        const urls = uniqueUrls;
         
         return sendJSON(res, 200, {
           ok: true,
