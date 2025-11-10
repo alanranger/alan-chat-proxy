@@ -601,19 +601,17 @@ async function ingestSingleUrl(url, supa, options = {}) {
     }
     console.log(`[TIMING] ${url}: fetch_csv_metadata took ${Date.now() - csvMetaStart}ms`);
     
-    // Debug: Log if Equipment Needed is in the text
-    try {
-      await supa.from('debug_logs').insert({
-        url: url,
-        stage: 'text_analysis',
-        data: { 
-          textLength: text.length, 
-          hasEquipmentNeeded: text.includes('EQUIPMENT NEEDED'),
-          textSample: text.substring(0, 1000),
-          hasCsvMetadata: !!csvMetadata
-        }
-      });
-    } catch (e) {} // Ignore errors
+    // Debug: Log if Equipment Needed is in the text (fire and forget - don't block)
+    supa.from('debug_logs').insert({
+      url: url,
+      stage: 'text_analysis',
+      data: { 
+        textLength: text.length, 
+        hasEquipmentNeeded: text.includes('EQUIPMENT NEEDED'),
+        textSample: text.substring(0, 1000),
+        hasCsvMetadata: !!csvMetadata
+      }
+    }).then(() => {}).catch(() => {}); // Fire and forget
     
     stage = 'store_chunks';
     const storeChunksStart = Date.now();
@@ -662,27 +660,23 @@ async function ingestSingleUrl(url, supa, options = {}) {
     stage = 'store_entities';
     const storeEntitiesStart = Date.now();
     if (jsonLd) {
-      // Log JSON-LD objects found directly to database
-      try {
-        await supa.from('debug_logs').insert({
-          url: url,
-          stage: 'jsonld_objects',
-          data: { count: jsonLd.length, objects: jsonLd.map((item, idx) => ({ idx, type: item['@type'], kind: normalizeKind(item, url) })) }
-        });
-      } catch (e) {} // Ignore errors
+      // Log JSON-LD objects found directly to database (fire and forget - don't block)
+      supa.from('debug_logs').insert({
+        url: url,
+        stage: 'jsonld_objects',
+        data: { count: jsonLd.length, objects: jsonLd.map((item, idx) => ({ idx, type: item['@type'], kind: normalizeKind(item, url) })) }
+      }).then(() => {}).catch(() => {}); // Fire and forget
       
       // Extract structured information from raw HTML for products
       let enhancedDescriptions = {};
       const structuredData = extractStructuredDataFromHTML(html);
       
-      // Log structured data extraction
-      try {
-        await supa.from('debug_logs').insert({
-          url: url,
-          stage: 'structured_data_extracted',
-          data: structuredData
-        });
-      } catch (e) {} // Ignore errors
+      // Log structured data extraction (fire and forget - don't block)
+      supa.from('debug_logs').insert({
+        url: url,
+        stage: 'structured_data_extracted',
+        data: structuredData
+      }).then(() => {}).catch(() => {}); // Fire and forget
 
       // Store enhanced descriptions for ALL entity types
       for (let idx = 0; idx < jsonLd.length; idx++) {
@@ -699,24 +693,20 @@ async function ingestSingleUrl(url, supa, options = {}) {
           enhancedDescriptions[idx] = cleanedDescription;
         }
         
-        // Log enhanced description creation directly to database (fire and forget)
-        try {
-          await supa.from('debug_logs').insert({
-            url: url,
-            stage: 'enhanced_description',
-            data: { idx: idx, kind: entityKind, description: enhancedDescriptions[idx].substring(0, 300) }
-          });
-        } catch (e) {} // Ignore errors
+        // Log enhanced description creation directly to database (fire and forget - don't block)
+        supa.from('debug_logs').insert({
+          url: url,
+          stage: 'enhanced_description',
+          data: { idx: idx, kind: entityKind, description: enhancedDescriptions[idx].substring(0, 300) }
+        }).then(() => {}).catch(() => {}); // Fire and forget
       }
       
-      // Log enhanced descriptions object directly to database
-      try {
-        await supa.from('debug_logs').insert({
-          url: url,
-          stage: 'enhanced_descriptions',
-          data: enhancedDescriptions
-        });
-      } catch (e) {} // Ignore errors
+      // Log enhanced descriptions object directly to database (fire and forget - don't block)
+      supa.from('debug_logs').insert({
+        url: url,
+        stage: 'enhanced_descriptions',
+        data: enhancedDescriptions
+      }).then(() => {}).catch(() => {}); // Fire and forget
       
       // Select the best JSON-LD object for this URL (prioritized by the sort above)
       const bestJsonLd = jsonLd[0]; // First item after prioritization
