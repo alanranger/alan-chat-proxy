@@ -285,7 +285,7 @@ async function fetchPage(url) {
 }
 
 /* ========== JSON-LD extraction ========== */
-async function extractJSONLD(html, baseUrl = null) {
+async function extractJSONLD(html, baseUrl = null, skipExternal = false) {
   // Find all script tags with type="application/ld+json"
   const scriptTagRegex = /<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gis;
   const jsonLdMatches = html.match(scriptTagRegex);
@@ -299,6 +299,55 @@ async function extractJSONLD(html, baseUrl = null) {
   }
   
   const jsonLdObjects = [];
+  
+  // If skipExternal is true, return early with just inline JSON-LD and flag for external processing
+  if (skipExternal && externalMatches.length > 0) {
+    // Process inline JSON-LD only
+    if (jsonLdMatches) {
+      for (const match of jsonLdMatches) {
+        let jsonContent = match.replace(/<script[^>]*>/i, '').replace(/<\/script>/i, '').trim();
+        if (!jsonContent) continue;
+        
+        jsonContent = jsonContent
+          .replace(/<!--([\s\S]*?)-->/g, '')
+          .replace(/\/\*[\s\S]*?\*\//g, '')
+          .replace(/<!\[CDATA\[/g, '').replace(/\]\]>/g, '')
+          .trim();
+
+        const attempts = [];
+        attempts.push(jsonContent);
+        const firstBrace = jsonContent.indexOf('{');
+        const firstBracket = jsonContent.indexOf('[');
+        const start = (firstBracket !== -1 && (firstBracket < firstBrace || firstBrace === -1)) ? firstBracket : firstBrace;
+        if (start !== -1) {
+          const lastBrace = jsonContent.lastIndexOf('}');
+          const lastBracket = jsonContent.lastIndexOf(']');
+          const end = Math.max(lastBrace, lastBracket);
+          if (end > start) {
+            let sliced = jsonContent.slice(start, end + 1);
+            sliced = sliced.replace(/,\s*([}\]])/g, '$1');
+            attempts.push(sliced);
+          }
+        }
+
+        for (const candidate of attempts) {
+          try {
+            const parsed = JSON.parse(candidate);
+            if (Array.isArray(parsed)) {
+              jsonLdObjects.push(...parsed);
+            } else {
+              jsonLdObjects.push(parsed);
+            }
+            break;
+          } catch (e) {
+            // continue
+          }
+        }
+      }
+    }
+    // Return with flag indicating external JSON-LD was skipped
+    return { jsonLd: jsonLdObjects.length > 0 ? jsonLdObjects : null, hasExternal: true };
+  }
   
   // Process inline JSON-LD (content between script tags)
   if (jsonLdMatches) {
@@ -513,7 +562,12 @@ async function ingestSingleUrl(url, supa, options = {}) {
     }
     
     stage = 'extract_jsonld';
-    const jsonLd = await extractJSONLD(html, url);
+    // First pass: detect external JSON-LD but skip fetching (to avoid timeouts in batch processing)
+    const jsonLdResult = await extractJSONLD(html, url, true); // skipExternal = true
+    const jsonLd = jsonLdResult && typeof jsonLdResult === 'object' && 'jsonLd' in jsonLdResult 
+      ? jsonLdResult.jsonLd 
+      : jsonLdResult;
+    const hasExternalJsonLd = jsonLdResult && typeof jsonLdResult === 'object' && jsonLdResult.hasExternal === true;
     
       // Prioritize JSON-LD objects for better entity selection (v2)
       if (jsonLd && jsonLd.length > 1) {
@@ -1252,6 +1306,7 @@ async function ingestSingleUrl(url, supa, options = {}) {
       chunks: chunkInserts.length,
       entities: jsonLd ? jsonLd.length : 0,
       jsonLdFound: !!jsonLd,
+      hasExternalJsonLd: hasExternalJsonLd || false, // Flag for external JSON-LD
       meta_description: metaDesc
     };
     
@@ -1306,6 +1361,9 @@ async function processBulkUpload(req, res) {
     
     console.log(`Processing ${urls.length} URLs in ${batches.length} batches of ${BATCH_SIZE}`);
     
+    // Collect URLs with external JSON-LD to process separately at the end
+    const urlsWithExternalJsonLd = [];
+    
     for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
       const batch = batches[batchIndex];
       console.log(`Processing batch ${batchIndex + 1}/${batches.length} (${batch.length} URLs)`);
@@ -1314,6 +1372,10 @@ async function processBulkUpload(req, res) {
       const batchPromises = batch.map(async (url) => {
         try {
           const result = await ingestSingleUrl(url, supa);
+          // Track URLs with external JSON-LD for later processing
+          if (result.hasExternalJsonLd) {
+            urlsWithExternalJsonLd.push(url);
+          }
           return { url, success: true, ...result };
         } catch (err) {
           // Check if this is a 404 error (hidden/unpublished product)
@@ -1340,6 +1402,90 @@ async function processBulkUpload(req, res) {
         console.log(`Batch ${batchIndex + 1} complete. Waiting 2 seconds before next batch...`);
         await sleep(2000);
       }
+    }
+    
+    // Process URLs with external JSON-LD separately at the end
+    if (urlsWithExternalJsonLd.length > 0) {
+      console.log(`\n🔄 Processing ${urlsWithExternalJsonLd.length} URLs with external JSON-LD separately...`);
+      const externalResults = [];
+      
+      for (const url of urlsWithExternalJsonLd) {
+        try {
+          // Re-fetch page and extract JSON-LD with external files enabled
+          const res = await fetchPage(url);
+          const html = await res.text();
+          const jsonLd = await extractJSONLD(html, url, false); // skipExternal = false (fetch external JSON-LD)
+          
+          if (!jsonLd || jsonLd.length === 0) {
+            console.warn(`⚠️ No JSON-LD found for ${url} after fetching external files`);
+            externalResults.push({ url, success: false, error: 'No JSON-LD found', externalJsonLdProcessed: false });
+            continue;
+          }
+          
+          // Find Product JSON-LD in the full set (including external)
+          const productJsonLd = jsonLd.find((item) => {
+            const itemType = (item['@type'] || '').toLowerCase();
+            return itemType === 'product';
+          });
+          
+          if (productJsonLd) {
+            // Create/update Product entity from external JSON-LD
+            const productTitle = productJsonLd.headline || productJsonLd.title || productJsonLd.name || null;
+            const productDescription = productJsonLd.description || null;
+            const productEntityHash = sha1(url + JSON.stringify(productJsonLd) + 'external');
+            
+            const productEntity = {
+              url: url,
+              kind: 'product',
+              title: productTitle,
+              description: productDescription,
+              price: productJsonLd.offers?.price || productJsonLd.offers?.[0]?.price || null,
+              price_currency: productJsonLd.offers?.priceCurrency || productJsonLd.offers?.[0]?.priceCurrency || 'GBP',
+              availability: productJsonLd.offers?.availability || productJsonLd.offers?.[0]?.availability || null,
+              sku: productJsonLd.sku || null,
+              provider: productJsonLd.brand?.name || productJsonLd.provider?.name || 'Alan Ranger Photography',
+              source_url: url,
+              raw: productJsonLd,
+              entity_hash: productEntityHash,
+              last_seen: new Date().toISOString(),
+              image_url: (Array.isArray(productJsonLd.image) ? productJsonLd.image[0] : productJsonLd.image) || null
+            };
+            
+            // Upsert Product entity
+            const { error: upsertErr } = await supa.from('page_entities').upsert([productEntity], {
+              onConflict: 'url,kind'
+            });
+            
+            if (upsertErr) {
+              throw new Error(`Failed to upsert Product entity: ${upsertErr.message}`);
+            }
+            
+            console.log(`✅ Created/updated Product entity from external JSON-LD for ${url}`);
+            externalResults.push({ url, success: true, externalJsonLdProcessed: true, productEntityCreated: true });
+          } else {
+            console.log(`ℹ️ No Product JSON-LD found in external files for ${url}`);
+            externalResults.push({ url, success: true, externalJsonLdProcessed: true, productEntityCreated: false });
+          }
+          
+          // Small delay between external JSON-LD URLs
+          await sleep(500);
+        } catch (err) {
+          externalResults.push({ url, success: false, error: err.message, externalJsonLdProcessed: false });
+          console.warn(`⚠️ Failed to process external JSON-LD for ${url}: ${err.message}`);
+        }
+      }
+      
+      // Update results with external JSON-LD processing
+      externalResults.forEach(externalResult => {
+        const existingIndex = results.findIndex(r => r.url === externalResult.url);
+        if (existingIndex >= 0) {
+          results[existingIndex] = { ...results[existingIndex], ...externalResult };
+        } else {
+          results.push(externalResult);
+        }
+      });
+      
+      console.log(`✅ Completed processing ${externalResults.filter(r => r.success).length}/${urlsWithExternalJsonLd.length} URLs with external JSON-LD\n`);
     }
     
     const successCount = results.filter(r => r.success).length;
