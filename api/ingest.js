@@ -177,7 +177,7 @@ async function fetchOnce(url, ua, referer, method = 'GET', lang, cookie) {
   try {
     return await Promise.race([fetchPromise, timeoutPromise]);
   } catch (error) {
-    if (error.message === 'Request timeout after 30 seconds') {
+    if (error.message === 'Request timeout after 10 seconds') {
       throw new Error('Request timeout');
     }
     throw error;
