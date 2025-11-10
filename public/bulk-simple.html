@@ -480,6 +480,23 @@
             </div>
           </div>
 
+          <!-- Step 2.5: Service Reconciliation (Optional) -->
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <button class="btn" onclick="reconcileServices()" id="reconcileBtn" style="background:#FF9800;">
+              🔧 Reconcile Services
+        </button>
+            <span id="stepReconcile" style="padding:4px 8px;border-radius:4px;background:#555;font-size:12px;text-align:center;">Status: idle</span>
+      </div>
+          <div>
+            <h4 style="margin:0 0 8px 0;color:#FF9800;">Reconcile Missing Service Entities (Optional)</h4>
+            <div style="margin:0;color:#ccc;font-size:14px;line-height:1.5;">
+              <div><strong>What it does:</strong> Ingests missing service entities from csv_metadata that don't have corresponding page_entities.</div>
+              <div><strong>When to use:</strong> After importing CSV files, if some service pages weren't ingested. This ensures all services in your CSV have entities.</div>
+              <div><strong>Process:</strong> Finds missing services → ingests them in batches → creates page_entities for each.</div>
+              <div><strong>Note:</strong> This is optional and can be run anytime. It processes missing services only.</div>
+            </div>
+          </div>
+
           <!-- Step 3 -->
           <div style="display: flex; flex-direction: column; gap: 8px;">
             <button class="btn step" onclick="runMapping()" id="mappingBtn">
@@ -2056,6 +2073,61 @@
         document.getElementById('stepMap').style.background = '#a62';
         document.getElementById('stepMap').textContent = 'Status: failed';
       }
+      hideOverlayProgress();
+    }
+
+    // Reconcile Services: ingest missing service entities
+    async function reconcileServices() {
+      addResult('🔧 Starting service reconciliation...');
+      document.getElementById('stepReconcile').style.background = '#FF9800';
+      document.getElementById('stepReconcile').textContent = 'Status: running';
+      showOverlayProgress('Reconciling services…', 1);
+      
+      try {
+        const token = getToken();
+        const resp = await fetch('/api/tools?action=reconcile_services', {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json', 
+            'Authorization': `Bearer ${token}` 
+          },
+          body: JSON.stringify({})
+        });
+        
+        const text = await resp.text();
+        let result;
+        try { 
+          result = JSON.parse(text); 
+        } catch { 
+          result = { ok: false, raw: text }; 
+        }
+        
+        if (!resp.ok || !result?.ok) {
+          addResult(`❌ Reconciliation failed: ${result?.error || resp.status} ${result?.detail || ''}`, 'error');
+          document.getElementById('stepReconcile').textContent = 'Status: failed';
+          document.getElementById('stepReconcile').style.background = '#a62';
+          hideOverlayProgress();
+          return;
+        }
+        
+        addResult(`✅ Reconciliation complete: ${result.ingested || 0} succeeded, ${result.failed || 0} failed`, 'success');
+        addResult(`📊 Total services: ${result.total_services || 0}, Missing: ${result.total || 0}, Already existed: ${result.already_existed || 0}`, 'info');
+        
+        if (result.message) {
+          addResult(`ℹ️ ${result.message}`, 'info');
+        }
+        
+        document.getElementById('stepReconcile').textContent = `Status: ${result.ingested || 0} ingested`;
+        document.getElementById('stepReconcile').style.background = '#2a6';
+        showToast('Service reconciliation complete ✓', 2000);
+        updateParityPill();
+        
+      } catch (e) {
+        addResult(`❌ Reconciliation error: ${e.message}`, 'error');
+        document.getElementById('stepReconcile').textContent = 'Status: error';
+        document.getElementById('stepReconcile').style.background = '#a62';
+      }
+      
       hideOverlayProgress();
     }
 
