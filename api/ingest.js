@@ -421,7 +421,7 @@ function normalizeKind(item, url) {
 }
 
 /* ========== single URL ingestion ========== */
-async function ingestSingleUrl(url, supa, options = {}) {
+export async function ingestSingleUrl(url, supa, options = {}) {
   const startTime = Date.now();
   let stage = 'fetch';
   try {

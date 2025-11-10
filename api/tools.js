@@ -692,6 +692,87 @@ export default async function handler(req, res) {
       }
     }
 
+    // --- reconcile_services: ingest missing service entities from csv_metadata ---
+    if (req.method === 'POST' && action === 'reconcile_services') {
+      try {
+        // Import ingestSingleUrl function directly
+        const { ingestSingleUrl } = await import('./ingest.js');
+        
+        const { data: svcRows, error: svcErr } = await supa
+          .from('csv_metadata')
+          .select('id, url')
+          .eq('csv_type', 'landing_service_pages')
+          .eq('kind', 'service');
+        if (svcErr) return sendJSON(res, 500, { error: 'supabase_error', detail: svcErr.message });
+
+        const csvIds = (svcRows || []).map(r => r.id);
+        if (csvIds.length === 0) {
+          return sendJSON(res, 200, { ok: true, message: 'No service rows found in csv_metadata', ingested: 0, total: 0 });
+        }
+
+        const { data: existing, error: existErr } = await supa
+          .from('page_entities')
+          .select('csv_metadata_id')
+          .eq('csv_type', 'landing_service_pages')
+          .in('csv_metadata_id', csvIds);
+        if (existErr) return sendJSON(res, 500, { error: 'supabase_error', detail: existErr.message });
+
+        const present = new Set((existing || []).map(r => r.csv_metadata_id));
+        const toCreate = (svcRows || []).filter(r => !present.has(r.id));
+        
+        if (toCreate.length === 0) {
+          return sendJSON(res, 200, { 
+            ok: true, 
+            message: 'All services already have entities', 
+            ingested: 0, 
+            total: svcRows.length,
+            missing: 0
+          });
+        }
+
+        // Process in batches to avoid timeout
+        const batchSize = 5; // Smaller batches to avoid Vercel timeout
+        const results = [];
+        let successCount = 0;
+        let failCount = 0;
+
+        for (let i = 0; i < toCreate.length; i += batchSize) {
+          const batch = toCreate.slice(i, i + batchSize);
+          const batchPromises = batch.map(async (r) => {
+            const u = String(r.url || '').replace(/\/$/, '');
+            try {
+              const result = await ingestSingleUrl(u, supa, { dryRun: false });
+              successCount++;
+              return { url: u, ok: true, chunks: result.chunks, entities: result.entities };
+            } catch (e) {
+              failCount++;
+              return { url: u, ok: false, error: e.message };
+            }
+          });
+          const batchResults = await Promise.all(batchPromises);
+          results.push(...batchResults);
+          
+          // Small delay between batches
+          if (i + batchSize < toCreate.length) {
+            await new Promise(resolve => setTimeout(resolve, 2000));
+          }
+        }
+
+        return sendJSON(res, 200, {
+          ok: true,
+          message: `Reconciliation complete: ${successCount} succeeded, ${failCount} failed`,
+          ingested: successCount,
+          failed: failCount,
+          total: toCreate.length,
+          total_services: svcRows.length,
+          already_existed: svcRows.length - toCreate.length,
+          results: results.slice(0, 20) // Return first 20 results as sample
+        });
+      } catch (err) {
+        return sendJSON(res, 500, { error: 'server_error', detail: err.message });
+      }
+    }
+
     // --- export_reconcile: compare exported mappings vs event CSV view ---
     if (req.method === 'GET' && action === 'export_reconcile') {
       try {
@@ -756,7 +837,7 @@ export default async function handler(req, res) {
     }
 
     // Unknown/unsupported
-    return sendJSON(res, 404, { error: 'not_found', detail: 'Use action=health|verify|get_urls|counts|parity|cron_status|export|export_unmapped|export_reconcile (GET) or action=search|finalize|aggregate_analytics (POST)' });
+    return sendJSON(res, 404, { error: 'not_found', detail: 'Use action=health|verify|get_urls|counts|parity|cron_status|export|export_unmapped|export_reconcile (GET) or action=search|finalize|aggregate_analytics|reconcile_services (POST)' });
   } catch (e) {
     return sendJSON(res, 500, { error: 'server_error', detail: String(e?.message || e) });
   }
