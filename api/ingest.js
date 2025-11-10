@@ -171,7 +171,7 @@ async function fetchOnce(url, ua, referer, method = 'GET', lang, cookie) {
   });
 
   const timeoutPromise = new Promise((_, reject) => {
-    setTimeout(() => reject(new Error('Request timeout after 30 seconds')), 30000);
+    setTimeout(() => reject(new Error('Request timeout after 10 seconds')), 10000);
   });
 
   try {
