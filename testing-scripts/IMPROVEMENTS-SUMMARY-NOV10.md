@@ -106,11 +106,37 @@ Added `DISTINCT ON` clauses to both views:
 ### Files Changed
 - `migrations/20251019120000_enhance_v_events_for_chat_with_sessions.sql` - Added DISTINCT ON
 
+## 5. Service Reconciliation Fix ✅
+
+### Problem
+Service reconciliation was processing 552 duplicate rows instead of 24 unique URLs. The `csv_metadata` table contained multiple entries for the same unique service URL (e.g., a single URL appearing 23 times), causing inefficient processing.
+
+### Solution
+Modified the `GET /api/tools?action=reconcile_services` endpoint to deduplicate URLs before processing:
+- Collects all `csv_metadata_id`s for missing services
+- Extracts unique URLs associated with those IDs
+- Returns only unique URLs for processing
+- Ensures each unique service URL is ingested only once
+
+### Implementation Details
+- Added URL deduplication logic in `api/tools.js`
+- Uses `Set` to track unique URLs
+- Processes only unique URLs, not duplicate `csv_metadata` rows
+
+### Results
+- ✅ Reconciliation now processes 24 unique URLs instead of 552 duplicate rows
+- ✅ All 24 missing services successfully ingested (100% success rate)
+- ✅ Efficient processing - no duplicate ingestion attempts
+- ✅ All service entities now have JSON-LD data extracted
+
+### Files Changed
+- `api/tools.js` - Added URL deduplication in reconcile_services endpoint
+
 ## Regression Test Results
 
 ### Test Configuration
 - **Baseline**: November 1, 2025 (baseline-40-question-interactive-subset-2025-11-01T13-32-45-780Z.json)
-- **Current**: November 10, 2025 (deployed-analytics-test-2025-11-10T15-58-09-401Z.json)
+- **Current**: November 10, 2025 (deployed-analytics-test-2025-11-10T22-57-04-965Z.json)
 - **Test**: 40-question interactive subset
 
 ### Results Summary
@@ -134,6 +160,27 @@ All regressions are **minor** - answer length decreases with confidence unchange
 
 **Assessment**: ✅ **NO CRITICAL REGRESSIONS** - All improvements are safe to keep.
 
+## Structured Data Comparison Results
+
+### Summary
+- **Total Structured Items**: 304 → 716 (+412, +135%) 🎉
+- **Improvements**: 32 questions with more structured data
+- **Regressions**: 2 questions (fewer articles for "Who is Alan Ranger" queries)
+- **Unchanged**: 6 questions
+
+### Key Improvements
+- **More Events**: "next workshop date" went from 20 → 40 events
+- **More Services**: Many questions now include 6 services (previously 0)
+- **More Articles**: Many questions now include 12 articles (previously 0-9)
+- **Better Cross-Linking**: Questions now return events + services + articles together
+
+### Examples
+- "Do you do astrophotography workshops": 0 → 18 items (6 services + 12 articles)
+- "Can my 14yr old attend": 0 → 24 items (6 events + 6 services + 12 articles)
+- "What types of photography services": 24 → 36 items (+12 articles)
+
+**Assessment**: ✅ **SIGNIFICANT IMPROVEMENT** - Structured data sections working much better!
+
 ## Database Schema Changes
 
 ### New Column
@@ -147,7 +194,10 @@ All regressions are **minor** - answer length decreases with confidence unchange
 
 ### Test Scripts Created
 - `testing-scripts/compare-baseline-nov1-vs-nov10.cjs` - Comparison script
+- `testing-scripts/compare-latest-baseline.cjs` - Latest baseline comparison
+- `testing-scripts/compare-structured-data.cjs` - Structured data comparison script
 - `testing-scripts/regression-test-summary-nov10.md` - Detailed regression analysis
+- `testing-scripts/REGRESSION-TEST-SUMMARY-NOV10-EVENING.md` - Evening regression test summary
 - `testing-scripts/json-schema-improvements-summary.md` - JSON-LD improvements summary
 
 ### Test Results
