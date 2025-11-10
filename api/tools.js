@@ -220,18 +220,34 @@ export default async function handler(req, res) {
           
           // Legacy mapping counts for backward compatibility
           try {
-            const { count: total, error: e1 } = await supa
-              .from('v_event_product_final_enhanced')
+            // Primary: use v_events_for_chat
+            const { count: totalV, error: eV1 } = await supa
+              .from('v_events_for_chat')
               .select('*', { head: true, count: 'exact' });
-            if (!e1) counts.total = total || 0;
-            
-            const { count: mapped, error: e2 } = await supa
-              .from('v_event_product_final_enhanced')
+            if (!eV1) counts.total = totalV || 0;
+
+            const { count: mappedV, error: eV2 } = await supa
+              .from('v_events_for_chat')
               .select('*', { head: true, count: 'exact' })
               .not('product_url', 'is', null);
-            if (!e2) counts.mapped = mapped || 0;
+            if (!eV2) counts.mapped = mappedV || 0;
+
+            // Fallback: legacy view if primary failed
+            if ((counts.total ?? 0) === 0 && (counts.mapped ?? 0) === 0) {
+              try {
+                const { count: totalL } = await supa
+                  .from('v_event_product_final_enhanced')
+                  .select('*', { head: true, count: 'exact' });
+                const { count: mappedL } = await supa
+                  .from('v_event_product_final_enhanced')
+                  .select('*', { head: true, count: 'exact' })
+                  .not('product_url', 'is', null);
+                if ((totalL ?? 0) > 0) counts.total = totalL || 0;
+                if ((mappedL ?? 0) > 0) counts.mapped = mappedL || 0;
+              } catch {}
+            }
           } catch (e) {
-            console.warn('Failed to get legacy mapping counts:', e.message);
+            console.warn('Failed to get mapping counts:', e.message);
           }
           
           return sendJSON(res, 200, { ok: true, ...counts });
