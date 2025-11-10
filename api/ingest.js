@@ -1234,132 +1234,49 @@ async function processBulkUpload(req, res) {
     const results = [];
     const urls = rows.slice(1).map(row => row[urlIdx]).filter(Boolean);
     
-    // Process URLs sequentially to avoid Vercel function timeouts
-    // (Parallel processing causes timeouts when multiple 30s fetches run simultaneously)
-    console.log(`Processing ${urls.length} URLs sequentially...`);
-    
-    // Collect URLs with external JSON-LD to process separately at the end
-    const urlsWithExternalJsonLd = [];
-    
-    // Process URLs one at a time to prevent function timeouts
-    for (let i = 0; i < urls.length; i++) {
-      const url = urls[i];
-      const progress = `[${i + 1}/${urls.length}]`;
-      
-      try {
-        console.log(`${progress} Processing ${url}...`);
-        const result = await ingestSingleUrl(url, supa);
-        // Track URLs with external JSON-LD for later processing
-        if (result.hasExternalJsonLd) {
-          urlsWithExternalJsonLd.push(url);
-        }
-        results.push({ url, success: true, ...result });
-        console.log(`${progress} ✅ Success: ${url}`);
-      } catch (err) {
-        // Check if this is a 404 error (hidden/unpublished product)
-        const is404 = err.message && (
-          err.message.includes('404') || 
-          err.message.includes('HEAD 404') ||
-          err.message.includes('GET 404')
-        );
-        
-        if (is404) {
-          results.push({ url, success: true, skipped: true, reason: 'Product hidden/unpublished (404)', error: err.message });
-          console.log(`${progress} ⏭️ Skipped (404): ${url}`);
-        } else {
-          results.push({ url, success: false, error: err.message });
-          console.log(`${progress} ❌ Failed: ${url} - ${err.message}`);
-        }
-      }
-      
-      // Small delay between URLs to be polite to the server
-      if (i < urls.length - 1) {
-        await sleep(500);
-      }
+    // Process URLs in batches of 12 for faster ingestion
+    const BATCH_SIZE = 12;
+    const batches = [];
+    for (let i = 0; i < urls.length; i += BATCH_SIZE) {
+      batches.push(urls.slice(i, i + BATCH_SIZE));
     }
     
-    // Process URLs with external JSON-LD separately at the end
-    if (urlsWithExternalJsonLd.length > 0) {
-      console.log(`\n🔄 Processing ${urlsWithExternalJsonLd.length} URLs with external JSON-LD separately...`);
-      const externalResults = [];
+    console.log(`Processing ${urls.length} URLs in ${batches.length} batches of ${BATCH_SIZE}`);
+    
+    for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
+      const batch = batches[batchIndex];
+      console.log(`Processing batch ${batchIndex + 1}/${batches.length} (${batch.length} URLs)`);
       
-      for (const url of urlsWithExternalJsonLd) {
+      // Process all URLs in the current batch in parallel
+      const batchPromises = batch.map(async (url) => {
         try {
-          // Re-fetch page and extract JSON-LD with external files enabled
-          const res = await fetchPage(url);
-          const html = await res.text();
-          const jsonLd = await extractJSONLD(html, url, false); // skipExternal = false (fetch external JSON-LD)
-          
-          if (!jsonLd || jsonLd.length === 0) {
-            console.warn(`⚠️ No JSON-LD found for ${url} after fetching external files`);
-            externalResults.push({ url, success: false, error: 'No JSON-LD found', externalJsonLdProcessed: false });
-            continue;
-          }
-          
-          // Find Product JSON-LD in the full set (including external)
-          const productJsonLd = jsonLd.find((item) => {
-            const itemType = (item['@type'] || '').toLowerCase();
-            return itemType === 'product';
-          });
-          
-          if (productJsonLd) {
-            // Create/update Product entity from external JSON-LD
-            const productTitle = productJsonLd.headline || productJsonLd.title || productJsonLd.name || null;
-            const productDescription = productJsonLd.description || null;
-            const productEntityHash = sha1(url + JSON.stringify(productJsonLd) + 'external');
-            
-            const productEntity = {
-              url: url,
-              kind: 'product',
-              title: productTitle,
-              description: productDescription,
-              price: productJsonLd.offers?.price || productJsonLd.offers?.[0]?.price || null,
-              price_currency: productJsonLd.offers?.priceCurrency || productJsonLd.offers?.[0]?.priceCurrency || 'GBP',
-              availability: productJsonLd.offers?.availability || productJsonLd.offers?.[0]?.availability || null,
-              sku: productJsonLd.sku || null,
-              provider: productJsonLd.brand?.name || productJsonLd.provider?.name || 'Alan Ranger Photography',
-              source_url: url,
-              raw: productJsonLd,
-              entity_hash: productEntityHash,
-              last_seen: new Date().toISOString(),
-              image_url: (Array.isArray(productJsonLd.image) ? productJsonLd.image[0] : productJsonLd.image) || null
-            };
-            
-            // Upsert Product entity
-            const { error: upsertErr } = await supa.from('page_entities').upsert([productEntity], {
-              onConflict: 'url,kind'
-            });
-            
-            if (upsertErr) {
-              throw new Error(`Failed to upsert Product entity: ${upsertErr.message}`);
-            }
-            
-            console.log(`✅ Created/updated Product entity from external JSON-LD for ${url}`);
-            externalResults.push({ url, success: true, externalJsonLdProcessed: true, productEntityCreated: true });
-          } else {
-            console.log(`ℹ️ No Product JSON-LD found in external files for ${url}`);
-            externalResults.push({ url, success: true, externalJsonLdProcessed: true, productEntityCreated: false });
-          }
-          
-          // Small delay between external JSON-LD URLs
-          await sleep(500);
+          const result = await ingestSingleUrl(url, supa);
+          return { url, success: true, ...result };
         } catch (err) {
-          externalResults.push({ url, success: false, error: err.message, externalJsonLdProcessed: false });
-          console.warn(`⚠️ Failed to process external JSON-LD for ${url}: ${err.message}`);
-        }
-      }
-      
-      // Update results with external JSON-LD processing
-      externalResults.forEach(externalResult => {
-        const existingIndex = results.findIndex(r => r.url === externalResult.url);
-        if (existingIndex >= 0) {
-          results[existingIndex] = { ...results[existingIndex], ...externalResult };
-        } else {
-          results.push(externalResult);
+          // Check if this is a 404 error (hidden/unpublished product)
+          const is404 = err.message && (
+            err.message.includes('404') || 
+            err.message.includes('HEAD 404') ||
+            err.message.includes('GET 404')
+          );
+          
+          if (is404) {
+            return { url, success: true, skipped: true, reason: 'Product hidden/unpublished (404)', error: err.message };
+          } else {
+            return { url, success: false, error: err.message };
+          }
         }
       });
       
-      console.log(`✅ Completed processing ${externalResults.filter(r => r.success).length}/${urlsWithExternalJsonLd.length} URLs with external JSON-LD\n`);
+      // Wait for all URLs in this batch to complete
+      const batchResults = await Promise.all(batchPromises);
+      results.push(...batchResults);
+      
+      // Rate limiting between batches (not between individual URLs)
+      if (batchIndex < batches.length - 1) {
+        console.log(`Batch ${batchIndex + 1} complete. Waiting 2 seconds before next batch...`);
+        await sleep(2000);
+      }
     }
     
     const successCount = results.filter(r => r.success).length;
