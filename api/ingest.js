@@ -285,7 +285,7 @@ async function fetchPage(url) {
 }
 
 /* ========== JSON-LD extraction ========== */
-async function extractJSONLD(html, baseUrl = null, skipExternal = false) {
+async function extractJSONLD(html, baseUrl = null) {
   // Find all script tags with type="application/ld+json"
   const scriptTagRegex = /<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gis;
   const jsonLdMatches = html.match(scriptTagRegex);
@@ -562,25 +562,7 @@ async function ingestSingleUrl(url, supa, options = {}) {
     }
     
     stage = 'extract_jsonld';
-    // Extract JSON-LD (skip external files during main batch to avoid timeouts)
-    // External JSON-LD will be processed separately at the end
-    const jsonLdResult = await extractJSONLD(html, url, true); // skipExternal = true
-    let jsonLd = null;
-    let hasExternalJsonLd = false;
-    
-    if (jsonLdResult) {
-      if (typeof jsonLdResult === 'object' && 'jsonLd' in jsonLdResult) {
-        // Returned object with hasExternal flag
-        jsonLd = jsonLdResult.jsonLd;
-        hasExternalJsonLd = jsonLdResult.hasExternal === true;
-      } else if (Array.isArray(jsonLdResult)) {
-        // Returned array directly (normal case)
-        jsonLd = jsonLdResult;
-      } else {
-        // Single object
-        jsonLd = [jsonLdResult];
-      }
-    }
+    const jsonLd = await extractJSONLD(html, url);
     
       // Prioritize JSON-LD objects for better entity selection (v2)
       if (jsonLd && jsonLd.length > 1) {
@@ -1319,7 +1301,6 @@ async function ingestSingleUrl(url, supa, options = {}) {
       chunks: chunkInserts.length,
       entities: jsonLd ? jsonLd.length : 0,
       jsonLdFound: !!jsonLd,
-      hasExternalJsonLd: hasExternalJsonLd || false, // Flag for external JSON-LD
       meta_description: metaDesc
     };
     
