@@ -300,55 +300,6 @@ async function extractJSONLD(html, baseUrl = null) {
   
   const jsonLdObjects = [];
   
-  // If skipExternal is true, return early with just inline JSON-LD and flag for external processing
-  if (skipExternal && externalMatches.length > 0) {
-    // Process inline JSON-LD only
-    if (jsonLdMatches) {
-      for (const match of jsonLdMatches) {
-        let jsonContent = match.replace(/<script[^>]*>/i, '').replace(/<\/script>/i, '').trim();
-        if (!jsonContent) continue;
-        
-        jsonContent = jsonContent
-          .replace(/<!--([\s\S]*?)-->/g, '')
-          .replace(/\/\*[\s\S]*?\*\//g, '')
-          .replace(/<!\[CDATA\[/g, '').replace(/\]\]>/g, '')
-          .trim();
-
-        const attempts = [];
-        attempts.push(jsonContent);
-        const firstBrace = jsonContent.indexOf('{');
-        const firstBracket = jsonContent.indexOf('[');
-        const start = (firstBracket !== -1 && (firstBracket < firstBrace || firstBrace === -1)) ? firstBracket : firstBrace;
-        if (start !== -1) {
-          const lastBrace = jsonContent.lastIndexOf('}');
-          const lastBracket = jsonContent.lastIndexOf(']');
-          const end = Math.max(lastBrace, lastBracket);
-          if (end > start) {
-            let sliced = jsonContent.slice(start, end + 1);
-            sliced = sliced.replace(/,\s*([}\]])/g, '$1');
-            attempts.push(sliced);
-          }
-        }
-
-        for (const candidate of attempts) {
-          try {
-            const parsed = JSON.parse(candidate);
-            if (Array.isArray(parsed)) {
-              jsonLdObjects.push(...parsed);
-            } else {
-              jsonLdObjects.push(parsed);
-            }
-            break;
-          } catch (e) {
-            // continue
-          }
-        }
-      }
-    }
-    // Return with flag indicating external JSON-LD was skipped
-    return { jsonLd: jsonLdObjects.length > 0 ? jsonLdObjects : null, hasExternal: true };
-  }
-  
   // Process inline JSON-LD (content between script tags)
   if (jsonLdMatches) {
     for (const match of jsonLdMatches) {
