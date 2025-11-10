@@ -1007,25 +1007,39 @@ async function ingestSingleUrl(url, supa, options = {}) {
       }
       
       if (!options.dryRun) {
-        // For events with multiple dates: check for existing by (url, kind, date_start) instead of just (url, kind)
-        for (const e of entities) {
+        // BATCH: Fetch all existing entities in one query to avoid sequential SELECTs
+        const existingEntitiesMap = new Map();
+        try {
+          const urlSet = new Set(entities.map(e => e.url));
+          const kindSet = new Set(entities.map(e => e.kind));
+          
+          // Fetch all existing entities for this URL and kind(s) in one query
+          let query = supa
+            .from('page_entities')
+            .select('*')
+            .in('url', Array.from(urlSet))
+            .in('kind', Array.from(kindSet));
+          
+          const { data: existingEntities } = await query;
+          
+          // Build map: key = "url|kind|date_start" for events, "url|kind" for others
+          (existingEntities || []).forEach(ex => {
+            const key = (ex.kind === 'event' && ex.date_start) 
+              ? `${ex.url}|${ex.kind}|${ex.date_start}`
+              : `${ex.url}|${ex.kind}`;
+            existingEntitiesMap.set(key, ex);
+          });
+        } catch (err) {
+          console.error('Error fetching existing entities:', err);
+        }
+        
+        // Process entities - now we can do this in parallel since we have all existing data
+        const entityPromises = entities.map(async (e) => {
           // For events, check by (url, kind, date_start) to allow multiple events per URL
-          let existing = null;
-          try {
-            let query = supa
-              .from('page_entities')
-              .select('*')
-              .eq('url', e.url)
-              .eq('kind', e.kind);
-            
-            // For events with date_start, also match by date_start to find the correct entity
-            if (e.kind === 'event' && e.date_start) {
-              query = query.eq('date_start', e.date_start);
-            }
-            
-            const resSel = await query.limit(1).maybeSingle();
-            existing = resSel?.data || null;
-          } catch {}
+          const key = (e.kind === 'event' && e.date_start)
+            ? `${e.url}|${e.kind}|${e.date_start}`
+            : `${e.url}|${e.kind}`;
+          const existing = existingEntitiesMap.get(key) || null;
 
           if (existing) {
             const merged = { ...existing };
@@ -1104,6 +1118,7 @@ async function ingestSingleUrl(url, supa, options = {}) {
             merged.last_seen = e.last_seen;
             const { error: updErr } = await supa.from('page_entities').update(merged).eq('id', existing.id);
             if (updErr) throw new Error(`Entity update failed: ${updErr.message}`);
+            return { success: true, action: 'updated' };
           } else {
             // Try insert; if unique constraint blocks, fallback to update existing natural key
             console.log(`DEBUG: Inserting entity for ${e.url} with meta_description:`, e.meta_description ? `"${e.meta_description.substring(0, 50)}..."` : 'null');
@@ -1159,13 +1174,18 @@ async function ingestSingleUrl(url, supa, options = {}) {
                 .eq('url', e.url)
                 .eq('kind', e.kind);
               if (updErr) throw new Error(`Entity upsert failed: ${updErr.message}`);
+              return { success: true, action: 'upserted' };
             }
+            return { success: true, action: 'inserted' };
           }
-        }
+        });
+        
+        // Wait for all entity operations to complete in parallel
+        await Promise.all(entityPromises);
       }
       
-      // Sync pricing to display table after entity updates
-      await supa.rpc('upsert_display_price_all');
+      // Sync pricing to display table after entity updates (fire and forget - don't block)
+      supa.rpc('upsert_display_price_all').then(() => {}).catch(() => {});
     }
     
     // Final safeguard: ensure service/landing titles are set to meta/HTML title when generic
