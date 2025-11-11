@@ -10063,8 +10063,19 @@ async function addArticlesForEnrichment(client, keywords, enriched, businessCate
   if (businessCategory !== 'Event Queries') {
     const articles = await findArticles(client, { keywords, limit: 12 });
     if (articles && articles.length > 0) {
-      enriched.articles = (enriched.articles || []).concat(articles).slice(0, 12);
-      console.log(`[ENRICH] Added ${articles.length} articles`);
+      const existing = enriched.articles || [];
+      // Deduplicate by page_url/id before concatenating
+      const seen = new Set();
+      existing.forEach(a => {
+        const key = (a.page_url || a.url || a.id || '').toString().replace(/\/+$/, '').trim();
+        if (key) seen.add(key);
+      });
+      const newArticles = articles.filter(a => {
+        const key = (a.page_url || a.url || a.id || '').toString().replace(/\/+$/, '').trim();
+        return key && !seen.has(key);
+      });
+      enriched.articles = [...existing, ...newArticles].slice(0, 12);
+      console.log(`[ENRICH] Added ${newArticles.length} new articles (${existing.length} existing, ${articles.length} total found)`);
     }
   }
 }
