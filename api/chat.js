@@ -4476,7 +4476,18 @@ function scoreArticleRow(r, kw) {
 function processAndSortResults(rows, keywords, limit) {
  const kw = (keywords || []).map(k => String(k || "").toLowerCase());
 
- return rows
+ // Deduplicate articles by page_url or id before sorting
+ const seen = new Set();
+ const unique = [];
+ for (const row of rows) {
+   const key = (row.page_url || row.url || row.id || '').toString().replace(/\/+$/, '').trim();
+   if (key && !seen.has(key)) {
+     seen.add(key);
+     unique.push(row);
+   }
+ }
+
+ return unique
  .map(r => ({ r, s: scoreArticleRow(r, kw) }))
  .sort((a,b) => b.s - a.s)
  .slice(0, limit)
