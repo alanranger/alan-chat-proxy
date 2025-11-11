@@ -1,7 +1,7 @@
 # Improvements Summary - November 10, 2025
 
 ## Overview
-This document summarizes all improvements made on November 10, 2025, including JSON-LD Product entity creation, ETag-based change detection, event-product mapping fixes, and view deduplication.
+This document summarizes all improvements made on November 10-11, 2025, including JSON-LD Product entity creation, ETag-based change detection, event-product mapping fixes, view deduplication, service reconciliation fix, and article deduplication fix.
 
 ## 1. JSON-LD Product Entity Creation ✅
 
@@ -132,6 +132,55 @@ Modified the `GET /api/tools?action=reconcile_services` endpoint to deduplicate 
 ### Files Changed
 - `api/tools.js` - Added URL deduplication in reconcile_services endpoint
 
+## 6. Article Deduplication Fix ✅
+
+### Problem
+After JSON-LD ingestion improvements, articles were appearing multiple times in the response:
+- **Issue 1**: Same article appearing 12 times (e.g., "What is ISO" article repeated 12x)
+- **Issue 2**: Each unique article appearing twice (3 unique articles shown as 6 duplicates)
+
+This was caused by:
+1. Missing deduplication in `processAndSortResults()` - articles from multiple search strategies were not deduplicated before sorting
+2. Missing deduplication in `addArticlesForEnrichment()` - articles were concatenated without checking for duplicates
+
+### Root Cause
+The JSON-LD ingestion made article search more effective by searching across multiple fields (title, page_url, json_ld_data->>headline, json_ld_data->>name). This caused:
+- The same article to match multiple search conditions
+- Multiple search strategies to find the same article
+- Articles to be added multiple times during enrichment without deduplication
+
+### Solution
+Added deduplication logic in two places:
+
+1. **`processAndSortResults()` function** (line 4476):
+   - Deduplicates articles by `page_url`/`id` before sorting
+   - Uses `Set` to track seen articles
+   - Normalizes URLs by removing trailing slashes
+
+2. **`addArticlesForEnrichment()` function** (line 10060):
+   - Deduplicates articles before concatenating with existing articles
+   - Filters out articles that already exist in `enriched.articles`
+   - Only adds new unique articles
+
+### Implementation Details
+- Deduplication key: `(page_url || url || id).toString().replace(/\/+$/, '').trim()`
+- Normalizes URLs to ensure consistent matching (removes trailing slashes)
+- Preserves article order and scoring after deduplication
+- Works with both `page_url` and `id` fields
+
+### Results
+- ✅ Articles now appear only once in response
+- ✅ Unique articles properly displayed in "Related Photography Guides" section
+- ✅ No duplicate articles in `structured.articles` or `sources.articles`
+- ✅ Fixes regression caused by improved JSON-LD search effectiveness
+
+### Files Changed
+- `api/chat.js` - Added deduplication in `processAndSortResults()` and `addArticlesForEnrichment()`
+
+### Commits
+- `c98b84a` - FIX: Deduplicate articles in processAndSortResults
+- `5fa27e2` - FIX: Deduplicate articles in addArticlesForEnrichment
+
 ## Regression Test Results
 
 ### Test Configuration
@@ -210,11 +259,11 @@ All regressions are **minor** - answer length decreases with confidence unchange
 ## Documentation Updates
 
 ### Files Updated
-- `Architecture and Handover MDs/AI_TODO_LIST_CURRENT.md` - Added completed improvements
-- `Architecture and Handover MDs/PROJECT_PROGRESS_MASTER.md` - Updated latest snapshot
+- `Architecture and Handover MDs/AI_TODO_LIST_CURRENT.md` - Added completed improvements (including article deduplication fix)
+- `Architecture and Handover MDs/PROJECT_PROGRESS_MASTER.md` - Updated latest snapshot (including article deduplication fix)
 - `testing-scripts/regression-test-summary-nov10.md` - Detailed regression analysis
 - `testing-scripts/json-schema-improvements-summary.md` - JSON-LD improvements
-- `testing-scripts/IMPROVEMENTS-SUMMARY-NOV10.md` - This document
+- `testing-scripts/IMPROVEMENTS-SUMMARY-NOV10.md` - This document (updated with article deduplication fix)
 
 ## Deployment Status
 
@@ -223,6 +272,8 @@ All regressions are **minor** - answer length decreases with confidence unchange
 - ✅ ETag change detection - Deployed to Supabase Edge Functions
 - ✅ Event-product mapping export fix - Deployed to Vercel
 - ✅ View deduplication - Deployed to Supabase (migration applied)
+- ✅ Service reconciliation fix - Deployed to Vercel
+- ✅ Article deduplication fix - Deployed to Vercel (Nov 11, 2025)
 
 ### Verification
 - ✅ All changes tested and verified in production
@@ -250,6 +301,7 @@ All improvements have been successfully implemented, tested, and deployed. The s
 - ✅ Better change detection (ETag support)
 - ✅ Correct event-product mappings
 - ✅ Deduplicated views
+- ✅ Unique articles in responses (no duplicates)
 
 **Status**: ✅ **APPROVED** - All changes are safe to keep in production.
 

@@ -1,6 +1,7 @@
 # PROJECT_PROGRESS_MASTER.md
 
 ## Latest Snapshot
+- **11 Nov 2025** — Article Deduplication Fix: Fixed duplicate articles appearing in response - articles were appearing 12x (same article repeated) and 2x (each unique article duplicated). Added deduplication in `processAndSortResults()` and `addArticlesForEnrichment()` to ensure unique articles by page_url/id. Fixes regression caused by JSON-LD ingestion making search more effective
 - **10 Nov 2025** — Service Reconciliation Fix: Fixed deduplication bug in service reconciliation - now processes 24 unique URLs instead of 552 duplicate rows. All 24 missing services successfully ingested (100% success rate). Reconciliation endpoint deduplicates URLs before processing
 - **10 Nov 2025** — 40Q Regression Test & Structured Data Analysis: Ran comprehensive regression test showing 100% success rate, +1.2% confidence improvement (81.6% → 82.8%), 6 improvements, 7 minor regressions (answer length only). Structured data comparison shows +412 items (+135% improvement), 32 improvements, 2 minor regressions. Created comparison scripts for structured data validation
 - **10 Nov 2025** — JSON-LD Product Entity Creation: Modified ingest code to create Product entities when Product JSON-LD is present. Product entities now properly stored with price, availability, currency. Both Event and Product entities coexist. Regression test: 100% success rate, +1.2% confidence improvement, better routing for course queries
