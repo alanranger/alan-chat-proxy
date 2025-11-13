@@ -278,18 +278,24 @@ async function importCourseEventMetadata(rows, supa) {
     // CRITICAL: Delete old entries for URLs in this CSV before inserting new ones
     // This ensures that when dates are rescheduled/removed, old dates are cleaned up
     const uniqueUrls = [...new Set(metadata.map(m => m.url).filter(Boolean))];
+    console.log(`[DEBUG importCourseEventMetadata] metadata.length=${metadata.length}, uniqueUrls.length=${uniqueUrls.length}`);
     if (uniqueUrls.length > 0) {
-      const { error: deleteError } = await supa
+      console.log(`[DEBUG importCourseEventMetadata] Attempting to delete old entries for ${uniqueUrls.length} URLs:`, uniqueUrls.slice(0, 3));
+      const { data: deleteData, error: deleteError } = await supa
         .from('csv_metadata')
         .delete()
         .eq('csv_type', 'course_events')
-        .in('url', uniqueUrls);
+        .in('url', uniqueUrls)
+        .select();
       if (deleteError) {
-        console.warn('Warning: Failed to delete old course_events metadata:', deleteError);
+        console.warn('[DEBUG importCourseEventMetadata] Warning: Failed to delete old course_events metadata:', deleteError);
         // Continue anyway - upsert will handle conflicts
       } else {
-        console.log(`Deleted old course_events metadata for ${uniqueUrls.length} URLs before importing new data`);
+        const deletedCount = deleteData ? deleteData.length : 0;
+        console.log(`[DEBUG importCourseEventMetadata] Deleted ${deletedCount} old course_events metadata entries for ${uniqueUrls.length} URLs before importing new data`);
       }
+    } else {
+      console.log('[DEBUG importCourseEventMetadata] No unique URLs found, skipping deletion');
     }
     
     // Use (csv_type, url, start_date) to allow same URL with multiple dates for events
@@ -362,18 +368,24 @@ async function importWorkshopEventMetadata(rows, supa) {
     // CRITICAL: Delete old entries for URLs in this CSV before inserting new ones
     // This ensures that when dates are rescheduled/removed, old dates are cleaned up
     const uniqueUrls = [...new Set(metadata.map(m => m.url).filter(Boolean))];
+    console.log(`[DEBUG importWorkshopEventMetadata] metadata.length=${metadata.length}, uniqueUrls.length=${uniqueUrls.length}`);
     if (uniqueUrls.length > 0) {
-      const { error: deleteError } = await supa
+      console.log(`[DEBUG importWorkshopEventMetadata] Attempting to delete old entries for ${uniqueUrls.length} URLs`);
+      const { data: deleteData, error: deleteError } = await supa
         .from('csv_metadata')
         .delete()
         .eq('csv_type', 'workshop_events')
-        .in('url', uniqueUrls);
+        .in('url', uniqueUrls)
+        .select();
       if (deleteError) {
-        console.warn('Warning: Failed to delete old workshop_events metadata:', deleteError);
+        console.warn('[DEBUG importWorkshopEventMetadata] Warning: Failed to delete old workshop_events metadata:', deleteError);
         // Continue anyway - upsert will handle conflicts
       } else {
-        console.log(`Deleted old workshop_events metadata for ${uniqueUrls.length} URLs before importing new data`);
+        const deletedCount = deleteData ? deleteData.length : 0;
+        console.log(`[DEBUG importWorkshopEventMetadata] Deleted ${deletedCount} old workshop_events metadata entries for ${uniqueUrls.length} URLs before importing new data`);
       }
+    } else {
+      console.log('[DEBUG importWorkshopEventMetadata] No unique URLs found, skipping deletion');
     }
     
     // Use (csv_type, url, start_date) to allow same URL with multiple dates for events
