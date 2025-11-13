@@ -275,6 +275,21 @@ async function importCourseEventMetadata(rows, supa) {
   }).filter(item => item.url);
 
   if (metadata.length > 0) {
+    // CRITICAL: Delete old entries for URLs in this CSV before inserting new ones
+    // This ensures that when dates are rescheduled/removed, old dates are cleaned up
+    const uniqueUrls = [...new Set(metadata.map(m => m.url).filter(Boolean))];
+    if (uniqueUrls.length > 0) {
+      const { error: deleteError } = await supa
+        .from('csv_metadata')
+        .delete()
+        .eq('csv_type', 'course_events')
+        .in('url', uniqueUrls);
+      if (deleteError) {
+        console.warn('Warning: Failed to delete old course_events metadata:', deleteError);
+        // Continue anyway - upsert will handle conflicts
+      }
+    }
+    
     // Use (csv_type, url, start_date) to allow same URL with multiple dates for events
     // For non-events, start_date is NULL, which PostgreSQL treats as distinct in unique constraints
     const { error } = await supa.from('csv_metadata').upsert(metadata, { onConflict: 'csv_type,url,start_date' });
@@ -342,6 +357,21 @@ async function importWorkshopEventMetadata(rows, supa) {
   }).filter(item => item.url);
 
   if (metadata.length > 0) {
+    // CRITICAL: Delete old entries for URLs in this CSV before inserting new ones
+    // This ensures that when dates are rescheduled/removed, old dates are cleaned up
+    const uniqueUrls = [...new Set(metadata.map(m => m.url).filter(Boolean))];
+    if (uniqueUrls.length > 0) {
+      const { error: deleteError } = await supa
+        .from('csv_metadata')
+        .delete()
+        .eq('csv_type', 'workshop_events')
+        .in('url', uniqueUrls);
+      if (deleteError) {
+        console.warn('Warning: Failed to delete old workshop_events metadata:', deleteError);
+        // Continue anyway - upsert will handle conflicts
+      }
+    }
+    
     // Use (csv_type, url, start_date) to allow same URL with multiple dates for events
     // For non-events, start_date is NULL, which PostgreSQL treats as distinct in unique constraints
     const { error } = await supa.from('csv_metadata').upsert(metadata, { onConflict: 'csv_type,url,start_date' });
