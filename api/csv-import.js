@@ -287,6 +287,8 @@ async function importCourseEventMetadata(rows, supa) {
       if (deleteError) {
         console.warn('Warning: Failed to delete old course_events metadata:', deleteError);
         // Continue anyway - upsert will handle conflicts
+      } else {
+        console.log(`Deleted old course_events metadata for ${uniqueUrls.length} URLs before importing new data`);
       }
     }
     
@@ -369,6 +371,8 @@ async function importWorkshopEventMetadata(rows, supa) {
       if (deleteError) {
         console.warn('Warning: Failed to delete old workshop_events metadata:', deleteError);
         // Continue anyway - upsert will handle conflicts
+      } else {
+        console.log(`Deleted old workshop_events metadata for ${uniqueUrls.length} URLs before importing new data`);
       }
     }
     
