@@ -281,18 +281,49 @@ async function importCourseEventMetadata(rows, supa) {
     console.log(`[DEBUG importCourseEventMetadata] metadata.length=${metadata.length}, uniqueUrls.length=${uniqueUrls.length}`);
     if (uniqueUrls.length > 0) {
       console.log(`[DEBUG importCourseEventMetadata] Attempting to delete old entries for ${uniqueUrls.length} URLs:`, uniqueUrls.slice(0, 3));
-      const { data: deleteData, error: deleteError } = await supa
+      
+      // First, get the IDs of old csv_metadata entries we want to delete
+      const { data: oldMetadata, error: fetchError } = await supa
         .from('csv_metadata')
-        .delete()
+        .select('id')
         .eq('csv_type', 'course_events')
-        .in('url', uniqueUrls)
-        .select();
-      if (deleteError) {
-        console.warn('[DEBUG importCourseEventMetadata] Warning: Failed to delete old course_events metadata:', deleteError);
-        // Continue anyway - upsert will handle conflicts
+        .in('url', uniqueUrls);
+      
+      if (fetchError) {
+        console.warn('[DEBUG importCourseEventMetadata] Warning: Failed to fetch old course_events metadata:', fetchError);
+      } else if (oldMetadata && oldMetadata.length > 0) {
+        const oldIds = oldMetadata.map(m => m.id);
+        console.log(`[DEBUG importCourseEventMetadata] Found ${oldIds.length} old csv_metadata entries to delete`);
+        
+        // CRITICAL: First, null out the foreign key references in page_entities
+        // This allows us to delete the csv_metadata rows without violating the foreign key constraint
+        const { error: nullifyError } = await supa
+          .from('page_entities')
+          .update({ csv_metadata_id: null })
+          .in('csv_metadata_id', oldIds);
+        
+        if (nullifyError) {
+          console.warn('[DEBUG importCourseEventMetadata] Warning: Failed to nullify foreign key references:', nullifyError);
+        } else {
+          console.log(`[DEBUG importCourseEventMetadata] Nullified foreign key references for ${oldIds.length} old csv_metadata entries`);
+        }
+        
+        // Now delete the old csv_metadata entries
+        const { data: deleteData, error: deleteError } = await supa
+          .from('csv_metadata')
+          .delete()
+          .in('id', oldIds)
+          .select();
+        
+        if (deleteError) {
+          console.warn('[DEBUG importCourseEventMetadata] Warning: Failed to delete old course_events metadata:', deleteError);
+          // Continue anyway - upsert will handle conflicts
+        } else {
+          const deletedCount = deleteData ? deleteData.length : 0;
+          console.log(`[DEBUG importCourseEventMetadata] Deleted ${deletedCount} old course_events metadata entries for ${uniqueUrls.length} URLs before importing new data`);
+        }
       } else {
-        const deletedCount = deleteData ? deleteData.length : 0;
-        console.log(`[DEBUG importCourseEventMetadata] Deleted ${deletedCount} old course_events metadata entries for ${uniqueUrls.length} URLs before importing new data`);
+        console.log('[DEBUG importCourseEventMetadata] No old entries found to delete');
       }
     } else {
       console.log('[DEBUG importCourseEventMetadata] No unique URLs found, skipping deletion');
@@ -371,18 +402,49 @@ async function importWorkshopEventMetadata(rows, supa) {
     console.log(`[DEBUG importWorkshopEventMetadata] metadata.length=${metadata.length}, uniqueUrls.length=${uniqueUrls.length}`);
     if (uniqueUrls.length > 0) {
       console.log(`[DEBUG importWorkshopEventMetadata] Attempting to delete old entries for ${uniqueUrls.length} URLs`);
-      const { data: deleteData, error: deleteError } = await supa
+      
+      // First, get the IDs of old csv_metadata entries we want to delete
+      const { data: oldMetadata, error: fetchError } = await supa
         .from('csv_metadata')
-        .delete()
+        .select('id')
         .eq('csv_type', 'workshop_events')
-        .in('url', uniqueUrls)
-        .select();
-      if (deleteError) {
-        console.warn('[DEBUG importWorkshopEventMetadata] Warning: Failed to delete old workshop_events metadata:', deleteError);
-        // Continue anyway - upsert will handle conflicts
+        .in('url', uniqueUrls);
+      
+      if (fetchError) {
+        console.warn('[DEBUG importWorkshopEventMetadata] Warning: Failed to fetch old workshop_events metadata:', fetchError);
+      } else if (oldMetadata && oldMetadata.length > 0) {
+        const oldIds = oldMetadata.map(m => m.id);
+        console.log(`[DEBUG importWorkshopEventMetadata] Found ${oldIds.length} old csv_metadata entries to delete`);
+        
+        // CRITICAL: First, null out the foreign key references in page_entities
+        // This allows us to delete the csv_metadata rows without violating the foreign key constraint
+        const { error: nullifyError } = await supa
+          .from('page_entities')
+          .update({ csv_metadata_id: null })
+          .in('csv_metadata_id', oldIds);
+        
+        if (nullifyError) {
+          console.warn('[DEBUG importWorkshopEventMetadata] Warning: Failed to nullify foreign key references:', nullifyError);
+        } else {
+          console.log(`[DEBUG importWorkshopEventMetadata] Nullified foreign key references for ${oldIds.length} old csv_metadata entries`);
+        }
+        
+        // Now delete the old csv_metadata entries
+        const { data: deleteData, error: deleteError } = await supa
+          .from('csv_metadata')
+          .delete()
+          .in('id', oldIds)
+          .select();
+        
+        if (deleteError) {
+          console.warn('[DEBUG importWorkshopEventMetadata] Warning: Failed to delete old workshop_events metadata:', deleteError);
+          // Continue anyway - upsert will handle conflicts
+        } else {
+          const deletedCount = deleteData ? deleteData.length : 0;
+          console.log(`[DEBUG importWorkshopEventMetadata] Deleted ${deletedCount} old workshop_events metadata entries for ${uniqueUrls.length} URLs before importing new data`);
+        }
       } else {
-        const deletedCount = deleteData ? deleteData.length : 0;
-        console.log(`[DEBUG importWorkshopEventMetadata] Deleted ${deletedCount} old workshop_events metadata entries for ${uniqueUrls.length} URLs before importing new data`);
+        console.log('[DEBUG importWorkshopEventMetadata] No old entries found to delete');
       }
     } else {
       console.log('[DEBUG importWorkshopEventMetadata] No unique URLs found, skipping deletion');
