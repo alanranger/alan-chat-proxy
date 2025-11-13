@@ -1052,46 +1052,89 @@ export async function ingestSingleUrl(url, supa, options = {}) {
           const eventDates = entities.filter(e => e.kind === 'event' && e.date_start).map(e => e.date_start);
           const nonEventEntities = entities.filter(e => e.kind !== 'event' || !e.date_start);
           
-          // Build queries: one for events with specific dates, one for non-events
-          const queries = [];
+          // CRITICAL: For events, we need to fetch ALL existing event dates for this URL to clean up old dates
+          // that are no longer in the source data (e.g., when an event is rescheduled)
+          const url = entities[0].url; // All entities have same URL
+          const hasEventEntities = entities.some(e => e.kind === 'event' && e.date_start);
           
-          if (eventDates.length > 0) {
-            // Fetch events matching specific dates
-            const url = entities[0].url; // All entities have same URL
-            queries.push(
-              supa
-                .from('page_entities')
-                .select('*')
-                .eq('url', url)
-                .eq('kind', 'event')
-                .in('date_start', eventDates)
-            );
+          if (hasEventEntities) {
+            // Fetch ALL existing event entities for this URL to identify old dates to delete
+            const { data: allExistingEvents, error: fetchAllErr } = await supa
+              .from('page_entities')
+              .select('*')
+              .eq('url', url)
+              .eq('kind', 'event');
+            
+            if (fetchAllErr) {
+              console.error('Error fetching all existing events:', fetchAllErr);
+            } else if (allExistingEvents && allExistingEvents.length > 0) {
+              // Extract start_date values from new entities (normalize to date-only for comparison)
+              const newEventDates = new Set();
+              entities.filter(e => e.kind === 'event').forEach(e => {
+                // Use start_date (date-only) if available, otherwise extract from date_start
+                const newStartDate = e.start_date || (e.date_start ? e.date_start.split('T')[0] : null);
+                if (newStartDate) {
+                  newEventDates.add(newStartDate);
+                }
+              });
+              
+              // Find old event dates that are no longer in the source data
+              const oldEventsToDelete = allExistingEvents.filter(ex => {
+                const exStartDate = ex.start_date || (ex.date_start ? ex.date_start.split('T')[0] : null);
+                return exStartDate && !newEventDates.has(exStartDate);
+              });
+              
+              // Delete old event dates that are no longer in source
+              if (oldEventsToDelete.length > 0) {
+                const oldEventIds = oldEventsToDelete.map(e => e.id);
+                const { error: deleteErr } = await supa
+                  .from('page_entities')
+                  .delete()
+                  .in('id', oldEventIds);
+                
+                if (deleteErr) {
+                  console.error(`Error deleting old event dates for ${url}:`, deleteErr);
+                } else {
+                  console.log(`Deleted ${oldEventsToDelete.length} old event date(s) for ${url}:`, 
+                    oldEventsToDelete.map(e => e.start_date || e.date_start?.split('T')[0]).join(', '));
+                }
+              }
+              
+              // Now fetch only the events we're about to process (matching new dates)
+              if (eventDates.length > 0) {
+                const { data: matchingEvents } = await supa
+                  .from('page_entities')
+                  .select('*')
+                  .eq('url', url)
+                  .eq('kind', 'event')
+                  .in('date_start', eventDates);
+                
+                if (matchingEvents) {
+                  matchingEvents.forEach(ex => {
+                    const key = `${ex.url}|${ex.kind}|${ex.date_start}`;
+                    existingEntitiesMap.set(key, ex);
+                  });
+                }
+              }
+            }
           }
           
           if (nonEventEntities.length > 0) {
             // Fetch non-event entities (or events without dates)
-            const url = entities[0].url;
             const kinds = [...new Set(nonEventEntities.map(e => e.kind))];
-            queries.push(
-              supa
-                .from('page_entities')
-                .select('*')
-                .eq('url', url)
-                .in('kind', kinds)
-            );
+            const { data: nonEventData } = await supa
+              .from('page_entities')
+              .select('*')
+              .eq('url', url)
+              .in('kind', kinds);
+            
+            if (nonEventData) {
+              nonEventData.forEach(ex => {
+                const key = `${ex.url}|${ex.kind}`;
+                existingEntitiesMap.set(key, ex);
+              });
+            }
           }
-          
-          // Execute all queries in parallel
-          const results = await Promise.all(queries);
-          const existingEntities = results.flatMap(r => r.data || []);
-          
-          // Build map: key = "url|kind|date_start" for events, "url|kind" for others
-          existingEntities.forEach(ex => {
-            const key = (ex.kind === 'event' && ex.date_start) 
-              ? `${ex.url}|${ex.kind}|${ex.date_start}`
-              : `${ex.url}|${ex.kind}`;
-            existingEntitiesMap.set(key, ex);
-          });
         } catch (err) {
           console.error('Error fetching existing entities:', err);
         }
