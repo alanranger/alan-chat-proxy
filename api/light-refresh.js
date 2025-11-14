@@ -1,14 +1,18 @@
 // /api/light-refresh.js
-// Lightweight refresh: read URLs from repo CSV and re-ingest changed content (runs every 8 hours via Vercel Cron), then finalize mappings.
+// Lightweight refresh: read URLs from shared resources repo CSV and re-ingest changed content (runs every 8 hours via Vercel Cron), then finalize mappings.
 // GET /api/light-refresh?action=run
 // GET /api/light-refresh?action=urls
+// NOTE: This endpoint now reads from alan-shared-resources repo (flat structure):
+//   - Raw CSVs: shared-resources/csv/ (all CSV files in root, no subfolders)
+//   - Site URLs file: shared-resources/csv/06-site-urls.csv
 
 export const config = { runtime: 'nodejs' };
 
 import fs from 'node:fs/promises';
 import { createClient } from '@supabase/supabase-js';
 
-const CSV_PATH = 'CSVSs from website/06 - site urls - Sheet1.csv';
+// Updated path: shared-resources/csv/06-site-urls.csv (flat structure, no subfolders)
+const CSV_PATH = 'shared-resources/csv/06-site-urls.csv';
 
 function send(res, status, obj){
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
@@ -157,7 +161,8 @@ async function checkForChangedUrls(urls) {
 }
 
 async function fetchCsvFromGitHub() {
-  const rawUrl = 'https://raw.githubusercontent.com/alanranger/alan-chat-proxy/main/CSVSs%20from%20website/06%20-%20site%20urls%20-%20Sheet1.csv';
+  // Updated to use alan-shared-resources repo (flat structure)
+  const rawUrl = 'https://raw.githubusercontent.com/alanranger/alan-shared-resources/main/shared-resources/csv/06-site-urls.csv';
   const resp = await fetch(rawUrl);
   if (!resp.ok) throw new Error(`raw_fetch_http_${resp.status}`);
   return resp.text();
@@ -175,12 +180,29 @@ function extractUrlsFromCsv(content) {
 
 async function readUrlsFromRepo(){
   let content = null;
+  let source = 'local';
   try {
     content = await fs.readFile(CSV_PATH, 'utf8');
-  } catch {
-    content = await fetchCsvFromGitHub();
+    source = 'local';
+    console.log(`[Light Refresh] Read URLs from local file: ${CSV_PATH}`);
+  } catch (localError) {
+    console.warn(`[Light Refresh] Local file not found (${CSV_PATH}), attempting to fetch from alan-shared-resources repo...`);
+    try {
+      content = await fetchCsvFromGitHub();
+      source = 'github';
+      console.log(`[Light Refresh] Successfully fetched URLs from alan-shared-resources repo`);
+    } catch (githubError) {
+      console.error(`[Light Refresh] ERROR: Failed to read URLs from both local file and GitHub:`, {
+        localError: localError.message,
+        githubError: githubError.message,
+        expectedPath: CSV_PATH
+      });
+      throw new Error(`Failed to read site URLs CSV. Expected location: ${CSV_PATH} in alan-shared-resources repo.`);
+    }
   }
-  return extractUrlsFromCsv(content);
+  const urls = extractUrlsFromCsv(content);
+  console.log(`[Light Refresh] Extracted ${urls.length} URLs from ${source} source`);
+  return urls;
 }
 
 function getBatchIndex() {
