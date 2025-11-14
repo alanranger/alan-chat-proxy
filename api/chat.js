@@ -25,6 +25,15 @@ process.on('uncaughtException', (error) => {
 // Seasonal terms for workshop detection and content analysis
 const seasonalTerms = ['autumn', 'spring', 'summer', 'winter', 'bluebell', 'seasonal'];
 
+// Processed CSV file paths from alan-shared-resources (absolute paths)
+// These paths are used by ingestion scripts to load processed CSV files
+export const PATH_PRODUCTS = "G:\\Dropbox\\alan ranger photography\\Website Code\\alan-shared-resources\\csv processed\\02-products-cleaned.xlsx";
+export const PATH_REVIEWS_COMBINED = "G:\\Dropbox\\alan ranger photography\\Website Code\\alan-shared-resources\\csv processed\\03-combined-product-reviews.csv";
+export const PATH_TRUSTPILOT = "G:\\Dropbox\\alan ranger photography\\Website Code\\alan-shared-resources\\csv processed\\03a-trustpilot-matched.csv";
+export const PATH_GOOGLE = "G:\\Dropbox\\alan ranger photography\\Website Code\\alan-shared-resources\\csv processed\\03b-google-matched.csv";
+export const PATH_PRODUCT_SCHEMA = "G:\\Dropbox\\alan ranger photography\\Website Code\\alan-shared-resources\\csv processed\\04-product-schema-with-ratings.csv";
+export const PATH_EVENT_PRODUCT_MAP = "G:\\Dropbox\\alan ranger photography\\Website Code\\alan-shared-resources\\csv processed\\05-event-product-mappings-latest.csv";
+
 /* ----------------------- Helper Functions ----------------------- */
 // Hash IP for privacy
 const hashIP = (ip) => {
@@ -4497,10 +4506,11 @@ function processAndSortResults(rows, keywords, limit) {
 function filterArticleKeywords(keywords){
   const allow = new Set([
     'sharp','sharpness','focus','focusing','blur','blurry','camera','camera shake','tripod','shutter','shutter speed','stabilization','ibis','vr',
-    'aperture','iso','exposure','metering','composition','white balance','depth of field','focal length','long exposure','hdr','noise','handheld'
+    'aperture','iso','exposure','metering','composition','white balance','depth of field','focal length','long exposure','hdr','noise','handheld',
+    'landscape','portrait','travel','studio','macro','wildlife','street'
   ]);
   const cleaned = Array.from(new Set((keywords||[]).map(k=>String(k).toLowerCase().trim())));
-  return cleaned.filter(k=>k.length>=3 && (allow.has(k) || /^(?:iso|hdr|vr|ibis)$/i.test(k) || /\b(sharp|focus|blur|tripod|shutter)\b/.test(k)));
+  return cleaned.filter(k=>k.length>=3 && (allow.has(k) || /^(?:iso|hdr|vr|ibis)$/i.test(k) || /\b(sharp|focus|blur|tripod|shutter|landscape|portrait|travel|studio|macro|wildlife|street)\b/.test(k)));
 }
 
 async function findArticles(client, { keywords, limit = 12, pageContext = null }) {

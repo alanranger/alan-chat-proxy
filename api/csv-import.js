@@ -12,7 +12,18 @@ export const config = { runtime: 'nodejs' };
 
 import { createClient } from '@supabase/supabase-js';
 import crypto from 'node:crypto';
+import fs from 'node:fs';
+import XLSX from 'xlsx';
 import { cleanHTMLText } from '../lib/htmlExtractor.js';
+
+// Processed CSV file paths from alan-shared-resources (absolute paths)
+// These paths are used when loading files directly (not via POST body)
+const PATH_PRODUCTS = "G:\\Dropbox\\alan ranger photography\\Website Code\\alan-shared-resources\\csv processed\\02-products-cleaned.xlsx";
+const PATH_REVIEWS_COMBINED = "G:\\Dropbox\\alan ranger photography\\Website Code\\alan-shared-resources\\csv processed\\03-combined-product-reviews.csv";
+const PATH_TRUSTPILOT = "G:\\Dropbox\\alan ranger photography\\Website Code\\alan-shared-resources\\csv processed\\03a-trustpilot-matched.csv";
+const PATH_GOOGLE = "G:\\Dropbox\\alan ranger photography\\Website Code\\alan-shared-resources\\csv processed\\03b-google-matched.csv";
+const PATH_PRODUCT_SCHEMA = "G:\\Dropbox\\alan ranger photography\\Website Code\\alan-shared-resources\\csv processed\\04-product-schema-with-ratings.csv";
+const PATH_EVENT_PRODUCT_MAP = "G:\\Dropbox\\alan ranger photography\\Website Code\\alan-shared-resources\\csv processed\\05-event-product-mappings-latest.csv";
 
 /* ========== utils ========== */
 const need = (k) => {
