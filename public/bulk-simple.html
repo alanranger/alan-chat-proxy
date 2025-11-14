@@ -1872,6 +1872,15 @@
       // Update both dashboards
       await updateCsvMetadataDashboard();
       await updateDebugControlDashboard();
+      
+      // Auto-trigger scraping after successful CSV import
+      if (successCount === totalCount && totalImported > 0) {
+        addResult('🔄 Auto-starting content ingestion (Step 2)...', 'info');
+        // Small delay to let UI update
+        setTimeout(() => {
+          scrapeWebsite(false);
+        }, 1000);
+      }
     }
 
     // --- Bulk CSV Upload ---
