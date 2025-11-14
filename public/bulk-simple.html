@@ -2158,9 +2158,12 @@
               source = 'blog';
               break;
             case 'course_events':
+              include = includeEvent;
+              source = 'event';
+              break;
             case 'workshop_events':
-              include = includeEvent || includeWorkshop;
-              source = csv_type === 'course_events' ? 'event' : 'workshop';
+              include = includeWorkshop;
+              source = 'workshop';
               break;
             case 'course_products':
               include = includeService;
