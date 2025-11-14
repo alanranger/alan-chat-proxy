@@ -2104,10 +2104,11 @@
         const token = getToken();
         const baseUrl = 'https://alan-chat-proxy.vercel.app';
         
-        addResult('🔍 Fetching URLs from current import session...', 'info');
+        addResult('🔍 Fetching URLs from csv_metadata table...', 'info');
         
-        // Get URLs from csv_metadata table - ONLY from current import session (last 5 minutes)
-        const response = await fetch(`${baseUrl}/api/tools?action=get_urls&recent=true`, {
+        // Get ALL URLs from csv_metadata table
+        // The ingestion endpoint handles duplicates by deleting old chunks before inserting new ones
+        const response = await fetch(`${baseUrl}/api/tools?action=get_urls`, {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -2123,9 +2124,9 @@
         const data = await response.json();
         const csvMetadataUrls = data.urls || [];
         
-        addResult(`📊 Found ${csvMetadataUrls.length} URLs from current import session (imported in last 5 minutes)`, 'info');
+        addResult(`📊 Found ${csvMetadataUrls.length} URLs from csv_metadata table`, 'info');
         if (csvMetadataUrls.length === 0) {
-          addResult(`⚠️ No URLs found from recent imports. Make sure you've imported CSVs in the last 5 minutes.`, 'warning');
+          addResult(`⚠️ No URLs found in csv_metadata. Make sure you've imported CSVs first (Step 1).`, 'warning');
           return;
         }
         
@@ -2358,9 +2359,18 @@
               window.urlScrapingStats[category].skipped++;
               stats.skippedCount++;
             } else {
-              addResult(`✅ Ingested: ${url}`, 'success');
+              // Log chunk and entity counts if available
+              const chunkCount = result.chunks || 0;
+              const entityCount = result.entities || 0;
+              const chunkMsg = chunkCount > 0 ? ` (${chunkCount} chunks, ${entityCount} entities)` : '';
+              addResult(`✅ Ingested: ${url}${chunkMsg}`, 'success');
               stats.successCount++;
               window.urlScrapingStats[category].success++;
+              
+              // Warn if no chunks were created
+              if (chunkCount === 0) {
+                addResult(`⚠️ Warning: No chunks created for ${url} - content may be empty or inaccessible`, 'warning');
+              }
             }
           } else {
             const reason = result && (result.error || result.detail || result.text) ? `${result.error || ''} ${result.detail || ''} ${result.text || ''}`.trim() : 'unknown';
