@@ -7843,11 +7843,13 @@ async function searchBroaderGuideArticles(client, primaryKeyword) {
 async function searchWithKeywords(client, keywords) {
   let chunks = [];
   for (const keyword of keywords) {
+    // Search across chunk_text, title, and url fields using OR condition
+    const orCondition = `chunk_text.ilike.%${keyword}%,title.ilike.%${keyword}%,url.ilike.%${keyword}%`;
     const { data: keywordChunks, error: chunksError } = await client
       .from('page_chunks')
       .select('url, title, chunk_text')
-      .ilike('chunk_text', `%${keyword}%`)
-      .limit(3);
+      .or(orCondition)
+      .limit(5); // Increased limit since we're searching multiple fields
     
     if (chunksError) {
       console.error(`[RAG Search] Error searching for keyword "${keyword}":`, chunksError);
@@ -7864,11 +7866,13 @@ async function searchWithKeywords(client, keywords) {
  
 // Helper function to search with full query
 async function searchWithFullQuery(client, query) {
+  // Search across chunk_text, title, and url fields using OR condition
+  const orCondition = `chunk_text.ilike.%${query}%,title.ilike.%${query}%,url.ilike.%${query}%`;
   const { data: fullQueryChunks, error: fullQueryError } = await client
     .from('page_chunks')
     .select('url, title, chunk_text')
-    .ilike('chunk_text', `%${query}%`)
-    .limit(2);
+    .or(orCondition)
+    .limit(5); // Increased limit since we're searching multiple fields
   
   if (fullQueryError) {
     console.error(`[RAG Search] Error searching with full query "${query}":`, fullQueryError);
