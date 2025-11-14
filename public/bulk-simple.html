@@ -2349,6 +2349,11 @@
           const result = await apiCall('/api/ingest', { url, dryRun }, { timeoutMs: TIMEOUT_MS });
           const category = categorize(url, result, source);
           
+          // Debug: Log categorization for events
+          if (source === 'event' || source === 'workshop') {
+            console.log(`[DEBUG] URL: ${url}, source: ${source}, category: ${category}`);
+          }
+          
           // Debug: Log meta description extraction results
           if (result && result.meta_description) {
             addResult(`🔍 Meta description extracted for ${url}: "${result.meta_description.substring(0, 100)}..."`, 'info');
@@ -2378,6 +2383,11 @@
               addResult(`✅ Ingested: ${url}${chunkMsg}`, 'success');
               stats.successCount++;
               window.urlScrapingStats[category].success++;
+              
+              // Debug: Log stats update for events
+              if (source === 'event' || source === 'workshop') {
+                console.log(`[DEBUG] Updated stats for category "${category}": success=${window.urlScrapingStats[category].success}, total stats:`, window.urlScrapingStats);
+              }
               
               // Warn if no chunks were created
               if (chunkCount === 0) {
