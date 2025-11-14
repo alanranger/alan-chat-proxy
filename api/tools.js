@@ -253,6 +253,82 @@ export default async function handler(req, res) {
           return sendJSON(res, 200, { ok: true, ...counts });
         }
 
+        // --- diagnose_chunks: Check actual state of chunks vs csv_metadata ---
+        if (req.method === 'GET' && action === 'diagnose_chunks') {
+          try {
+            // Get sample chunks
+            const { data: sampleChunks, error: chunksError } = await supa
+              .from('page_chunks')
+              .select('url, title, chunk_text, csv_type, csv_metadata_id')
+              .limit(10)
+              .order('url', { ascending: true });
+            
+            // Get sample csv_metadata
+            const { data: sampleMetadata, error: metadataError } = await supa
+              .from('csv_metadata')
+              .select('id, url, title, csv_type')
+              .limit(10)
+              .order('url', { ascending: true });
+            
+            // Count chunks with/without titles
+            const { data: allChunks, error: allChunksError } = await supa
+              .from('page_chunks')
+              .select('title')
+              .limit(1000);
+            
+            const chunksWithTitle = (allChunks || []).filter(c => c.title && c.title.trim()).length;
+            const chunksWithoutTitle = (allChunks || []).length - chunksWithTitle;
+            
+            // Test a search query
+            const testQuery = 'blog';
+            const { data: searchResults, error: searchError } = await supa
+              .from('page_chunks')
+              .select('url, title, chunk_text')
+              .or(`chunk_text.ilike.%${testQuery}%,title.ilike.%${testQuery}%,url.ilike.%${testQuery}%`)
+              .limit(5);
+            
+            // Check URL matching
+            const { data: blogMetadata, error: blogMetaError } = await supa
+              .from('csv_metadata')
+              .select('url, title')
+              .eq('csv_type', 'blog')
+              .limit(5);
+            
+            const { data: blogChunks, error: blogChunksError } = await supa
+              .from('page_chunks')
+              .select('url, title')
+              .eq('csv_type', 'blog')
+              .limit(5);
+            
+            return sendJSON(res, 200, {
+              ok: true,
+              sample_chunks: sampleChunks || [],
+              sample_metadata: sampleMetadata || [],
+              chunks_with_title: chunksWithTitle,
+              chunks_without_title: chunksWithoutTitle,
+              total_chunks_sampled: (allChunks || []).length,
+              test_search: {
+                query: testQuery,
+                results: searchResults || [],
+                error: searchError?.message
+              },
+              blog_comparison: {
+                metadata_urls: (blogMetadata || []).map(m => ({ url: m.url, title: m.title })),
+                chunk_urls: (blogChunks || []).map(c => ({ url: c.url, title: c.title })),
+                metadata_error: blogMetaError?.message,
+                chunks_error: blogChunksError?.message
+              },
+              errors: {
+                chunks: chunksError?.message,
+                metadata: metadataError?.message,
+                all_chunks: allChunksError?.message
+              }
+            });
+          } catch (e) {
+            return sendJSON(res, 500, { error: 'diagnosis_failed', detail: e.message });
+          }
+        }
+
     // --- parity: distinct URL counts by path using service role ---
     if (req.method === 'GET' && action === 'parity') {
       async function distinct(table, pattern){
@@ -889,7 +965,7 @@ export default async function handler(req, res) {
     }
 
     // Unknown/unsupported
-    return sendJSON(res, 404, { error: 'not_found', detail: 'Use action=health|verify|get_urls|counts|parity|cron_status|export|export_unmapped|export_reconcile|reconcile_services (GET) or action=search|finalize|aggregate_analytics|reconcile_services (POST)' });
+    return sendJSON(res, 404, { error: 'not_found', detail: 'Use action=health|verify|get_urls|counts|diagnose_chunks|parity|cron_status|export|export_unmapped|export_reconcile|reconcile_services (GET) or action=search|finalize|aggregate_analytics|reconcile_services (POST)' });
   } catch (e) {
     return sendJSON(res, 500, { error: 'server_error', detail: String(e?.message || e) });
   }
