@@ -130,6 +130,10 @@ export default async function handler(req, res) {
               query = query.gte('import_session', fiveMinutesAgo);
             }
             
+            // Supabase defaults to 1000 row limit - explicitly request more if needed
+            // Use range() to get all rows (0 to 9999 should cover all URLs)
+            query = query.range(0, 9999);
+            
             const { data: urls, error } = await query;
             
             if (error) throw error;
