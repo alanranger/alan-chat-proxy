@@ -1,7 +1,104 @@
-# Improvements Summary - November 10, 2025
+# Improvements Summary - November 10-14, 2025
 
 ## Overview
-This document summarizes all improvements made on November 10-11, 2025, including JSON-LD Product entity creation, ETag-based change detection, event-product mapping fixes, view deduplication, service reconciliation fix, and article deduplication fix.
+This document summarizes all improvements made on November 10-14, 2025, including JSON-LD Product entity creation, ETag-based change detection, event-product mapping fixes, view deduplication, service reconciliation fix, article deduplication fix, light-refresh Edge Function fix, article search keyword filtering fix, and article ingestion root cause fix.
+
+## 8. Light-Refresh Edge Function Fix - All URLs ✅ (14 Nov 2025)
+
+### Problem
+The light-refresh Edge Function was only checking event URLs from `v_events_for_chat` view, meaning blog articles, products, and other content types were never checked for changes by the automated cron job. This meant new or updated blog articles would never be automatically refreshed.
+
+### Root Cause
+The Edge Function was querying `v_events_for_chat` to get URLs to check, which only contains event URLs. Blog articles and other content types were completely ignored by the automated refresh system.
+
+### Solution
+Updated the Edge Function to query `csv_metadata` table for ALL unique URLs instead of just event URLs. This ensures all content types (blog articles, products, events, etc.) are checked for changes.
+
+### Implementation Details
+- Modified Edge Function to query `csv_metadata` table: `SELECT url FROM csv_metadata`
+- Extract unique URLs using `Array.from(new Set(...))` to handle duplicates
+- All content types now included in change detection
+- Deployed as Edge Function version 8
+
+### Results
+- ✅ All URLs now checked for changes (not just events)
+- ✅ Blog articles automatically refreshed when changed
+- ✅ Products automatically refreshed when changed
+- ✅ System now comprehensive for all content types
+
+### Files Changed
+- `supabase/functions/light-refresh/index.ts` - Changed URL source from `v_events_for_chat` to `csv_metadata`
+
+### Deployment
+- ✅ Deployed as Edge Function version 8 on 14 Nov 2025
+
+## 9. Article Search Keyword Filtering Fix ✅ (14 Nov 2025)
+
+### Problem
+Photography genre keywords (landscape, portrait, travel, studio, macro, wildlife, street) were being filtered out of article searches by the `filterArticleKeywords()` function. This meant queries like "best tripod for landscape photography" would only search for "tripod", missing genre-specific articles.
+
+### Root Cause
+The `filterArticleKeywords()` function in `api/chat.js` had a restrictive allow list that only included technical photography terms (tripod, shutter, aperture, etc.) but excluded genre keywords. This caused genre-specific articles to rank lower or not appear at all.
+
+### Solution
+Added photography genre keywords to the allow list in `filterArticleKeywords()` function:
+- Added: `landscape`, `portrait`, `travel`, `studio`, `macro`, `wildlife`, `street`
+- Updated regex pattern to include these keywords
+
+### Implementation Details
+- Modified `filterArticleKeywords()` in `api/chat.js`
+- Added genre keywords to the `allow` Set
+- Updated regex pattern to match genre keywords
+
+### Results
+- ✅ Genre-specific queries now properly find relevant articles
+- ✅ "landscape photography" queries now include "landscape" keyword
+- ✅ Articles with genre-specific titles now rank higher in search results
+
+### Files Changed
+- `api/chat.js` - Added genre keywords to `filterArticleKeywords()` function
+
+### Deployment
+- ✅ Code updated (requires Vercel deployment)
+
+## 10. Article Ingestion Root Cause Fix ✅ (14 Nov 2025)
+
+### Problem
+New blog article "Best Tripod for Landscape Photography" was not appearing in search results even after re-ingestion. The article existed in the database but had stale timestamps and wasn't being found by search queries.
+
+### Root Cause
+The article was missing from the source CSV file (`01-Alan Ranger Blog On Photography - Tips, Offers and News-CSV.csv`). The ingestion system only processes URLs that are present in the CSV metadata. Since the article wasn't in the CSV, it was never queued for ingestion, so its `last_seen` timestamp never updated and it ranked lower in search results.
+
+### Solution
+1. Added the article to the source CSV file with correct metadata
+2. Re-imported CSV metadata (Step 1)
+3. Re-ingested content (Step 2)
+4. Article now has fresh timestamps and appears in search results
+
+### Implementation Details
+- Article added to CSV with: Title, Url Id, Full Url, Categories, Tags, Image, Publish Date
+- CSV import processed the new row
+- Content ingestion processed the URL and updated chunks and `last_seen` timestamp
+
+### Results
+- ✅ Article now in CSV metadata
+- ✅ Article properly ingested with fresh timestamps
+- ✅ Article appears in search results
+- ✅ System now correctly processes all articles in CSV
+
+### Files Changed
+- `CSVSs from website/01-Alan Ranger Blog On Photography - Tips, Offers and News-CSV.csv` - Added missing article row
+
+### Testing
+- ✅ Verified article in `csv_metadata` table
+- ✅ Verified fresh `last_seen` timestamp (2025-11-14 09:31:28)
+- ✅ Verified new chunks created (2025-11-14 09:31:27)
+- ✅ Verified article appears in search results
+
+### Lessons Learned
+- **Always verify CSV contains all articles**: New articles must be added to the source CSV before they can be ingested
+- **Check CSV first**: If an article isn't appearing, check if it's in the CSV file before investigating other causes
+- **Ingestion depends on CSV**: The ingestion system is driven by CSV metadata - articles not in CSV won't be processed
 
 ## 1. JSON-LD Product Entity Creation ✅
 
@@ -239,6 +336,51 @@ All regressions are **minor** - answer length decreases with confidence unchange
 - `v_events_for_chat` - Added DISTINCT ON clause
 - `v_products_unified_open` - Added DISTINCT ON clause
 
+## 7. CSV Import Event Date Cleanup Fix ✅ (13 Nov 2025)
+
+### Problem
+When re-importing CSV files with rescheduled event dates, the old dates were not being removed from the database. The CSV import used `upsert` which would update existing entries but wouldn't delete old dates that were no longer in the CSV file. This caused:
+- Old rescheduled dates remaining in `csv_metadata` table
+- Old dates remaining in `page_entities` table
+- Chat bot displaying incorrect (old) dates instead of new rescheduled dates
+
+### Root Cause
+1. **CSV Import Logic**: The `importCourseEventMetadata()` and `importWorkshopEventMetadata()` functions used `upsert` with `onConflict: 'csv_type,url,start_date'`, which would update existing entries but not delete entries that were no longer in the CSV.
+2. **Foreign Key Constraint**: When attempting to delete old `csv_metadata` entries, the deletion failed because `page_entities` had foreign key references (`csv_metadata_id`) to those entries, preventing deletion.
+
+### Solution
+Implemented a two-step deletion process:
+1. **Extract unique URLs** from the new CSV metadata
+2. **Nullify foreign key references** in `page_entities` by setting `csv_metadata_id = NULL` for entries referencing old `csv_metadata` rows
+3. **Delete old csv_metadata entries** for those URLs
+4. **Insert new csv_metadata entries** from the CSV
+
+### Implementation Details
+- Modified `importCourseEventMetadata()` in `api/csv-import.js`:
+  - Extract unique URLs from new metadata
+  - Fetch IDs of old `csv_metadata` entries to delete
+  - Nullify `page_entities.csv_metadata_id` references
+  - Delete old `csv_metadata` entries
+  - Insert new entries
+- Modified `importWorkshopEventMetadata()` with the same logic
+- Added debug logging to track deletion operations
+
+### Results
+- ✅ Old dates successfully removed from `csv_metadata` when CSV is re-imported
+- ✅ Old dates automatically removed from `page_entities` by ingestion cleanup logic
+- ✅ Chat bot now displays correct rescheduled dates automatically
+- ✅ Verified: Old date (2025-11-29) removed, new date (2026-05-30) correctly stored
+- ✅ Foreign key constraint issue resolved by nullifying references before deletion
+
+### Files Changed
+- `api/csv-import.js` - Added deletion logic to both `importCourseEventMetadata()` and `importWorkshopEventMetadata()` functions
+
+### Testing
+- ✅ Verified old dates removed from `csv_metadata` after re-import
+- ✅ Verified old dates removed from `page_entities` after ingestion
+- ✅ Verified chat bot displays correct dates from `v_events_for_chat` view
+- ✅ Tested with Wales workshop: old date (2025-11-29) removed, new date (2026-05-30) displayed
+
 ## Testing
 
 ### Test Scripts Created
@@ -255,15 +397,16 @@ All regressions are **minor** - answer length decreases with confidence unchange
 - ✅ ETag change detection verified
 - ✅ Event-product mapping dates verified
 - ✅ View deduplication verified
+- ✅ CSV import date cleanup verified (old dates removed, new dates stored correctly)
 
 ## Documentation Updates
 
 ### Files Updated
-- `Architecture and Handover MDs/AI_TODO_LIST_CURRENT.md` - Added completed improvements (including article deduplication fix)
-- `Architecture and Handover MDs/PROJECT_PROGRESS_MASTER.md` - Updated latest snapshot (including article deduplication fix)
+- `Architecture and Handover MDs/AI_TODO_LIST_CURRENT.md` - Added completed improvements (including CSV import fix)
+- `Architecture and Handover MDs/PROJECT_PROGRESS_MASTER.md` - Updated latest snapshot (including CSV import fix)
 - `testing-scripts/regression-test-summary-nov10.md` - Detailed regression analysis
 - `testing-scripts/json-schema-improvements-summary.md` - JSON-LD improvements
-- `testing-scripts/IMPROVEMENTS-SUMMARY-NOV10.md` - This document (updated with article deduplication fix)
+- `testing-scripts/IMPROVEMENTS-SUMMARY-NOV10.md` - This document (updated with CSV import fix)
 
 ## Deployment Status
 
@@ -274,6 +417,7 @@ All regressions are **minor** - answer length decreases with confidence unchange
 - ✅ View deduplication - Deployed to Supabase (migration applied)
 - ✅ Service reconciliation fix - Deployed to Vercel
 - ✅ Article deduplication fix - Deployed to Vercel (Nov 11, 2025)
+- ✅ CSV Import Event Date Cleanup Fix - Deployed to Vercel (Nov 13, 2025)
 
 ### Verification
 - ✅ All changes tested and verified in production
@@ -302,6 +446,7 @@ All improvements have been successfully implemented, tested, and deployed. The s
 - ✅ Correct event-product mappings
 - ✅ Deduplicated views
 - ✅ Unique articles in responses (no duplicates)
+- ✅ Correct event dates (old rescheduled dates automatically removed)
 
 **Status**: ✅ **APPROVED** - All changes are safe to keep in production.
 

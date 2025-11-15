@@ -1,0 +1,17 @@
+{
+	"folders": [
+		{
+			"path": ".."
+		},
+		{
+			"path": "../../Schema Tools"
+		},
+		{
+			"path": "../../alan-shared-resources"
+		},
+		{
+			"path": "../../Schema Tools/alanranger-schema"
+		}
+	],
+	"settings": {}
+}

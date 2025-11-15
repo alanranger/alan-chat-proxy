@@ -25,15 +25,6 @@ process.on('uncaughtException', (error) => {
 // Seasonal terms for workshop detection and content analysis
 const seasonalTerms = ['autumn', 'spring', 'summer', 'winter', 'bluebell', 'seasonal'];
 
-// Processed CSV file paths from alan-shared-resources (absolute paths)
-// These paths are used by ingestion scripts to load processed CSV files
-export const PATH_PRODUCTS = "G:\\Dropbox\\alan ranger photography\\Website Code\\alan-shared-resources\\csv processed\\02-products-cleaned.xlsx";
-export const PATH_REVIEWS_COMBINED = "G:\\Dropbox\\alan ranger photography\\Website Code\\alan-shared-resources\\csv processed\\03-combined-product-reviews.csv";
-export const PATH_TRUSTPILOT = "G:\\Dropbox\\alan ranger photography\\Website Code\\alan-shared-resources\\csv processed\\03a-trustpilot-matched.csv";
-export const PATH_GOOGLE = "G:\\Dropbox\\alan ranger photography\\Website Code\\alan-shared-resources\\csv processed\\03b-google-matched.csv";
-export const PATH_PRODUCT_SCHEMA = "G:\\Dropbox\\alan ranger photography\\Website Code\\alan-shared-resources\\csv processed\\04-product-schema-with-ratings.csv";
-export const PATH_EVENT_PRODUCT_MAP = "G:\\Dropbox\\alan ranger photography\\Website Code\\alan-shared-resources\\csv processed\\05-event-product-mappings-latest.csv";
-
 /* ----------------------- Helper Functions ----------------------- */
 // Hash IP for privacy
 const hashIP = (ip) => {
@@ -7841,52 +7832,34 @@ async function searchBroaderGuideArticles(client, primaryKeyword) {
 
 // Helper function to search with keywords
 async function searchWithKeywords(client, keywords) {
-  let chunks = [];
-  for (const keyword of keywords) {
-    // Search across chunk_text, title, and url fields using OR condition
-    const orCondition = `chunk_text.ilike.%${keyword}%,title.ilike.%${keyword}%,url.ilike.%${keyword}%`;
-    const { data: keywordChunks, error: chunksError } = await client
-      .from('page_chunks')
-      .select('url, title, chunk_text')
-      .or(orCondition)
-      .limit(5); // Increased limit since we're searching multiple fields
-    
-    if (chunksError) {
-      console.error(`[RAG Search] Error searching for keyword "${keyword}":`, chunksError);
-    } else if (keywordChunks) {
-      console.log(`[RAG Search] Found ${keywordChunks.length} chunks for keyword "${keyword}"`);
-      chunks = [...chunks, ...keywordChunks];
-    } else {
-      console.log(`[RAG Search] No chunks found for keyword "${keyword}"`);
-    }
-  }
-  console.log(`[RAG Search] Total chunks found across all keywords: ${chunks.length}`);
-  return chunks;
-}
+ let chunks = [];
+ for (const keyword of keywords) {
+ const { data: keywordChunks, error: chunksError } = await client
+ .from('page_chunks')
+ .select('url, title, chunk_text')
+ .ilike('chunk_text', `%${keyword}%`)
+ .limit(3);
+ 
+ if (!chunksError && keywordChunks) {
+ chunks = [...chunks, ...keywordChunks];
+ }
+ }
+ return chunks;
+ }
  
 // Helper function to search with full query
 async function searchWithFullQuery(client, query) {
-  // Search across chunk_text, title, and url fields using OR condition
-  const orCondition = `chunk_text.ilike.%${query}%,title.ilike.%${query}%,url.ilike.%${query}%`;
-  const { data: fullQueryChunks, error: fullQueryError } = await client
-    .from('page_chunks')
-    .select('url, title, chunk_text')
-    .or(orCondition)
-    .limit(5); // Increased limit since we're searching multiple fields
-  
-  if (fullQueryError) {
-    console.error(`[RAG Search] Error searching with full query "${query}":`, fullQueryError);
-    return [];
-  }
-  
-  if (fullQueryChunks) {
-    console.log(`[RAG Search] Found ${fullQueryChunks.length} chunks for full query "${query}"`);
-    return fullQueryChunks;
-  }
-  
-  console.log(`[RAG Search] No chunks found for full query "${query}"`);
-  return [];
-}
+ const { data: fullQueryChunks, error: fullQueryError } = await client
+ .from('page_chunks')
+ .select('url, title, chunk_text')
+ .ilike('chunk_text', `%${query}%`)
+ .limit(2);
+ 
+ if (!fullQueryError && fullQueryChunks) {
+ return fullQueryChunks;
+ }
+ return [];
+ }
  
 // Helper function to remove duplicate chunks
 function removeDuplicateChunks(chunks) {
@@ -7898,10 +7871,6 @@ function removeDuplicateChunks(chunks) {
 // Helper function to search for RAG content chunks
 async function searchRagContent(context) {
  let chunks = [];
- 
- console.log(`[RAG Search] Starting search for query: "${context.query}"`);
- console.log(`[RAG Search] Keywords: ${JSON.stringify(context.keywords)}`);
- console.log(`[RAG Search] Is concept query: ${context.isConceptQuery}`);
  
  // For concept queries like "what is exposure", prioritize guide articles
  if (context.isConceptQuery) {
@@ -7931,9 +7900,7 @@ async function searchRagContent(context) {
  chunks = [...chunks, ...fullQueryChunks];
  
  // Remove duplicates
- const uniqueChunks = removeDuplicateChunks(chunks);
- console.log(`[RAG Search] Final result: ${uniqueChunks.length} unique chunks after deduplication`);
- return uniqueChunks;
+ return removeDuplicateChunks(chunks);
 }
 
 // Helper function to score and filter chunks

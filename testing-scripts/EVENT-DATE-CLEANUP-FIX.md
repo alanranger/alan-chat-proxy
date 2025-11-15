@@ -207,21 +207,34 @@ Deleted 1 old event date(s) for https://www.alanranger.com/.../event-url: 2025-0
 
 ## Related Issues
 
+- **CSV Import Event Date Cleanup Fix** (Nov 13, 2025): Fixed CSV import to delete old event dates from `csv_metadata` before inserting new ones. This ensures that when CSVs are re-imported with rescheduled dates, old dates are removed from the source metadata table. This works in conjunction with the ingestion cleanup logic to ensure complete date cleanup.
+- **Light-Refresh Edge Function Fix** (Nov 14, 2025): Fixed Edge Function to check all URLs from `csv_metadata` instead of just events. This ensures all content types are checked for changes by the automated cron job.
+- **Article Ingestion Root Cause Fix** (Nov 14, 2025): Identified that articles missing from CSV won't be ingested. Articles must be in the source CSV file for the ingestion system to process them.
 - **Event-Product Mapping Export Fix** (Nov 10, 2025): Fixed date overwrite bug in export
 - **View Deduplication** (Nov 10, 2025): Added DISTINCT ON clauses to prevent duplicate rows
 - **Duplicate Event Handling** (Nov 10, 2025): Fixed unique constraint matching for events with dates
 
 ## Files Changed
 
-- `api/ingest.js` - Added cleanup logic (lines 1055-1097)
+- `api/ingest.js` - Added cleanup logic (lines 1055-1097) - Removes old dates from `page_entities` during ingestion
+- `api/csv-import.js` - Added deletion logic to `importCourseEventMetadata()` and `importWorkshopEventMetadata()` (Nov 13, 2025) - Removes old dates from `csv_metadata` during CSV import
+- `supabase/functions/light-refresh/index.ts` - Changed URL source from `v_events_for_chat` to `csv_metadata` (Nov 14, 2025) - Now checks all URLs, not just events
+- `api/chat.js` - Added genre keywords to `filterArticleKeywords()` (Nov 14, 2025) - Now includes landscape, portrait, travel, studio, macro, wildlife, street
 - `testing-scripts/test-event-date-cleanup.cjs` - Test script (new file)
 - `testing-scripts/EVENT-DATE-CLEANUP-FIX.md` - This documentation (new file)
 
 ## Deployment
 
-- **Date**: November 11, 2025
-- **Commit**: `f97e1c5`
-- **Status**: ✅ Deployed to production
+- **Ingestion Cleanup Logic**: November 11, 2025
+  - **Commit**: `f97e1c5`
+  - **Status**: ✅ Deployed to production
+- **CSV Import Cleanup Logic**: November 13, 2025
+  - **Status**: ✅ Deployed to production
+  - **Note**: This fix ensures `csv_metadata` is cleaned up before ingestion, working in conjunction with the ingestion cleanup logic
+- **Light-Refresh Edge Function Fix**: November 14, 2025
+  - **Status**: ✅ Deployed as Edge Function version 8
+- **Article Search Keyword Filtering Fix**: November 14, 2025
+  - **Status**: ✅ Code updated (requires Vercel deployment)
 
 ## Future Enhancements
 

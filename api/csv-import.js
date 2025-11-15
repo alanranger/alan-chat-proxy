@@ -2,11 +2,6 @@
 // Consolidated CSV import for all content types
 // Handles: blog, workshop, service, product, and event imports
 // Replaces: csv-bulk-import.js, csv-multi-import.js, csv-events-import.js
-// 
-// NOTE: CSV files are now sourced from alan-shared-resources repo (flat structure):
-//   - Raw CSVs: shared-resources/csv/ (all CSV files in root, no subfolders)
-//   - Processed CSVs: shared-resources/csv processed/
-//   - File naming: 01-blog-posts.csv, 02-beginners-photography-lessons.csv, etc.
 
 export const config = { runtime: 'nodejs' };
 
@@ -1528,12 +1523,6 @@ export default async function handler(req, res) {
     const { csvData, contentType } = req.body || {};
     if (!csvData) return sendJSON(res, 400, { error: 'bad_request', detail: 'Provide "csvData"', stage });
     if (!contentType) return sendJSON(res, 400, { error: 'bad_request', detail: 'Provide "contentType" (blog, workshop, service, product, event)', stage });
-    
-    // Log warning about CSV source location
-    // CSV files are now sourced from alan-shared-resources repo (flat structure):
-    // All raw CSVs are in shared-resources/csv/ (no subfolders)
-    const expectedPath = 'shared-resources/csv/';
-    console.log(`[CSV Import] Processing ${contentType} CSV from alan-shared-resources repo (flat structure: ${expectedPath})`);
 
     stage = 'db_client';
     const supa = createClient(need('SUPABASE_URL'), need('SUPABASE_SERVICE_ROLE_KEY'));
