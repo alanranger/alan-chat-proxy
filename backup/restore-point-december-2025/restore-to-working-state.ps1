@@ -1,7 +1,7 @@
-# RESTORE TO WORKING STATE - December 2025
+# RESTORE TO WORKING STATE - October 2025
 # PowerShell script to restore the system to the working state
 
-Write-Host "🔄 RESTORING TO WORKING STATE - December 2025" -ForegroundColor Green
+Write-Host "🔄 RESTORING TO WORKING STATE - October 2025" -ForegroundColor Green
 Write-Host "=" * 50
 
 # Check if we're in the right directory
@@ -61,7 +61,7 @@ Write-Host "`n🚀 Deploying restored state..." -ForegroundColor Yellow
 # Commit and push changes
 try {
     git add .
-    git commit -m "Restore to working state - December 2025 restore point"
+    git commit -m "Restore to working state - October 2025 restore point (commit 593448f)"
     git push
     Write-Host "   ✅ Changes committed and pushed" -ForegroundColor Green
 } catch {
@@ -71,7 +71,7 @@ try {
 
 Write-Host "`n" + "=" * 50
 Write-Host "🎉 RESTORE COMPLETE!" -ForegroundColor Green
-Write-Host "✅ System restored to working state - December 2025" -ForegroundColor Green
+Write-Host "✅ System restored to working state - October 2025 (commit 593448f)" -ForegroundColor Green
 Write-Host "✅ Courses and workshops should be working perfectly" -ForegroundColor Green
 Write-Host "✅ Ready to proceed with articles and general questions" -ForegroundColor Green
 Write-Host "=" * 50

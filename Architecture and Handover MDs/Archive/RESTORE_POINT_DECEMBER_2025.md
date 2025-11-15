@@ -1,8 +1,8 @@
-# RESTORE POINT - December 2025
+# RESTORE POINT - October 2025
 ## Working Version: Courses & Workshops Complete
 
-**Date Created**: December 2025  
-**Git Commit**: `54633ce` - "Update documentation with December 2025 fixes and improvements"  
+**Date Created**: October 12, 2025  
+**Git Commit**: `593448f` - "Force Vercel redeploy to clear cache for Lightroom course fixes"  
 **Status**: ✅ **STABLE - Courses & Workshops Working Perfectly**  
 **Next Phase**: Articles & General Questions
 
@@ -115,8 +115,8 @@ FROM page_entities WHERE kind = 'product'
 - **`v_articles_unified`** - Ready for article improvements
 
 ### **Documentation**
-- **`Architecture and Handover/SYSTEM_ARCHITECTURE.md`** - Updated December 2025
-- **`Architecture and Handover/MIGRATION_GUIDE.md`** - Updated December 2025
+- **`Architecture and Handover/SYSTEM_ARCHITECTURE.md`** - Updated October 2025
+- **`Architecture and Handover/MIGRATION_GUIDE.md`** - Updated October 2025
 
 ---
 
@@ -127,7 +127,7 @@ If issues arise during article/general question improvements:
 ### **Quick Rollback**
 ```bash
 # Revert to this working state
-git checkout 54633ce
+git checkout 593448f
 git push --force-with-lease
 ```
 
@@ -145,7 +145,7 @@ WHERE title ILIKE '%beginners photography course%'
 
 ### **Force Vercel Redeploy**
 ```bash
-git commit --allow-empty -m "Restore to working state - December 2025"
+git commit --allow-empty -m "Restore to working state - October 2025"
 git push
 ```
 
@@ -186,5 +186,5 @@ git push
 **🎉 This restore point represents a solid, working foundation for courses and workshops. The system is stable and ready for the next phase of improvements focusing on articles and general questions.**
 
 **Created by**: AI Assistant  
-**Date**: December 2025  
+**Date**: October 12, 2025  
 **Status**: Ready for next phase development

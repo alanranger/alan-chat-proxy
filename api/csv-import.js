@@ -208,9 +208,8 @@ async function importBlogMetadata(rows, supa) {
   }).filter(item => item.url);
 
   if (metadata.length > 0) {
-    // Use (csv_type, url, start_date) to allow same URL with multiple dates for events
-    // For non-events, start_date is NULL, which PostgreSQL treats as distinct in unique constraints
-    const { error } = await supa.from('csv_metadata').upsert(metadata, { onConflict: 'csv_type,url,start_date' });
+    // For non-events (start_date is NULL), use (csv_type, url) only - partial unique index prevents duplicates
+    const { error } = await supa.from('csv_metadata').upsert(metadata, { onConflict: 'csv_type,url' });
     if (error) throw error;
     
     // Track successful imports
@@ -329,8 +328,8 @@ async function importCourseEventMetadata(rows, supa) {
       console.log('[DEBUG importCourseEventMetadata] No unique URLs found, skipping deletion');
     }
     
-    // Use (csv_type, url, start_date) to allow same URL with multiple dates for events
-    // For non-events, start_date is NULL, which PostgreSQL treats as distinct in unique constraints
+    // For events (start_date is NOT NULL), use (csv_type, url, start_date) to allow multiple dates per URL
+    // For non-events (start_date is NULL), use (csv_type, url) only - partial unique index prevents duplicates
     const { error } = await supa.from('csv_metadata').upsert(metadata, { onConflict: 'csv_type,url,start_date' });
     if (error) throw error;
     
@@ -450,8 +449,8 @@ async function importWorkshopEventMetadata(rows, supa) {
       console.log('[DEBUG importWorkshopEventMetadata] No unique URLs found, skipping deletion');
     }
     
-    // Use (csv_type, url, start_date) to allow same URL with multiple dates for events
-    // For non-events, start_date is NULL, which PostgreSQL treats as distinct in unique constraints
+    // For events (start_date is NOT NULL), use (csv_type, url, start_date) to allow multiple dates per URL
+    // For non-events (start_date is NULL), use (csv_type, url) only - partial unique index prevents duplicates
     const { error } = await supa.from('csv_metadata').upsert(metadata, { onConflict: 'csv_type,url,start_date' });
     if (error) throw error;
     
@@ -504,8 +503,8 @@ async function importCourseProductMetadata(rows, supa) {
   }).filter(item => item.url);
 
   if (metadata.length > 0) {
-    // Use (csv_type, url, start_date) to allow same URL with multiple dates for events
-    // For non-events, start_date is NULL, which PostgreSQL treats as distinct in unique constraints
+    // For events (start_date is NOT NULL), use (csv_type, url, start_date) to allow multiple dates per URL
+    // For non-events (start_date is NULL), use (csv_type, url) only - partial unique index prevents duplicates
     const { error } = await supa.from('csv_metadata').upsert(metadata, { onConflict: 'csv_type,url,start_date' });
     if (error) throw error;
     
@@ -558,8 +557,8 @@ async function importWorkshopProductMetadata(rows, supa) {
   }).filter(item => item.url);
 
   if (metadata.length > 0) {
-    // Use (csv_type, url, start_date) to allow same URL with multiple dates for events
-    // For non-events, start_date is NULL, which PostgreSQL treats as distinct in unique constraints
+    // For events (start_date is NOT NULL), use (csv_type, url, start_date) to allow multiple dates per URL
+    // For non-events (start_date is NULL), use (csv_type, url) only - partial unique index prevents duplicates
     const { error } = await supa.from('csv_metadata').upsert(metadata, { onConflict: 'csv_type,url,start_date' });
     if (error) throw error;
     
@@ -592,8 +591,8 @@ async function importSiteUrlMetadata(rows, supa) {
   })).filter(item => item.url);
 
   if (metadata.length > 0) {
-    // Use (csv_type, url, start_date) to allow same URL with multiple dates for events
-    // For non-events, start_date is NULL, which PostgreSQL treats as distinct in unique constraints
+    // For events (start_date is NOT NULL), use (csv_type, url, start_date) to allow multiple dates per URL
+    // For non-events (start_date is NULL), use (csv_type, url) only - partial unique index prevents duplicates
     const { error } = await supa.from('csv_metadata').upsert(metadata, { onConflict: 'csv_type,url,start_date' });
     if (error) throw error;
   }
@@ -633,9 +632,8 @@ async function importProductSchemaMetadata(rows, supa) {
   }).filter(item => item.url);
 
   if (metadata.length > 0) {
-    // Use (csv_type, url, start_date) to allow same URL with multiple dates for events
-    // For non-events, start_date is NULL, which PostgreSQL treats as distinct in unique constraints
-    const { error } = await supa.from('csv_metadata').upsert(metadata, { onConflict: 'csv_type,url,start_date' });
+    // For non-events (start_date is NULL), use (csv_type, url) only - partial unique index prevents duplicates
+    const { error } = await supa.from('csv_metadata').upsert(metadata, { onConflict: 'csv_type,url' });
     if (error) throw error;
   }
   return { count: metadata.length };
@@ -675,9 +673,8 @@ async function importLandingServicePageMetadata(rows, supa) {
     console.log(`[DEBUG importLandingServicePageMetadata] Filtered to ${metadata.length} valid records`);
 
     if (metadata.length > 0) {
-      // Use (csv_type, url, start_date) to allow same URL with multiple dates for events
-    // For non-events, start_date is NULL, which PostgreSQL treats as distinct in unique constraints
-    const { error } = await supa.from('csv_metadata').upsert(metadata, { onConflict: 'csv_type,url,start_date' });
+      // For non-events (start_date is NULL), use (csv_type, url) only - partial unique index prevents duplicates
+      const { error } = await supa.from('csv_metadata').upsert(metadata, { onConflict: 'csv_type,url' });
       if (error) {
         console.log(`[DEBUG importLandingServicePageMetadata] Database error:`, error);
         throw error;

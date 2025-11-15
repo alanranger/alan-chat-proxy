@@ -100,6 +100,7 @@ All older references or notes can be found inside `/Archive/AI_TODO_LIST_2025-01
 ## 🚧 Active Tasks (Current Focus)
 | Priority | Task | Description | Owner | Status |
 |-----------|------|--------------|-------|--------|
+| 🟡 P2 | **Investigate "Chunks found: 0" in RAG Search** | Debug why RAG search is returning 0 chunks for queries. Chunks provide detailed content text for answer generation. System has fallback to article metadata, but chunks improve answer quality. Check `searchWithKeywords()` and `searchWithFullQuery()` functions in `api/chat.js` - verify PostgREST OR conditions and keyword encoding. Note: Responses are still good, so not blocking, but worth investigating for quality improvement | Cursor | Pending |
 | 🔴 P1 | **Complexity Refactoring** | ✅ 5 high-complexity functions refactored to ≤15 complexity - all verified with 40Q tests | Cursor | ✅ Complete |
 | 🔴 P1 | **Add Service Links for Personalised Feedback** | ✅ Added service link enrichment for "personalised feedback" queries - now displays online Zoom 1-2-1 and face-to-face private lesson service tiles | Cursor | ✅ Complete |
 | 🔴 P1 | **Refactor enrichAdviceWithRelatedInfo Complexity** | ✅ Reduced cognitive complexity from 21 to ≤15 by extracting 3 helper functions | Cursor | ✅ Complete |

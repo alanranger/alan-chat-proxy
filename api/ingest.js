@@ -2,6 +2,12 @@
 // Consolidated ingestion endpoint
 // Handles both single URL ingestion and bulk NDJSON streaming
 // Replaces: bulk-upload.js, ingest-embed-replace.js
+//
+// NOTE: CSV metadata is now sourced from alan-shared-resources repo (flat structure):
+//   - Raw CSVs: shared-resources/csv/ (all CSV files in root, no subfolders)
+//   - Processed CSVs: shared-resources/csv processed/
+//   - File naming: 01-blog-posts.csv, 02-beginners-photography-lessons.csv, etc.
+// The ingestion system queries csv_metadata table which is populated from these CSV files.
 
 export const config = { 
   runtime: 'nodejs',

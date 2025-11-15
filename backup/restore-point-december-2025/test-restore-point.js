@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 
-// TEST RESTORE POINT - December 2025
+// TEST RESTORE POINT - October 2025
 // Verifies that courses and workshops are working perfectly
 
 async function testRestorePoint() {
-  console.log("🧪 TESTING RESTORE POINT - December 2025");
+  console.log("🧪 TESTING RESTORE POINT - October 2025 (commit 593448f)");
   console.log("=" * 50);
   
   const tests = [

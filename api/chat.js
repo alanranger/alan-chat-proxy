@@ -8204,7 +8204,7 @@ async function searchKeywordEntities(client, searchKeywords) {
  .select('url, title, description, meta_description, location, date_start, kind, publish_date, last_seen')
  .or(searchKeywords.map(k => `title.ilike.%${k}%,description.ilike.%${k}%,location.ilike.%${k}%`).join(','))
  .eq('kind', 'article')
- .limit(25);
+ .limit(12);
  
  if (entitiesError) {
  console.error(`âŒ Entity search error:`, entitiesError);
@@ -9014,7 +9014,7 @@ async function processRagSearchResults(context) {
   // Search for articles for equipment advice
   results.articles = await findArticles(context.client, { 
     keywords: context.keywords, 
-    limit: 25, 
+    limit: 12, 
     pageContext: context.pageContext 
   });
 
@@ -9100,7 +9100,7 @@ async function handleAboutAlanQuery(client, query) {
   if ((qlc.includes("alan ranger") || qlc.includes("who is")) && (qlc.includes("who") || qlc.includes("background") || qlc.includes("about") || qlc.includes("photographic background"))) {
     console.log(`✅ About Alan query detected, returning bio as advice: "${query}"`);
     const keywords = extractKeywords(query);
-    const articles = await findArticles(client, { keywords, limit: 25 });
+    const articles = await findArticles(client, { keywords, limit: 12 });
     return {
       success: true,
       confidence: 0.8,
@@ -9213,7 +9213,7 @@ async function handleEquipmentQuery(client, query) {
   
   console.log(`✅ Equipment question detected, routing to articles/advice: "${query}"`);
   const keywords = extractKeywords(query);
-  const articles = await findArticles(client, { keywords, limit: 25 });
+  const articles = await findArticles(client, { keywords, limit: 12 });
   
   const qlc = query.toLowerCase();
   const isRecommendationQuery = qlc.includes('recommend') || qlc.includes('suggest') || qlc.includes('best') || qlc.includes('should i buy');
@@ -10206,7 +10206,7 @@ async function addArticlesForEnrichment(client, keywords, enriched, businessCate
   // Add articles for most categories (except pure event queries)
   // This improves diversity and quality of related information
   if (businessCategory !== 'Event Queries') {
-    const articles = await findArticles(client, { keywords, limit: 25 }); // Increased from 12 to 25 to ensure more articles available
+    const articles = await findArticles(client, { keywords, limit: 12 });
     if (articles && articles.length > 0) {
       const existing = enriched.articles || [];
       // Deduplicate by page_url/id before concatenating
@@ -10219,8 +10219,7 @@ async function addArticlesForEnrichment(client, keywords, enriched, businessCate
         const key = (a.page_url || a.url || a.id || '').toString().replace(/\/+$/, '').trim();
         return key && !seen.has(key);
       });
-      // Increased limit from 12 to 25 to allow more articles in response
-      enriched.articles = [...existing, ...newArticles].slice(0, 25);
+      enriched.articles = [...existing, ...newArticles].slice(0, 12);
       console.log(`[ENRICH] Added ${newArticles.length} new articles (${existing.length} existing, ${articles.length} total found)`);
     }
   }
