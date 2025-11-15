@@ -1,4 +1,21 @@
 // /api/csv-import.js
+
+// Helper function to batch delete operations (PostgREST has limits on .in() clause size)
+async function batchDeleteMetadata(supa, csvType, urls, batchSize = 100) {
+  if (!urls || urls.length === 0) return;
+  
+  // Process in batches
+  for (let i = 0; i < urls.length; i += batchSize) {
+    const batch = urls.slice(i, i + batchSize);
+    const { error } = await supa
+      .from('csv_metadata')
+      .delete()
+      .eq('csv_type', csvType)
+      .in('url', batch)
+      .is('start_date', null);
+    if (error) throw error;
+  }
+}
 // Consolidated CSV import for all content types
 // Handles: blog, workshop, service, product, and event imports
 // Replaces: csv-bulk-import.js, csv-multi-import.js, csv-events-import.js
@@ -516,16 +533,10 @@ async function importCourseProductMetadata(rows, supa) {
 
   if (metadata.length > 0) {
     // For non-events (start_date is NULL), manually handle upsert since PostgREST doesn't support partial indexes in onConflict
-    // Delete existing rows first, then insert new ones
+    // Delete existing rows first, then insert new ones (batched for large URL lists)
     const urls = metadata.map(m => m.url).filter(Boolean);
     if (urls.length > 0) {
-      const { error: deleteError } = await supa
-        .from('csv_metadata')
-        .delete()
-        .eq('csv_type', 'course_products')
-        .in('url', urls)
-        .is('start_date', null);
-      if (deleteError) throw deleteError;
+      await batchDeleteMetadata(supa, 'course_products', urls);
     }
     
     const { error } = await supa.from('csv_metadata').insert(metadata);
@@ -626,16 +637,10 @@ async function importSiteUrlMetadata(rows, supa) {
 
   if (metadata.length > 0) {
     // For non-events (start_date is NULL), manually handle upsert since PostgREST doesn't support partial indexes in onConflict
-    // Delete existing rows first, then insert new ones
+    // Delete existing rows first, then insert new ones (batched for large URL lists)
     const urls = metadata.map(m => m.url).filter(Boolean);
     if (urls.length > 0) {
-      const { error: deleteError } = await supa
-        .from('csv_metadata')
-        .delete()
-        .eq('csv_type', 'site_urls')
-        .in('url', urls)
-        .is('start_date', null);
-      if (deleteError) throw deleteError;
+      await batchDeleteMetadata(supa, 'site_urls', urls);
     }
     
     const { error } = await supa.from('csv_metadata').insert(metadata);
@@ -731,16 +736,12 @@ async function importLandingServicePageMetadata(rows, supa) {
 
     if (metadata.length > 0) {
       // For non-events (start_date is NULL), manually handle upsert since PostgREST doesn't support partial indexes in onConflict
-      // Delete existing rows first, then insert new ones
+      // Delete existing rows first, then insert new ones (batched for large URL lists)
       const urls = metadata.map(m => m.url).filter(Boolean);
       if (urls.length > 0) {
-        const { error: deleteError } = await supa
-          .from('csv_metadata')
-          .delete()
-          .eq('csv_type', 'landing_service_pages')
-          .in('url', urls)
-          .is('start_date', null);
-        if (deleteError) {
+        try {
+          await batchDeleteMetadata(supa, 'landing_service_pages', urls);
+        } catch (deleteError) {
           console.log(`[DEBUG importLandingServicePageMetadata] Delete error:`, deleteError);
           throw deleteError;
         }
