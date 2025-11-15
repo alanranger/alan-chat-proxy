@@ -503,9 +503,8 @@ async function importCourseProductMetadata(rows, supa) {
   }).filter(item => item.url);
 
   if (metadata.length > 0) {
-    // For events (start_date is NOT NULL), use (csv_type, url, start_date) to allow multiple dates per URL
     // For non-events (start_date is NULL), use (csv_type, url) only - partial unique index prevents duplicates
-    const { error } = await supa.from('csv_metadata').upsert(metadata, { onConflict: 'csv_type,url,start_date' });
+    const { error } = await supa.from('csv_metadata').upsert(metadata, { onConflict: 'csv_type,url' });
     if (error) throw error;
     
     // Track successful imports
@@ -557,9 +556,8 @@ async function importWorkshopProductMetadata(rows, supa) {
   }).filter(item => item.url);
 
   if (metadata.length > 0) {
-    // For events (start_date is NOT NULL), use (csv_type, url, start_date) to allow multiple dates per URL
     // For non-events (start_date is NULL), use (csv_type, url) only - partial unique index prevents duplicates
-    const { error } = await supa.from('csv_metadata').upsert(metadata, { onConflict: 'csv_type,url,start_date' });
+    const { error } = await supa.from('csv_metadata').upsert(metadata, { onConflict: 'csv_type,url' });
     if (error) throw error;
     
     // Track successful imports
@@ -591,9 +589,8 @@ async function importSiteUrlMetadata(rows, supa) {
   })).filter(item => item.url);
 
   if (metadata.length > 0) {
-    // For events (start_date is NOT NULL), use (csv_type, url, start_date) to allow multiple dates per URL
     // For non-events (start_date is NULL), use (csv_type, url) only - partial unique index prevents duplicates
-    const { error } = await supa.from('csv_metadata').upsert(metadata, { onConflict: 'csv_type,url,start_date' });
+    const { error } = await supa.from('csv_metadata').upsert(metadata, { onConflict: 'csv_type,url' });
     if (error) throw error;
   }
   return { count: metadata.length };
