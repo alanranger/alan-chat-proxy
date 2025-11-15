@@ -1284,6 +1284,12 @@
           const actualCsvType = result.csv_type || csvType;
           addResult(`✅ ${actualCsvType} metadata import successful: ${result.metadata_imported}/${actualRowCount} records`, 'success');
           
+          // Track which csv_types were imported in this session for filtering ingestion
+          if (!window.__importedCsvTypesInSession) {
+            window.__importedCsvTypesInSession = new Set();
+          }
+          window.__importedCsvTypesInSession.add(actualCsvType);
+          
           // Update csvRowCounts object for dashboard display (use actual csv_type from API response)
           // This handles cases where files are reclassified (e.g., File 05: workshop_events → workshop_products)
           if (csvRowCounts.hasOwnProperty(actualCsvType)) {
@@ -1651,6 +1657,10 @@
     async function bulkUploadCSVs(){
       showToast('Preparing selected CSVs for metadata import…');
       console.log('bulkUploadCSVs called');
+      
+      // Reset tracking of imported csv_types for this new session
+      window.__importedCsvTypesInSession = new Set();
+      
       try {
         const input = document.getElementById('bulkCsvs');
         console.log('Input element:', input);
@@ -1872,9 +1882,22 @@
         // Store current session URLs for dashboard display
         window.currentSessionUrls = csvMetadataUrls;
         
-        // Filter URLs based on checkboxes and map to source categories
+        // Filter URLs based on checkboxes AND only include csv_types imported in current session
+        const importedTypes = window.__importedCsvTypesInSession || new Set();
+        const hasImportedTypes = importedTypes.size > 0;
+        
+        if (hasImportedTypes) {
+          addResult(`🔍 Filtering to only csv_types imported in this session: ${Array.from(importedTypes).join(', ')}`, 'info');
+        }
+        
         csvMetadataUrls.forEach(item => {
           const { url, csv_type } = item;
+          
+          // CRITICAL: Only include URLs from csv_types that were imported in the current session
+          if (hasImportedTypes && !importedTypes.has(csv_type)) {
+            return; // Skip this URL - not imported in current session
+          }
+          
           let include = false;
           let source = '';
           
