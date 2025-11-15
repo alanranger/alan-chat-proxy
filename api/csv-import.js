@@ -1535,7 +1535,7 @@ export default async function handler(req, res) {
     
     // Check if this is a metadata import (new mode)
     if (contentType === 'metadata') {
-      const { csvType } = req.body || {};
+      let { csvType } = req.body || {}; // Use let instead of const to allow reassignment for reclassification
       if (!csvType) return sendJSON(res, 400, { error: 'bad_request', detail: 'Provide "csvType" for metadata import', stage });
       
       let metadataCount = 0;

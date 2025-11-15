@@ -1628,6 +1628,11 @@
 
     function detectTypeByName(name){
       const n = (name||'').toLowerCase();
+      // CRITICAL: Check for File 05 first (before generic 'workshop' check) to ensure correct detection
+      // File 05 is workshop_products, not workshop_events - check for standardized filename pattern
+      if (n.includes('05-photo-workshops-uk-landscape') || 
+          n.includes('photo-workshops-uk-landscape') ||
+          (n.includes('photo workshops uk') && n.includes('landscape'))) return 'product';
       if (n.includes('photo workshops uk')) return 'workshop';
       if (n.includes('photography services')) return 'service';
       if (n.includes('workshop')) return 'workshop';
@@ -1685,8 +1690,11 @@
         // Special case handlers (legacy file name patterns - still supported for backward compatibility)
         // NOTE: New files from alan-shared-resources repo should use category-based naming
         // File 05 (Photo Workshops UK) should be workshop_products, not workshop_events
+        // Check for both old and new standardized filename patterns
         if (f.name.includes('Photo Workshops UK _ Landscape Photography Workshops-CSV.csv') || 
-            f.name.includes('workshop') && f.name.includes('product')) {
+            f.name.includes('05-photo-workshops-uk-landscape') ||
+            f.name.includes('photo-workshops-uk-landscape') ||
+            (f.name.includes('workshop') && f.name.includes('product'))) {
           type = 'workshop_products';
         }
         
