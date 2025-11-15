@@ -4459,7 +4459,7 @@ function applySearchConditions(q, keywords) {
 }
 
 // Helper function to score a single row
-function scoreArticleRow(r, kw) {
+function scoreArticleRow(r, kw, equipmentKeywords = null) {
  const t = (r.title || r.raw?.name || "").toLowerCase();
  const u = (r.page_url || r.source_url || "").toLowerCase();
  const categories = r.categories || [];
@@ -4467,6 +4467,15 @@ function scoreArticleRow(r, kw) {
  
  const add = (n)=>{ s += n; };
  const has = (str, needle)=> str.includes(needle);
+ 
+ // If equipment keywords are present, check if article matches any of them
+ // If not, apply a penalty to prioritize equipment articles
+ if (equipmentKeywords && equipmentKeywords.size > 0) {
+   const matchesEquipment = Array.from(equipmentKeywords).some(eq => has(t, eq) || has(u, eq));
+   if (!matchesEquipment) {
+     add(-20); // Penalty for articles that don't match equipment keywords
+   }
+ }
  
  addBaseKeywordScore({ kw, t, u, add, has });
  const { hasCore, coreConcepts } = addOnlineCourseBoost({ categories, kw, t, add, has });
@@ -4494,7 +4503,16 @@ function processAndSortResults(rows, keywords, limit) {
    'landscape', 'portrait', 'travel', 'studio', 'macro', 'wildlife', 'street'
  ]);
  
- const hasEquipmentKeyword = kw.some(k => equipmentKeywords.has(k));
+ // Extract equipment keywords that are actually in the query
+ const queryEquipmentKeywords = new Set();
+ const hasEquipmentKeyword = kw.some(k => {
+   if (equipmentKeywords.has(k)) {
+     queryEquipmentKeywords.add(k);
+     return true;
+   }
+   return false;
+ });
+ 
  if (hasEquipmentKeyword) {
    // Filter out genre keywords when equipment keywords are present
    kw = kw.filter(k => !genreKeywords.has(k));
@@ -4512,7 +4530,7 @@ function processAndSortResults(rows, keywords, limit) {
  }
 
  return unique
- .map(r => ({ r, s: scoreArticleRow(r, kw) }))
+ .map(r => ({ r, s: scoreArticleRow(r, kw, hasEquipmentKeyword ? queryEquipmentKeywords : null) }))
  .sort((a,b) => b.s - a.s)
  .slice(0, limit)
  .map(x => x.r);
