@@ -7843,8 +7843,10 @@ async function searchWithKeywords(client, keywords) {
     
     // Search across chunk_text, title, and url fields using OR condition
     // PostgREST uses % for wildcards in .or() syntax (consistent with other code)
-    const orCondition = `chunk_text.ilike.%${keyword}%,title.ilike.%${keyword}%,url.ilike.%${keyword}%`;
-    console.log(`[RAG Search] Searching for keyword "${keyword}"`);
+    // CRITICAL: Must encode keyword for PostgREST (like anyIlike function does)
+    const encodedKeyword = encodeURIComponent(keyword);
+    const orCondition = `chunk_text.ilike.%${encodedKeyword}%,title.ilike.%${encodedKeyword}%,url.ilike.%${encodedKeyword}%`;
+    console.log(`[RAG Search] Searching for keyword "${keyword}" (encoded: "${encodedKeyword}")`);
     console.log(`[RAG Search] OR condition: ${orCondition}`);
     
     const { data: keywordChunks, error: chunksError } = await client
@@ -7876,8 +7878,10 @@ async function searchWithFullQuery(client, query) {
   
   // Search across chunk_text, title, and url fields using OR condition
   // PostgREST uses % for wildcards in .or() syntax (consistent with other code)
-  const orCondition = `chunk_text.ilike.%${query}%,title.ilike.%${query}%,url.ilike.%${query}%`;
-  console.log(`[RAG Search] Searching with full query "${query}"`);
+  // CRITICAL: Must encode query for PostgREST (like anyIlike function does)
+  const encodedQuery = encodeURIComponent(query);
+  const orCondition = `chunk_text.ilike.%${encodedQuery}%,title.ilike.%${encodedQuery}%,url.ilike.%${encodedQuery}%`;
+  console.log(`[RAG Search] Searching with full query "${query}" (encoded: "${encodedQuery}")`);
   console.log(`[RAG Search] OR condition: ${orCondition}`);
   
   const { data: fullQueryChunks, error: fullQueryError } = await client
