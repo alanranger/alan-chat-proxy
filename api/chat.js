@@ -4412,8 +4412,12 @@ function addCategoryBoost(categories, hasCore, add) {
  }
  
 function addRecencyTieBreaker(s, r) {
+ // Prioritize publish_date over last_seen for recency (newly published articles should rank higher)
+ const publishDate = r.publish_date ? Date.parse(r.publish_date) || 0 : 0;
  const seen = r.last_seen ? Date.parse(r.last_seen) || 0 : 0;
- return s * 1_000_000 + seen;
+ // Use publish_date if available, otherwise fall back to last_seen
+ const recencyDate = publishDate > 0 ? publishDate : seen;
+ return s * 1_000_000 + recencyDate;
 }
 
 
@@ -10202,7 +10206,7 @@ async function addArticlesForEnrichment(client, keywords, enriched, businessCate
   // Add articles for most categories (except pure event queries)
   // This improves diversity and quality of related information
   if (businessCategory !== 'Event Queries') {
-    const articles = await findArticles(client, { keywords, limit: 12 });
+    const articles = await findArticles(client, { keywords, limit: 25 }); // Increased from 12 to 25 to ensure more articles available
     if (articles && articles.length > 0) {
       const existing = enriched.articles || [];
       // Deduplicate by page_url/id before concatenating
@@ -10215,7 +10219,8 @@ async function addArticlesForEnrichment(client, keywords, enriched, businessCate
         const key = (a.page_url || a.url || a.id || '').toString().replace(/\/+$/, '').trim();
         return key && !seen.has(key);
       });
-      enriched.articles = [...existing, ...newArticles].slice(0, 12);
+      // Increased limit from 12 to 25 to allow more articles in response
+      enriched.articles = [...existing, ...newArticles].slice(0, 25);
       console.log(`[ENRICH] Added ${newArticles.length} new articles (${existing.length} existing, ${articles.length} total found)`);
     }
   }
