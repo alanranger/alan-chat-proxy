@@ -4335,25 +4335,30 @@ function addBaseKeywordScore(context) {
 function addOnlineCourseBoost(context) {
  const isOnlineCourse = context.categories.includes("online photography course");
  const coreConcepts = [
- "iso", "aperture", "shutter speed", "white balance", "depth of field", "metering",
- "exposure", "composition", "macro", "landscape", "portrait", "street", "wildlife",
- "raw", "jpeg", "hdr", "focal length", "long exposure"
+   "iso", "aperture", "shutter speed", "white balance", "depth of field", "metering",
+   "exposure", "composition", "macro", "landscape", "portrait", "street", "wildlife",
+   "raw", "jpeg", "hdr", "focal length", "long exposure"
  ];
  const hasCore = coreConcepts.some(c => context.kw.includes(c));
+ 
+ // If preventBoost is true (equipment keywords present but article doesn't match), skip the boost
+ if (context.preventBoost) {
+   return { hasCore, coreConcepts };
+ }
  
  if (hasCore && isOnlineCourse) {
  context.add(25); // Major boost for online course content on technical topics
  
  // Extra boost for "What is..." format articles in online course
  for (const c of coreConcepts) {
- if (context.has(context.t, `what is ${c}`) || context.has(context.t, `${c} in photography`)) {
- context.add(15); // Additional boost for structured learning content
- }
+   if (context.has(context.t, `what is ${c}`) || context.has(context.t, `${c} in photography`)) {
+     context.add(15); // Additional boost for structured learning content
+   }
  }
  
  // Boost for PDF checklists and guides
  if (context.has(context.t, "pdf") || context.has(context.t, "checklist") || context.has(context.t, "guide")) {
- context.add(10);
+   context.add(10);
  }
  }
  
@@ -4469,16 +4474,20 @@ function scoreArticleRow(r, kw, equipmentKeywords = null) {
  const has = (str, needle)=> str.includes(needle);
  
  // If equipment keywords are present, check if article matches any of them
- // If not, apply a penalty to prioritize equipment articles
+ // If not, apply a significant penalty to prioritize equipment articles
+ let matchesEquipment = false;
  if (equipmentKeywords && equipmentKeywords.size > 0) {
-   const matchesEquipment = Array.from(equipmentKeywords).some(eq => has(t, eq) || has(u, eq));
+   matchesEquipment = Array.from(equipmentKeywords).some(eq => has(t, eq) || has(u, eq));
    if (!matchesEquipment) {
-     add(-20); // Penalty for articles that don't match equipment keywords
+     add(-50); // Significant penalty for articles that don't match equipment keywords
    }
  }
  
  addBaseKeywordScore({ kw, t, u, add, has });
- const { hasCore, coreConcepts } = addOnlineCourseBoost({ categories, kw, t, add, has });
+ 
+ // Prevent online course boost for genre articles when equipment keywords are present and article doesn't match them
+ const shouldPreventOnlineCourseBoost = equipmentKeywords && equipmentKeywords.size > 0 && !matchesEquipment;
+ const { hasCore, coreConcepts } = addOnlineCourseBoost({ categories, kw, t, add, has, preventBoost: shouldPreventOnlineCourseBoost });
  addCoreConceptScore({ hasCore, coreConcepts, t, u, add, has });
  addCategoryBoost(categories, hasCore, add);
  
