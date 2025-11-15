@@ -7916,6 +7916,12 @@ async function searchRagContent(context) {
   console.log(`[RAG Search] Keywords: ${JSON.stringify(context.keywords)}`);
   console.log(`[RAG Search] Is concept query: ${context.isConceptQuery}`);
   
+  if (context.debugLogs) {
+    context.debugLogs.push(`[RAG Search] Starting search for query: "${context.query}"`);
+    context.debugLogs.push(`[RAG Search] Keywords: ${JSON.stringify(context.keywords)}`);
+    context.debugLogs.push(`[RAG Search] Keywords array length: ${context.keywords?.length || 0}`);
+  }
+  
   // For concept queries like "what is exposure", prioritize guide articles
  if (context.isConceptQuery) {
  console.log(`ðŸŽ¯ Concept query detected: "${context.query}" - prioritizing guide articles`);
@@ -7946,6 +7952,11 @@ async function searchRagContent(context) {
   // Remove duplicates
   const uniqueChunks = removeDuplicateChunks(chunks);
   console.log(`[RAG Search] Final result: ${uniqueChunks.length} unique chunks after deduplication`);
+  
+  if (context.debugLogs) {
+    context.debugLogs.push(`[RAG Search] Final result: ${uniqueChunks.length} unique chunks after deduplication`);
+  }
+  
   return uniqueChunks;
 }
 
@@ -8812,20 +8823,36 @@ function initializeRagResults() {
 
 // Helper: Search and process RAG content
 async function searchAndProcessRagContent(context) {
+ if (context.debugLogs) {
+   context.debugLogs.push(`[DEBUG] searchAndProcessRagContent called`);
+   context.debugLogs.push(`[DEBUG] Keywords passed: ${JSON.stringify(context.keywords)}`);
+ }
+ 
  const chunks = await searchRagContent({
- client: context.client,
- query: context.query,
- keywords: context.keywords,
- isConceptQuery: context.isConceptQuery,
- primaryKeyword: context.primaryKeyword
+  client: context.client,
+  query: context.query,
+  keywords: context.keywords,
+  isConceptQuery: context.isConceptQuery,
+  primaryKeyword: context.primaryKeyword,
+  debugLogs: context.debugLogs
  });
+ 
+ if (context.debugLogs) {
+   context.debugLogs.push(`[DEBUG] searchRagContent returned ${chunks?.length || 0} chunks`);
+ }
+ 
  const processedChunks = scoreAndFilterChunks({
- chunks,
- primaryKeyword: context.primaryKeyword,
- lcQuery: context.lcQuery,
- isConceptQuery: context.isConceptQuery
+  chunks,
+  primaryKeyword: context.primaryKeyword,
+  lcQuery: context.lcQuery,
+  isConceptQuery: context.isConceptQuery
  });
- console.log(`ðŸ“„ Found ${processedChunks.length} relevant chunks`);
+ 
+ if (context.debugLogs) {
+   context.debugLogs.push(`[DEBUG] After scoreAndFilterChunks: ${processedChunks.length} chunks`);
+ }
+ 
+ console.log(`ðŸ"„ Found ${processedChunks.length} relevant chunks`);
  return processedChunks;
 }
 
@@ -8896,16 +8923,24 @@ function handleRagError(error) {
 // Helper: Process RAG search results
 async function processRagSearchResults(context) {
  const results = initializeRagResults();
+ const debugLogs = [];
+ 
+ debugLogs.push(`[DEBUG] processRagSearchResults called with query: "${context.query}"`);
+ debugLogs.push(`[DEBUG] Keywords: ${JSON.stringify(context.keywords)}`);
+ debugLogs.push(`[DEBUG] Keywords count: ${context.keywords?.length || 0}`);
  
  // Search for content chunks
  results.chunks = await searchAndProcessRagContent({
- client: context.client,
- query: context.query,
- keywords: context.keywords,
- isConceptQuery: context.isConceptQuery,
- primaryKeyword: context.primaryKeyword,
- lcQuery: context.lcQuery
+  client: context.client,
+  query: context.query,
+  keywords: context.keywords,
+  isConceptQuery: context.isConceptQuery,
+  primaryKeyword: context.primaryKeyword,
+  lcQuery: context.lcQuery,
+  debugLogs: debugLogs
  });
+ 
+ debugLogs.push(`[DEBUG] Chunks returned: ${results.chunks?.length || 0}`);
  
   // Search for entities
   results.entities = await searchAndProcessRagEntities({
@@ -8927,6 +8962,7 @@ async function processRagSearchResults(context) {
   results.totalMatches = results.chunks.length + results.entities.length;
   results.confidence = 0;
   results.answerType = 'none';
+  results.debugLogs = debugLogs; // Include debug logs in results
  
  return results;
 }
@@ -9770,13 +9806,15 @@ async function processRagFallback(client, query) {
       primaryKeyword,
       lcQuery
     });
-    const { answer, type, sources, debugLogs = [] } = generateRagAnswer({ 
+    const { answer, type, sources, debugLogs: answerDebugLogs = [] } = generateRagAnswer({ 
       query, 
       entities: results.entities, 
       chunks: results.chunks, 
       results,
       articles: results.articles 
     });
+    // Merge debug logs from results and answer generation
+    const debugLogs = [...(results.debugLogs || []), ...answerDebugLogs];
     const { finalAnswer, finalType, finalSources } = handleRagFallbackLogic({ answer, type, sources, query });
     return buildRagResponse({ results, finalAnswer, finalType, finalSources, debugLogs });
   } catch (error) {
