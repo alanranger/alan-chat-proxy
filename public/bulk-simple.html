@@ -57,6 +57,73 @@
     
     .stat-value.success { color: #51cf66; }
     .stat-value.error { color: #ff6b6b; }
+    
+    /* Quick Path Reference Styles */
+    .path-reference {
+      background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+      padding: 25px;
+      border-radius: 10px;
+      margin: 20px 0;
+      border: 2px solid #4CAF50;
+      box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+    }
+    
+    .path-reference h2 {
+      color: #FFD700;
+      margin: 0 0 15px 0;
+      font-size: 22px;
+      text-align: center;
+    }
+    
+    .path-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 12px;
+      margin-top: 15px;
+    }
+    
+    .path-item {
+      background: rgba(0, 0, 0, 0.3);
+      padding: 12px;
+      border-radius: 6px;
+      border-left: 4px solid #4CAF50;
+      transition: all 0.3s;
+    }
+    
+    .path-item:hover {
+      background: rgba(0, 0, 0, 0.5);
+      transform: translateX(5px);
+    }
+    
+    .path-item .path-label {
+      color: #FFD700;
+      font-weight: bold;
+      font-size: 14px;
+      margin-bottom: 5px;
+    }
+    
+    .path-item .path-value {
+      color: #fff;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      background: rgba(0, 0, 0, 0.4);
+      padding: 6px 10px;
+      border-radius: 4px;
+      word-break: break-all;
+      cursor: pointer;
+      user-select: all;
+    }
+    
+    .path-item .path-value:hover {
+      background: rgba(0, 0, 0, 0.6);
+    }
+    
+    .path-item .path-desc {
+      color: #ccc;
+      font-size: 11px;
+      margin-top: 5px;
+      font-style: italic;
+    }
   </style>
 </head>
 <body>
@@ -65,6 +132,80 @@
       <h1>🎯 Alan Ranger Photography - Data Pipeline</h1>
       <p>Metadata-Driven Content Pipeline</p>
       <small>v1.0.8 - Metadata-Driven System</small>
+    </div>
+
+    <!-- Quick Path Reference -->
+    <div class="path-reference">
+      <h2>📁 Quick Reference: CSV File Locations (Flat Structure)</h2>
+      <div style="text-align: center; color: #fff; margin-bottom: 15px; font-size: 14px;">
+        All CSV files are in the <strong>alan-shared-resources</strong> repository<br>
+        <strong>Flat structure:</strong> All files in <code>shared-resources/csv/</code> (no subfolders)
+      </div>
+      <div class="path-grid">
+        <div class="path-item">
+          <div class="path-label">📝 Blog Articles</div>
+          <div class="path-value" onclick="copyToClipboard('shared-resources/csv/01-blog-posts.csv')">shared-resources/csv/01-blog-posts.csv</div>
+          <div class="path-desc">csv_type: 'blog'</div>
+        </div>
+        <div class="path-item">
+          <div class="path-label">🎓 Course Events</div>
+          <div class="path-value" onclick="copyToClipboard('shared-resources/csv/02-beginners-photography-lessons.csv')">shared-resources/csv/02-beginners-photography-lessons.csv</div>
+          <div class="path-desc">csv_type: 'course_events'</div>
+        </div>
+        <div class="path-item">
+          <div class="path-label">🏞️ Workshop Events</div>
+          <div class="path-value" onclick="copyToClipboard('shared-resources/csv/03-photographic-workshops-near-me.csv')">shared-resources/csv/03-photographic-workshops-near-me.csv</div>
+          <div class="path-desc">csv_type: 'workshop_events'</div>
+        </div>
+        <div class="path-item">
+          <div class="path-label">📚 Course Products</div>
+          <div class="path-value" onclick="copyToClipboard('shared-resources/csv/04-photography-services-courses-mentoring.csv')">shared-resources/csv/04-photography-services-courses-mentoring.csv</div>
+          <div class="path-desc">csv_type: 'course_products'</div>
+        </div>
+        <div class="path-item">
+          <div class="path-label">🏞️ Workshop Products</div>
+          <div class="path-value" onclick="copyToClipboard('shared-resources/csv/05-photo-workshops-uk-landscape.csv')">shared-resources/csv/05-photo-workshops-uk-landscape.csv</div>
+          <div class="path-desc">csv_type: 'workshop_products'</div>
+        </div>
+        <div class="path-item">
+          <div class="path-label">🌐 Site URLs</div>
+          <div class="path-value" onclick="copyToClipboard('shared-resources/csv/06-site-urls.csv')">shared-resources/csv/06-site-urls.csv</div>
+          <div class="path-desc">csv_type: 'site_urls'</div>
+        </div>
+        <div class="path-item">
+          <div class="path-label">🧾 Product Schema</div>
+          <div class="path-value" onclick="copyToClipboard('shared-resources/csv/07-product-schema-with-review-ratings.csv')">shared-resources/csv/07-product-schema-with-review-ratings.csv</div>
+          <div class="path-desc">csv_type: 'product_schema'</div>
+        </div>
+        <div class="path-item">
+          <div class="path-label">📄 Landing & Service Pages</div>
+          <div class="path-value" onclick="copyToClipboard('shared-resources/csv/08-landing-and-service-pages.csv')">shared-resources/csv/08-landing-and-service-pages.csv</div>
+          <div class="path-desc">csv_type: 'landing_service_pages'</div>
+        </div>
+        <div class="path-item">
+          <div class="path-label">📦 Raw Products Export</div>
+          <div class="path-value" onclick="copyToClipboard('shared-resources/csv/raw-01-products-sqsp-export.csv')">shared-resources/csv/raw-01-products-sqsp-export.csv</div>
+          <div class="path-desc">Raw product data</div>
+        </div>
+        <div class="path-item">
+          <div class="path-label">⭐ Trustpilot Reviews</div>
+          <div class="path-value" onclick="copyToClipboard('shared-resources/csv/raw-03a-trustpilot-reviews-historical.csv')">shared-resources/csv/raw-03a-trustpilot-reviews-historical.csv</div>
+          <div class="path-desc">Historical reviews</div>
+        </div>
+        <div class="path-item">
+          <div class="path-label">⭐ Google Reviews</div>
+          <div class="path-value" onclick="copyToClipboard('shared-resources/csv/raw-03b-google-reviews.csv')">shared-resources/csv/raw-03b-google-reviews.csv</div>
+          <div class="path-desc">Google reviews</div>
+        </div>
+        <div class="path-item">
+          <div class="path-label">📁 Processed CSVs</div>
+          <div class="path-value" onclick="copyToClipboard('shared-resources/csv processed/')">shared-resources/csv processed/</div>
+          <div class="path-desc">Cleaned & processed files</div>
+        </div>
+      </div>
+      <div style="text-align: center; margin-top: 15px; color: #FFD700; font-size: 12px;">
+        💡 Click any path above to copy it to your clipboard
+      </div>
     </div>
 
     <!-- DATA FLOW DIAGRAMS -->
@@ -77,14 +218,15 @@
         <div style="background: #1a1a1a; padding: 20px; border-radius: 8px; font-family: monospace; font-size: 14px; line-height: 1.6;">
           <div style="color: #4CAF50; font-weight: bold; margin-bottom: 15px;">STEP 1: CSV IMPORT → csv_metadata table</div>
           <div style="margin-left: 20px; margin-bottom: 10px;">
-            ├── Blog Articles (01) → csv_metadata.csv_type='blog_articles'<br>
-            ├── Course Events (02) → csv_metadata.csv_type='course_events'<br>
-            ├── Workshop Events (03) → csv_metadata.csv_type='workshop_events'<br>
-            ├── Course Products (04) → csv_metadata.csv_type='course_products'<br>
-            ├── Workshop Products (05) → csv_metadata.csv_type='workshop_products'<br>
-            ├── Site URLs (06) → csv_metadata.csv_type='site_urls'<br>
-            ├── Product Schema (07) → csv_metadata.csv_type='product_schema'<br>
-            └── Landing & Service Pages (08) → csv_metadata.csv_type='landing_service_pages'
+            <div style="color: #FFD700; margin-bottom: 5px;">📁 CSV files now sourced from alan-shared-resources repo (flat structure):</div>
+            ├── Blog Articles → shared-resources/csv/01-blog-posts.csv → csv_metadata.csv_type='blog'<br>
+            ├── Course Events → shared-resources/csv/02-beginners-photography-lessons.csv → csv_metadata.csv_type='course_events'<br>
+            ├── Workshop Events → shared-resources/csv/03-photographic-workshops-near-me.csv → csv_metadata.csv_type='workshop_events'<br>
+            ├── Course Products → shared-resources/csv/04-photography-services-courses-mentoring.csv → csv_metadata.csv_type='course_products'<br>
+            ├── Workshop Products → shared-resources/csv/05-photo-workshops-uk-landscape.csv → csv_metadata.csv_type='workshop_products'<br>
+            ├── Site URLs → shared-resources/csv/06-site-urls.csv → csv_metadata.csv_type='site_urls'<br>
+            ├── Product Schema → shared-resources/csv/07-product-schema-with-review-ratings.csv → csv_metadata.csv_type='product_schema'<br>
+            └── Landing & Service Pages → shared-resources/csv/08-landing-and-service-pages.csv → csv_metadata.csv_type='landing_service_pages'
           </div>
           
           <div style="color: #2196F3; font-weight: bold; margin: 20px 0 15px 0;">STEP 2: ENHANCED INGEST → page_entities table</div>
@@ -272,14 +414,15 @@
         <div style="background: #1a1a1a; padding: 20px; border-radius: 8px; font-family: monospace; font-size: 14px; line-height: 1.6;">
           <div style="color: #4CAF50; font-weight: bold; margin-bottom: 15px;">STEP 1: IMPORT CSV METADATA</div>
           <div style="margin-left: 20px; color: #fff;">
-            ├── Blog Articles (01) → csv_metadata table<br>
-            ├── Course Events (02) → csv_metadata table<br>
-            ├── Workshop Events (03) → csv_metadata table<br>
-            ├── Course Products (04) → csv_metadata table<br>
-            ├── Workshop Products (05) → csv_metadata table<br>
-            ├── Site URLs (06) → csv_metadata table<br>
-            ├── Product Schema (07) → csv_metadata table<br>
-            └── Landing & Service Pages (08) → csv_metadata table
+            <div style="color: #FFD700; margin-bottom: 5px;">📁 CSV files from alan-shared-resources repo:</div>
+            ├── Blog Articles → shared-resources/csv/01-blog-posts.csv → csv_metadata table<br>
+            ├── Course Events → shared-resources/csv/02-beginners-photography-lessons.csv → csv_metadata table<br>
+            ├── Workshop Events → shared-resources/csv/03-photographic-workshops-near-me.csv → csv_metadata table<br>
+            ├── Course Products → shared-resources/csv/04-photography-services-courses-mentoring.csv → csv_metadata table<br>
+            ├── Workshop Products → shared-resources/csv/05-photo-workshops-uk-landscape.csv → csv_metadata table<br>
+            ├── Site URLs → shared-resources/csv/06-site-urls.csv → csv_metadata table<br>
+            ├── Product Schema → shared-resources/csv/07-product-schema-with-review-ratings.csv → csv_metadata table<br>
+            └── Landing & Service Pages → shared-resources/csv/08-landing-and-service-pages.csv → csv_metadata table
           </div>
           
           <div style="color: #4CAF50; font-weight: bold; margin: 20px 0 15px 0;">STEP 2: INGEST CONTENT</div>
@@ -695,6 +838,33 @@
   </div>
 
   <script>
+    // Copy path to clipboard with user feedback
+    function copyToClipboard(text) {
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(text).then(() => {
+          showToast('✓ Path copied to clipboard: ' + text, 2000);
+        }).catch(err => {
+          console.error('Failed to copy:', err);
+          showToast('✗ Failed to copy to clipboard', 2000);
+        });
+      } else {
+        // Fallback for older browsers
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.select();
+        try {
+          document.execCommand('copy');
+          showToast('✓ Path copied to clipboard: ' + text, 2000);
+        } catch (err) {
+          showToast('✗ Failed to copy to clipboard', 2000);
+        }
+        document.body.removeChild(textarea);
+      }
+    }
+
     // Simple toast notifications
     function showToast(message, timeoutMs = 2500) {
       let holder = document.getElementById('toast-holder');
@@ -1110,12 +1280,22 @@
         const result = await response.json();
         
         if (result.success) {
-          addResult(`✅ ${csvType} metadata import successful: ${result.metadata_imported}/${actualRowCount} records`, 'success');
+          // Use the actual csv_type returned from API (may differ from initial detection due to reclassification)
+          const actualCsvType = result.csv_type || csvType;
+          addResult(`✅ ${actualCsvType} metadata import successful: ${result.metadata_imported}/${actualRowCount} records`, 'success');
           
-          // Update csvRowCounts object for dashboard display (use imported count, not total CSV count)
-          if (csvRowCounts.hasOwnProperty(csvType)) {
-            csvRowCounts[csvType] = result.metadata_imported;
-            addResult(`🔧 DEBUG: Updated csvRowCounts[${csvType}] = ${result.metadata_imported} (imported) vs ${actualRowCount} (total CSV)`, 'info');
+          // Update csvRowCounts object for dashboard display (use actual csv_type from API response)
+          // This handles cases where files are reclassified (e.g., File 05: workshop_events → workshop_products)
+          if (csvRowCounts.hasOwnProperty(actualCsvType)) {
+            csvRowCounts[actualCsvType] = result.metadata_imported;
+            addResult(`🔧 DEBUG: Updated csvRowCounts[${actualCsvType}] = ${result.metadata_imported} (imported) vs ${actualRowCount} (total CSV)`, 'info');
+          }
+          
+          // If the csv_type was reclassified, also clear/update the original category count
+          if (actualCsvType !== csvType && csvRowCounts.hasOwnProperty(csvType)) {
+            // Subtract the row count from the original category (it was added earlier in the flow)
+            csvRowCounts[csvType] = Math.max(0, (csvRowCounts[csvType] || 0) - actualRowCount);
+            addResult(`🔧 DEBUG: Adjusted csvRowCounts[${csvType}] after reclassification to ${actualCsvType}`, 'info');
           }
           
           // Display field-by-field tracking
@@ -1502,18 +1682,23 @@
           'landing_service_pages': 'landing_service_pages'
         };
         
-        // Special case: File 05 (Photo Workshops UK) should be workshop_products, not workshop_events
-        if (f.name.includes('Photo Workshops UK _ Landscape Photography Workshops-CSV.csv')) {
+        // Special case handlers (legacy file name patterns - still supported for backward compatibility)
+        // NOTE: New files from alan-shared-resources repo should use category-based naming
+        // File 05 (Photo Workshops UK) should be workshop_products, not workshop_events
+        if (f.name.includes('Photo Workshops UK _ Landscape Photography Workshops-CSV.csv') || 
+            f.name.includes('workshop') && f.name.includes('product')) {
           type = 'workshop_products';
         }
         
-        // Special case: File 07 (Product Schema) should be product_schema, not workshop_products
-        if (f.name.includes('alanranger_product_schema_FINAL_WITH_REVIEW_RATINGS.csv')) {
+        // File 07 (Product Schema) should be product_schema, not workshop_products
+        if (f.name.includes('alanranger_product_schema_FINAL_WITH_REVIEW_RATINGS.csv') ||
+            f.name.includes('product') && f.name.includes('schema')) {
           type = 'product_schema';
         }
         
-        // Special case: File 08 (Landing and Service Pages) should be landing_service_pages
-        if (f.name.includes('08 - Landing') || f.name.includes('Sercice Pages')) {
+        // File 08 (Landing and Service Pages) should be landing_service_pages
+        if (f.name.includes('08 - Landing') || f.name.includes('Sercice Pages') ||
+            f.name.includes('landing') && f.name.includes('service')) {
           type = 'landing_service_pages';
         }
         
@@ -1833,11 +2018,22 @@
         'test_questions': cat()
       };
       
-      // Use global urlScrapingStats - don't redeclare
+      // Reset urlScrapingStats at start of ingestion to ensure accurate current session counts
+      window.urlScrapingStats = {
+        'blog_articles': { success: 0, failed: 0, skipped: 0 },
+        'course_events': { success: 0, failed: 0, skipped: 0 },
+        'workshop_events': { success: 0, failed: 0, skipped: 0 },
+        'course_products': { success: 0, failed: 0, skipped: 0 },
+        'workshop_products': { success: 0, failed: 0, skipped: 0 },
+        'site_urls': { success: 0, failed: 0, skipped: 0 },
+        'product_schema': { success: 0, failed: 0, skipped: 0 },
+        'landing_service_pages': { success: 0, failed: 0, skipped: 0 }
+      };
 
       function categorize(url, result, sourceCategory) {
         const u = (url||'').toLowerCase();
-        // Prioritize the declared source category when present
+        // CRITICAL: Prioritize the declared source category when present - this comes from csv_metadata.csv_type
+        // Only use URL pattern matching when sourceCategory is missing or is 'site' (foundation URLs)
         if (sourceCategory === 'blog') return 'blog_articles';
         if (sourceCategory === 'event') return 'course_events';
         if (sourceCategory === 'workshop') return 'workshop_events';
@@ -1846,21 +2042,25 @@
         if (sourceCategory === 'product_schema') return 'product_schema';
         if (sourceCategory === 'site_urls') return 'site_urls';
         if (sourceCategory === 'landing_service_pages') return 'landing_service_pages';
-        if (sourceCategory === 'site') {
-          // site foundation can be any; fall through to URL heuristics
+        
+        // Only use URL pattern matching for 'site' foundation URLs or when sourceCategory is missing
+        if (sourceCategory === 'site' || !sourceCategory) {
+          // Broader patterns to catch more content (only for foundation URLs or unknown sources)
+          if (u.includes('/blog') || u.includes('/news') || u.includes('/blog-on-photography')) return 'blog_articles';
+          if (u.includes('/course') || u.includes('/lesson') || u.includes('/beginners-photography-lessons')) return 'course_events';
+          if (u.includes('/workshop') || u.includes('/photo-workshop') || u.includes('/photographic-workshops-near-me') || u.includes('/photo-workshops-uk')) return 'workshop_events';
+          if (u.includes('/service') || u.includes('/mentoring') || u.includes('/photography-services-near-me')) return 'course_products';
+          if (u.includes('/shop') || u.includes('/product') || u.includes('/photography-shop') || u.includes('/photography-presents')) return 'course_products';
+          if (u.includes('/landing') || u.includes('/page')) return 'website_urls';
+          
+          // Check for JSON-LD content in result
+          if (result && result.jsonLdFound) return 'json_extraction';
+          
+          // Everything else is a generic website URL
+          return 'website_urls';
         }
-        // Broader patterns to catch more content
-        if (u.includes('/blog') || u.includes('/news') || u.includes('/blog-on-photography')) return 'blog_articles';
-        if (u.includes('/course') || u.includes('/lesson') || u.includes('/beginners-photography-lessons')) return 'course_events';
-        if (u.includes('/workshop') || u.includes('/photo-workshop') || u.includes('/photographic-workshops-near-me') || u.includes('/photo-workshops-uk')) return 'workshop_events';
-        if (u.includes('/service') || u.includes('/mentoring') || u.includes('/photography-services-near-me')) return 'course_products';
-        if (u.includes('/shop') || u.includes('/product') || u.includes('/photography-shop') || u.includes('/photography-presents')) return 'course_products';
-        if (u.includes('/landing') || u.includes('/page')) return 'website_urls'; // Changed from landing_pages
         
-        // Check for JSON-LD content in result
-        if (result && result.jsonLdFound) return 'json_extraction';
-        
-        // Everything else is a generic website URL
+        // If sourceCategory is provided but not recognized, default to website_urls
         return 'website_urls';
       }
 
@@ -2604,15 +2804,17 @@
     };
 
     // Track CSV filenames per category for display
+    // NOTE: CSV files are now sourced from alan-shared-resources repo
+    // Paths: shared-resources/csv/ (flat structure, no subfolders)
     const csvFileNames = {
-      'blog_articles': '01-Alan Ranger Blog On Photography - Tips, Offers and News-CSV',
-      'course_events': '02 - www-alanranger-com__5013f4b2c4aaa4752ac69b17__beginners-photography-lessons.csv',
-      'workshop_events': '03 - www-alanranger-com__5013f4b2c4aaa4752ac69b17__photographic-workshops-near-me.csv',
-      'course_products': '04 - Photography Services _ courses, 1-2-1 _ mentoring-CSV.csv',
-      'workshop_products': '05 - Photo Workshops UK _ Landscape Photography Workshops-CSV.csv',
-      'website_urls': '06 - site urls - Sheet1.csv',
-      'json_extraction': '07 - alanranger_product_schema_FINAL_WITH_REVIEW_RATINGS',
-      'landing_service_pages': '08 - Landing and Sercice Pages.csv'
+      'blog_articles': 'shared-resources/csv/01-blog-posts.csv (flat structure)',
+      'course_events': 'shared-resources/csv/02-beginners-photography-lessons.csv (flat structure)',
+      'workshop_events': 'shared-resources/csv/03-photographic-workshops-near-me.csv (flat structure)',
+      'course_products': 'shared-resources/csv/04-photography-services-courses-mentoring.csv (flat structure)',
+      'workshop_products': 'shared-resources/csv/05-photo-workshops-uk-landscape.csv (flat structure)',
+      'website_urls': 'shared-resources/csv/06-site-urls.csv (flat structure)',
+      'json_extraction': 'shared-resources/csv/07-product-schema-with-review-ratings.csv (flat structure)',
+      'landing_service_pages': 'shared-resources/csv/08-landing-and-service-pages.csv (flat structure)'
     };
     
     // Global function to update CSV metadata dashboard

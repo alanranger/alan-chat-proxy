@@ -1563,6 +1563,7 @@ export default async function handler(req, res) {
             metadataCount = workshopProductResult.count;
             fieldStats = workshopProductResult.field_stats;
             successRate = workshopProductResult.success_rate;
+            csvType = 'workshop_products'; // Update csvType to reflect actual import type
           } else {
             const workshopResult = await importWorkshopEventMetadata(rows, supa);
             metadataCount = workshopResult.count;
