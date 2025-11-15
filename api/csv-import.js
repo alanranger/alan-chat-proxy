@@ -98,13 +98,39 @@ function parseCSV(csvText) {
     }
     
     // Check if we're in the middle of a multi-line quoted field
-    let quoteCount = (line.match(/"/g) || []).length;
+    // Count quotes, but be smarter about it - track if we're inside quotes
+    let inQuotes = false;
+    let quoteCount = 0;
+    for (let k = 0; k < line.length; k++) {
+      if (line[k] === '"') {
+        // Handle escaped quotes
+        if (k + 1 < line.length && line[k + 1] === '"') {
+          k++; // Skip next quote
+          continue;
+        }
+        inQuotes = !inQuotes;
+        quoteCount++;
+      }
+    }
+    
     let j = i + 1;
     
-    // If odd number of quotes, we're in a multi-line field - keep concatenating
-    while (quoteCount % 2 !== 0 && j < lines.length) {
+    // If we're still inside quotes, keep concatenating lines
+    while (inQuotes && j < lines.length) {
       line += '\n' + lines[j];
-      quoteCount = (line.match(/"/g) || []).length;
+      // Recalculate quote state
+      inQuotes = false;
+      quoteCount = 0;
+      for (let k = 0; k < line.length; k++) {
+        if (line[k] === '"') {
+          if (k + 1 < line.length && line[k + 1] === '"') {
+            k++;
+            continue;
+          }
+          inQuotes = !inQuotes;
+          quoteCount++;
+        }
+      }
       j++;
     }
     
@@ -118,8 +144,10 @@ function parseCSV(csvText) {
       });
       rows.push(row);
     } else {
-      // Log problematic rows for debugging
-      console.warn(`CSV row ${i} has ${values.length} columns, expected ${headers.length}:`, values.slice(0, 3));
+      // Log problematic rows for debugging (but don't spam - only first few)
+      if (rows.length < 5) {
+        console.warn(`CSV row ${i} has ${values.length} columns, expected ${headers.length}. First 3 values:`, values.slice(0, 3));
+      }
     }
     
     i = j;
