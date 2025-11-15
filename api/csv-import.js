@@ -12,18 +12,7 @@ export const config = { runtime: 'nodejs' };
 
 import { createClient } from '@supabase/supabase-js';
 import crypto from 'node:crypto';
-import fs from 'node:fs';
-import XLSX from 'xlsx';
 import { cleanHTMLText } from '../lib/htmlExtractor.js';
-
-// Processed CSV file paths from alan-shared-resources (absolute paths)
-// These paths are used when loading files directly (not via POST body)
-const PATH_PRODUCTS = "G:\\Dropbox\\alan ranger photography\\Website Code\\alan-shared-resources\\csv processed\\02-products-cleaned.xlsx";
-const PATH_REVIEWS_COMBINED = "G:\\Dropbox\\alan ranger photography\\Website Code\\alan-shared-resources\\csv processed\\03-combined-product-reviews.csv";
-const PATH_TRUSTPILOT = "G:\\Dropbox\\alan ranger photography\\Website Code\\alan-shared-resources\\csv processed\\03a-trustpilot-matched.csv";
-const PATH_GOOGLE = "G:\\Dropbox\\alan ranger photography\\Website Code\\alan-shared-resources\\csv processed\\03b-google-matched.csv";
-const PATH_PRODUCT_SCHEMA = "G:\\Dropbox\\alan ranger photography\\Website Code\\alan-shared-resources\\csv processed\\04-product-schema-with-ratings.csv";
-const PATH_EVENT_PRODUCT_MAP = "G:\\Dropbox\\alan ranger photography\\Website Code\\alan-shared-resources\\csv processed\\05-event-product-mappings-latest.csv";
 
 /* ========== utils ========== */
 const need = (k) => {
@@ -98,39 +87,13 @@ function parseCSV(csvText) {
     }
     
     // Check if we're in the middle of a multi-line quoted field
-    // Count quotes, but be smarter about it - track if we're inside quotes
-    let inQuotes = false;
-    let quoteCount = 0;
-    for (let k = 0; k < line.length; k++) {
-      if (line[k] === '"') {
-        // Handle escaped quotes
-        if (k + 1 < line.length && line[k + 1] === '"') {
-          k++; // Skip next quote
-          continue;
-        }
-        inQuotes = !inQuotes;
-        quoteCount++;
-      }
-    }
-    
+    let quoteCount = (line.match(/"/g) || []).length;
     let j = i + 1;
     
-    // If we're still inside quotes, keep concatenating lines
-    while (inQuotes && j < lines.length) {
+    // If odd number of quotes, we're in a multi-line field - keep concatenating
+    while (quoteCount % 2 !== 0 && j < lines.length) {
       line += '\n' + lines[j];
-      // Recalculate quote state
-      inQuotes = false;
-      quoteCount = 0;
-      for (let k = 0; k < line.length; k++) {
-        if (line[k] === '"') {
-          if (k + 1 < line.length && line[k + 1] === '"') {
-            k++;
-            continue;
-          }
-          inQuotes = !inQuotes;
-          quoteCount++;
-        }
-      }
+      quoteCount = (line.match(/"/g) || []).length;
       j++;
     }
     
@@ -144,10 +107,8 @@ function parseCSV(csvText) {
       });
       rows.push(row);
     } else {
-      // Log problematic rows for debugging (but don't spam - only first few)
-      if (rows.length < 5) {
-        console.warn(`CSV row ${i} has ${values.length} columns, expected ${headers.length}. First 3 values:`, values.slice(0, 3));
-      }
+      // Log problematic rows for debugging
+      console.warn(`CSV row ${i} has ${values.length} columns, expected ${headers.length}:`, values.slice(0, 3));
     }
     
     i = j;

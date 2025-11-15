@@ -639,7 +639,7 @@ export async function ingestSingleUrl(url, supa, options = {}) {
       
       return {
       url: url,
-      title: csvMetadata?.title || null, // Populate title from csv_metadata for better search
+      title: null,
         chunk_text: cleanChunk,
         // CSV metadata fields
         csv_type: csvMetadata?.csv_type || null,

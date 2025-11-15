@@ -860,217 +860,6 @@
   </div>
 
   <script>
-    // ============================================================================
-    // AUTO-LOAD CONFIGURATION - Shared Resources CSV Auto-Loading
-    // ============================================================================
-    const SHARED_CSV_PATH = "G:\\Dropbox\\alan ranger photography\\Website Code\\alan-shared-resources\\csv\\";
-    const DEFAULT_CSV_FILES = [
-      "01-blog-posts.csv",
-      "02-beginners-photography-lessons.csv",
-      "03-photographic-workshops-near-me.csv",
-      "04-photography-services-courses-mentoring.csv",
-      "05-photo-workshops-uk-landscape.csv",
-      "06-site-urls.csv",
-      "07-product-schema-with-review-ratings.csv",
-      "08-landing-and-service-pages.csv"
-    ];
-
-    // Global storage for auto-loaded CSV data
-    window.autoLoadedCSVs = {};
-    window.csvFolderHandle = null;
-
-    // Helper function to load CSV from absolute path (using File System Access API)
-    async function loadCSVFromAbsolutePath(filePath) {
-      try {
-        // Try File System Access API first (Chrome/Edge)
-        if ('showDirectoryPicker' in window) {
-          // If we have a stored folder handle, use it
-          const storedHandle = await getStoredFolderHandle();
-          if (storedHandle) {
-            const fileName = filePath.split('\\').pop();
-            const fileHandle = await storedHandle.getFileHandle(fileName);
-            const file = await fileHandle.getFile();
-            return await file.text();
-          }
-        }
-        
-        // Fallback: Try fetch with file:// protocol (may be blocked by browser)
-        const fileUrl = 'file:///' + filePath.replace(/\\/g, '/');
-        const response = await fetch(fileUrl);
-        if (response.ok) {
-          return await response.text();
-        }
-        throw new Error('File not accessible via fetch');
-      } catch (error) {
-        console.warn('Could not load CSV from absolute path:', filePath, error);
-        throw error;
-      }
-    }
-
-    // Store folder handle in IndexedDB for future auto-loads
-    async function storeFolderHandle(handle) {
-      try {
-        const db = await openDB();
-        const tx = db.transaction('csvFolder', 'readwrite');
-        await tx.store.put({ id: 1, handle: handle });
-        window.csvFolderHandle = handle;
-        addResult('✅ CSV folder access saved for future auto-loads', 'success');
-      } catch (error) {
-        console.error('Failed to store folder handle:', error);
-      }
-    }
-
-    // Retrieve stored folder handle from IndexedDB
-    async function getStoredFolderHandle() {
-      if (window.csvFolderHandle) return window.csvFolderHandle;
-      
-      try {
-        if ('showDirectoryPicker' in window) {
-          const db = await openDB();
-          const tx = db.transaction('csvFolder', 'readonly');
-          const result = await tx.store.get(1);
-          if (result && result.handle) {
-            // Verify handle is still valid
-            try {
-              await result.handle.getFileHandle(DEFAULT_CSV_FILES[0]);
-              window.csvFolderHandle = result.handle;
-              return result.handle;
-            } catch (e) {
-              // Handle invalid, clear it
-              await clearStoredFolderHandle();
-            }
-          }
-        }
-      } catch (error) {
-        console.warn('Could not retrieve stored folder handle:', error);
-      }
-      return null;
-    }
-
-    // Clear stored folder handle
-    async function clearStoredFolderHandle() {
-      try {
-        const db = await openDB();
-        const tx = db.transaction('csvFolder', 'readwrite');
-        await tx.store.delete(1);
-        window.csvFolderHandle = null;
-      } catch (error) {
-        console.error('Failed to clear folder handle:', error);
-      }
-    }
-
-    // Open IndexedDB for storing folder handles
-    function openDB() {
-      return new Promise((resolve, reject) => {
-        const request = indexedDB.open('csvAutoLoadDB', 1);
-        request.onerror = () => reject(request.error);
-        request.onsuccess = () => resolve(request.result);
-        request.onupgradeneeded = (event) => {
-          const db = event.target.result;
-          if (!db.objectStoreNames.contains('csvFolder')) {
-            db.createObjectStore('csvFolder', { keyPath: 'id' });
-          }
-        };
-      });
-    }
-
-    // Auto-load CSVs from shared-resources folder
-    async function autoLoadSharedCSVs() {
-      addResult('🔄 Attempting to auto-load CSVs from shared-resources...', 'info');
-      
-      let folderHandle = null;
-      
-      // Try to get stored folder handle first
-      if ('showDirectoryPicker' in window) {
-        folderHandle = await getStoredFolderHandle();
-        
-        // If no stored handle, prompt user once to select folder
-        if (!folderHandle) {
-          try {
-            addResult('📁 Please select the alan-shared-resources/csv/ folder (one-time setup)...', 'info');
-            folderHandle = await window.showDirectoryPicker({
-              startIn: 'documents',
-              mode: 'read'
-            });
-            await storeFolderHandle(folderHandle);
-          } catch (error) {
-            if (error.name !== 'AbortError') {
-              addResult('⚠️ Could not access folder. Manual file selection will be required.', 'info');
-            }
-            return;
-          }
-        }
-      }
-
-      const loaded = {};
-      let successCount = 0;
-
-      for (const fileName of DEFAULT_CSV_FILES) {
-        try {
-          let csvText = null;
-          
-          if (folderHandle) {
-            // Use File System Access API
-            try {
-              const fileHandle = await folderHandle.getFileHandle(fileName);
-              const file = await fileHandle.getFile();
-              csvText = await file.text();
-            } catch (e) {
-              console.warn(`File ${fileName} not found in selected folder:`, e);
-              continue;
-            }
-          } else {
-            // Fallback: Try absolute path (may not work in browsers)
-            try {
-              csvText = await loadCSVFromAbsolutePath(SHARED_CSV_PATH + fileName);
-            } catch (e) {
-              console.warn(`Could not load ${fileName} from absolute path:`, e);
-              continue;
-            }
-          }
-
-          if (csvText) {
-            loaded[fileName] = csvText;
-            successCount++;
-            addResult(`✅ Auto-loaded: ${fileName}`, 'success');
-          }
-        } catch (err) {
-          console.error(`Failed to auto-load ${fileName}:`, err);
-        }
-      }
-
-      window.autoLoadedCSVs = loaded;
-      
-      if (successCount > 0) {
-        addResult(`✅ Auto-loaded ${successCount}/${DEFAULT_CSV_FILES.length} CSV files from shared-resources`, 'success');
-        addResult('💡 You can now click "Import All CSV Files" without manual selection', 'info');
-      } else {
-        addResult('ℹ️ No CSVs auto-loaded. Please use manual file selection.', 'info');
-      }
-    }
-
-    // Manual function to re-select CSV folder (if user wants to change it)
-    async function selectCSVFolder() {
-      if (!('showDirectoryPicker' in window)) {
-        addResult('❌ File System Access API not supported in this browser', 'error');
-        return;
-      }
-      
-      try {
-        const folderHandle = await window.showDirectoryPicker({
-          startIn: 'documents',
-          mode: 'read'
-        });
-        await storeFolderHandle(folderHandle);
-        addResult('✅ Folder selected. Reloading CSVs...', 'success');
-        await autoLoadSharedCSVs();
-      } catch (error) {
-        if (error.name !== 'AbortError') {
-          addResult(`❌ Error selecting folder: ${error.message}`, 'error');
-        }
-      }
-    }
-
     // Copy path to clipboard with user feedback
     function copyToClipboard(text) {
       if (navigator.clipboard && window.isSecureContext) {
@@ -1486,20 +1275,7 @@
 
       showToast(`Reading ${file.name} for metadata import...`);
       addResult(`📥 Importing ${csvType} metadata...`);
-      
-      // Get CSV text - handle both File objects and text strings
-      let csvText;
-      if (typeof file === 'string') {
-        csvText = file;
-      } else {
-        csvText = await file.text();
-        
-        // Store in auto-loaded CSVs for future use (manual uploads override auto-loaded)
-        const fileName = file.name;
-        if (window.autoLoadedCSVs) {
-          window.autoLoadedCSVs[fileName] = csvText;
-        }
-      }
+      const csvText = await file.text();
       
       // Count CSV rows by actually parsing the CSV (excluding header)
       const lines = csvText.split('\n').filter(line => line.trim());
@@ -1790,12 +1566,6 @@
     }
 
     // Main import function
-    // Helper function to create File object from CSV text
-    function createFileFromText(text, fileName) {
-      const blob = new Blob([text], { type: 'text/csv' });
-      return new File([blob], fileName, { type: 'text/csv', lastModified: Date.now() });
-    }
-
     async function importAllCSVs() {
       const token = getToken();
       showToast('Starting Import All…');
@@ -1806,33 +1576,14 @@
       updateProgress(0, 'Starting CSV imports...');
       addResult('🚀 Starting CSV import process...');
 
-      // Use auto-loaded CSVs if available, otherwise fall back to file inputs
-      const getFileForType = (fileName, inputId, csvType) => {
-        // Priority 1: Manual file input (overrides auto-loaded)
-        const manualFile = document.getElementById(inputId)?.files[0];
-        if (manualFile) {
-          addResult(`📎 Using manually selected file for ${csvType}`, 'info');
-          return manualFile;
-        }
-        
-        // Priority 2: Auto-loaded CSV
-        if (window.autoLoadedCSVs && window.autoLoadedCSVs[fileName]) {
-          addResult(`🔄 Using auto-loaded file: ${fileName}`, 'info');
-          return createFileFromText(window.autoLoadedCSVs[fileName], fileName);
-        }
-        
-        return null;
-      };
-
       const files = [
-        { file: getFileForType('01-blog-posts.csv', 'blogCsv', 'blog'), type: 'blog', csvType: 'blog', name: 'Blog Articles' },
-        { file: getFileForType('02-beginners-photography-lessons.csv', 'courseEventsCsv', 'course_events'), type: 'event', csvType: 'course_events', name: 'Course Events' },
-        { file: getFileForType('03-photographic-workshops-near-me.csv', 'workshopEventsCsv', 'workshop_events'), type: 'workshop', csvType: 'workshop_events', name: 'Workshop Events' },
-        { file: getFileForType('04-photography-services-courses-mentoring.csv', 'servicePagesCsv', 'course_products'), type: 'service', csvType: 'course_products', name: 'Service Pages' },
-        { file: getFileForType('05-photo-workshops-uk-landscape.csv', 'productsCsv', 'workshop_products'), type: 'product', csvType: 'workshop_products', name: 'Workshop Products' },
-        { file: getFileForType('06-site-urls.csv', 'siteUrlsCsv', 'site_urls'), type: 'site_urls', csvType: 'site_urls', name: 'Site URLs' },
-        { file: getFileForType('07-product-schema-with-review-ratings.csv', 'productsCsv', 'product_schema'), type: 'product', csvType: 'product_schema', name: 'Product Schema' },
-        { file: getFileForType('08-landing-and-service-pages.csv', 'landingPagesCsv', 'landing_service_pages'), type: 'landing_service_pages', csvType: 'landing_service_pages', name: 'Landing Pages' },
+        { file: document.getElementById('blogCsv').files[0], type: 'blog', csvType: 'blog', name: 'Blog Articles' },
+        { file: document.getElementById('courseEventsCsv').files[0], type: 'event', csvType: 'course_events', name: 'Course Events' },
+        { file: document.getElementById('workshopEventsCsv').files[0], type: 'workshop', csvType: 'workshop_events', name: 'Workshop Events' },
+        { file: document.getElementById('servicePagesCsv').files[0], type: 'service', csvType: 'course_products', name: 'Service Pages' },
+        { file: document.getElementById('productsCsv').files[0], type: 'product', csvType: 'workshop_products', name: 'Physical Products' },
+        { file: document.getElementById('siteUrlsCsv').files[0], type: 'site_urls', csvType: 'site_urls', name: 'Site URLs' },
+        { file: document.getElementById('landingPagesCsv').files[0], type: 'landing_service_pages', csvType: 'landing_service_pages', name: 'Landing Pages' },
         { file: document.getElementById('testQuestionsCsv').files[0], type: 'test_questions', csvType: 'site_urls', name: 'Test Questions' }
       ];
 
@@ -1872,15 +1623,6 @@
       // Update both dashboards
       await updateCsvMetadataDashboard();
       await updateDebugControlDashboard();
-      
-      // Auto-trigger scraping after successful CSV import
-      if (successCount === totalCount && totalImported > 0) {
-        addResult('🔄 Auto-starting content ingestion (Step 2)...', 'info');
-        // Small delay to let UI update
-        setTimeout(() => {
-          scrapeWebsite(false);
-        }, 1000);
-      }
     }
 
     // --- Bulk CSV Upload ---
@@ -1898,11 +1640,6 @@
 
     function detectTypeByName(name){
       const n = (name||'').toLowerCase();
-      // File 05 should be detected as workshop_products, not workshop
-      if (n.includes('05-photo-workshops-uk-landscape') || 
-          (n.includes('photo workshops uk') && n.includes('landscape'))) {
-        return 'workshop_products';
-      }
       if (n.includes('photo workshops uk')) return 'workshop';
       if (n.includes('photography services')) return 'service';
       if (n.includes('workshop')) return 'workshop';
@@ -1961,9 +1698,7 @@
         // NOTE: New files from alan-shared-resources repo should use category-based naming
         // File 05 (Photo Workshops UK) should be workshop_products, not workshop_events
         if (f.name.includes('Photo Workshops UK _ Landscape Photography Workshops-CSV.csv') || 
-            f.name.includes('05-photo-workshops-uk-landscape.csv') ||
-            f.name.includes('photo-workshops-uk-landscape') ||
-            (f.name.includes('workshop') && f.name.includes('product'))) {
+            f.name.includes('workshop') && f.name.includes('product')) {
           type = 'workshop_products';
         }
         
@@ -2113,11 +1848,10 @@
         const token = getToken();
         const baseUrl = 'https://alan-chat-proxy.vercel.app';
         
-        addResult('🔍 Fetching URLs from csv_metadata table...', 'info');
+        addResult('🔍 Fetching URLs from current import session...', 'info');
         
-        // Get ALL URLs from csv_metadata table
-        // The ingestion endpoint handles duplicates by deleting old chunks before inserting new ones
-        const response = await fetch(`${baseUrl}/api/tools?action=get_urls`, {
+        // Get URLs from csv_metadata table - ONLY from current import session (last 5 minutes)
+        const response = await fetch(`${baseUrl}/api/tools?action=get_urls&recent=true`, {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -2133,9 +1867,9 @@
         const data = await response.json();
         const csvMetadataUrls = data.urls || [];
         
-        addResult(`📊 Found ${csvMetadataUrls.length} URLs from csv_metadata table`, 'info');
+        addResult(`📊 Found ${csvMetadataUrls.length} URLs from current import session (imported in last 5 minutes)`, 'info');
         if (csvMetadataUrls.length === 0) {
-          addResult(`⚠️ No URLs found in csv_metadata. Make sure you've imported CSVs first (Step 1).`, 'warning');
+          addResult(`⚠️ No URLs found from recent imports. Make sure you've imported CSVs in the last 5 minutes.`, 'warning');
           return;
         }
         
@@ -2346,11 +2080,6 @@
           const result = await apiCall('/api/ingest', { url, dryRun }, { timeoutMs: TIMEOUT_MS });
           const category = categorize(url, result, source);
           
-          // Debug: Log categorization for events
-          if (source === 'event' || source === 'workshop') {
-            console.log(`[DEBUG] URL: ${url}, source: ${source}, category: ${category}`);
-          }
-          
           // Debug: Log meta description extraction results
           if (result && result.meta_description) {
             addResult(`🔍 Meta description extracted for ${url}: "${result.meta_description.substring(0, 100)}..."`, 'info');
@@ -2373,23 +2102,9 @@
               window.urlScrapingStats[category].skipped++;
               stats.skippedCount++;
             } else {
-              // Log chunk and entity counts if available
-              const chunkCount = result.chunks || 0;
-              const entityCount = result.entities || 0;
-              const chunkMsg = chunkCount > 0 ? ` (${chunkCount} chunks, ${entityCount} entities)` : '';
-              addResult(`✅ Ingested: ${url}${chunkMsg}`, 'success');
+              addResult(`✅ Ingested: ${url}`, 'success');
               stats.successCount++;
               window.urlScrapingStats[category].success++;
-              
-              // Debug: Log stats update for events
-              if (source === 'event' || source === 'workshop') {
-                console.log(`[DEBUG] Updated stats for category "${category}": success=${window.urlScrapingStats[category].success}, total stats:`, window.urlScrapingStats);
-              }
-              
-              // Warn if no chunks were created
-              if (chunkCount === 0) {
-                addResult(`⚠️ Warning: No chunks created for ${url} - content may be empty or inaccessible`, 'warning');
-              }
             }
           } else {
             const reason = result && (result.error || result.detail || result.text) ? `${result.error || ''} ${result.detail || ''} ${result.text || ''}`.trim() : 'unknown';
@@ -3408,12 +3123,6 @@
       updateCronPill();
       await updateCsvMetadataDashboard(); // Load initial CSV metadata dashboard
       await updateDebugControlDashboard(); // Load initial Debug & Control dashboard
-      
-      // Auto-load CSVs from shared-resources (non-blocking)
-      autoLoadSharedCSVs().catch(err => {
-        console.error('Auto-load failed:', err);
-        addResult('ℹ️ Auto-load unavailable. Use manual file selection.', 'info');
-      });
     };
   </script>
 </body>
