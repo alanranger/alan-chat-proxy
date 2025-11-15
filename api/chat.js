@@ -10429,7 +10429,6 @@ function buildDebugInfo(ragResult, composedResponse) {
     totalMatches: composedResponse.totalMatches,
     chunksFound: composedResponse.chunksFound,
     entitiesFound: composedResponse.entitiesFound,
-    debugLogs: ragResult.debugLogs || ragResult.debugInfo?.debugLogs || [],
     entityTitles: composedResponse.entities?.map(e => e.title) || [],
     approach: ragResult.debugInfo?.approach || "rag_first_hybrid",
     debugLogs: [
@@ -10439,6 +10438,7 @@ function buildDebugInfo(ragResult, composedResponse) {
       `Chunks found: ${composedResponse.chunksFound || 0}`,
       `Entities found: ${composedResponse.entitiesFound || 0}`,
       ...(composedResponse.debugLogs || []),
+      ...(ragResult.debugLogs || []),
       ...(ragResult.debugInfo?.debugLogs || [])
     ]
   };
