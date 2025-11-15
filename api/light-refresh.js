@@ -173,7 +173,28 @@ function extractUrlsFromCsv(content) {
   return [...new Set(urls)];
 }
 
-async function readUrlsFromRepo(){
+async function readUrlsFromCsvMetadata(){
+  // Fetch ALL unique URLs from csv_metadata (not just events)
+  // This matches the Supabase Edge Function implementation
+  const client = supabaseAdmin();
+  const { data: urlRows, error: urlErr } = await client
+    .from('csv_metadata')
+    .select('url')
+    .order('url', { ascending: true });
+  
+  if (urlErr) {
+    console.error('[light-refresh] Error fetching URLs from csv_metadata:', urlErr);
+    // Fallback to CSV file if database query fails
+    return await readUrlsFromRepoFallback();
+  }
+  
+  // Get unique URLs (csv_metadata can have duplicates)
+  const allUrls = Array.from(new Set((urlRows || []).map(r => r.url).filter(Boolean)));
+  return allUrls;
+}
+
+async function readUrlsFromRepoFallback(){
+  // Fallback: read from CSV file if database query fails
   let content = null;
   try {
     content = await fs.readFile(CSV_PATH, 'utf8');
@@ -332,7 +353,7 @@ function logRunResult(data) {
 }
 
 async function executeRunLogic(forceBatchIndex = null, maxUrls = null) {
-  const urls = await readUrlsFromRepo();
+  const urls = await readUrlsFromCsvMetadata();
   const cameraCourseUrl = 'https://www.alanranger.com/photography-services-near-me/beginners-photography-course';
   
   // Use rotating batch system: 3 batches, runs every 4 hours
@@ -416,7 +437,7 @@ async function handleRunAction(req, res) {
 }
 
 async function handleUrlsAction(req, res) {
-  const urls = await readUrlsFromRepo();
+  const urls = await readUrlsFromCsvMetadata();
   return send(res, 200, { ok: true, count: urls.length, sample: urls.slice(0, 10) });
 }
 
