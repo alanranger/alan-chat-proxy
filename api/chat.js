@@ -7838,34 +7838,40 @@ async function searchWithKeywords(client, keywords) {
     return chunks;
   }
   
-  for (const keyword of keywords) {
-    if (!keyword || keyword.trim() === '') continue;
-    
-    // Search across chunk_text, title, and url fields using OR condition
-    // PostgREST uses % for wildcards in .or() syntax (consistent with other code)
-    // CRITICAL: Must encode keyword for PostgREST (like anyIlike function does)
-    const encodedKeyword = encodeURIComponent(keyword);
-    const orCondition = `chunk_text.ilike.%${encodedKeyword}%,title.ilike.%${encodedKeyword}%,url.ilike.%${encodedKeyword}%`;
-    console.log(`[RAG Search] Searching for keyword "${keyword}" (encoded: "${encodedKeyword}")`);
-    console.log(`[RAG Search] OR condition: ${orCondition}`);
-    
-    const { data: keywordChunks, error: chunksError } = await client
-      .from('page_chunks')
-      .select('url, title, chunk_text')
-      .or(orCondition)
-      .limit(5); // Increased limit since we're searching multiple fields
-    
-    if (chunksError) {
-      console.error(`[RAG Search] Error searching for keyword "${keyword}":`, chunksError);
-      console.error(`[RAG Search] Error details:`, JSON.stringify(chunksError, null, 2));
-    } else if (keywordChunks && keywordChunks.length > 0) {
-      console.log(`[RAG Search] Found ${keywordChunks.length} chunks for keyword "${keyword}"`);
-      chunks = [...chunks, ...keywordChunks];
-    } else {
-      console.log(`[RAG Search] No chunks found for keyword "${keyword}"`);
-    }
+  // Build OR conditions using anyIlike helper (consistent with rest of codebase)
+  // This properly encodes keywords and builds PostgREST-compatible OR conditions
+  const chunkTextConditions = anyIlike("chunk_text", keywords);
+  const titleConditions = anyIlike("title", keywords);
+  const urlConditions = anyIlike("url", keywords);
+  
+  // Combine all conditions into a single OR expression
+  const orConditions = [chunkTextConditions, titleConditions, urlConditions].filter(Boolean).join(",");
+  
+  if (!orConditions) {
+    console.log(`[RAG Search] No valid OR conditions built from keywords: ${JSON.stringify(keywords)}`);
+    return chunks;
   }
-  console.log(`[RAG Search] Total chunks found across all keywords: ${chunks.length}`);
+  
+  console.log(`[RAG Search] Searching with keywords: ${JSON.stringify(keywords)}`);
+  console.log(`[RAG Search] OR condition: ${orConditions.substring(0, 200)}...`);
+  
+  const { data: keywordChunks, error: chunksError } = await client
+    .from('page_chunks')
+    .select('url, title, chunk_text')
+    .or(orConditions)
+    .limit(15); // Increased limit since we're searching multiple fields
+  
+  if (chunksError) {
+    console.error(`[RAG Search] Error searching for keywords:`, chunksError);
+    console.error(`[RAG Search] Error details:`, JSON.stringify(chunksError, null, 2));
+  } else if (keywordChunks && keywordChunks.length > 0) {
+    console.log(`[RAG Search] Found ${keywordChunks.length} chunks for keywords`);
+    chunks = [...chunks, ...keywordChunks];
+  } else {
+    console.log(`[RAG Search] No chunks found for keywords`);
+  }
+  
+  console.log(`[RAG Search] Total chunks found: ${chunks.length}`);
   return chunks;
 }
  
@@ -7876,19 +7882,29 @@ async function searchWithFullQuery(client, query) {
     return [];
   }
   
-  // Search across chunk_text, title, and url fields using OR condition
-  // PostgREST uses % for wildcards in .or() syntax (consistent with other code)
-  // CRITICAL: Must encode query for PostgREST (like anyIlike function does)
-  const encodedQuery = encodeURIComponent(query);
-  const orCondition = `chunk_text.ilike.%${encodedQuery}%,title.ilike.%${encodedQuery}%,url.ilike.%${encodedQuery}%`;
-  console.log(`[RAG Search] Searching with full query "${query}" (encoded: "${encodedQuery}")`);
-  console.log(`[RAG Search] OR condition: ${orCondition}`);
+  // Extract keywords from query and use anyIlike helper (consistent with rest of codebase)
+  const queryKeywords = extractKeywords(query);
+  const chunkTextConditions = anyIlike("chunk_text", queryKeywords);
+  const titleConditions = anyIlike("title", queryKeywords);
+  const urlConditions = anyIlike("url", queryKeywords);
+  
+  // Combine all conditions into a single OR expression
+  const orConditions = [chunkTextConditions, titleConditions, urlConditions].filter(Boolean).join(",");
+  
+  if (!orConditions) {
+    console.log(`[RAG Search] No valid OR conditions built from query: "${query}"`);
+    return [];
+  }
+  
+  console.log(`[RAG Search] Searching with full query "${query}"`);
+  console.log(`[RAG Search] Extracted keywords: ${JSON.stringify(queryKeywords)}`);
+  console.log(`[RAG Search] OR condition: ${orConditions.substring(0, 200)}...`);
   
   const { data: fullQueryChunks, error: fullQueryError } = await client
     .from('page_chunks')
     .select('url, title, chunk_text')
-    .or(orCondition)
-    .limit(5); // Increased limit since we're searching multiple fields
+    .or(orConditions)
+    .limit(15); // Increased limit since we're searching multiple fields
   
   if (fullQueryError) {
     console.error(`[RAG Search] Error searching with full query "${query}":`, fullQueryError);
