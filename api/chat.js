@@ -4478,7 +4478,27 @@ function scoreArticleRow(r, kw) {
 
 // Helper function to process and sort results
 function processAndSortResults(rows, keywords, limit) {
- const kw = (keywords || []).map(k => String(k || "").toLowerCase());
+ let kw = (keywords || []).map(k => String(k || "").toLowerCase());
+
+ // If equipment keywords are present, filter out genre keywords from scoring
+ // This ensures equipment queries prioritize equipment articles over genre articles
+ const equipmentKeywords = new Set([
+   'tripod', 'camera', 'lens', 'filter', 'flash', 'monopod', 'head', 'ball head', 'geared head',
+   'memory card', 'battery', 'sensor', 'shutter', 'aperture', 'iso', 'white balance',
+   'depth of field', 'focal length', 'exposure', 'metering', 'composition', 'sharpness', 'focus',
+   'sharp', 'sharpness', 'focusing', 'blur', 'blurry', 'camera shake', 'stabilization', 'ibis', 'vr',
+   'hdr', 'noise', 'handheld'
+ ]);
+ 
+ const genreKeywords = new Set([
+   'landscape', 'portrait', 'travel', 'studio', 'macro', 'wildlife', 'street'
+ ]);
+ 
+ const hasEquipmentKeyword = kw.some(k => equipmentKeywords.has(k));
+ if (hasEquipmentKeyword) {
+   // Filter out genre keywords when equipment keywords are present
+   kw = kw.filter(k => !genreKeywords.has(k));
+ }
 
  // Deduplicate articles by page_url or id before sorting
  const seen = new Set();
