@@ -208,8 +208,20 @@ async function importBlogMetadata(rows, supa) {
   }).filter(item => item.url);
 
   if (metadata.length > 0) {
-    // For non-events (start_date is NULL), use (csv_type, url) only - partial unique index prevents duplicates
-    const { error } = await supa.from('csv_metadata').upsert(metadata, { onConflict: 'csv_type,url' });
+    // For non-events (start_date is NULL), manually handle upsert since PostgREST doesn't support partial indexes in onConflict
+    // Delete existing rows first, then insert new ones
+    const urls = metadata.map(m => m.url).filter(Boolean);
+    if (urls.length > 0) {
+      const { error: deleteError } = await supa
+        .from('csv_metadata')
+        .delete()
+        .eq('csv_type', 'blog')
+        .in('url', urls)
+        .is('start_date', null);
+      if (deleteError) throw deleteError;
+    }
+    
+    const { error } = await supa.from('csv_metadata').insert(metadata);
     if (error) throw error;
     
     // Track successful imports
@@ -503,8 +515,20 @@ async function importCourseProductMetadata(rows, supa) {
   }).filter(item => item.url);
 
   if (metadata.length > 0) {
-    // For non-events (start_date is NULL), use (csv_type, url) only - partial unique index prevents duplicates
-    const { error } = await supa.from('csv_metadata').upsert(metadata, { onConflict: 'csv_type,url' });
+    // For non-events (start_date is NULL), manually handle upsert since PostgREST doesn't support partial indexes in onConflict
+    // Delete existing rows first, then insert new ones
+    const urls = metadata.map(m => m.url).filter(Boolean);
+    if (urls.length > 0) {
+      const { error: deleteError } = await supa
+        .from('csv_metadata')
+        .delete()
+        .eq('csv_type', 'course_products')
+        .in('url', urls)
+        .is('start_date', null);
+      if (deleteError) throw deleteError;
+    }
+    
+    const { error } = await supa.from('csv_metadata').insert(metadata);
     if (error) throw error;
     
     // Track successful imports
@@ -556,8 +580,20 @@ async function importWorkshopProductMetadata(rows, supa) {
   }).filter(item => item.url);
 
   if (metadata.length > 0) {
-    // For non-events (start_date is NULL), use (csv_type, url) only - partial unique index prevents duplicates
-    const { error } = await supa.from('csv_metadata').upsert(metadata, { onConflict: 'csv_type,url' });
+    // For non-events (start_date is NULL), manually handle upsert since PostgREST doesn't support partial indexes in onConflict
+    // Delete existing rows first, then insert new ones
+    const urls = metadata.map(m => m.url).filter(Boolean);
+    if (urls.length > 0) {
+      const { error: deleteError } = await supa
+        .from('csv_metadata')
+        .delete()
+        .eq('csv_type', 'workshop_products')
+        .in('url', urls)
+        .is('start_date', null);
+      if (deleteError) throw deleteError;
+    }
+    
+    const { error } = await supa.from('csv_metadata').insert(metadata);
     if (error) throw error;
     
     // Track successful imports
@@ -589,8 +625,20 @@ async function importSiteUrlMetadata(rows, supa) {
   })).filter(item => item.url);
 
   if (metadata.length > 0) {
-    // For non-events (start_date is NULL), use (csv_type, url) only - partial unique index prevents duplicates
-    const { error } = await supa.from('csv_metadata').upsert(metadata, { onConflict: 'csv_type,url' });
+    // For non-events (start_date is NULL), manually handle upsert since PostgREST doesn't support partial indexes in onConflict
+    // Delete existing rows first, then insert new ones
+    const urls = metadata.map(m => m.url).filter(Boolean);
+    if (urls.length > 0) {
+      const { error: deleteError } = await supa
+        .from('csv_metadata')
+        .delete()
+        .eq('csv_type', 'site_urls')
+        .in('url', urls)
+        .is('start_date', null);
+      if (deleteError) throw deleteError;
+    }
+    
+    const { error } = await supa.from('csv_metadata').insert(metadata);
     if (error) throw error;
   }
   return { count: metadata.length };
@@ -629,8 +677,20 @@ async function importProductSchemaMetadata(rows, supa) {
   }).filter(item => item.url);
 
   if (metadata.length > 0) {
-    // For non-events (start_date is NULL), use (csv_type, url) only - partial unique index prevents duplicates
-    const { error } = await supa.from('csv_metadata').upsert(metadata, { onConflict: 'csv_type,url' });
+    // For non-events (start_date is NULL), manually handle upsert since PostgREST doesn't support partial indexes in onConflict
+    // Delete existing rows first, then insert new ones
+    const urls = metadata.map(m => m.url).filter(Boolean);
+    if (urls.length > 0) {
+      const { error: deleteError } = await supa
+        .from('csv_metadata')
+        .delete()
+        .eq('csv_type', 'product_schema')
+        .in('url', urls)
+        .is('start_date', null);
+      if (deleteError) throw deleteError;
+    }
+    
+    const { error } = await supa.from('csv_metadata').insert(metadata);
     if (error) throw error;
   }
   return { count: metadata.length };
@@ -670,8 +730,23 @@ async function importLandingServicePageMetadata(rows, supa) {
     console.log(`[DEBUG importLandingServicePageMetadata] Filtered to ${metadata.length} valid records`);
 
     if (metadata.length > 0) {
-      // For non-events (start_date is NULL), use (csv_type, url) only - partial unique index prevents duplicates
-      const { error } = await supa.from('csv_metadata').upsert(metadata, { onConflict: 'csv_type,url' });
+      // For non-events (start_date is NULL), manually handle upsert since PostgREST doesn't support partial indexes in onConflict
+      // Delete existing rows first, then insert new ones
+      const urls = metadata.map(m => m.url).filter(Boolean);
+      if (urls.length > 0) {
+        const { error: deleteError } = await supa
+          .from('csv_metadata')
+          .delete()
+          .eq('csv_type', 'landing_service_pages')
+          .in('url', urls)
+          .is('start_date', null);
+        if (deleteError) {
+          console.log(`[DEBUG importLandingServicePageMetadata] Delete error:`, deleteError);
+          throw deleteError;
+        }
+      }
+      
+      const { error } = await supa.from('csv_metadata').insert(metadata);
       if (error) {
         console.log(`[DEBUG importLandingServicePageMetadata] Database error:`, error);
         throw error;
