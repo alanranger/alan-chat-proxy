@@ -4538,11 +4538,27 @@ function processAndSortResults(rows, keywords, limit) {
    }
  }
 
- return unique
+ const scored = unique
  .map(r => ({ r, s: scoreArticleRow(r, kw, hasEquipmentKeyword ? queryEquipmentKeywords : null) }))
- .sort((a,b) => b.s - a.s)
- .slice(0, limit)
- .map(x => x.r);
+ .sort((a,b) => b.s - a.s);
+ 
+ // If equipment keywords are present, filter out articles that don't match them in title/URL
+ // This ensures equipment queries only return equipment articles
+ let filtered = scored;
+ if (hasEquipmentKeyword && queryEquipmentKeywords.size > 0) {
+   filtered = scored.filter(({ r }) => {
+     const t = (r.title || r.raw?.name || "").toLowerCase();
+     const u = (r.page_url || r.source_url || "").toLowerCase();
+     return Array.from(queryEquipmentKeywords).some(eq => t.includes(eq) || u.includes(eq));
+   });
+   
+   // If filtering removed all results, fall back to scored results (better than nothing)
+   if (filtered.length === 0) {
+     filtered = scored;
+   }
+ }
+ 
+ return filtered.slice(0, limit).map(x => x.r);
 }
 
 function filterArticleKeywords(keywords){
