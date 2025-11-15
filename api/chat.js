@@ -7833,11 +7833,20 @@ async function searchBroaderGuideArticles(client, primaryKeyword) {
 // Helper function to search with keywords
 async function searchWithKeywords(client, keywords) {
   let chunks = [];
+  if (!keywords || keywords.length === 0) {
+    console.log(`[RAG Search] No keywords provided to searchWithKeywords`);
+    return chunks;
+  }
+  
   for (const keyword of keywords) {
+    if (!keyword || keyword.trim() === '') continue;
+    
     // Search across chunk_text, title, and url fields using OR condition
-    // PostgREST uses * for wildcards in .or() syntax, not %
-    const encodedKeyword = encodeURIComponent(keyword);
-    const orCondition = `chunk_text.ilike.*${encodedKeyword}*,title.ilike.*${encodedKeyword}*,url.ilike.*${encodedKeyword}*`;
+    // PostgREST uses % for wildcards in .or() syntax (consistent with other code)
+    const orCondition = `chunk_text.ilike.%${keyword}%,title.ilike.%${keyword}%,url.ilike.%${keyword}%`;
+    console.log(`[RAG Search] Searching for keyword "${keyword}"`);
+    console.log(`[RAG Search] OR condition: ${orCondition}`);
+    
     const { data: keywordChunks, error: chunksError } = await client
       .from('page_chunks')
       .select('url, title, chunk_text')
@@ -7846,7 +7855,8 @@ async function searchWithKeywords(client, keywords) {
     
     if (chunksError) {
       console.error(`[RAG Search] Error searching for keyword "${keyword}":`, chunksError);
-    } else if (keywordChunks) {
+      console.error(`[RAG Search] Error details:`, JSON.stringify(chunksError, null, 2));
+    } else if (keywordChunks && keywordChunks.length > 0) {
       console.log(`[RAG Search] Found ${keywordChunks.length} chunks for keyword "${keyword}"`);
       chunks = [...chunks, ...keywordChunks];
     } else {
@@ -7859,10 +7869,17 @@ async function searchWithKeywords(client, keywords) {
  
 // Helper function to search with full query
 async function searchWithFullQuery(client, query) {
+  if (!query || query.trim() === '') {
+    console.log(`[RAG Search] No query provided to searchWithFullQuery`);
+    return [];
+  }
+  
   // Search across chunk_text, title, and url fields using OR condition
-  // PostgREST uses * for wildcards in .or() syntax, not %
-  const encodedQuery = encodeURIComponent(query);
-  const orCondition = `chunk_text.ilike.*${encodedQuery}*,title.ilike.*${encodedQuery}*,url.ilike.*${encodedQuery}*`;
+  // PostgREST uses % for wildcards in .or() syntax (consistent with other code)
+  const orCondition = `chunk_text.ilike.%${query}%,title.ilike.%${query}%,url.ilike.%${query}%`;
+  console.log(`[RAG Search] Searching with full query "${query}"`);
+  console.log(`[RAG Search] OR condition: ${orCondition}`);
+  
   const { data: fullQueryChunks, error: fullQueryError } = await client
     .from('page_chunks')
     .select('url, title, chunk_text')
@@ -7871,10 +7888,11 @@ async function searchWithFullQuery(client, query) {
   
   if (fullQueryError) {
     console.error(`[RAG Search] Error searching with full query "${query}":`, fullQueryError);
+    console.error(`[RAG Search] Error details:`, JSON.stringify(fullQueryError, null, 2));
     return [];
   }
   
-  if (fullQueryChunks) {
+  if (fullQueryChunks && fullQueryChunks.length > 0) {
     console.log(`[RAG Search] Found ${fullQueryChunks.length} chunks for full query "${query}"`);
     return fullQueryChunks;
   }
