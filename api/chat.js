@@ -7831,10 +7831,12 @@ async function searchBroaderGuideArticles(client, primaryKeyword) {
 }
 
 // Helper function to search with keywords
-async function searchWithKeywords(client, keywords) {
+async function searchWithKeywords(client, keywords, debugLogs = null) {
   let chunks = [];
   if (!keywords || keywords.length === 0) {
-    console.log(`[RAG Search] No keywords provided to searchWithKeywords`);
+    const msg = `[RAG Search] No keywords provided to searchWithKeywords`;
+    console.log(msg);
+    if (debugLogs) debugLogs.push(msg);
     return chunks;
   }
   
@@ -7848,12 +7850,20 @@ async function searchWithKeywords(client, keywords) {
   const orConditions = [chunkTextConditions, titleConditions, urlConditions].filter(Boolean).join(",");
   
   if (!orConditions) {
-    console.log(`[RAG Search] No valid OR conditions built from keywords: ${JSON.stringify(keywords)}`);
+    const msg = `[RAG Search] No valid OR conditions built from keywords: ${JSON.stringify(keywords)}`;
+    console.log(msg);
+    if (debugLogs) debugLogs.push(msg);
     return chunks;
   }
   
-  console.log(`[RAG Search] Searching with keywords: ${JSON.stringify(keywords)}`);
-  console.log(`[RAG Search] OR condition: ${orConditions.substring(0, 200)}...`);
+  const logMsg1 = `[RAG Search] Searching with keywords: ${JSON.stringify(keywords)}`;
+  const logMsg2 = `[RAG Search] OR condition: ${orConditions.substring(0, 200)}...`;
+  console.log(logMsg1);
+  console.log(logMsg2);
+  if (debugLogs) {
+    debugLogs.push(logMsg1);
+    debugLogs.push(logMsg2);
+  }
   
   const { data: keywordChunks, error: chunksError } = await client
     .from('page_chunks')
@@ -7862,23 +7872,33 @@ async function searchWithKeywords(client, keywords) {
     .limit(15); // Increased limit since we're searching multiple fields
   
   if (chunksError) {
-    console.error(`[RAG Search] Error searching for keywords:`, chunksError);
+    const errorMsg = `[RAG Search] Error searching for keywords: ${JSON.stringify(chunksError)}`;
+    console.error(errorMsg);
     console.error(`[RAG Search] Error details:`, JSON.stringify(chunksError, null, 2));
+    if (debugLogs) debugLogs.push(errorMsg);
   } else if (keywordChunks && keywordChunks.length > 0) {
-    console.log(`[RAG Search] Found ${keywordChunks.length} chunks for keywords`);
+    const msg = `[RAG Search] Found ${keywordChunks.length} chunks for keywords`;
+    console.log(msg);
+    if (debugLogs) debugLogs.push(msg);
     chunks = [...chunks, ...keywordChunks];
   } else {
-    console.log(`[RAG Search] No chunks found for keywords`);
+    const msg = `[RAG Search] No chunks found for keywords`;
+    console.log(msg);
+    if (debugLogs) debugLogs.push(msg);
   }
   
-  console.log(`[RAG Search] Total chunks found: ${chunks.length}`);
+  const finalMsg = `[RAG Search] Total chunks found: ${chunks.length}`;
+  console.log(finalMsg);
+  if (debugLogs) debugLogs.push(finalMsg);
   return chunks;
 }
  
 // Helper function to search with full query
-async function searchWithFullQuery(client, query) {
+async function searchWithFullQuery(client, query, debugLogs = null) {
   if (!query || query.trim() === '') {
-    console.log(`[RAG Search] No query provided to searchWithFullQuery`);
+    const msg = `[RAG Search] No query provided to searchWithFullQuery`;
+    console.log(msg);
+    if (debugLogs) debugLogs.push(msg);
     return [];
   }
   
@@ -7892,13 +7912,23 @@ async function searchWithFullQuery(client, query) {
   const orConditions = [chunkTextConditions, titleConditions, urlConditions].filter(Boolean).join(",");
   
   if (!orConditions) {
-    console.log(`[RAG Search] No valid OR conditions built from query: "${query}"`);
+    const msg = `[RAG Search] No valid OR conditions built from query: "${query}"`;
+    console.log(msg);
+    if (debugLogs) debugLogs.push(msg);
     return [];
   }
   
-  console.log(`[RAG Search] Searching with full query "${query}"`);
-  console.log(`[RAG Search] Extracted keywords: ${JSON.stringify(queryKeywords)}`);
-  console.log(`[RAG Search] OR condition: ${orConditions.substring(0, 200)}...`);
+  const logMsg1 = `[RAG Search] Searching with full query "${query}"`;
+  const logMsg2 = `[RAG Search] Extracted keywords: ${JSON.stringify(queryKeywords)}`;
+  const logMsg3 = `[RAG Search] OR condition: ${orConditions.substring(0, 200)}...`;
+  console.log(logMsg1);
+  console.log(logMsg2);
+  console.log(logMsg3);
+  if (debugLogs) {
+    debugLogs.push(logMsg1);
+    debugLogs.push(logMsg2);
+    debugLogs.push(logMsg3);
+  }
   
   const { data: fullQueryChunks, error: fullQueryError } = await client
     .from('page_chunks')
@@ -7907,17 +7937,23 @@ async function searchWithFullQuery(client, query) {
     .limit(15); // Increased limit since we're searching multiple fields
   
   if (fullQueryError) {
-    console.error(`[RAG Search] Error searching with full query "${query}":`, fullQueryError);
+    const errorMsg = `[RAG Search] Error searching with full query "${query}": ${JSON.stringify(fullQueryError)}`;
+    console.error(errorMsg);
     console.error(`[RAG Search] Error details:`, JSON.stringify(fullQueryError, null, 2));
+    if (debugLogs) debugLogs.push(errorMsg);
     return [];
   }
   
   if (fullQueryChunks && fullQueryChunks.length > 0) {
-    console.log(`[RAG Search] Found ${fullQueryChunks.length} chunks for full query "${query}"`);
+    const msg = `[RAG Search] Found ${fullQueryChunks.length} chunks for full query "${query}"`;
+    console.log(msg);
+    if (debugLogs) debugLogs.push(msg);
     return fullQueryChunks;
   }
   
-  console.log(`[RAG Search] No chunks found for full query "${query}"`);
+  const msg = `[RAG Search] No chunks found for full query "${query}"`;
+  console.log(msg);
+  if (debugLogs) debugLogs.push(msg);
   return [];
 }
  
@@ -7961,12 +7997,12 @@ async function searchRagContent(context) {
  
  // Only do general keyword search if we didn't find guide chunks
  if (!context.isConceptQuery || chunks.length === 0) {
- const keywordChunks = await searchWithKeywords(context.client, context.keywords);
+ const keywordChunks = await searchWithKeywords(context.client, context.keywords, context.debugLogs);
  chunks = [...chunks, ...keywordChunks];
  }
  
  // Also try the full query
- const fullQueryChunks = await searchWithFullQuery(context.client, context.query);
+ const fullQueryChunks = await searchWithFullQuery(context.client, context.query, context.debugLogs);
   chunks = [...chunks, ...fullQueryChunks];
   
   // Remove duplicates
