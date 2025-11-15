@@ -7832,34 +7832,56 @@ async function searchBroaderGuideArticles(client, primaryKeyword) {
 
 // Helper function to search with keywords
 async function searchWithKeywords(client, keywords) {
- let chunks = [];
- for (const keyword of keywords) {
- const { data: keywordChunks, error: chunksError } = await client
- .from('page_chunks')
- .select('url, title, chunk_text')
- .ilike('chunk_text', `%${keyword}%`)
- .limit(3);
- 
- if (!chunksError && keywordChunks) {
- chunks = [...chunks, ...keywordChunks];
- }
- }
- return chunks;
- }
+  let chunks = [];
+  for (const keyword of keywords) {
+    // Search across chunk_text, title, and url fields using OR condition
+    // PostgREST uses * for wildcards in .or() syntax, not %
+    const encodedKeyword = encodeURIComponent(keyword);
+    const orCondition = `chunk_text.ilike.*${encodedKeyword}*,title.ilike.*${encodedKeyword}*,url.ilike.*${encodedKeyword}*`;
+    const { data: keywordChunks, error: chunksError } = await client
+      .from('page_chunks')
+      .select('url, title, chunk_text')
+      .or(orCondition)
+      .limit(5); // Increased limit since we're searching multiple fields
+    
+    if (chunksError) {
+      console.error(`[RAG Search] Error searching for keyword "${keyword}":`, chunksError);
+    } else if (keywordChunks) {
+      console.log(`[RAG Search] Found ${keywordChunks.length} chunks for keyword "${keyword}"`);
+      chunks = [...chunks, ...keywordChunks];
+    } else {
+      console.log(`[RAG Search] No chunks found for keyword "${keyword}"`);
+    }
+  }
+  console.log(`[RAG Search] Total chunks found across all keywords: ${chunks.length}`);
+  return chunks;
+}
  
 // Helper function to search with full query
 async function searchWithFullQuery(client, query) {
- const { data: fullQueryChunks, error: fullQueryError } = await client
- .from('page_chunks')
- .select('url, title, chunk_text')
- .ilike('chunk_text', `%${query}%`)
- .limit(2);
- 
- if (!fullQueryError && fullQueryChunks) {
- return fullQueryChunks;
- }
- return [];
- }
+  // Search across chunk_text, title, and url fields using OR condition
+  // PostgREST uses * for wildcards in .or() syntax, not %
+  const encodedQuery = encodeURIComponent(query);
+  const orCondition = `chunk_text.ilike.*${encodedQuery}*,title.ilike.*${encodedQuery}*,url.ilike.*${encodedQuery}*`;
+  const { data: fullQueryChunks, error: fullQueryError } = await client
+    .from('page_chunks')
+    .select('url, title, chunk_text')
+    .or(orCondition)
+    .limit(5); // Increased limit since we're searching multiple fields
+  
+  if (fullQueryError) {
+    console.error(`[RAG Search] Error searching with full query "${query}":`, fullQueryError);
+    return [];
+  }
+  
+  if (fullQueryChunks) {
+    console.log(`[RAG Search] Found ${fullQueryChunks.length} chunks for full query "${query}"`);
+    return fullQueryChunks;
+  }
+  
+  console.log(`[RAG Search] No chunks found for full query "${query}"`);
+  return [];
+}
  
 // Helper function to remove duplicate chunks
 function removeDuplicateChunks(chunks) {
@@ -7870,9 +7892,13 @@ function removeDuplicateChunks(chunks) {
 
 // Helper function to search for RAG content chunks
 async function searchRagContent(context) {
- let chunks = [];
- 
- // For concept queries like "what is exposure", prioritize guide articles
+  let chunks = [];
+  
+  console.log(`[RAG Search] Starting search for query: "${context.query}"`);
+  console.log(`[RAG Search] Keywords: ${JSON.stringify(context.keywords)}`);
+  console.log(`[RAG Search] Is concept query: ${context.isConceptQuery}`);
+  
+  // For concept queries like "what is exposure", prioritize guide articles
  if (context.isConceptQuery) {
  console.log(`ðŸŽ¯ Concept query detected: "${context.query}" - prioritizing guide articles`);
  
@@ -7897,10 +7923,12 @@ async function searchRagContent(context) {
  
  // Also try the full query
  const fullQueryChunks = await searchWithFullQuery(context.client, context.query);
- chunks = [...chunks, ...fullQueryChunks];
- 
- // Remove duplicates
- return removeDuplicateChunks(chunks);
+  chunks = [...chunks, ...fullQueryChunks];
+  
+  // Remove duplicates
+  const uniqueChunks = removeDuplicateChunks(chunks);
+  console.log(`[RAG Search] Final result: ${uniqueChunks.length} unique chunks after deduplication`);
+  return uniqueChunks;
 }
 
 // Helper function to score and filter chunks
