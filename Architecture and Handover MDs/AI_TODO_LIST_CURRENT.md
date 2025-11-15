@@ -1,5 +1,5 @@
 # 🧠 AI_TODO_LIST_CURRENT.md  
-_Last updated: 2 Nov 2025_  
+_Last updated: 15 Nov 2025_  
 _Alan Ranger — Chat AI Bot / alan-chat-proxy_
 
 ---
@@ -28,6 +28,9 @@ All older references or notes can be found inside `/Archive/AI_TODO_LIST_2025-01
 ## ✅ Recently Completed (Last 2 Weeks)
 | Date | Completed Item | Notes |
 |------|-----------------|-------|
+| 15 Nov 2025 | **CSV Import Fix - Foreign Key Constraints** | ✅ Fixed 409 Conflict errors for non-event CSV imports (Files 04, 06, 08). Root cause: Foreign key constraints with NO ACTION delete rule prevent deletion of csv_metadata rows when referenced by page_entities or page_chunks. Updated batchDeleteMetadata() to nullify foreign key references before deletion. All 8 CSV files now import successfully without duplicates. Verified: No duplicates in database after ingestion |
+| 15 Nov 2025 | **CSV Import Fix - Batch Delete Operations** | ✅ Fixed server_error failures for large URL lists (File 06 with 433 URLs). Root cause: PostgREST has limits on .in() clause size (~100 items). Added batchDeleteMetadata() helper function to process deletes in batches of 100 URLs. Files 04, 06, and 08 now handle large URL lists correctly |
+| 15 Nov 2025 | **CSV Import Fix - Manual Upsert for Non-Event Types** | ✅ Fixed server_error failures for non-event CSV imports (Files 01, 04, 05, 06, 07, 08). Root cause: PostgREST doesn't support partial unique indexes in onConflict parameter. Changed all non-event import functions to manually handle upsert: delete existing rows first, then insert new ones. This works with the partial unique index we created earlier |
 | 14 Nov 2025 | **Light-Refresh Edge Function Fix - All URLs** | ✅ Fixed critical issue where light-refresh Edge Function was only checking event URLs from `v_events_for_chat` instead of all URLs. Updated Edge Function to query `csv_metadata` table for ALL unique URLs (blog articles, products, events, etc.). System now checks all content types for changes, not just events. Deployed as Edge Function version 8 |
 | 14 Nov 2025 | **Article Search Keyword Filtering Fix** | ✅ Fixed issue where photography genre keywords (landscape, portrait, travel, studio, macro, wildlife, street) were being filtered out of article searches. Added these keywords to `filterArticleKeywords()` allow list in `api/chat.js`. Articles with genre-specific queries now properly appear in search results. Fix deployed to codebase (requires Vercel deployment) |
 | 14 Nov 2025 | **Article Ingestion Root Cause Fix** | ✅ Identified and fixed root cause: new blog article "Best Tripod for Landscape Photography" was not appearing in search results because it was missing from the CSV file. Article was in database but not in source CSV, so ingestion never processed it. Added article to CSV, re-imported metadata, re-ingested content. Article now appears correctly in search results with fresh timestamps |
@@ -94,6 +97,38 @@ All older references or notes can be found inside `/Archive/AI_TODO_LIST_2025-01
 | 20–27 Oct 2025 | Testing framework reorganisation | `testing-scripts/` now hosts all test .js; results stored in `test results/` subfolder |
 | 20–27 Oct 2025 | Debug modules confirmed working | Debug scripts verified and timestamped up to 24 Oct |
 | 18–24 Oct 2025 | chat.js logic improvements | Refinements to scoring and confidence handling; new matching rules applied |
+
+---
+
+## 📋 Regression Testing Protocol
+
+### 40Q Deployed Regression Test (PRIMARY)
+**Script**: `testing-scripts/test-40q-deployed.cjs`  
+**Baseline**: `deployed-analytics-test-2025-11-10T22-57-04-965Z.json` (Nov 10, 2025)  
+**Comparison**: `testing-scripts/compare-40q-baseline-vs-current.cjs`
+
+**When to run**:
+- After deploying code changes to production
+- Before/after major feature changes (scoring, filtering, routing)
+- To verify fixes haven't introduced regressions
+
+**How to run**:
+```bash
+# 1. Run test against deployed API
+node testing-scripts/test-40q-deployed.cjs
+
+# 2. Compare results with baseline
+node testing-scripts/compare-40q-baseline-vs-current.cjs
+```
+
+**What to check**:
+- Overall success rate (should be 40/40 = 100%)
+- Average confidence (baseline: 82.8%)
+- Equipment queries (tripod, camera, memory card, lenses) - verify relevant articles
+- Landscape queries - verify they still work
+- Article counts and relevance
+
+**Documentation**: See `Architecture and Handover MDs/TESTING_MASTER_PLAN.md` section 5.1
 
 ---
 
