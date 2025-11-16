@@ -488,6 +488,85 @@ export default async function handler(req, res) {
     }
   }
 
+  // Get Regression Test Results for a Job (GET /api/admin?action=regression_test_results&jobid=21)
+  if (req.method === 'GET' && action === 'regression_test_results') {
+    try {
+      const jobid = parseInt(req.query.jobid);
+
+      if (!jobid) {
+        return res.status(400).json({ error: 'jobid parameter required' });
+      }
+
+      // Get latest test run for this job
+      const { data: testRun, error: runError } = await supabase
+        .from('regression_test_runs')
+        .select('*')
+        .eq('job_id', jobid)
+        .order('run_started_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (runError && runError.code !== 'PGRST116') {
+        throw new Error(runError.message);
+      }
+
+      if (!testRun) {
+        return res.status(200).json({
+          ok: true,
+          has_results: false,
+          message: 'No regression test results found for this job'
+        });
+      }
+
+      // Get baseline and after test results
+      let baselineResult = null;
+      let afterResult = null;
+      let comparison = null;
+
+      if (testRun.baseline_test_id) {
+        const { data, error } = await supabase
+          .from('regression_test_results')
+          .select('*')
+          .eq('id', testRun.baseline_test_id)
+          .single();
+        if (!error) baselineResult = data;
+      }
+
+      if (testRun.after_test_id) {
+        const { data, error } = await supabase
+          .from('regression_test_results')
+          .select('*')
+          .eq('id', testRun.after_test_id)
+          .single();
+        if (!error) afterResult = data;
+      }
+
+      // Get comparison if both exist
+      if (testRun.baseline_test_id && testRun.after_test_id) {
+        const { data, error } = await supabase.rpc('compare_regression_test_results_detailed', {
+          baseline_test_id: testRun.baseline_test_id,
+          current_test_id: testRun.after_test_id
+        });
+        if (!error && data && data.length > 0) {
+          comparison = data[0];
+        }
+      }
+
+      return res.status(200).json({
+        ok: true,
+        has_results: true,
+        test_run: testRun,
+        baseline: baselineResult,
+        after: afterResult,
+        comparison: comparison
+      });
+
+    } catch (error) {
+      console.error('Error getting regression test results:', error);
+      return res.status(500).json({ error: 'Internal server error', detail: error.message });
+    }
+  }
+
   // Default response
   return res.status(400).json({ 
     error: 'bad_request', 

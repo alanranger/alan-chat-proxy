@@ -239,6 +239,56 @@
       box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
 
+    .regression-test-section {
+      background: #fff3cd;
+      border: 1px solid #ffc107;
+      border-radius: 6px;
+      padding: 12px;
+      margin: 15px 0;
+      font-size: 13px;
+    }
+
+    .regression-test-section.severe {
+      background: #f8d7da;
+      border-color: #dc3545;
+    }
+
+    .regression-test-section.moderate {
+      background: #fff3cd;
+      border-color: #ffc107;
+    }
+
+    .regression-test-section.minor {
+      background: #d1ecf1;
+      border-color: #17a2b8;
+    }
+
+    .regression-test-section.no-regression {
+      background: #d4edda;
+      border-color: #28a745;
+    }
+
+    .regression-summary {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .regression-stat {
+      font-size: 12px;
+    }
+
+    .regression-stat-label {
+      color: #6c757d;
+      font-weight: 600;
+    }
+
+    .regression-stat-value {
+      color: #2c3e50;
+      font-weight: bold;
+    }
+
     .job-schedule {
       background: #ecf0f1;
       padding: 8px;
@@ -811,7 +861,95 @@
       return cron;
     }
 
-    function renderJobCard(job, isLinked, groupType) {
+    // Risky jobs that have regression testing
+    const riskyJobs = [21, 26, 27, 28, 31];
+    const regressionTestData = {};
+
+    async function loadRegressionTestData(jobid) {
+      if (!riskyJobs.includes(jobid)) return null;
+      
+      try {
+        const response = await fetch(`${API_BASE}/api/admin?action=regression_test_results&jobid=${jobid}`, {
+          headers: {
+            'Authorization': `Bearer ${authToken}`
+          }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          if (data.ok && data.has_results) {
+            return data;
+          }
+        }
+      } catch (error) {
+        console.error(`Error loading regression data for job ${jobid}:`, error);
+      }
+      return null;
+    }
+
+    function renderRegressionTestSummary(regressionData) {
+      if (!regressionData || !regressionData.has_results) {
+        return '<div class="regression-test-section"><em>No regression test results yet</em></div>';
+      }
+
+      const { baseline, after, comparison, test_run } = regressionData;
+      
+      if (!baseline || !after) {
+        return '<div class="regression-test-section"><em>Regression test in progress...</em></div>';
+      }
+
+      if (!comparison) {
+        return '<div class="regression-test-section"><em>Comparison analysis pending...</em></div>';
+      }
+
+      const severity = comparison.regression_severity || 'none';
+      const detected = comparison.regression_detected || false;
+      const details = comparison.regression_details || {};
+      const baselineStats = comparison.baseline_stats || {};
+      const currentStats = comparison.current_stats || {};
+
+      const severityClass = detected ? severity : 'no-regression';
+      const severityIcon = detected 
+        ? (severity === 'severe' ? '🔴' : severity === 'moderate' ? '🟡' : '🟠')
+        : '✅';
+
+      return `
+        <div class="regression-test-section ${severityClass}">
+          <div style="font-weight: bold; margin-bottom: 8px;">
+            ${severityIcon} Regression Test: ${detected ? severity.toUpperCase() + ' REGRESSION DETECTED' : 'No Regression'}
+          </div>
+          <div class="regression-summary">
+            <div class="regression-stat">
+              <div class="regression-stat-label">Baseline Success Rate</div>
+              <div class="regression-stat-value">${parseFloat(baselineStats.success_rate || 0).toFixed(1)}%</div>
+            </div>
+            <div class="regression-stat">
+              <div class="regression-stat-label">Current Success Rate</div>
+              <div class="regression-stat-value">${parseFloat(currentStats.success_rate || 0).toFixed(1)}%</div>
+            </div>
+            <div class="regression-stat">
+              <div class="regression-stat-label">Baseline Confidence</div>
+              <div class="regression-stat-value">${parseFloat(baselineStats.avg_confidence || 0).toFixed(3)}</div>
+            </div>
+            <div class="regression-stat">
+              <div class="regression-stat-label">Current Confidence</div>
+              <div class="regression-stat-value">${parseFloat(currentStats.avg_confidence || 0).toFixed(3)}</div>
+            </div>
+            <div class="regression-stat">
+              <div class="regression-stat-label">Article Changes</div>
+              <div class="regression-stat-value">${details.article_change_count || 0} queries</div>
+            </div>
+            <div class="regression-stat">
+              <div class="regression-stat-label">Severe Changes</div>
+              <div class="regression-stat-value">${details.severe_article_changes || 0}</div>
+            </div>
+          </div>
+          ${detected ? `<div style="margin-top: 8px; font-size: 11px; color: #721c24;"><strong>Action:</strong> ${severity === 'severe' || severity === 'moderate' ? 'ROLLBACK RECOMMENDED' : 'Review recommended'}</div>` : ''}
+        </div>
+      `;
+    }
+
+    async function renderJobCard(job, isLinked, groupType) {
       const successRate = job.total_runs > 0 
         ? ((job.success_count / job.total_runs) * 100).toFixed(1)
         : 0;
@@ -828,6 +966,13 @@
       const linkedIdsText = linkedIdsArray.join(', ');
       const displayName = jobDisplayNames[job.jobid] || job.jobname || `Job ${job.jobid}`;
       const frequency = parseCronFrequency(job.schedule);
+      
+      // Load regression test data for risky jobs (use pre-loaded data)
+      let regressionSummary = '';
+      if (riskyJobs.includes(job.jobid)) {
+        const regressionData = regressionTestData[job.jobid] || await loadRegressionTestData(job.jobid);
+        regressionSummary = renderRegressionTestSummary(regressionData);
+      }
       
       const borderColor = 
         groupType === 'analytics' ? '#f5576c' : 
@@ -850,6 +995,7 @@
             </span>
           </div>
           <div class="frequency-pill">⏰ ${frequency}</div>
+          ${regressionSummary}
           <div class="job-description">${description}</div>
           <div class="job-schedule">Schedule: ${job.schedule}</div>
           <div class="job-stats">
