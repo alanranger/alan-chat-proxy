@@ -1,0 +1,2200 @@
+{
+  "timestamp": "2025-11-15T16:07:31.391Z",
+  "baseline": "deployed-analytics-test-2025-11-10T22-57-04-965Z.json",
+  "current": "deployed-analytics-test-2025-11-15T16-05-38-079Z.json",
+  "summary": {
+    "totalCompared": 40,
+    "articlesChanged": 32,
+    "unchanged": 8
+  },
+  "differences": [
+    {
+      "query": "do you do astrophotography workshops",
+      "baselineCount": 12,
+      "currentCount": 12,
+      "sameCount": 12,
+      "added": [
+        {
+          "id": 256764,
+          "title": "Poppy Fields Photography Workshops | Worcestershire"
+        },
+        {
+          "id": 256777,
+          "title": "Christmas Photography Seasonal Workshops | Warwickshire"
+        },
+        {
+          "id": 256790,
+          "title": "Fireworks Photography Workshop | Long Exposure | Kenilworth"
+        },
+        {
+          "id": 256356,
+          "title": "Creative Photography Workshops: Unlocking Your Potential"
+        },
+        {
+          "id": 256897,
+          "title": "Discover the Midlands Photography Workshops with Alan Ranger"
+        },
+        {
+          "id": 256773,
+          "title": "Landscape Photography Workshop Glencoe | 15 - 17 Mar 2021"
+        },
+        {
+          "id": 256797,
+          "title": "DARTMOOR Photography Workshop - Landscapes - 9th - 11th Oct"
+        },
+        {
+          "id": 256905,
+          "title": "Hartland Quay - Devon Photography Workshops | Why Devon? "
+        },
+        {
+          "id": 256767,
+          "title": "LAVENDER FIELD Photography Workshop - Gloucestershire July"
+        },
+        {
+          "id": 256796,
+          "title": "The Secret of WOODLAND PHOTOGRAPHY- 1-Day Jan, Apr, Aug, Oct"
+        },
+        {
+          "id": 256795,
+          "title": "SEZINCOTE Garden Photography Workshop - Gloucs 29 May"
+        }
+      ],
+      "removed": []
+    },
+    {
+      "query": "can my 14yr old attend your workshop",
+      "baselineCount": 12,
+      "currentCount": 12,
+      "sameCount": 0,
+      "added": [
+        {
+          "id": 256790,
+          "title": "Fireworks Photography Workshop | Long Exposure | Kenilworth"
+        },
+        {
+          "id": 256764,
+          "title": "Poppy Fields Photography Workshops | Worcestershire"
+        },
+        {
+          "id": 256777,
+          "title": "Christmas Photography Seasonal Workshops | Warwickshire"
+        },
+        {
+          "id": 256356,
+          "title": "Creative Photography Workshops: Unlocking Your Potential"
+        },
+        {
+          "id": 256897,
+          "title": "Discover the Midlands Photography Workshops with Alan Ranger"
+        },
+        {
+          "id": 256414,
+          "title": "Comprehensive Guide: Preparing for Your Photography Workshop"
+        },
+        {
+          "id": 256773,
+          "title": "Landscape Photography Workshop Glencoe | 15 - 17 Mar 2021"
+        },
+        {
+          "id": 256797,
+          "title": "DARTMOOR Photography Workshop - Landscapes - 9th - 11th Oct"
+        },
+        {
+          "id": 256905,
+          "title": "Hartland Quay - Devon Photography Workshops | Why Devon? "
+        },
+        {
+          "id": 256981,
+          "title": "Why Go on Snowdonia Landscape Photography Workshops ?"
+        },
+        {
+          "id": 256767,
+          "title": "LAVENDER FIELD Photography Workshop - Gloucestershire July"
+        },
+        {
+          "id": 256796,
+          "title": "The Secret of WOODLAND PHOTOGRAPHY- 1-Day Jan, Apr, Aug, Oct"
+        }
+      ],
+      "removed": [
+        {
+          "id": 256884,
+          "title": "Ireland Photography Workshop Recce Report | Dingle to Kerry"
+        },
+        {
+          "id": 256884,
+          "title": "Ireland Photography Workshop Recce Report | Dingle to Kerry"
+        },
+        {
+          "id": 256884,
+          "title": "Ireland Photography Workshop Recce Report | Dingle to Kerry"
+        },
+        {
+          "id": 256884,
+          "title": "Ireland Photography Workshop Recce Report | Dingle to Kerry"
+        },
+        {
+          "id": 256884,
+          "title": "Ireland Photography Workshop Recce Report | Dingle to Kerry"
+        },
+        {
+          "id": 256884,
+          "title": "Ireland Photography Workshop Recce Report | Dingle to Kerry"
+        },
+        {
+          "id": 256884,
+          "title": "Ireland Photography Workshop Recce Report | Dingle to Kerry"
+        },
+        {
+          "id": 256884,
+          "title": "Ireland Photography Workshop Recce Report | Dingle to Kerry"
+        },
+        {
+          "id": 256884,
+          "title": "Ireland Photography Workshop Recce Report | Dingle to Kerry"
+        },
+        {
+          "id": 256884,
+          "title": "Ireland Photography Workshop Recce Report | Dingle to Kerry"
+        },
+        {
+          "id": 256884,
+          "title": "Ireland Photography Workshop Recce Report | Dingle to Kerry"
+        },
+        {
+          "id": 256884,
+          "title": "Ireland Photography Workshop Recce Report | Dingle to Kerry"
+        }
+      ]
+    },
+    {
+      "query": "my pictures never seem sharp.  can you advise on what i am doing wrong",
+      "baselineCount": 12,
+      "currentCount": 6,
+      "sameCount": 0,
+      "added": [
+        {
+          "id": 260851,
+          "title": "Best Tripod for Landscape Photography Benro Mammoth + GD36PT"
+        },
+        {
+          "id": 256969,
+          "title": "08 What is FOCUS in Photography: Key Concepts Explained"
+        },
+        {
+          "id": 257003,
+          "title": "15 Camera Settings — Photography Field Checklists PDF Bundle"
+        },
+        {
+          "id": 256346,
+          "title": "04 What is ISO in Photography: A Guide for Beginners."
+        },
+        {
+          "id": 257020,
+          "title": "Photo Print Preparation Service 30-min – File Check & Advice"
+        },
+        {
+          "id": 256764,
+          "title": "Poppy Fields Photography Workshops | Worcestershire"
+        }
+      ],
+      "removed": [
+        {
+          "id": 256365,
+          "title": "08 What is FOCUS in Photography: Key Concepts Explained"
+        },
+        {
+          "id": 256365,
+          "title": "08 What is FOCUS in Photography: Key Concepts Explained"
+        },
+        {
+          "id": 256365,
+          "title": "08 What is FOCUS in Photography: Key Concepts Explained"
+        },
+        {
+          "id": 256365,
+          "title": "08 What is FOCUS in Photography: Key Concepts Explained"
+        },
+        {
+          "id": 256365,
+          "title": "08 What is FOCUS in Photography: Key Concepts Explained"
+        },
+        {
+          "id": 256365,
+          "title": "08 What is FOCUS in Photography: Key Concepts Explained"
+        },
+        {
+          "id": 256365,
+          "title": "08 What is FOCUS in Photography: Key Concepts Explained"
+        },
+        {
+          "id": 256365,
+          "title": "08 What is FOCUS in Photography: Key Concepts Explained"
+        },
+        {
+          "id": 256365,
+          "title": "08 What is FOCUS in Photography: Key Concepts Explained"
+        },
+        {
+          "id": 256365,
+          "title": "08 What is FOCUS in Photography: Key Concepts Explained"
+        },
+        {
+          "id": 256365,
+          "title": "08 What is FOCUS in Photography: Key Concepts Explained"
+        },
+        {
+          "id": 256365,
+          "title": "08 What is FOCUS in Photography: Key Concepts Explained"
+        }
+      ]
+    },
+    {
+      "query": "what types of photography services do you offer?",
+      "baselineCount": 12,
+      "currentCount": 12,
+      "sameCount": 4,
+      "added": [
+        {
+          "id": 260851,
+          "title": "Best Tripod for Landscape Photography Benro Mammoth + GD36PT"
+        },
+        {
+          "id": 257743,
+          "title": "Case Study - Peter Orton - ARPS | RPS Distinctions Panel"
+        },
+        {
+          "id": 257742,
+          "title": "Case Study - John Simpson - LRPS | RPS Distinctions Panel "
+        },
+        {
+          "id": 256856,
+          "title": "Five Creative Autumn Photography Projects: To Inspire You"
+        },
+        {
+          "id": 256812,
+          "title": "Free Autumn Photography Tips | Equipment | Approach"
+        },
+        {
+          "id": 256951,
+          "title": "The Way of Wu Wei Philosophy - A Personal Reflection"
+        },
+        {
+          "id": 256399,
+          "title": "Composition Curiousness - Part 1 | Professional Guide"
+        },
+        {
+          "id": 256852,
+          "title": "Composition Curiousness - Part 2 | Professional Guide"
+        },
+        {
+          "id": 256346,
+          "title": "04 What is ISO in Photography: A Guide for Beginners."
+        },
+        {
+          "id": 256347,
+          "title": "Photo Print Sizes - Photo Sizing - Print Resolution Guide"
+        }
+      ],
+      "removed": [
+        {
+          "id": 256350,
+          "title": "What is FRAMING in photography: A Guide for Beginners"
+        },
+        {
+          "id": 257267,
+          "title": "The History of Photography - Origin of Photography to Today"
+        },
+        {
+          "id": 256943,
+          "title": "The Art of STORYTELLING PHOTOGRAPHY: Capturing Moments"
+        },
+        {
+          "id": 256923,
+          "title": "Photography Styles: Trends, Tips & Finding Your Fit (2025"
+        },
+        {
+          "id": 256853,
+          "title": "Mastering Exposure: Outdoor Photography Exposure Calculator"
+        },
+        {
+          "id": 256899,
+          "title": "Master Photography with a Professional Photography Tutor"
+        },
+        {
+          "id": 256387,
+          "title": "Learn photography from home - Online Photography Classes"
+        },
+        {
+          "id": 256374,
+          "title": "How to Improve Your Photography Composition: A Guide"
+        }
+      ]
+    },
+    {
+      "query": "what tripod do you recommend",
+      "baselineCount": 12,
+      "currentCount": 10,
+      "sameCount": 12,
+      "added": [
+        {
+          "id": 260851,
+          "title": "Best Tripod for Landscape Photography Benro Mammoth + GD36PT"
+        },
+        {
+          "id": 256409,
+          "title": "Tripod for Camera: Guide To Which, Why, How to Use A Tripod"
+        },
+        {
+          "id": 256819,
+          "title": "The Best Product Photography Tripod: Review and Features"
+        },
+        {
+          "id": 256425,
+          "title": "Tripods – Photographers Best Friend or Creativity Stifler "
+        },
+        {
+          "id": 256891,
+          "title": "Manfrotto Befree Tripod Review: A Compact Travel Companion"
+        },
+        {
+          "id": 256440,
+          "title": "The Perfect Travel Tripod: Benro Cyanbird Tripod Review"
+        },
+        {
+          "id": 256802,
+          "title": "5 Reasons why a tripod will help you to become better"
+        },
+        {
+          "id": 256950,
+          "title": "Benro Review - Head to Head with Gitzo and Manfrotto Tripods"
+        },
+        {
+          "id": 256485,
+          "title": "How to use a tripod correctly | Professional Guide"
+        }
+      ],
+      "removed": []
+    },
+    {
+      "query": "what sort of camera do i need for your camera course",
+      "baselineCount": 12,
+      "currentCount": 12,
+      "sameCount": 0,
+      "added": [
+        {
+          "id": 257003,
+          "title": "15 Camera Settings — Photography Field Checklists PDF Bundle"
+        },
+        {
+          "id": 256847,
+          "title": "Composition in Photography: Why the Camera Isn’t the Artist"
+        },
+        {
+          "id": 256804,
+          "title": "10 Things to Do with Your New Camera - Basic camera settings"
+        },
+        {
+          "id": 256820,
+          "title": "BEST CAMERA BAGS for Different Trips :  My 2024 Picks"
+        },
+        {
+          "id": 256377,
+          "title": "Camera Lenses: When to Buy New, Used, or Rent: A Guide"
+        },
+        {
+          "id": 256381,
+          "title": "Camera Sensor Cleaning: The Ultimate Step-by-Step Guide"
+        },
+        {
+          "id": 256389,
+          "title": "12 What are CAMERA DRIVE MODES: A Guide for Beginners"
+        },
+        {
+          "id": 256798,
+          "title": "7 Essential Camera Accessories You Need in Your Kit"
+        },
+        {
+          "id": 256807,
+          "title": "Are Mirrorless Cameras Better Than DSLRs: A Comparison"
+        },
+        {
+          "id": 256962,
+          "title": "What do CAMERA LENS FILTERS DO: A Guide for Beginners"
+        },
+        {
+          "id": 256411,
+          "title": "Are camera UV filters worth it? Pros and cons explained"
+        },
+        {
+          "id": 256409,
+          "title": "Tripod for Camera: Guide To Which, Why, How to Use A Tripod"
+        }
+      ],
+      "removed": [
+        {
+          "id": 256940,
+          "title": "The camera is an instrument to teaches people how to see "
+        },
+        {
+          "id": 256940,
+          "title": "The camera is an instrument to teaches people how to see "
+        },
+        {
+          "id": 256940,
+          "title": "The camera is an instrument to teaches people how to see "
+        },
+        {
+          "id": 256940,
+          "title": "The camera is an instrument to teaches people how to see "
+        },
+        {
+          "id": 256940,
+          "title": "The camera is an instrument to teaches people how to see "
+        },
+        {
+          "id": 256940,
+          "title": "The camera is an instrument to teaches people how to see "
+        },
+        {
+          "id": 256940,
+          "title": "The camera is an instrument to teaches people how to see "
+        },
+        {
+          "id": 256940,
+          "title": "The camera is an instrument to teaches people how to see "
+        },
+        {
+          "id": 256940,
+          "title": "The camera is an instrument to teaches people how to see "
+        },
+        {
+          "id": 256940,
+          "title": "The camera is an instrument to teaches people how to see "
+        },
+        {
+          "id": 256524,
+          "title": "Struggle to see your camera screen | Professional guide"
+        },
+        {
+          "id": 256524,
+          "title": "Struggle to see your camera screen | Professional guide"
+        }
+      ]
+    },
+    {
+      "query": "what gear or equipment do i need to bring to a workshop?",
+      "baselineCount": 12,
+      "currentCount": 12,
+      "sameCount": 0,
+      "added": [
+        {
+          "id": 256790,
+          "title": "Fireworks Photography Workshop | Long Exposure | Kenilworth"
+        },
+        {
+          "id": 256764,
+          "title": "Poppy Fields Photography Workshops | Worcestershire"
+        },
+        {
+          "id": 256777,
+          "title": "Christmas Photography Seasonal Workshops | Warwickshire"
+        },
+        {
+          "id": 256812,
+          "title": "Free Autumn Photography Tips | Equipment | Approach"
+        },
+        {
+          "id": 256356,
+          "title": "Creative Photography Workshops: Unlocking Your Potential"
+        },
+        {
+          "id": 256897,
+          "title": "Discover the Midlands Photography Workshops with Alan Ranger"
+        },
+        {
+          "id": 260851,
+          "title": "Best Tripod for Landscape Photography Benro Mammoth + GD36PT"
+        },
+        {
+          "id": 256409,
+          "title": "Tripod for Camera: Guide To Which, Why, How to Use A Tripod"
+        },
+        {
+          "id": 256819,
+          "title": "The Best Product Photography Tripod: Review and Features"
+        },
+        {
+          "id": 256425,
+          "title": "Tripods – Photographers Best Friend or Creativity Stifler "
+        },
+        {
+          "id": 256891,
+          "title": "Manfrotto Befree Tripod Review: A Compact Travel Companion"
+        },
+        {
+          "id": 256440,
+          "title": "The Perfect Travel Tripod: Benro Cyanbird Tripod Review"
+        }
+      ],
+      "removed": [
+        {
+          "id": 256884,
+          "title": "Ireland Photography Workshop Recce Report | Dingle to Kerry"
+        },
+        {
+          "id": 256884,
+          "title": "Ireland Photography Workshop Recce Report | Dingle to Kerry"
+        },
+        {
+          "id": 256884,
+          "title": "Ireland Photography Workshop Recce Report | Dingle to Kerry"
+        },
+        {
+          "id": 256884,
+          "title": "Ireland Photography Workshop Recce Report | Dingle to Kerry"
+        },
+        {
+          "id": 256884,
+          "title": "Ireland Photography Workshop Recce Report | Dingle to Kerry"
+        },
+        {
+          "id": 256884,
+          "title": "Ireland Photography Workshop Recce Report | Dingle to Kerry"
+        },
+        {
+          "id": 256377,
+          "title": "Camera Lenses: When to Buy New, Used, or Rent: A Guide"
+        },
+        {
+          "id": 256377,
+          "title": "Camera Lenses: When to Buy New, Used, or Rent: A Guide"
+        },
+        {
+          "id": 256377,
+          "title": "Camera Lenses: When to Buy New, Used, or Rent: A Guide"
+        },
+        {
+          "id": 256377,
+          "title": "Camera Lenses: When to Buy New, Used, or Rent: A Guide"
+        },
+        {
+          "id": 256377,
+          "title": "Camera Lenses: When to Buy New, Used, or Rent: A Guide"
+        },
+        {
+          "id": 256377,
+          "title": "Camera Lenses: When to Buy New, Used, or Rent: A Guide"
+        }
+      ]
+    },
+    {
+      "query": "what is the difference between prime and zoom lenses?",
+      "baselineCount": 12,
+      "currentCount": 4,
+      "sameCount": 12,
+      "added": [
+        {
+          "id": 256377,
+          "title": "Camera Lenses: When to Buy New, Used, or Rent: A Guide"
+        },
+        {
+          "id": 256962,
+          "title": "What do CAMERA LENS FILTERS DO: A Guide for Beginners"
+        },
+        {
+          "id": 256982,
+          "title": "Buying a lens.... Which lens should I buy next? | Guide"
+        }
+      ],
+      "removed": []
+    },
+    {
+      "query": "what memory card should i buy?",
+      "baselineCount": 12,
+      "currentCount": 2,
+      "sameCount": 12,
+      "added": [
+        {
+          "id": 257032,
+          "title": "Photography Gift Vouchers | Digital eCard | Email Delivery"
+        }
+      ],
+      "removed": []
+    },
+    {
+      "query": "do you i get a certificate with the photography course",
+      "baselineCount": 12,
+      "currentCount": 12,
+      "sameCount": 4,
+      "added": [
+        {
+          "id": 260851,
+          "title": "Best Tripod for Landscape Photography Benro Mammoth + GD36PT"
+        },
+        {
+          "id": 257743,
+          "title": "Case Study - Peter Orton - ARPS | RPS Distinctions Panel"
+        },
+        {
+          "id": 257742,
+          "title": "Case Study - John Simpson - LRPS | RPS Distinctions Panel "
+        },
+        {
+          "id": 256856,
+          "title": "Five Creative Autumn Photography Projects: To Inspire You"
+        },
+        {
+          "id": 256812,
+          "title": "Free Autumn Photography Tips | Equipment | Approach"
+        },
+        {
+          "id": 256951,
+          "title": "The Way of Wu Wei Philosophy - A Personal Reflection"
+        },
+        {
+          "id": 256399,
+          "title": "Composition Curiousness - Part 1 | Professional Guide"
+        },
+        {
+          "id": 256852,
+          "title": "Composition Curiousness - Part 2 | Professional Guide"
+        },
+        {
+          "id": 256346,
+          "title": "04 What is ISO in Photography: A Guide for Beginners."
+        },
+        {
+          "id": 256347,
+          "title": "Photo Print Sizes - Photo Sizing - Print Resolution Guide"
+        }
+      ],
+      "removed": [
+        {
+          "id": 256899,
+          "title": "Master Photography with a Professional Photography Tutor"
+        },
+        {
+          "id": 256350,
+          "title": "What is FRAMING in photography: A Guide for Beginners"
+        },
+        {
+          "id": 257267,
+          "title": "The History of Photography - Origin of Photography to Today"
+        },
+        {
+          "id": 256943,
+          "title": "The Art of STORYTELLING PHOTOGRAPHY: Capturing Moments"
+        },
+        {
+          "id": 256923,
+          "title": "Photography Styles: Trends, Tips & Finding Your Fit (2025"
+        },
+        {
+          "id": 256853,
+          "title": "Mastering Exposure: Outdoor Photography Exposure Calculator"
+        },
+        {
+          "id": 256387,
+          "title": "Learn photography from home - Online Photography Classes"
+        },
+        {
+          "id": 256374,
+          "title": "How to Improve Your Photography Composition: A Guide"
+        }
+      ]
+    },
+    {
+      "query": "do i need a laptop for the lightroom course",
+      "baselineCount": 12,
+      "currentCount": 12,
+      "sameCount": 0,
+      "added": [
+        {
+          "id": 256798,
+          "title": "7 Essential Camera Accessories You Need in Your Kit"
+        },
+        {
+          "id": 257019,
+          "title": "Alan Ranger Academy - Photography Foundation Course eBook"
+        },
+        {
+          "id": 256428,
+          "title": "Lightroom Classic Latest Version 13.3 - What's New"
+        },
+        {
+          "id": 256813,
+          "title": "Kickstart 2024: Beginners Photography Course in Coventry"
+        },
+        {
+          "id": 256436,
+          "title": "Guide: How to Prepare for Photography Courses for Beginners"
+        },
+        {
+          "id": 256442,
+          "title": "What's new in Lightroom Classic 13 (2024) - First Glance"
+        },
+        {
+          "id": 256456,
+          "title": "Kase Filters and Adobe Lightroom Queen Partner Deals |"
+        },
+        {
+          "id": 256848,
+          "title": "How to delete duplicate photos in Lightroom Classic"
+        },
+        {
+          "id": 256756,
+          "title": "Beginners Portrait Photography Course - Coventry - 1 Day"
+        },
+        {
+          "id": 256750,
+          "title": "Intermediates Lightroom Photo Editing Course | Coventry"
+        },
+        {
+          "id": 256748,
+          "title": "Beginners Photography Course | 3 Weekly Evening Classes"
+        },
+        {
+          "id": 256749,
+          "title": "Intermediates Intentions Photography Project Course"
+        }
+      ],
+      "removed": [
+        {
+          "id": 256521,
+          "title": "Learn how to use Lightroom to edit  | Professional Guide"
+        },
+        {
+          "id": 256521,
+          "title": "Learn how to use Lightroom to edit  | Professional Guide"
+        },
+        {
+          "id": 256521,
+          "title": "Learn how to use Lightroom to edit  | Professional Guide"
+        },
+        {
+          "id": 256521,
+          "title": "Learn how to use Lightroom to edit  | Professional Guide"
+        },
+        {
+          "id": 256521,
+          "title": "Learn how to use Lightroom to edit  | Professional Guide"
+        },
+        {
+          "id": 256521,
+          "title": "Learn how to use Lightroom to edit  | Professional Guide"
+        },
+        {
+          "id": 256521,
+          "title": "Learn how to use Lightroom to edit  | Professional Guide"
+        },
+        {
+          "id": 256521,
+          "title": "Learn how to use Lightroom to edit  | Professional Guide"
+        },
+        {
+          "id": 256521,
+          "title": "Learn how to use Lightroom to edit  | Professional Guide"
+        },
+        {
+          "id": 256521,
+          "title": "Learn how to use Lightroom to edit  | Professional Guide"
+        },
+        {
+          "id": 256521,
+          "title": "Learn how to use Lightroom to edit  | Professional Guide"
+        },
+        {
+          "id": 256521,
+          "title": "Learn how to use Lightroom to edit  | Professional Guide"
+        }
+      ]
+    },
+    {
+      "query": "is the online photography course really free",
+      "baselineCount": 12,
+      "currentCount": 12,
+      "sameCount": 6,
+      "added": [
+        {
+          "id": 257031,
+          "title": "Premium Photography Academy Membership Subscription"
+        },
+        {
+          "id": 260851,
+          "title": "Best Tripod for Landscape Photography Benro Mammoth + GD36PT"
+        },
+        {
+          "id": 257743,
+          "title": "Case Study - Peter Orton - ARPS | RPS Distinctions Panel"
+        },
+        {
+          "id": 257742,
+          "title": "Case Study - John Simpson - LRPS | RPS Distinctions Panel "
+        },
+        {
+          "id": 256856,
+          "title": "Five Creative Autumn Photography Projects: To Inspire You"
+        },
+        {
+          "id": 256951,
+          "title": "The Way of Wu Wei Philosophy - A Personal Reflection"
+        },
+        {
+          "id": 256399,
+          "title": "Composition Curiousness - Part 1 | Professional Guide"
+        },
+        {
+          "id": 256852,
+          "title": "Composition Curiousness - Part 2 | Professional Guide"
+        },
+        {
+          "id": 256892,
+          "title": "Mastering the Art of Seasonal Photography: Nature's Rhythms"
+        },
+        {
+          "id": 256346,
+          "title": "04 What is ISO in Photography: A Guide for Beginners."
+        }
+      ],
+      "removed": [
+        {
+          "id": 256387,
+          "title": "Learn photography from home - Online Photography Classes"
+        },
+        {
+          "id": 256853,
+          "title": "Mastering Exposure: Outdoor Photography Exposure Calculator"
+        },
+        {
+          "id": 256350,
+          "title": "What is FRAMING in photography: A Guide for Beginners"
+        },
+        {
+          "id": 257267,
+          "title": "The History of Photography - Origin of Photography to Today"
+        },
+        {
+          "id": 256943,
+          "title": "The Art of STORYTELLING PHOTOGRAPHY: Capturing Moments"
+        },
+        {
+          "id": 256923,
+          "title": "Photography Styles: Trends, Tips & Finding Your Fit (2025"
+        }
+      ]
+    },
+    {
+      "query": "what courses do you offer for complete beginners?",
+      "baselineCount": 12,
+      "currentCount": 12,
+      "sameCount": 12,
+      "added": [
+        {
+          "id": 256346,
+          "title": "04 What is ISO in Photography: A Guide for Beginners."
+        },
+        {
+          "id": 256349,
+          "title": "10 What is DYNAMIC RANGE in photography: A Beginners Guide"
+        },
+        {
+          "id": 256350,
+          "title": "What is FRAMING in photography: A Guide for Beginners"
+        },
+        {
+          "id": 256358,
+          "title": "07 Explaining EXPOSURE BRACKETING: A Guide for Beginners"
+        },
+        {
+          "id": 256357,
+          "title": "ARCHITECTURE Photography Guide: Step-by-Step for Beginners"
+        },
+        {
+          "id": 256963,
+          "title": "01 What is EXPOSURE in photography: A Guide for Beginners"
+        },
+        {
+          "id": 256361,
+          "title": "What is MINIMALIST PHOTOGRAPHY: Key Concepts for Beginners"
+        },
+        {
+          "id": 256978,
+          "title": "What is PORTRAIT PHOTOGRAPHY:  Essential Tips for Beginners"
+        },
+        {
+          "id": 256926,
+          "title": "PRODUCT PHOTOGRAPHY Setup: A Simple Guide for Beginners"
+        },
+        {
+          "id": 256371,
+          "title": "What is STILL LIFE PHOTOGRAPHY: A Guide For Beginners"
+        },
+        {
+          "id": 256876,
+          "title": "How to take LONG EXPOSURE photos: A Guide For Beginners"
+        }
+      ],
+      "removed": []
+    },
+    {
+      "query": "how many weeks is the beginners’ photography course?",
+      "baselineCount": 12,
+      "currentCount": 12,
+      "sameCount": 2,
+      "added": [
+        {
+          "id": 260851,
+          "title": "Best Tripod for Landscape Photography Benro Mammoth + GD36PT"
+        },
+        {
+          "id": 257743,
+          "title": "Case Study - Peter Orton - ARPS | RPS Distinctions Panel"
+        },
+        {
+          "id": 257742,
+          "title": "Case Study - John Simpson - LRPS | RPS Distinctions Panel "
+        },
+        {
+          "id": 256856,
+          "title": "Five Creative Autumn Photography Projects: To Inspire You"
+        },
+        {
+          "id": 256812,
+          "title": "Free Autumn Photography Tips | Equipment | Approach"
+        },
+        {
+          "id": 256423,
+          "title": "Photographing Autumn - UK landscape photography guide"
+        },
+        {
+          "id": 256951,
+          "title": "The Way of Wu Wei Philosophy - A Personal Reflection"
+        },
+        {
+          "id": 256399,
+          "title": "Composition Curiousness - Part 1 | Professional Guide"
+        },
+        {
+          "id": 256852,
+          "title": "Composition Curiousness - Part 2 | Professional Guide"
+        },
+        {
+          "id": 256892,
+          "title": "Mastering the Art of Seasonal Photography: Nature's Rhythms"
+        },
+        {
+          "id": 256347,
+          "title": "Photo Print Sizes - Photo Sizing - Print Resolution Guide"
+        }
+      ],
+      "removed": [
+        {
+          "id": 256386,
+          "title": "BLACK and WHITE Photography for Beginners:  A Guide"
+        },
+        {
+          "id": 256350,
+          "title": "What is FRAMING in photography: A Guide for Beginners"
+        },
+        {
+          "id": 256357,
+          "title": "ARCHITECTURE Photography Guide: Step-by-Step for Beginners"
+        },
+        {
+          "id": 256385,
+          "title": "11 What is WHITE BALANCE in photography: A Beginners Guide"
+        },
+        {
+          "id": 256349,
+          "title": "10 What is DYNAMIC RANGE in photography: A Beginners Guide"
+        },
+        {
+          "id": 256963,
+          "title": "01 What is EXPOSURE in photography: A Guide for Beginners"
+        },
+        {
+          "id": 256968,
+          "title": "09 What is DEPTH OF FIELD in Photography: A Beginners Guide"
+        },
+        {
+          "id": 256379,
+          "title": "03 What is SHUTTER SPEED in photography: Guide for Beginners"
+        },
+        {
+          "id": 257267,
+          "title": "The History of Photography - Origin of Photography to Today"
+        },
+        {
+          "id": 256943,
+          "title": "The Art of STORYTELLING PHOTOGRAPHY: Capturing Moments"
+        }
+      ]
+    },
+    {
+      "query": "how do i get personalised feedback on my images",
+      "baselineCount": 12,
+      "currentCount": 2,
+      "sameCount": 12,
+      "added": [
+        {
+          "id": 256874,
+          "title": "How to Make Images That are Moving | Moving Photographs"
+        }
+      ],
+      "removed": []
+    },
+    {
+      "query": "how can i contact you or book a discovery call?",
+      "baselineCount": 12,
+      "currentCount": 2,
+      "sameCount": 0,
+      "added": [
+        {
+          "id": 257031,
+          "title": "Premium Photography Academy Membership Subscription"
+        },
+        {
+          "id": 257020,
+          "title": "Photo Print Preparation Service 30-min – File Check & Advice"
+        }
+      ],
+      "removed": [
+        {
+          "id": 257019,
+          "title": "Alan Ranger Academy - Photography Foundation Course eBook"
+        },
+        {
+          "id": 257019,
+          "title": "Alan Ranger Academy - Photography Foundation Course eBook"
+        },
+        {
+          "id": 257019,
+          "title": "Alan Ranger Academy - Photography Foundation Course eBook"
+        },
+        {
+          "id": 257019,
+          "title": "Alan Ranger Academy - Photography Foundation Course eBook"
+        },
+        {
+          "id": 257019,
+          "title": "Alan Ranger Academy - Photography Foundation Course eBook"
+        },
+        {
+          "id": 257019,
+          "title": "Alan Ranger Academy - Photography Foundation Course eBook"
+        },
+        {
+          "id": 257019,
+          "title": "Alan Ranger Academy - Photography Foundation Course eBook"
+        },
+        {
+          "id": 257019,
+          "title": "Alan Ranger Academy - Photography Foundation Course eBook"
+        },
+        {
+          "id": 257019,
+          "title": "Alan Ranger Academy - Photography Foundation Course eBook"
+        },
+        {
+          "id": 257019,
+          "title": "Alan Ranger Academy - Photography Foundation Course eBook"
+        },
+        {
+          "id": 257019,
+          "title": "Alan Ranger Academy - Photography Foundation Course eBook"
+        },
+        {
+          "id": 257019,
+          "title": "Alan Ranger Academy - Photography Foundation Course eBook"
+        }
+      ]
+    },
+    {
+      "query": "what is your cancellation or refund policy for courses/workshops?",
+      "baselineCount": 12,
+      "currentCount": 12,
+      "sameCount": 12,
+      "added": [
+        {
+          "id": 256764,
+          "title": "Poppy Fields Photography Workshops | Worcestershire"
+        },
+        {
+          "id": 256777,
+          "title": "Christmas Photography Seasonal Workshops | Warwickshire"
+        },
+        {
+          "id": 256790,
+          "title": "Fireworks Photography Workshop | Long Exposure | Kenilworth"
+        },
+        {
+          "id": 256356,
+          "title": "Creative Photography Workshops: Unlocking Your Potential"
+        },
+        {
+          "id": 256897,
+          "title": "Discover the Midlands Photography Workshops with Alan Ranger"
+        },
+        {
+          "id": 256773,
+          "title": "Landscape Photography Workshop Glencoe | 15 - 17 Mar 2021"
+        },
+        {
+          "id": 256436,
+          "title": "Guide: How to Prepare for Photography Courses for Beginners"
+        },
+        {
+          "id": 256797,
+          "title": "DARTMOOR Photography Workshop - Landscapes - 9th - 11th Oct"
+        },
+        {
+          "id": 256905,
+          "title": "Hartland Quay - Devon Photography Workshops | Why Devon? "
+        },
+        {
+          "id": 256767,
+          "title": "LAVENDER FIELD Photography Workshop - Gloucestershire July"
+        },
+        {
+          "id": 256796,
+          "title": "The Secret of WOODLAND PHOTOGRAPHY- 1-Day Jan, Apr, Aug, Oct"
+        }
+      ],
+      "removed": []
+    },
+    {
+      "query": "where is your gallery and can i submit my images for feedback?",
+      "baselineCount": 12,
+      "currentCount": 3,
+      "sameCount": 12,
+      "added": [
+        {
+          "id": 256473,
+          "title": "Jacki Rosin ARPS - RHS exhibition at the Saatchi Gallery"
+        },
+        {
+          "id": 256874,
+          "title": "How to Make Images That are Moving | Moving Photographs"
+        }
+      ],
+      "removed": []
+    },
+    {
+      "query": "what is long exposure and how can i find out more about it",
+      "baselineCount": 12,
+      "currentCount": 12,
+      "sameCount": 12,
+      "added": [
+        {
+          "id": 256790,
+          "title": "Fireworks Photography Workshop | Long Exposure | Kenilworth"
+        },
+        {
+          "id": 256853,
+          "title": "Mastering Exposure: Outdoor Photography Exposure Calculator"
+        },
+        {
+          "id": 256358,
+          "title": "07 Explaining EXPOSURE BRACKETING: A Guide for Beginners"
+        },
+        {
+          "id": 256963,
+          "title": "01 What is EXPOSURE in photography: A Guide for Beginners"
+        },
+        {
+          "id": 256876,
+          "title": "How to take LONG EXPOSURE photos: A Guide For Beginners"
+        },
+        {
+          "id": 256858,
+          "title": "Exposure Bracketing Photos - Dynamic Range | A Guide"
+        },
+        {
+          "id": 256441,
+          "title": "Tip of the day -  Alternative Long Exposure Photography"
+        },
+        {
+          "id": 256933,
+          "title": "Shooting In Low Light | Long Exposure Photography Guide"
+        },
+        {
+          "id": 256480,
+          "title": "Using a ND Filter for Long Exposure Photography | A Guide"
+        },
+        {
+          "id": 256785,
+          "title": "Long Exposure Photography Workshop KENILWORTH Sunset"
+        },
+        {
+          "id": 256766,
+          "title": "BURNHAM ON SEA Long Exposure Photography Workshop 2 May"
+        }
+      ],
+      "removed": []
+    },
+    {
+      "query": "\"what is the exposure triangle (aperture, shutter, iso)?\"",
+      "baselineCount": 12,
+      "currentCount": 3,
+      "sameCount": 0,
+      "added": [
+        {
+          "id": 256346,
+          "title": "04 What is ISO in Photography: A Guide for Beginners."
+        },
+        {
+          "id": 256807,
+          "title": "Are Mirrorless Cameras Better Than DSLRs: A Comparison"
+        },
+        {
+          "id": 256476,
+          "title": "Choosing a camera - Considerations and Comparisons"
+        }
+      ],
+      "removed": [
+        {
+          "id": 256408,
+          "title": "05 What is MANUAL EXPOSURE in photography:Guide for beginner"
+        },
+        {
+          "id": 256408,
+          "title": "05 What is MANUAL EXPOSURE in photography:Guide for beginner"
+        },
+        {
+          "id": 256408,
+          "title": "05 What is MANUAL EXPOSURE in photography:Guide for beginner"
+        },
+        {
+          "id": 256408,
+          "title": "05 What is MANUAL EXPOSURE in photography:Guide for beginner"
+        },
+        {
+          "id": 256408,
+          "title": "05 What is MANUAL EXPOSURE in photography:Guide for beginner"
+        },
+        {
+          "id": 256408,
+          "title": "05 What is MANUAL EXPOSURE in photography:Guide for beginner"
+        },
+        {
+          "id": 256408,
+          "title": "05 What is MANUAL EXPOSURE in photography:Guide for beginner"
+        },
+        {
+          "id": 256408,
+          "title": "05 What is MANUAL EXPOSURE in photography:Guide for beginner"
+        },
+        {
+          "id": 256408,
+          "title": "05 What is MANUAL EXPOSURE in photography:Guide for beginner"
+        },
+        {
+          "id": 256408,
+          "title": "05 What is MANUAL EXPOSURE in photography:Guide for beginner"
+        },
+        {
+          "id": 256408,
+          "title": "05 What is MANUAL EXPOSURE in photography:Guide for beginner"
+        },
+        {
+          "id": 256408,
+          "title": "05 What is MANUAL EXPOSURE in photography:Guide for beginner"
+        }
+      ]
+    },
+    {
+      "query": "\"what is depth of field, and how do i control it?\"",
+      "baselineCount": 12,
+      "currentCount": 6,
+      "sameCount": 0,
+      "added": [
+        {
+          "id": 256764,
+          "title": "Poppy Fields Photography Workshops | Worcestershire"
+        },
+        {
+          "id": 257031,
+          "title": "Premium Photography Academy Membership Subscription"
+        },
+        {
+          "id": 257018,
+          "title": "35 PDFs — 1 Page Photography Field Checklists Bundle"
+        },
+        {
+          "id": 257004,
+          "title": "10 Composition PDFs — Photography Field Checklists Bundle"
+        },
+        {
+          "id": 257030,
+          "title": "10 Genre PDFs — Photography Field Checklists Bundle"
+        },
+        {
+          "id": 257003,
+          "title": "15 Camera Settings — Photography Field Checklists PDF Bundle"
+        }
+      ],
+      "removed": [
+        {
+          "id": 256968,
+          "title": "09 What is DEPTH OF FIELD in Photography: A Beginners Guide"
+        },
+        {
+          "id": 256968,
+          "title": "09 What is DEPTH OF FIELD in Photography: A Beginners Guide"
+        },
+        {
+          "id": 256968,
+          "title": "09 What is DEPTH OF FIELD in Photography: A Beginners Guide"
+        },
+        {
+          "id": 256968,
+          "title": "09 What is DEPTH OF FIELD in Photography: A Beginners Guide"
+        },
+        {
+          "id": 256968,
+          "title": "09 What is DEPTH OF FIELD in Photography: A Beginners Guide"
+        },
+        {
+          "id": 256968,
+          "title": "09 What is DEPTH OF FIELD in Photography: A Beginners Guide"
+        },
+        {
+          "id": 256968,
+          "title": "09 What is DEPTH OF FIELD in Photography: A Beginners Guide"
+        },
+        {
+          "id": 256968,
+          "title": "09 What is DEPTH OF FIELD in Photography: A Beginners Guide"
+        },
+        {
+          "id": 256968,
+          "title": "09 What is DEPTH OF FIELD in Photography: A Beginners Guide"
+        },
+        {
+          "id": 256968,
+          "title": "09 What is DEPTH OF FIELD in Photography: A Beginners Guide"
+        },
+        {
+          "id": 256968,
+          "title": "09 What is DEPTH OF FIELD in Photography: A Beginners Guide"
+        },
+        {
+          "id": 256968,
+          "title": "09 What is DEPTH OF FIELD in Photography: A Beginners Guide"
+        }
+      ]
+    },
+    {
+      "query": "what is white balance and how do i use it?",
+      "baselineCount": 12,
+      "currentCount": 1,
+      "sameCount": 0,
+      "added": [
+        {
+          "id": 257004,
+          "title": "10 Composition PDFs — Photography Field Checklists Bundle"
+        }
+      ],
+      "removed": [
+        {
+          "id": 256857,
+          "title": "Finding Your Compositional Balance: A Guide For Beginner's"
+        },
+        {
+          "id": 256857,
+          "title": "Finding Your Compositional Balance: A Guide For Beginner's"
+        },
+        {
+          "id": 256857,
+          "title": "Finding Your Compositional Balance: A Guide For Beginner's"
+        },
+        {
+          "id": 256857,
+          "title": "Finding Your Compositional Balance: A Guide For Beginner's"
+        },
+        {
+          "id": 256857,
+          "title": "Finding Your Compositional Balance: A Guide For Beginner's"
+        },
+        {
+          "id": 256857,
+          "title": "Finding Your Compositional Balance: A Guide For Beginner's"
+        },
+        {
+          "id": 256857,
+          "title": "Finding Your Compositional Balance: A Guide For Beginner's"
+        },
+        {
+          "id": 256857,
+          "title": "Finding Your Compositional Balance: A Guide For Beginner's"
+        },
+        {
+          "id": 256857,
+          "title": "Finding Your Compositional Balance: A Guide For Beginner's"
+        },
+        {
+          "id": 256857,
+          "title": "Finding Your Compositional Balance: A Guide For Beginner's"
+        },
+        {
+          "id": 256857,
+          "title": "Finding Your Compositional Balance: A Guide For Beginner's"
+        },
+        {
+          "id": 256857,
+          "title": "Finding Your Compositional Balance: A Guide For Beginner's"
+        }
+      ]
+    },
+    {
+      "query": "what is hdr photography?",
+      "baselineCount": 12,
+      "currentCount": 12,
+      "sameCount": 4,
+      "added": [
+        {
+          "id": 260851,
+          "title": "Best Tripod for Landscape Photography Benro Mammoth + GD36PT"
+        },
+        {
+          "id": 257743,
+          "title": "Case Study - Peter Orton - ARPS | RPS Distinctions Panel"
+        },
+        {
+          "id": 257742,
+          "title": "Case Study - John Simpson - LRPS | RPS Distinctions Panel "
+        },
+        {
+          "id": 256856,
+          "title": "Five Creative Autumn Photography Projects: To Inspire You"
+        },
+        {
+          "id": 256812,
+          "title": "Free Autumn Photography Tips | Equipment | Approach"
+        },
+        {
+          "id": 256951,
+          "title": "The Way of Wu Wei Philosophy - A Personal Reflection"
+        },
+        {
+          "id": 256399,
+          "title": "Composition Curiousness - Part 1 | Professional Guide"
+        },
+        {
+          "id": 256852,
+          "title": "Composition Curiousness - Part 2 | Professional Guide"
+        },
+        {
+          "id": 256346,
+          "title": "04 What is ISO in Photography: A Guide for Beginners."
+        },
+        {
+          "id": 256347,
+          "title": "Photo Print Sizes - Photo Sizing - Print Resolution Guide"
+        }
+      ],
+      "removed": [
+        {
+          "id": 256350,
+          "title": "What is FRAMING in photography: A Guide for Beginners"
+        },
+        {
+          "id": 257267,
+          "title": "The History of Photography - Origin of Photography to Today"
+        },
+        {
+          "id": 256943,
+          "title": "The Art of STORYTELLING PHOTOGRAPHY: Capturing Moments"
+        },
+        {
+          "id": 256923,
+          "title": "Photography Styles: Trends, Tips & Finding Your Fit (2025"
+        },
+        {
+          "id": 256853,
+          "title": "Mastering Exposure: Outdoor Photography Exposure Calculator"
+        },
+        {
+          "id": 256899,
+          "title": "Master Photography with a Professional Photography Tutor"
+        },
+        {
+          "id": 256387,
+          "title": "Learn photography from home - Online Photography Classes"
+        },
+        {
+          "id": 256374,
+          "title": "How to Improve Your Photography Composition: A Guide"
+        }
+      ]
+    },
+    {
+      "query": "who is alan ranger and what is his photographic background?",
+      "baselineCount": 12,
+      "currentCount": 12,
+      "sameCount": 0,
+      "added": [
+        {
+          "id": 260851,
+          "title": "Best Tripod for Landscape Photography Benro Mammoth + GD36PT"
+        },
+        {
+          "id": 257743,
+          "title": "Case Study - Peter Orton - ARPS | RPS Distinctions Panel"
+        },
+        {
+          "id": 257742,
+          "title": "Case Study - John Simpson - LRPS | RPS Distinctions Panel "
+        },
+        {
+          "id": 256856,
+          "title": "Five Creative Autumn Photography Projects: To Inspire You"
+        },
+        {
+          "id": 256812,
+          "title": "Free Autumn Photography Tips | Equipment | Approach"
+        },
+        {
+          "id": 256423,
+          "title": "Photographing Autumn - UK landscape photography guide"
+        },
+        {
+          "id": 256951,
+          "title": "The Way of Wu Wei Philosophy - A Personal Reflection"
+        },
+        {
+          "id": 256399,
+          "title": "Composition Curiousness - Part 1 | Professional Guide"
+        },
+        {
+          "id": 256852,
+          "title": "Composition Curiousness - Part 2 | Professional Guide"
+        },
+        {
+          "id": 256892,
+          "title": "Mastering the Art of Seasonal Photography: Nature's Rhythms"
+        },
+        {
+          "id": 256346,
+          "title": "04 What is ISO in Photography: A Guide for Beginners."
+        },
+        {
+          "id": 256347,
+          "title": "Photo Print Sizes - Photo Sizing - Print Resolution Guide"
+        }
+      ],
+      "removed": [
+        {
+          "id": 256512,
+          "title": "Suffolk Punch - A personal perspective &amp; Background"
+        },
+        {
+          "id": 256857,
+          "title": "Finding Your Compositional Balance: A Guide For Beginner's"
+        },
+        {
+          "id": 256531,
+          "title": "Case Study - Kirsten Pearce shares a photographic journey"
+        },
+        {
+          "id": 256385,
+          "title": "11 What is WHITE BALANCE in photography: A Beginners Guide"
+        },
+        {
+          "id": 256920,
+          "title": "Why Photography is an Art of Observation: A Deep Dive"
+        },
+        {
+          "id": 256371,
+          "title": "What is STILL LIFE PHOTOGRAPHY: A Guide For Beginners"
+        },
+        {
+          "id": 256976,
+          "title": "What is NEGATIVE SPACE in photography: A Guide for Beginners"
+        },
+        {
+          "id": 256361,
+          "title": "What is MINIMALIST PHOTOGRAPHY: Key Concepts for Beginners"
+        },
+        {
+          "id": 256978,
+          "title": "What is PORTRAIT PHOTOGRAPHY:  Essential Tips for Beginners"
+        },
+        {
+          "id": 256959,
+          "title": "What Are LEADING LINES in Photography: A How-To-Guide"
+        },
+        {
+          "id": 256350,
+          "title": "What is FRAMING in photography: A Guide for Beginners"
+        },
+        {
+          "id": 256350,
+          "title": "What is FRAMING in photography: A Guide for Beginners"
+        }
+      ]
+    },
+    {
+      "query": "where is alan ranger based?",
+      "baselineCount": 12,
+      "currentCount": 12,
+      "sameCount": 6,
+      "added": [
+        {
+          "id": 260851,
+          "title": "Best Tripod for Landscape Photography Benro Mammoth + GD36PT"
+        },
+        {
+          "id": 257743,
+          "title": "Case Study - Peter Orton - ARPS | RPS Distinctions Panel"
+        },
+        {
+          "id": 257742,
+          "title": "Case Study - John Simpson - LRPS | RPS Distinctions Panel "
+        },
+        {
+          "id": 256856,
+          "title": "Five Creative Autumn Photography Projects: To Inspire You"
+        },
+        {
+          "id": 256812,
+          "title": "Free Autumn Photography Tips | Equipment | Approach"
+        },
+        {
+          "id": 256399,
+          "title": "Composition Curiousness - Part 1 | Professional Guide"
+        },
+        {
+          "id": 256852,
+          "title": "Composition Curiousness - Part 2 | Professional Guide"
+        },
+        {
+          "id": 256892,
+          "title": "Mastering the Art of Seasonal Photography: Nature's Rhythms"
+        },
+        {
+          "id": 256346,
+          "title": "04 What is ISO in Photography: A Guide for Beginners."
+        },
+        {
+          "id": 256347,
+          "title": "Photo Print Sizes - Photo Sizing - Print Resolution Guide"
+        }
+      ],
+      "removed": [
+        {
+          "id": 256385,
+          "title": "11 What is WHITE BALANCE in photography: A Beginners Guide"
+        },
+        {
+          "id": 256350,
+          "title": "What is FRAMING in photography: A Guide for Beginners"
+        },
+        {
+          "id": 257267,
+          "title": "The History of Photography - Origin of Photography to Today"
+        },
+        {
+          "id": 256943,
+          "title": "The Art of STORYTELLING PHOTOGRAPHY: Capturing Moments"
+        },
+        {
+          "id": 256512,
+          "title": "Suffolk Punch - A personal perspective &amp; Background"
+        },
+        {
+          "id": 256923,
+          "title": "Photography Styles: Trends, Tips & Finding Your Fit (2025"
+        }
+      ]
+    },
+    {
+      "query": "can i hire you as a professional photographer in coventry?",
+      "baselineCount": 12,
+      "currentCount": 12,
+      "sameCount": 12,
+      "added": [
+        {
+          "id": 256764,
+          "title": "Poppy Fields Photography Workshops | Worcestershire"
+        },
+        {
+          "id": 256777,
+          "title": "Christmas Photography Seasonal Workshops | Warwickshire"
+        },
+        {
+          "id": 256399,
+          "title": "Composition Curiousness - Part 1 | Professional Guide"
+        },
+        {
+          "id": 256852,
+          "title": "Composition Curiousness - Part 2 | Professional Guide"
+        },
+        {
+          "id": 256358,
+          "title": "07 Explaining EXPOSURE BRACKETING: A Guide for Beginners"
+        },
+        {
+          "id": 256899,
+          "title": "Master Photography with a Professional Photography Tutor"
+        },
+        {
+          "id": 256377,
+          "title": "Camera Lenses: When to Buy New, Used, or Rent: A Guide"
+        },
+        {
+          "id": 256382,
+          "title": "Top Tips for photographing bluebells | A Professional Guide"
+        },
+        {
+          "id": 256396,
+          "title": "How Much Do Photographers Earn: 2025 Industry Report UK"
+        },
+        {
+          "id": 256415,
+          "title": "Photography Evening Classes: In Coventry with Alan Ranger"
+        },
+        {
+          "id": 256939,
+          "title": "Selecting the Ideal Product Photographer for Your Business"
+        }
+      ],
+      "removed": []
+    },
+    {
+      "query": "who is alan ranger",
+      "baselineCount": 12,
+      "currentCount": 12,
+      "sameCount": 0,
+      "added": [
+        {
+          "id": 260851,
+          "title": "Best Tripod for Landscape Photography Benro Mammoth + GD36PT"
+        },
+        {
+          "id": 257743,
+          "title": "Case Study - Peter Orton - ARPS | RPS Distinctions Panel"
+        },
+        {
+          "id": 257742,
+          "title": "Case Study - John Simpson - LRPS | RPS Distinctions Panel "
+        },
+        {
+          "id": 256856,
+          "title": "Five Creative Autumn Photography Projects: To Inspire You"
+        },
+        {
+          "id": 256812,
+          "title": "Free Autumn Photography Tips | Equipment | Approach"
+        },
+        {
+          "id": 256423,
+          "title": "Photographing Autumn - UK landscape photography guide"
+        },
+        {
+          "id": 256951,
+          "title": "The Way of Wu Wei Philosophy - A Personal Reflection"
+        },
+        {
+          "id": 256399,
+          "title": "Composition Curiousness - Part 1 | Professional Guide"
+        },
+        {
+          "id": 256852,
+          "title": "Composition Curiousness - Part 2 | Professional Guide"
+        },
+        {
+          "id": 256892,
+          "title": "Mastering the Art of Seasonal Photography: Nature's Rhythms"
+        },
+        {
+          "id": 256346,
+          "title": "04 What is ISO in Photography: A Guide for Beginners."
+        },
+        {
+          "id": 256347,
+          "title": "Photo Print Sizes - Photo Sizing - Print Resolution Guide"
+        }
+      ],
+      "removed": [
+        {
+          "id": 256857,
+          "title": "Finding Your Compositional Balance: A Guide For Beginner's"
+        },
+        {
+          "id": 256385,
+          "title": "11 What is WHITE BALANCE in photography: A Beginners Guide"
+        },
+        {
+          "id": 256920,
+          "title": "Why Photography is an Art of Observation: A Deep Dive"
+        },
+        {
+          "id": 256371,
+          "title": "What is STILL LIFE PHOTOGRAPHY: A Guide For Beginners"
+        },
+        {
+          "id": 256976,
+          "title": "What is NEGATIVE SPACE in photography: A Guide for Beginners"
+        },
+        {
+          "id": 256361,
+          "title": "What is MINIMALIST PHOTOGRAPHY: Key Concepts for Beginners"
+        },
+        {
+          "id": 256978,
+          "title": "What is PORTRAIT PHOTOGRAPHY:  Essential Tips for Beginners"
+        },
+        {
+          "id": 256959,
+          "title": "What Are LEADING LINES in Photography: A How-To-Guide"
+        },
+        {
+          "id": 256350,
+          "title": "What is FRAMING in photography: A Guide for Beginners"
+        },
+        {
+          "id": 256350,
+          "title": "What is FRAMING in photography: A Guide for Beginners"
+        },
+        {
+          "id": 256350,
+          "title": "What is FRAMING in photography: A Guide for Beginners"
+        },
+        {
+          "id": 256369,
+          "title": "What is CONTRAST in Photography: A Guide for Beginners"
+        }
+      ]
+    },
+    {
+      "query": "how do i subscribe to the free online photography course?",
+      "baselineCount": 12,
+      "currentCount": 12,
+      "sameCount": 6,
+      "added": [
+        {
+          "id": 257031,
+          "title": "Premium Photography Academy Membership Subscription"
+        },
+        {
+          "id": 260851,
+          "title": "Best Tripod for Landscape Photography Benro Mammoth + GD36PT"
+        },
+        {
+          "id": 257743,
+          "title": "Case Study - Peter Orton - ARPS | RPS Distinctions Panel"
+        },
+        {
+          "id": 257742,
+          "title": "Case Study - John Simpson - LRPS | RPS Distinctions Panel "
+        },
+        {
+          "id": 256856,
+          "title": "Five Creative Autumn Photography Projects: To Inspire You"
+        },
+        {
+          "id": 256951,
+          "title": "The Way of Wu Wei Philosophy - A Personal Reflection"
+        },
+        {
+          "id": 256399,
+          "title": "Composition Curiousness - Part 1 | Professional Guide"
+        },
+        {
+          "id": 256852,
+          "title": "Composition Curiousness - Part 2 | Professional Guide"
+        },
+        {
+          "id": 256892,
+          "title": "Mastering the Art of Seasonal Photography: Nature's Rhythms"
+        },
+        {
+          "id": 256346,
+          "title": "04 What is ISO in Photography: A Guide for Beginners."
+        }
+      ],
+      "removed": [
+        {
+          "id": 256387,
+          "title": "Learn photography from home - Online Photography Classes"
+        },
+        {
+          "id": 256853,
+          "title": "Mastering Exposure: Outdoor Photography Exposure Calculator"
+        },
+        {
+          "id": 256350,
+          "title": "What is FRAMING in photography: A Guide for Beginners"
+        },
+        {
+          "id": 257267,
+          "title": "The History of Photography - Origin of Photography to Today"
+        },
+        {
+          "id": 256943,
+          "title": "The Art of STORYTELLING PHOTOGRAPHY: Capturing Moments"
+        },
+        {
+          "id": 256923,
+          "title": "Photography Styles: Trends, Tips & Finding Your Fit (2025"
+        }
+      ]
+    },
+    {
+      "query": "how do i improve my composition and storytelling in photos?",
+      "baselineCount": 12,
+      "currentCount": 11,
+      "sameCount": 12,
+      "added": [
+        {
+          "id": 256399,
+          "title": "Composition Curiousness - Part 1 | Professional Guide"
+        },
+        {
+          "id": 256852,
+          "title": "Composition Curiousness - Part 2 | Professional Guide"
+        },
+        {
+          "id": 257004,
+          "title": "10 Composition PDFs — Photography Field Checklists Bundle"
+        },
+        {
+          "id": 256857,
+          "title": "Finding Your Compositional Balance: A Guide For Beginner's"
+        },
+        {
+          "id": 256374,
+          "title": "How to Improve Your Photography Composition: A Guide"
+        },
+        {
+          "id": 256896,
+          "title": "Photography COMPOSITION RULES: A Guide for Beginners"
+        },
+        {
+          "id": 256909,
+          "title": "Photographers Composition Aides - Viewing frames launched"
+        },
+        {
+          "id": 256942,
+          "title": "Tip of the day - Ten tips towards better composition"
+        },
+        {
+          "id": 257007,
+          "title": "Viewing Frames for Composition | Used by Professionals"
+        },
+        {
+          "id": 256492,
+          "title": "Top 10 composition mistakes - Guide To Great Composition"
+        }
+      ],
+      "removed": []
+    },
+    {
+      "query": "how do i use flash photography?",
+      "baselineCount": 12,
+      "currentCount": 12,
+      "sameCount": 4,
+      "added": [
+        {
+          "id": 260851,
+          "title": "Best Tripod for Landscape Photography Benro Mammoth + GD36PT"
+        },
+        {
+          "id": 257743,
+          "title": "Case Study - Peter Orton - ARPS | RPS Distinctions Panel"
+        },
+        {
+          "id": 257742,
+          "title": "Case Study - John Simpson - LRPS | RPS Distinctions Panel "
+        },
+        {
+          "id": 256856,
+          "title": "Five Creative Autumn Photography Projects: To Inspire You"
+        },
+        {
+          "id": 256812,
+          "title": "Free Autumn Photography Tips | Equipment | Approach"
+        },
+        {
+          "id": 256951,
+          "title": "The Way of Wu Wei Philosophy - A Personal Reflection"
+        },
+        {
+          "id": 256399,
+          "title": "Composition Curiousness - Part 1 | Professional Guide"
+        },
+        {
+          "id": 256852,
+          "title": "Composition Curiousness - Part 2 | Professional Guide"
+        },
+        {
+          "id": 256346,
+          "title": "04 What is ISO in Photography: A Guide for Beginners."
+        },
+        {
+          "id": 256347,
+          "title": "Photo Print Sizes - Photo Sizing - Print Resolution Guide"
+        }
+      ],
+      "removed": [
+        {
+          "id": 256350,
+          "title": "What is FRAMING in photography: A Guide for Beginners"
+        },
+        {
+          "id": 257267,
+          "title": "The History of Photography - Origin of Photography to Today"
+        },
+        {
+          "id": 256943,
+          "title": "The Art of STORYTELLING PHOTOGRAPHY: Capturing Moments"
+        },
+        {
+          "id": 256923,
+          "title": "Photography Styles: Trends, Tips & Finding Your Fit (2025"
+        },
+        {
+          "id": 256853,
+          "title": "Mastering Exposure: Outdoor Photography Exposure Calculator"
+        },
+        {
+          "id": 256899,
+          "title": "Master Photography with a Professional Photography Tutor"
+        },
+        {
+          "id": 256387,
+          "title": "Learn photography from home - Online Photography Classes"
+        },
+        {
+          "id": 256374,
+          "title": "How to Improve Your Photography Composition: A Guide"
+        }
+      ]
+    },
+    {
+      "query": "how do i edit raw files?",
+      "baselineCount": 12,
+      "currentCount": 9,
+      "sameCount": 12,
+      "added": [
+        {
+          "id": 256883,
+          "title": "13 JPEG vs RAW: The Key Differences: A Guide for Beginners"
+        },
+        {
+          "id": 256395,
+          "title": "2025 Photo Editing Software: Which One is Right for You"
+        },
+        {
+          "id": 256845,
+          "title": "Creative Photo Editing with DXO NIK Collection 6 - "
+        },
+        {
+          "id": 256493,
+          "title": "Tip of the day - Advanced Photo Editing with NIK Collection"
+        },
+        {
+          "id": 256750,
+          "title": "Intermediates Lightroom Photo Editing Course | Coventry"
+        },
+        {
+          "id": 256850,
+          "title": "Creative Photo Editing MasterClass | Professional Tuition"
+        },
+        {
+          "id": 256521,
+          "title": "Learn how to use Lightroom to edit  | Professional Guide"
+        },
+        {
+          "id": 256739,
+          "title": "Lightroom Courses for Beginners Photo Editing - Coventry"
+        }
+      ],
+      "removed": []
+    },
+    {
+      "query": "how do i improve my photography skills?",
+      "baselineCount": 12,
+      "currentCount": 12,
+      "sameCount": 4,
+      "added": [
+        {
+          "id": 260851,
+          "title": "Best Tripod for Landscape Photography Benro Mammoth + GD36PT"
+        },
+        {
+          "id": 257743,
+          "title": "Case Study - Peter Orton - ARPS | RPS Distinctions Panel"
+        },
+        {
+          "id": 257742,
+          "title": "Case Study - John Simpson - LRPS | RPS Distinctions Panel "
+        },
+        {
+          "id": 256856,
+          "title": "Five Creative Autumn Photography Projects: To Inspire You"
+        },
+        {
+          "id": 256812,
+          "title": "Free Autumn Photography Tips | Equipment | Approach"
+        },
+        {
+          "id": 256951,
+          "title": "The Way of Wu Wei Philosophy - A Personal Reflection"
+        },
+        {
+          "id": 256399,
+          "title": "Composition Curiousness - Part 1 | Professional Guide"
+        },
+        {
+          "id": 256852,
+          "title": "Composition Curiousness - Part 2 | Professional Guide"
+        },
+        {
+          "id": 256346,
+          "title": "04 What is ISO in Photography: A Guide for Beginners."
+        },
+        {
+          "id": 256347,
+          "title": "Photo Print Sizes - Photo Sizing - Print Resolution Guide"
+        }
+      ],
+      "removed": [
+        {
+          "id": 256374,
+          "title": "How to Improve Your Photography Composition: A Guide"
+        },
+        {
+          "id": 256350,
+          "title": "What is FRAMING in photography: A Guide for Beginners"
+        },
+        {
+          "id": 257267,
+          "title": "The History of Photography - Origin of Photography to Today"
+        },
+        {
+          "id": 256943,
+          "title": "The Art of STORYTELLING PHOTOGRAPHY: Capturing Moments"
+        },
+        {
+          "id": 256923,
+          "title": "Photography Styles: Trends, Tips & Finding Your Fit (2025"
+        },
+        {
+          "id": 256853,
+          "title": "Mastering Exposure: Outdoor Photography Exposure Calculator"
+        },
+        {
+          "id": 256899,
+          "title": "Master Photography with a Professional Photography Tutor"
+        },
+        {
+          "id": 256387,
+          "title": "Learn photography from home - Online Photography Classes"
+        }
+      ]
+    }
+  ]
+}
