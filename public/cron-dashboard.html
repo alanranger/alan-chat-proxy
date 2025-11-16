@@ -19,8 +19,37 @@
     }
 
     .container {
-      max-width: 1400px;
+      max-width: 1800px;
       margin: 0 auto;
+    }
+
+    .job-section {
+      margin-bottom: 30px;
+    }
+
+    .job-section-header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 15px 20px;
+      border-radius: 8px 8px 0 0;
+      font-size: 18px;
+      font-weight: bold;
+      margin-bottom: 0;
+    }
+
+    .job-section-header.analytics {
+      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    }
+
+    .job-section-header.refresh {
+      background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    }
+
+    .job-section-content {
+      background: #f8f9fa;
+      padding: 20px;
+      border-radius: 0 0 8px 8px;
+      border: 2px solid #e0e0e0;
     }
 
     h1 {
@@ -431,17 +460,28 @@
       20: 'Aggregates today\'s analytics from chat bot usage logs (sessions, questions, interactions, averages) and updates session records with total questions and interactions per session. Powers the Overview tab in analytics.html. Runs hourly in sync with Jobs 19 & 22.',
       21: 'Refreshes the unified products materialized view which consolidates product data from multiple sources (page_entities, product_display_price, CSV metadata) into a single deduplicated view. Resolves product types (workshop vs course), extracts location hints, availability status, and pricing. Then updates display prices for all products by processing them in batches. The refreshed view feeds into v_products_unified_open → v_events_for_chat, which provides product pricing for events displayed in the chat bot. Ensures event pricing shown in chat responses is current.',
       22: 'Analyzes chat interactions from the last 30 days to find questions with low confidence scores (< 0.6). Groups identical questions, calculates frequency and average confidence, identifies which questions need better answers, and generates prioritized improvement recommendations (missing content, content gaps, intent confusion, high-impact fixes). Excludes questions already processed. Stores results in content_improvement_tracking table. Powers the Insights tab in analytics.html where you can review recommendations and mark questions as improved or ignored. Runs hourly in sync with Jobs 19 & 20.',
-      26: 'Reads all URLs from the site URLs CSV file, checks each URL\'s Last-Modified header to detect content changes, compares with database records, and re-ingests only changed URLs (full content extraction, embeddings, etc.). Splits URLs across 3 batches. Batch 0. Runs every 4 hours.',
-      27: 'Reads all URLs from the site URLs CSV file, checks each URL\'s Last-Modified header to detect content changes, compares with database records, and re-ingests only changed URLs (full content extraction, embeddings, etc.). Splits URLs across 3 batches. Batch 1. Runs every 4 hours.',
-      28: 'Reads all URLs from the site URLs CSV file, checks each URL\'s Last-Modified header to detect content changes, compares with database records, and re-ingests only changed URLs (full content extraction, embeddings, etc.). Splits URLs across 3 batches. Batch 2. Runs every 4 hours.'
+      26: 'Reads all URLs from the site URLs CSV file, makes HEAD requests to check each URL\'s Last-Modified header, compares with database records to detect content changes, and re-ingests only changed URLs (full content extraction, embeddings, page_entities, page_chunks). Processes URLs in batches of 20. Batch 0 handles the first third of URLs plus the camera course URL. Keeps the database in sync with website changes without requiring full re-ingestion. Runs every 4 hours at minute 0, in sync with batches 1 and 2 (at minutes 1 and 2).',
+      27: 'Reads all URLs from the site URLs CSV file, makes HEAD requests to check each URL\'s Last-Modified header, compares with database records to detect content changes, and re-ingests only changed URLs (full content extraction, embeddings, page_entities, page_chunks). Processes URLs in batches of 20. Batch 1 handles the second third of URLs. Keeps the database in sync with website changes without requiring full re-ingestion. Runs every 4 hours at minute 1, in sync with batches 0 and 2 (at minutes 0 and 2).',
+      28: 'Reads all URLs from the site URLs CSV file, makes HEAD requests to check each URL\'s Last-Modified header, compares with database records to detect content changes, and re-ingests only changed URLs (full content extraction, embeddings, page_entities, page_chunks). Processes URLs in batches of 20. Batch 2 handles the final third of URLs. Keeps the database in sync with website changes without requiring full re-ingestion. Runs every 4 hours at minute 2, in sync with batches 0 and 1 (at minutes 0 and 1).'
     };
 
     // Define linked jobs (jobs that run together and are related)
     // Jobs 19, 20, and 22 are all linked together (analytics jobs)
+    // Jobs 26, 27, and 28 are all linked together (refresh batches)
     const linkedJobs = {
       19: [20, 22],  // Job 19 is linked to Jobs 20 and 22
       20: [19, 22],  // Job 20 is linked to Jobs 19 and 22
-      22: [19, 20]   // Job 22 is linked to Jobs 19 and 20
+      22: [19, 20],  // Job 22 is linked to Jobs 19 and 20
+      26: [27, 28],  // Job 26 is linked to Jobs 27 and 28
+      27: [26, 28],  // Job 27 is linked to Jobs 26 and 28
+      28: [26, 27]   // Job 28 is linked to Jobs 26 and 27
+    };
+
+    // Custom display names for jobs
+    const jobDisplayNames = {
+      26: 'Website Pages Refresh Batch 0',
+      27: 'Website Pages Refresh Batch 1',
+      28: 'Website Pages Refresh Batch 2'
     };
 
     function setAuthToken() {
@@ -525,104 +565,121 @@
         links.forEach(linkId => linkedJobSet.add(linkId));
       });
 
-      // Sort jobs to group linked ones together
-      const sortedJobs = [...jobs].sort((a, b) => {
-        const aLinked = linkedJobSet.has(a.jobid);
-        const bLinked = linkedJobSet.has(b.jobid);
-        if (aLinked && bLinked) {
-          // Both are linked, keep them together in order
-          return a.jobid - b.jobid;
-        }
-        if (aLinked) return -1;
-        if (bLinked) return 1;
-        return a.jobid - b.jobid;
-      });
+      // Define job groups
+      const analyticsJobs = [19, 20, 22];
+      const refreshBatches = [26, 27, 28];
+      
+      // Separate jobs into groups
+      const analyticsGroup = jobs.filter(j => analyticsJobs.includes(j.jobid)).sort((a, b) => a.jobid - b.jobid);
+      const refreshGroup = jobs.filter(j => refreshBatches.includes(j.jobid)).sort((a, b) => a.jobid - b.jobid);
+      const otherJobs = jobs.filter(j => !analyticsJobs.includes(j.jobid) && !refreshBatches.includes(j.jobid)).sort((a, b) => a.jobid - b.jobid);
 
-      container.className = 'jobs-grid';
       let html = '';
-      let inLinkedGroup = false;
-      let linkedGroupStart = false;
 
-      sortedJobs.forEach((job, index) => {
-        const successRate = job.total_runs > 0 
-          ? ((job.success_count / job.total_runs) * 100).toFixed(1)
-          : 0;
-        const failureRate = job.total_runs > 0
-          ? ((job.failed_count / job.total_runs) * 100).toFixed(1)
-          : 0;
-        const lastRun = job.last_run 
-          ? new Date(job.last_run).toLocaleString()
-          : 'Never';
-        const description = jobDescriptions[job.jobid] || 'No description available.';
-        const linkedJobIds = linkedJobs[job.jobid];
-        const isLinked = linkedJobIds !== undefined;
-        const linkedIdsArray = Array.isArray(linkedJobIds) ? linkedJobIds : [linkedJobIds];
-        const linkedIdsText = linkedIdsArray.join(', ');
-
-        // Check if we're starting a new linked group
-        const wasInLinkedGroup = inLinkedGroup;
-        inLinkedGroup = isLinked;
+      // Render Analytics Jobs Section
+      if (analyticsGroup.length > 0) {
+        html += '<div class="job-section">';
+        html += '<div class="job-section-header analytics">📊 Chat Quality Analytics Jobs</div>';
+        html += '<div class="job-section-content">';
+        html += '<div class="jobs-grid" style="grid-template-columns: repeat(3, 1fr);">';
         
-        // Add link arrow before the first job in a linked group, or between linked jobs
-        if (isLinked) {
-          if (!wasInLinkedGroup) {
-            // Starting a new linked group
-            linkedGroupStart = true;
-          } else if (index > 0 && sortedJobs[index - 1] && linkedJobSet.has(sortedJobs[index - 1].jobid)) {
-            // Continuing a linked group - add arrow between jobs
-            html += `
-              <div style="grid-column: span 1; text-align: center; padding: 10px; color: #3498db; font-weight: bold; font-size: 18px; display: flex; align-items: center; justify-content: center;">
-                &lt;---&gt;
-              </div>
-            `;
+        analyticsGroup.forEach((job, index) => {
+          if (index > 0) {
+            html += `<div style="display: flex; align-items: center; justify-content: center; color: #3498db; font-weight: bold; font-size: 18px;">&lt;---&gt;</div>`;
           }
-        } else if (wasInLinkedGroup) {
-          // Ending a linked group
-          linkedGroupStart = false;
-        }
+          html += renderJobCard(job, true, 'analytics');
+        });
+        
+        html += '</div></div></div>';
+      }
 
-        html += `
-          <div class="job-card" ${isLinked ? 'style="border: 2px solid #3498db;"' : ''}>
-            <div class="job-header">
-              <div>
-                <div class="job-title">${job.jobname || `Job ${job.jobid}`}</div>
-                <div class="job-id">ID: ${job.jobid}${isLinked ? ` <span style="color: #3498db;">↔ Linked to Jobs ${linkedIdsText}</span>` : ''}</div>
-              </div>
-              <span class="status-badge ${job.active ? 'status-active' : 'status-inactive'}">
-                ${job.active ? 'Active' : 'Inactive'}
-              </span>
-            </div>
-            <div class="job-description">${description}</div>
-            <div class="job-schedule">Schedule: ${job.schedule}</div>
-            <div class="job-stats">
-              <div class="stat-item">
-                <div class="stat-label">Last Run</div>
-                <div class="stat-value" style="font-size: 12px;">${lastRun}</div>
-              </div>
-              <div class="stat-item">
-                <div class="stat-label">Total Runs</div>
-                <div class="stat-value">${job.total_runs || 0}</div>
-              </div>
-              <div class="stat-item">
-                <div class="stat-label">Success Rate</div>
-                <div class="stat-value success-rate">${successRate}%</div>
-                <div style="font-size: 11px; color: #7f8c8d;">${job.success_count || 0} succeeded</div>
-              </div>
-              <div class="stat-item">
-                <div class="stat-label">Failure Rate</div>
-                <div class="stat-value failure-rate">${failureRate}%</div>
-                <div style="font-size: 11px; color: #7f8c8d;">${job.failed_count || 0} failed</div>
-              </div>
-            </div>
-            <div class="job-actions">
-              <button class="btn btn-primary btn-small" onclick="viewLogs(${job.jobid})">View Logs</button>
-              <button class="btn btn-secondary btn-small" onclick="editSchedule(${job.jobid}, '${job.schedule}', '${job.jobname}')">Edit Schedule</button>
-            </div>
-          </div>
-        `;
-      });
+      // Render Refresh Batches Section
+      if (refreshGroup.length > 0) {
+        html += '<div class="job-section">';
+        html += '<div class="job-section-header refresh">🔄 Website Pages Refresh Batches</div>';
+        html += '<div class="job-section-content">';
+        html += '<div class="jobs-grid" style="grid-template-columns: repeat(3, 1fr);">';
+        
+        refreshGroup.forEach((job, index) => {
+          if (index > 0) {
+            html += `<div style="display: flex; align-items: center; justify-content: center; color: #3498db; font-weight: bold; font-size: 18px;">&lt;---&gt;</div>`;
+          }
+          html += renderJobCard(job, true, 'refresh');
+        });
+        
+        html += '</div></div></div>';
+      }
+
+      // Render Other Jobs
+      if (otherJobs.length > 0) {
+        html += '<div class="jobs-grid">';
+        otherJobs.forEach(job => {
+          html += renderJobCard(job, false, '');
+        });
+        html += '</div>';
+      }
 
       container.innerHTML = html;
+    }
+
+    function renderJobCard(job, isLinked, groupType) {
+      const successRate = job.total_runs > 0 
+        ? ((job.success_count / job.total_runs) * 100).toFixed(1)
+        : 0;
+      const failureRate = job.total_runs > 0
+        ? ((job.failed_count / job.total_runs) * 100).toFixed(1)
+        : 0;
+      const lastRun = job.last_run 
+        ? new Date(job.last_run).toLocaleString()
+        : 'Never';
+      const description = jobDescriptions[job.jobid] || 'No description available.';
+      const linkedJobIds = linkedJobs[job.jobid];
+      const isLinkedJob = linkedJobIds !== undefined;
+      const linkedIdsArray = Array.isArray(linkedJobIds) ? linkedJobIds : [linkedJobIds];
+      const linkedIdsText = linkedIdsArray.join(', ');
+      const displayName = jobDisplayNames[job.jobid] || job.jobname || `Job ${job.jobid}`;
+      
+      const borderColor = groupType === 'analytics' ? '#f5576c' : groupType === 'refresh' ? '#00f2fe' : '#3498db';
+      
+      return `
+        <div class="job-card" ${isLinkedJob ? `style="border: 2px solid ${borderColor};"` : ''}>
+          <div class="job-header">
+            <div>
+              <div class="job-title">${displayName}</div>
+              <div class="job-id">ID: ${job.jobid}${isLinkedJob ? ` <span style="color: ${borderColor};">↔ Linked to Jobs ${linkedIdsText}</span>` : ''}</div>
+            </div>
+            <span class="status-badge ${job.active ? 'status-active' : 'status-inactive'}">
+              ${job.active ? 'Active' : 'Inactive'}
+            </span>
+          </div>
+          <div class="job-description">${description}</div>
+          <div class="job-schedule">Schedule: ${job.schedule}</div>
+          <div class="job-stats">
+            <div class="stat-item">
+              <div class="stat-label">Last Run</div>
+              <div class="stat-value" style="font-size: 12px;">${lastRun}</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-label">Total Runs</div>
+              <div class="stat-value">${job.total_runs || 0}</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-label">Success Rate</div>
+              <div class="stat-value success-rate">${successRate}%</div>
+              <div style="font-size: 11px; color: #7f8c8d;">${job.success_count || 0} succeeded</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-label">Failure Rate</div>
+              <div class="stat-value failure-rate">${failureRate}%</div>
+              <div style="font-size: 11px; color: #7f8c8d;">${job.failed_count || 0} failed</div>
+            </div>
+          </div>
+          <div class="job-actions">
+            <button class="btn btn-primary btn-small" onclick="viewLogs(${job.jobid})">View Logs</button>
+            <button class="btn btn-secondary btn-small" onclick="editSchedule(${job.jobid}, '${job.schedule}', '${displayName}')">Edit Schedule</button>
+          </div>
+        </div>
+      `;
     }
 
     function showMessage(message, type = 'success') {
