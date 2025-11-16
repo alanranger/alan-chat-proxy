@@ -97,7 +97,9 @@ export default async function handler(req, res) {
       // Attempt to raise statement timeout for this session (best-effort)
       try {
         await supabase.rpc('set_config', { parameter: 'statement_timeout', value: '120000', is_local: true });
-      } catch {}
+      } catch (e) {
+        // Ignore timeout config errors
+      }
 
       // Get current count before refresh
       const { data: beforeData, error: beforeError } = await supabase
@@ -116,7 +118,7 @@ export default async function handler(req, res) {
 
       // Call the refresh function directly
       console.log('Calling refresh_event_product_autolinks function...');
-      const { data: refreshData, error: refreshError } = await supabase
+      const { error: refreshError } = await supabase
         .rpc('refresh_event_product_autolinks');
 
       if (refreshError) {
@@ -253,9 +255,94 @@ export default async function handler(req, res) {
     }
   }
 
+  // Cron Job Management (GET /api/admin?action=cron_jobs)
+  if (req.method === 'GET' && action === 'cron_jobs') {
+    try {
+      const { data: jobs, error: jobsError } = await supabase
+        .rpc('get_cron_jobs_summary');
+
+      if (jobsError) {
+        console.error('Error getting cron jobs:', jobsError);
+        return res.status(500).json({ error: 'Failed to get cron jobs', detail: jobsError.message });
+      }
+
+      return res.status(200).json({ ok: true, jobs: jobs || [] });
+
+    } catch (error) {
+      console.error('Error getting cron jobs:', error);
+      return res.status(500).json({ error: 'Internal server error', detail: error.message });
+    }
+  }
+
+  // Get Cron Job Logs (GET /api/admin?action=cron_logs&jobid=19&limit=50)
+  if (req.method === 'GET' && action === 'cron_logs') {
+    try {
+      const jobid = parseInt(req.query.jobid);
+      const limit = parseInt(req.query.limit) || 50;
+
+      if (!jobid) {
+        return res.status(400).json({ error: 'jobid parameter required' });
+      }
+
+      const { data: logs, error: logsError } = await supabase
+        .rpc('get_cron_job_logs', {
+          p_jobid: jobid,
+          p_limit: limit
+        });
+
+      if (logsError) {
+        return res.status(500).json({ error: 'Failed to get logs', detail: logsError.message });
+      }
+
+      return res.status(200).json({ ok: true, logs: logs || [] });
+
+    } catch (error) {
+      console.error('Error getting cron logs:', error);
+      return res.status(500).json({ error: 'Internal server error', detail: error.message });
+    }
+  }
+
+  // Update Cron Job Schedule (POST /api/admin?action=update_cron_schedule)
+  if (req.method === 'POST' && action === 'update_cron_schedule') {
+    try {
+      const { jobid, schedule } = req.body;
+
+      if (!jobid || !schedule) {
+        return res.status(400).json({ error: 'jobid and schedule parameters required' });
+      }
+
+      // Validate cron schedule format (basic check)
+      const cronPattern = /^(\*|([0-9]|[1-5][0-9])|\*\/([0-9]|[1-5][0-9])) (\*|([0-9]|1[0-9]|2[0-3])|\*\/([0-9]|1[0-9]|2[0-3])) (\*|([1-9]|[12][0-9]|3[01])|\*\/([1-9]|[12][0-9]|3[01])) (\*|([1-9]|1[0-2])|\*\/([1-9]|1[0-2])) (\*|([0-6])|\*\/([0-6]))$/;
+      if (!cronPattern.test(schedule)) {
+        return res.status(400).json({ error: 'Invalid cron schedule format' });
+      }
+
+      // Update the schedule using cron.alter_job via a database function
+      const { error } = await supabase.rpc('update_cron_schedule', {
+        p_jobid: jobid,
+        p_schedule: schedule
+      });
+
+      if (error) {
+        return res.status(500).json({ error: 'Failed to update schedule', detail: error.message });
+      }
+
+      return res.status(200).json({ 
+        ok: true, 
+        message: 'Schedule updated successfully',
+        jobid,
+        schedule
+      });
+
+    } catch (error) {
+      console.error('Error updating cron schedule:', error);
+      return res.status(500).json({ error: 'Internal server error', detail: error.message });
+    }
+  }
+
   // Default response
   return res.status(400).json({ 
     error: 'bad_request', 
-    detail: 'Use ?action=qa for spot checks, ?action=refresh for mapping refresh, or ?action=aggregate_analytics for analytics aggregation' 
+    detail: 'Use ?action=qa for spot checks, ?action=refresh for mapping refresh, ?action=aggregate_analytics for analytics aggregation, ?action=cron_jobs for cron job list, ?action=cron_logs for logs, or ?action=update_cron_schedule to update schedule' 
   });
 }
