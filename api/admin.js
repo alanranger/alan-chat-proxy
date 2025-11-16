@@ -411,9 +411,86 @@ export default async function handler(req, res) {
     }
   }
 
+  // Run Regression Test (POST /api/admin?action=run_regression_test)
+  if (req.method === 'POST' && action === 'run_regression_test') {
+    try {
+      const { job_id, job_name, test_phase } = req.body;
+
+      if (!job_id || !test_phase) {
+        return res.status(400).json({ error: 'job_id and test_phase (before/after) required' });
+      }
+
+      // Call the Edge Function to run the 40Q test
+      const edgeFunctionUrl = `${SUPABASE_URL}/functions/v1/run-40q-regression-test`;
+      
+      const response = await fetch(edgeFunctionUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`
+        },
+        body: JSON.stringify({
+          job_id,
+          job_name: job_name || `Job ${job_id}`,
+          test_phase
+        })
+      });
+
+      const data = await response.json();
+      
+      if (!data.ok) {
+        throw new Error(data.error || 'Failed to run regression test');
+      }
+
+      return res.status(200).json({
+        ok: true,
+        test_result_id: data.test_result_id,
+        successful_tests: data.successful_tests,
+        failed_tests: data.failed_tests,
+        avg_confidence: data.avg_confidence,
+        total_questions: data.total_questions,
+        duration: data.duration
+      });
+
+    } catch (error) {
+      console.error('Error running regression test:', error);
+      return res.status(500).json({ error: 'Internal server error', detail: error.message });
+    }
+  }
+
+  // Compare Regression Test Results (POST /api/admin?action=compare_regression_tests)
+  if (req.method === 'POST' && action === 'compare_regression_tests') {
+    try {
+      const { baseline_test_id, current_test_id } = req.body;
+
+      if (!baseline_test_id || !current_test_id) {
+        return res.status(400).json({ error: 'baseline_test_id and current_test_id required' });
+      }
+
+      // Call SQL function to compare
+      const { data, error } = await supabase.rpc('compare_regression_test_results', {
+        baseline_test_id,
+        current_test_id
+      });
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      return res.status(200).json({
+        ok: true,
+        comparison: data[0] || data
+      });
+
+    } catch (error) {
+      console.error('Error comparing regression tests:', error);
+      return res.status(500).json({ error: 'Internal server error', detail: error.message });
+    }
+  }
+
   // Default response
   return res.status(400).json({ 
     error: 'bad_request', 
-    detail: 'Use ?action=qa for spot checks, ?action=refresh for mapping refresh, ?action=aggregate_analytics for analytics aggregation, ?action=cron_jobs for cron job list, ?action=cron_logs for logs, ?action=update_cron_schedule to update schedule, or ?action=toggle_cron_job to pause/resume jobs' 
+    detail: 'Use ?action=qa for spot checks, ?action=refresh for mapping refresh, ?action=aggregate_analytics for analytics aggregation, ?action=cron_jobs for cron job list, ?action=cron_logs for logs, ?action=update_cron_schedule to update schedule, ?action=toggle_cron_job to pause/resume jobs, ?action=run_regression_test to run 40Q test, or ?action=compare_regression_tests to compare results' 
   });
 }
