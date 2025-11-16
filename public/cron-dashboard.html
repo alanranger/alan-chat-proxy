@@ -904,6 +904,34 @@
       document.getElementById('scheduleModal').classList.remove('active');
     }
 
+    async function toggleJob(jobid, active, jobname) {
+      const action = active ? 'activate' : 'pause';
+      if (!confirm(`Are you sure you want to ${action} "${jobname}" (Job ${jobid})?`)) {
+        return;
+      }
+
+      try {
+        const response = await fetch(`${API_BASE}/api/admin?action=toggle_cron_job`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${authToken}`
+          },
+          body: JSON.stringify({ jobid, active })
+        });
+
+        const data = await response.json();
+        if (!data.ok) {
+          throw new Error(data.error || `Failed to ${action} job`);
+        }
+
+        showMessage(`Job ${active ? 'activated' : 'paused'} successfully!`, 'success');
+        loadJobs();
+      } catch (error) {
+        showMessage(`Error ${action}ing job: ${error.message}`, 'error');
+      }
+    }
+
     async function updateSchedule(jobid) {
       const newSchedule = document.getElementById('newSchedule').value.trim();
       
