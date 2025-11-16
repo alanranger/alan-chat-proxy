@@ -1051,6 +1051,10 @@
           ? (severity === 'severe' ? '🔴' : severity === 'moderate' ? '🟡' : '🟠')
           : '✅';
         
+        // Use passed jobId parameter
+        const displayJobId = jobId || (regressionData && regressionData.test_run ? regressionData.test_run.job_id : 
+                     (regressionData && regressionData.baseline ? regressionData.baseline.job_id : null));
+        
         return `
           <div class="regression-test-section ${severityClass}">
             <div style="font-weight: bold; margin-bottom: 8px;">
@@ -1095,7 +1099,7 @@
             </div>
             ${comparison && detected ? `<div style="margin-top: 8px; font-size: 11px; color: #721c24;"><strong>Action:</strong> ${severity === 'severe' || severity === 'moderate' ? 'ROLLBACK RECOMMENDED' : 'Review recommended'}</div>` : ''}
             ${!comparison ? `<div style="margin-top: 8px; font-size: 11px; color: #155724;">Comparison analysis pending...</div>` : ''}
-            ${comparison ? `<div style="margin-top: 10px;"><button class="btn btn-primary btn-small" onclick="showRegressionDetails(${job.jobid})">View Details</button></div>` : ''}
+            ${comparison && displayJobId ? `<div style="margin-top: 10px;"><button class="btn btn-primary btn-small" onclick="showRegressionDetails(${displayJobId})">View Details</button></div>` : ''}
           </div>
         `;
       }
@@ -1274,7 +1278,7 @@
       let regressionSummary = '';
       if (riskyJobs.includes(job.jobid)) {
         const regressionData = regressionTestData[job.jobid] || null;
-        regressionSummary = renderRegressionTestSummary(regressionData);
+        regressionSummary = renderRegressionTestSummary(regressionData, job.jobid);
       }
       
       const borderColor = 
