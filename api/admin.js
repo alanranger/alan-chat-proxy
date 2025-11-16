@@ -892,12 +892,17 @@ export default async function handler(req, res) {
             if (insertError) {
               console.error('Error recording job execution:', insertError);
               console.error('Insert error details:', JSON.stringify(insertError, null, 2));
-              // Try fallback: direct insert if RPC doesn't exist
               console.log('RPC function may not exist, job execution will not be recorded in job_run_details');
-            } else {
+            } else if (insertData && insertData.inserted > 0) {
               recordInserted = true;
-              recordCount = insertData?.inserted || 0;
+              recordCount = insertData.inserted;
               console.log(`Successfully recorded job execution for job ${jobid}:`, insertData);
+            } else {
+              // RPC returned success but insert failed (error in JSON response)
+              const errorMsg = insertData?.error || 'Unknown error';
+              const errorCode = insertData?.error_code || 'UNKNOWN';
+              console.error('Error recording job execution (in response):', errorMsg, 'Code:', errorCode);
+              console.error('Full response:', JSON.stringify(insertData, null, 2));
             }
           } catch (recordError) {
             // Log error but don't fail the response
@@ -943,8 +948,12 @@ export default async function handler(req, res) {
             
             if (insertError) {
               console.error('Error recording failed job execution:', insertError);
-            } else {
+            } else if (insertData && insertData.inserted > 0) {
               console.log(`Successfully recorded failed job execution for job ${jobid}:`, insertData);
+            } else {
+              const errorMsg = insertData?.error || 'Unknown error';
+              const errorCode = insertData?.error_code || 'UNKNOWN';
+              console.error('Error recording failed job execution (in response):', errorMsg, 'Code:', errorCode);
             }
           } catch (recordError) {
             // Log error but don't fail the response
