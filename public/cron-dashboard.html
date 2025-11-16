@@ -1256,6 +1256,158 @@
       }
     }
 
+    async function runJobNow(jobId, jobName) {
+      const modal = document.getElementById('jobExecutionModal');
+      const modalContent = document.getElementById('jobExecutionContent');
+      
+      if (!modal || !modalContent) return;
+      
+      // Show loading state
+      modalContent.innerHTML = `
+        <h2>Running Job: ${jobName} (ID: ${jobId})</h2>
+        <div style="text-align: center; padding: 40px;">
+          <div style="font-size: 18px; margin-bottom: 20px;">⏳ Executing job...</div>
+          <div style="color: #7f8c8d;">This may take a few moments</div>
+        </div>
+      `;
+      modal.style.display = 'block';
+      
+      try {
+        const response = await fetch(`${API_BASE}/api/admin?action=run_cron_job`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${authToken}`
+          },
+          body: JSON.stringify({ jobid: jobId })
+        });
+        
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        
+        if (!data.ok) {
+          throw new Error(data.error || 'Job execution failed');
+        }
+        
+        const { job, execution, regression_test } = data;
+        const isRiskyJob = [21, 26, 27, 28, 31].includes(parseInt(jobId));
+        
+        let html = `
+          <h2>Job Execution Results: ${job.name || jobName}</h2>
+          <div class="details-section">
+            <h3>Execution Summary</h3>
+            <p><strong>Status:</strong> <span style="color: ${execution.success ? '#27ae60' : '#e74c3c'}; font-weight: bold;">
+              ${execution.success ? '✅ Success' : '❌ Failed'}
+            </span></p>
+            <p><strong>Duration:</strong> ${execution.duration ? execution.duration.toFixed(2) : 'N/A'} seconds</p>
+            <p><strong>Start Time:</strong> ${new Date(execution.start_time).toLocaleString()}</p>
+            <p><strong>End Time:</strong> ${new Date(execution.end_time).toLocaleString()}</p>
+        `;
+        
+        if (execution.error) {
+          html += `<p><strong>Error:</strong> <span style="color: #e74c3c;">${execution.error}</span></p>`;
+        }
+        
+        if (execution.result) {
+          if (typeof execution.result === 'string') {
+            html += `<p><strong>Result:</strong> ${execution.result}</p>`;
+          } else if (Array.isArray(execution.result) && execution.result.length > 0) {
+            html += `<h4>Results:</h4><pre style="background: #f4f4f4; padding: 10px; border-radius: 4px; overflow-x: auto; max-height: 300px; overflow-y: auto;">${JSON.stringify(execution.result, null, 2)}</pre>`;
+          } else if (typeof execution.result === 'object') {
+            html += `<h4>Results:</h4><pre style="background: #f4f4f4; padding: 10px; border-radius: 4px; overflow-x: auto; max-height: 300px; overflow-y: auto;">${JSON.stringify(execution.result, null, 2)}</pre>`;
+          }
+        }
+        
+        if (execution.records_affected) {
+          html += `<h4>Records Affected:</h4>`;
+          if (typeof execution.records_affected === 'object') {
+            Object.entries(execution.records_affected).forEach(([key, value]) => {
+              html += `<p><strong>${key}:</strong> ${value}</p>`;
+            });
+          } else {
+            html += `<p>${execution.records_affected}</p>`;
+          }
+        }
+        
+        html += `</div>`;
+        
+        // Show regression test results for risky jobs
+        if (isRiskyJob && regression_test && regression_test.test_run) {
+          const testRun = regression_test.test_run;
+          const comparison = regression_test.comparison;
+          
+          html += `
+            <div class="details-section">
+              <h3>Regression Test Results</h3>
+              <p><strong>Test Run Status:</strong> ${testRun.status || 'Unknown'}</p>
+              <p><strong>Baseline Test ID:</strong> ${testRun.baseline_test_id || 'N/A'}</p>
+              <p><strong>After Test ID:</strong> ${testRun.after_test_id || 'N/A'}</p>
+          `;
+          
+          if (comparison) {
+            const detected = comparison.regression_detected || false;
+            const severity = comparison.regression_severity || 'none';
+            const details = comparison.regression_details || {};
+            
+            html += `
+              <p><strong>Regression Detected:</strong> <span style="color: ${detected ? '#e74c3c' : '#27ae60'};">
+                ${detected ? 'Yes' : 'No'}
+              </span></p>
+              <p><strong>Severity:</strong> ${severity}</p>
+              <p><strong>Success Rate Change:</strong> ${parseFloat(details.success_rate_diff || 0).toFixed(2)}%</p>
+              <p><strong>Confidence Change:</strong> ${parseFloat(details.confidence_diff || 0).toFixed(3)}</p>
+              <p><strong>Article Changes:</strong> ${details.article_change_count || 0} queries</p>
+              <p><strong>Severe Changes:</strong> ${details.severe_article_changes || 0}</p>
+            `;
+            
+            if (detected) {
+              html += `<p style="color: #e74c3c; font-weight: bold; margin-top: 10px;">
+                ${severity === 'severe' || severity === 'moderate' ? '⚠️ ROLLBACK RECOMMENDED' : 'Review recommended'}
+              </p>`;
+            }
+          } else {
+            html += `<p>Comparison analysis pending or not available.</p>`;
+          }
+          
+          html += `</div>`;
+        }
+        
+        // Show command executed
+        html += `
+          <div class="details-section">
+            <h3>Command Executed</h3>
+            <pre style="background: #f4f4f4; padding: 10px; border-radius: 4px; overflow-x: auto;">${job.command || 'N/A'}</pre>
+          </div>
+        `;
+        
+        modalContent.innerHTML = html;
+        
+        // Refresh jobs list to update stats
+        setTimeout(() => {
+          loadJobs();
+        }, 2000);
+        
+      } catch (error) {
+        modalContent.innerHTML = `
+          <h2>Error Running Job: ${jobName}</h2>
+          <div class="details-section">
+            <p style="color: #e74c3c;"><strong>Error:</strong> ${error.message}</p>
+            <p>Please check the job configuration and try again.</p>
+          </div>
+        `;
+      }
+    }
+
+    function closeJobExecutionModal() {
+      const modal = document.getElementById('jobExecutionModal');
+      if (modal) {
+        modal.style.display = 'none';
+      }
+    }
+
     function renderJobCard(job, isLinked, groupType) {
       const successRate = job.total_runs > 0 
         ? ((job.success_count / job.total_runs) * 100).toFixed(1)
@@ -1326,6 +1478,7 @@
             </div>
           </div>
           <div class="job-actions">
+            <button class="btn btn-primary btn-small" onclick="runJobNow(${job.jobid}, '${displayName}')">▶ Run Now</button>
             <button class="btn btn-primary btn-small" onclick="viewLogs(${job.jobid})">View Logs</button>
             <button class="btn btn-secondary btn-small" onclick="editSchedule(${job.jobid}, '${job.schedule}', '${displayName}')">Edit Schedule</button>
             <button class="btn ${job.active ? 'btn-warning' : 'btn-success'} btn-small" onclick="toggleJob(${job.jobid}, ${!job.active}, '${displayName}')">
@@ -1540,12 +1693,25 @@
     </div>
   </div>
 
+  <!-- Job Execution Results Modal -->
+  <div id="jobExecutionModal" class="modal">
+    <div class="modal-content" style="max-width: 1000px;">
+      <span class="close" onclick="closeJobExecutionModal()">&times;</span>
+      <div id="jobExecutionContent"></div>
+    </div>
+  </div>
+
   <script>
-    // Close modal when clicking outside
+    // Close modals when clicking outside
     window.onclick = function(event) {
-      const modal = document.getElementById('regressionDetailsModal');
-      if (event.target == modal) {
+      const regressionModal = document.getElementById('regressionDetailsModal');
+      const executionModal = document.getElementById('jobExecutionModal');
+      
+      if (event.target == regressionModal) {
         closeRegressionDetails();
+      }
+      if (event.target == executionModal) {
+        closeJobExecutionModal();
       }
     }
   </script>

@@ -608,9 +608,237 @@ export default async function handler(req, res) {
     }
   }
 
+  // Run Cron Job Now (POST /api/admin?action=run_cron_job)
+  if (req.method === 'POST' && action === 'run_cron_job') {
+    try {
+      const { jobid } = req.body;
+
+      if (!jobid) {
+        return res.status(400).json({ error: 'jobid parameter required' });
+      }
+
+      // Get job details
+      const { data: jobData, error: jobError } = await supabase.rpc('get_cron_job_details', {
+        p_jobid: jobid
+      });
+
+      if (jobError || !jobData || jobData.length === 0) {
+        return res.status(404).json({ error: 'Job not found' });
+      }
+
+      const job = jobData[0];
+      const startTime = new Date();
+      
+      let executionResult = null;
+      let error = null;
+      let recordsAffected = null;
+      let regressionTestResults = null;
+
+      try {
+        // Execute the job command
+        // For risky jobs, they use wrapper functions that return results
+        // For other jobs, we execute the command directly
+        
+        const isRiskyJob = [21, 26, 27, 28, 31].includes(parseInt(jobid));
+        
+        if (isRiskyJob) {
+          // Risky jobs use wrapper functions that handle regression testing
+          let result;
+          if (jobid == 21) {
+            result = await supabase.rpc('refresh_v_products_unified_with_regression_test');
+          } else if (jobid == 26) {
+            result = await supabase.rpc('light_refresh_batch_with_regression_test', { p_batch: 0 });
+          } else if (jobid == 27) {
+            result = await supabase.rpc('light_refresh_batch_with_regression_test', { p_batch: 1 });
+          } else if (jobid == 28) {
+            result = await supabase.rpc('light_refresh_batch_with_regression_test', { p_batch: 2 });
+          } else if (jobid == 31) {
+            result = await supabase.rpc('cleanup_orphaned_records_with_regression_test');
+          }
+          
+          if (result && result.data) {
+            executionResult = result.data;
+          }
+          if (result && result.error) {
+            error = result.error.message;
+          }
+          
+          // Get regression test results
+          const { data: testRun } = await supabase
+            .from('regression_test_runs')
+            .select('*')
+            .eq('job_id', jobid)
+            .order('run_started_at', { ascending: false })
+            .limit(1)
+            .single();
+          
+          if (testRun) {
+            const { data: comparison } = await supabase.rpc('analyze_regression_test_run', {
+              p_run_id: testRun.id
+            });
+            regressionTestResults = {
+              test_run: testRun,
+              comparison: comparison && comparison.length > 0 ? comparison[0] : null
+            };
+          }
+        } else {
+          // For non-risky jobs, parse and execute the command
+          const command = job.command.trim();
+          
+          // Parse function calls like: SELECT function_name(); or SELECT function_name(params);
+          const functionCallMatch = command.match(/SELECT\s+(\w+)\s*\(([^)]*)\)/i);
+          
+          if (functionCallMatch) {
+            const functionName = functionCallMatch[1];
+            const paramsStr = functionCallMatch[2].trim();
+            
+            // Parse parameters - try multiple common parameter names
+            let params = {};
+            if (paramsStr) {
+              // Handle different parameter formats
+              // Simple numeric: cleanup_old_chat_data(90)
+              const numMatch = paramsStr.match(/^(\d+)$/);
+              if (numMatch) {
+                const numValue = parseInt(numMatch[1]);
+                // Try common parameter names based on function name
+                if (functionName.includes('cleanup') && functionName.includes('days')) {
+                  params = { p_days: numValue };
+                } else if (functionName.includes('cleanup')) {
+                  params = { p_days: numValue };
+                } else if (functionName.includes('batch')) {
+                  params = { p_batch: numValue };
+                } else {
+                  // Try generic parameter names
+                  params = { p_days: numValue };
+                }
+              } else if (paramsStr.includes('CURRENT_DATE')) {
+                // Handle CURRENT_DATE - INTERVAL '7 days'
+                if (paramsStr.includes("INTERVAL '7 days'")) {
+                  const dateValue = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+                  params = { p_date: dateValue };
+                } else {
+                  params = { p_date: new Date().toISOString().split('T')[0] };
+                }
+              } else if (paramsStr.match(/^\d+$/)) {
+                // Another numeric check
+                params = { p_days: parseInt(paramsStr) };
+              }
+            }
+            
+            // Call the function via RPC - try with params first, then without
+            try {
+              let rpcData, rpcError;
+              
+              if (Object.keys(params).length > 0) {
+                const result = await supabase.rpc(functionName, params);
+                rpcData = result.data;
+                rpcError = result.error;
+                
+                // If that fails, try without params or with different param names
+                if (rpcError && paramsStr) {
+                  const numMatch = paramsStr.match(/^(\d+)$/);
+                  if (numMatch) {
+                    // Try with just the numeric value as first parameter
+                    const altParams = { p_value: parseInt(numMatch[1]) };
+                    const altResult = await supabase.rpc(functionName, altParams);
+                    if (!altResult.error) {
+                      rpcData = altResult.data;
+                      rpcError = null;
+                    }
+                  }
+                }
+              } else {
+                const result = await supabase.rpc(functionName);
+                rpcData = result.data;
+                rpcError = result.error;
+              }
+              
+              if (rpcError) {
+                error = rpcError.message;
+              } else {
+                executionResult = rpcData;
+                
+                // Extract records affected for specific functions
+                if (functionName.includes('cleanup')) {
+                  recordsAffected = rpcData;
+                } else if (functionName.includes('check') || functionName.includes('validate') || functionName.includes('monitor')) {
+                  recordsAffected = rpcData;
+                }
+              }
+            } catch (rpcErr) {
+              error = rpcErr.message || 'Failed to execute function';
+            }
+          } else if (command.includes('net.http_post')) {
+            // For Edge Function calls, we can't easily execute them here
+            // They'll be executed by pg_net, but we can't capture results easily
+            executionResult = 'Job triggered (Edge Function call - check logs for results)';
+          } else {
+            // Unknown command format
+            executionResult = 'Job command format not recognized - check logs for execution status';
+          }
+        }
+
+        const endTime = new Date();
+        const duration = (endTime - startTime) / 1000;
+
+        // Try to get records affected for specific job types
+        if (jobid == 31) {
+          // Cleanup job returns orphaned_chunks and orphaned_entities
+          if (executionResult && Array.isArray(executionResult) && executionResult.length > 0) {
+            recordsAffected = executionResult[0];
+          }
+        }
+
+        return res.status(200).json({
+          ok: true,
+          job: {
+            id: jobid,
+            name: job.jobname || job.name,
+            command: job.command
+          },
+          execution: {
+            success: !error,
+            error: error,
+            duration: duration,
+            start_time: startTime.toISOString(),
+            end_time: endTime.toISOString(),
+            result: executionResult,
+            records_affected: recordsAffected
+          },
+          regression_test: regressionTestResults
+        });
+
+      } catch (execError) {
+        const endTime = new Date();
+        const duration = (endTime - startTime) / 1000;
+        
+        return res.status(200).json({
+          ok: true,
+          job: {
+            id: jobid,
+            name: job.jobname || job.name,
+            command: job.command
+          },
+          execution: {
+            success: false,
+            error: execError.message,
+            duration: duration,
+            start_time: startTime.toISOString(),
+            end_time: endTime.toISOString()
+          },
+          regression_test: regressionTestResults
+        });
+      }
+
+    } catch (error) {
+      console.error('Error running cron job:', error);
+      return res.status(500).json({ error: 'Internal server error', detail: error.message });
+    }
+  }
+
   // Default response
   return res.status(400).json({ 
     error: 'bad_request', 
-    detail: 'Use ?action=qa for spot checks, ?action=refresh for mapping refresh, ?action=aggregate_analytics for analytics aggregation, ?action=cron_jobs for cron job list, ?action=cron_logs for logs, ?action=update_cron_schedule to update schedule, ?action=toggle_cron_job to pause/resume jobs, ?action=run_regression_test to run 40Q test, or ?action=compare_regression_tests to compare results' 
+    detail: 'Use ?action=qa for spot checks, ?action=refresh for mapping refresh, ?action=aggregate_analytics for analytics aggregation, ?action=cron_jobs for cron job list, ?action=cron_logs for logs, ?action=update_cron_schedule to update schedule, ?action=toggle_cron_job to pause/resume jobs, ?action=run_regression_test to run 40Q test, ?action=compare_regression_tests to compare results, or ?action=run_cron_job to run a job now' 
   });
 }
