@@ -258,15 +258,50 @@ export default async function handler(req, res) {
   // Cron Job Management (GET /api/admin?action=cron_jobs)
   if (req.method === 'GET' && action === 'cron_jobs') {
     try {
-      const { data: jobs, error: jobsError } = await supabase
-        .rpc('get_cron_jobs_summary');
+      // For Job 21, only count stats from the last successful run (when it was fixed)
+      // Get the last success time for Job 21
+      const { data: lastSuccess, error: successError } = await supabase
+        .from('cron.job_run_details')
+        .select('start_time')
+        .eq('jobid', 21)
+        .eq('status', 'succeeded')
+        .order('start_time', { ascending: false })
+        .limit(1)
+        .single();
 
-      if (jobsError) {
-        console.error('Error getting cron jobs:', jobsError);
-        return res.status(500).json({ error: 'Failed to get cron jobs', detail: jobsError.message });
+      let fromDate = null;
+      if (!successError && lastSuccess) {
+        fromDate = lastSuccess.start_time;
       }
 
-      return res.status(200).json({ ok: true, jobs: jobs || [] });
+      // Get all jobs with stats
+      const { data: allJobs, error: allJobsError } = await supabase
+        .rpc('get_cron_jobs_summary');
+
+      if (allJobsError) {
+        console.error('Error getting cron jobs:', allJobsError);
+        return res.status(500).json({ error: 'Failed to get cron jobs', detail: allJobsError.message });
+      }
+
+      // For Job 21, recalculate stats from the last successful run
+      if (fromDate && allJobs) {
+        const job21 = allJobs.find(j => j.jobid === 21);
+        if (job21) {
+          const { data: job21Stats, error: statsError } = await supabase
+            .from('cron.job_run_details')
+            .select('status')
+            .eq('jobid', 21)
+            .gte('start_time', fromDate);
+
+          if (!statsError && job21Stats) {
+            job21.success_count = job21Stats.filter(s => s.status === 'succeeded').length;
+            job21.failed_count = job21Stats.filter(s => s.status === 'failed').length;
+            job21.total_runs = job21Stats.length;
+          }
+        }
+      }
+
+      return res.status(200).json({ ok: true, jobs: allJobs || [] });
 
     } catch (error) {
       console.error('Error getting cron jobs:', error);
