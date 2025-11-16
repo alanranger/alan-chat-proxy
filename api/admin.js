@@ -983,10 +983,45 @@ export default async function handler(req, res) {
       }
     }
 
+    // Reset Job Statistics (POST /api/admin?action=reset_job_stats)
+    if (req.method === 'POST' && action === 'reset_job_stats') {
+      try {
+        const { jobid } = req.body;
+
+        if (!jobid) {
+          return res.status(400).json({ error: 'jobid parameter required' });
+        }
+
+        // Delete all job run details for this job
+        const { error: deleteError } = await supabase
+          .from('cron.job_run_details')
+          .delete()
+          .eq('jobid', parseInt(jobid));
+
+        if (deleteError) {
+          console.error('Error deleting job run details:', deleteError);
+          return res.status(500).json({ 
+            error: 'Failed to reset job statistics', 
+            detail: deleteError.message 
+          });
+        }
+
+        return res.status(200).json({
+          ok: true,
+          message: `Successfully reset statistics for job ${jobid}`,
+          jobid: parseInt(jobid)
+        });
+
+      } catch (error) {
+        console.error('Error resetting job statistics:', error);
+        return res.status(500).json({ error: 'Internal server error', detail: error.message });
+      }
+    }
+
     // Default response
     return res.status(400).json({ 
       error: 'bad_request', 
-      detail: 'Use ?action=qa for spot checks, ?action=refresh for mapping refresh, ?action=aggregate_analytics for analytics aggregation, ?action=cron_jobs for cron job list, ?action=cron_logs for logs, ?action=update_cron_schedule to update schedule, ?action=toggle_cron_job to pause/resume jobs, ?action=run_regression_test to run 40Q test, ?action=compare_regression_tests to compare results, or ?action=run_cron_job to run a job now' 
+      detail: 'Use ?action=qa for spot checks, ?action=refresh for mapping refresh, ?action=aggregate_analytics for analytics aggregation, ?action=cron_jobs for cron job list, ?action=cron_logs for logs, ?action=update_cron_schedule to update schedule, ?action=toggle_cron_job to pause/resume jobs, ?action=reset_job_stats to reset job statistics, ?action=run_regression_test to run 40Q test, ?action=compare_regression_tests to compare results, or ?action=run_cron_job to run a job now' 
     });
   } catch (error) {
     // Global error handler - ensure we always return JSON

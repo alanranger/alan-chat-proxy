@@ -1657,6 +1657,7 @@
             <button class="btn btn-primary btn-small" onclick="runJobNow(${job.jobid}, '${displayName}')">▶ Run Now</button>
             <button class="btn btn-primary btn-small" onclick="viewLogs(${job.jobid})">View Logs</button>
             <button class="btn btn-secondary btn-small" onclick="editSchedule(${job.jobid}, '${job.schedule}', '${displayName}')">Edit Schedule</button>
+            <button class="btn btn-secondary btn-small" onclick="resetJobStats(${job.jobid}, '${displayName}')" title="Reset success/fail counts">🔄 Reset Stats</button>
             <button class="btn ${job.active ? 'btn-warning' : 'btn-success'} btn-small" onclick="toggleJob(${job.jobid}, ${!job.active}, '${displayName}')">
               ${job.active ? '⏸ Pause' : '▶ Resume'}
             </button>
@@ -1787,6 +1788,39 @@
 
     function closeScheduleModal() {
       document.getElementById('scheduleModal').classList.remove('active');
+    }
+
+    async function resetJobStats(jobid, jobname) {
+      if (!confirm(`Are you sure you want to reset the success/fail statistics for "${jobname}" (Job ${jobid})?\n\nThis will delete all execution history for this job.`)) {
+        return;
+      }
+
+      try {
+        const response = await fetch(`${API_BASE}/api/admin?action=reset_job_stats`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${authToken}`
+          },
+          body: JSON.stringify({ jobid: jobid })
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        
+        if (!data.ok) {
+          throw new Error(data.error || 'Failed to reset job statistics');
+        }
+
+        showMessage(`Successfully reset statistics for "${jobname}" (Job ${jobid})`, 'success');
+        loadJobs();
+      } catch (error) {
+        console.error('Error resetting job stats:', error);
+        showMessage(`Error resetting statistics: ${error.message}`, 'error');
+      }
     }
 
     async function toggleJob(jobid, active, jobname) {
