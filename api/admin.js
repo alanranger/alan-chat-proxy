@@ -995,17 +995,21 @@ export default async function handler(req, res) {
         const jobIdInt = parseInt(jobid);
 
         // First, verify how many records exist
-        const { count: beforeCount } = await supabase
+        const { count: beforeCount, error: countError } = await supabase
           .from('cron.job_run_details')
           .select('*', { count: 'exact', head: true })
           .eq('jobid', jobIdInt);
 
+        if (countError) {
+          console.error('Error counting records:', countError);
+        }
+
         // Delete all job run details for this job
-        const { error: deleteError, count: deletedCount } = await supabase
+        const { data: deletedData, error: deleteError } = await supabase
           .from('cron.job_run_details')
           .delete()
           .eq('jobid', jobIdInt)
-          .select('*', { count: 'exact', head: true });
+          .select();
 
         if (deleteError) {
           console.error('Error deleting job run details:', deleteError);
@@ -1016,18 +1020,21 @@ export default async function handler(req, res) {
         }
 
         // Verify deletion worked
-        const { count: afterCount } = await supabase
+        const { count: afterCount, error: afterCountError } = await supabase
           .from('cron.job_run_details')
           .select('*', { count: 'exact', head: true })
           .eq('jobid', jobIdInt);
 
-        console.log(`Reset stats for job ${jobIdInt}: Deleted ${beforeCount || 0} records, ${afterCount || 0} remaining`);
+        const deletedCount = deletedData ? deletedData.length : 0;
+        
+        console.log(`Reset stats for job ${jobIdInt}: Found ${beforeCount || 0} records before, deleted ${deletedCount} records, ${afterCount || 0} remaining`);
 
         return res.status(200).json({
           ok: true,
           message: `Successfully reset statistics for job ${jobid}`,
           jobid: jobIdInt,
-          deleted_count: beforeCount || 0,
+          before_count: beforeCount || 0,
+          deleted_count: deletedCount,
           remaining_count: afterCount || 0
         });
 
