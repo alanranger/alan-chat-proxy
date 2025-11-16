@@ -715,9 +715,19 @@ export default async function handler(req, res) {
                 // Handle CURRENT_DATE - INTERVAL '7 days'
                 if (paramsStr.includes("INTERVAL '7 days'")) {
                   const dateValue = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-                  params = { p_date: dateValue };
+                  // Try common date parameter names
+                  if (functionName.includes('analytics')) {
+                    params = { target_date: dateValue };
+                  } else {
+                    params = { p_date: dateValue };
+                  }
                 } else {
-                  params = { p_date: new Date().toISOString().split('T')[0] };
+                  const dateValue = new Date().toISOString().split('T')[0];
+                  if (functionName.includes('analytics')) {
+                    params = { target_date: dateValue };
+                  } else {
+                    params = { p_date: dateValue };
+                  }
                 }
               } else if (paramsStr.match(/^\d+$/)) {
                 // Another numeric check
@@ -736,14 +746,35 @@ export default async function handler(req, res) {
                 
                 // If that fails, try without params or with different param names
                 if (rpcError && paramsStr) {
-                  const numMatch = paramsStr.match(/^(\d+)$/);
-                  if (numMatch) {
-                    // Try with just the numeric value as first parameter
-                    const altParams = { p_value: parseInt(numMatch[1]) };
-                    const altResult = await supabase.rpc(functionName, altParams);
-                    if (!altResult.error) {
-                      rpcData = altResult.data;
-                      rpcError = null;
+                  // Try alternative parameter names based on function type
+                  if (paramsStr.includes('CURRENT_DATE')) {
+                    const dateValue = paramsStr.includes("INTERVAL '7 days'")
+                      ? new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+                      : new Date().toISOString().split('T')[0];
+                    
+                    // Try different date parameter names
+                    const altNames = ['target_date', 'p_date', 'date_param', 'date'];
+                    for (const paramName of altNames) {
+                      const altResult = await supabase.rpc(functionName, { [paramName]: dateValue });
+                      if (!altResult.error) {
+                        rpcData = altResult.data;
+                        rpcError = null;
+                        break;
+                      }
+                    }
+                  } else {
+                    const numMatch = paramsStr.match(/^(\d+)$/);
+                    if (numMatch) {
+                      // Try with different numeric parameter names
+                      const altNames = ['p_value', 'p_days', 'days', 'value'];
+                      for (const paramName of altNames) {
+                        const altResult = await supabase.rpc(functionName, { [paramName]: parseInt(numMatch[1]) });
+                        if (!altResult.error) {
+                          rpcData = altResult.data;
+                          rpcError = null;
+                          break;
+                        }
+                      }
                     }
                   }
                 }
