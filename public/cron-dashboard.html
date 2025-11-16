@@ -1559,10 +1559,8 @@
         
         modalContent.innerHTML = html;
         
-        // Refresh jobs list to update stats
-        setTimeout(() => {
-          loadJobs();
-        }, 2000);
+        // Refresh jobs list to update stats immediately
+        loadJobs();
         
       } catch (error) {
         modalContent.innerHTML = `

@@ -889,6 +889,31 @@ export default async function handler(req, res) {
             }
           }
 
+          // Record the job execution in cron.job_run_details
+          const executionSuccess = !error;
+          try {
+            await supabase
+              .from('cron.job_run_details')
+              .insert({
+                jobid: parseInt(jobid),
+                runid: null, // Will be auto-generated
+                job_pid: null,
+                database: null,
+                username: null,
+                command: job.command,
+                status: executionSuccess ? 'succeeded' : 'failed',
+                return_message: executionSuccess 
+                  ? (executionResult ? JSON.stringify(executionResult).substring(0, 500) : 'Job completed successfully')
+                  : error || 'Job execution failed',
+                start_time: startTime.toISOString(),
+                end_time: endTime.toISOString(),
+                duration_ms: Math.round(duration * 1000)
+              });
+          } catch (recordError) {
+            // Log error but don't fail the response
+            console.error('Error recording job execution:', recordError);
+          }
+
           return res.status(200).json({
             ok: true,
             job: {
@@ -897,7 +922,7 @@ export default async function handler(req, res) {
               command: job.command
             },
             execution: {
-              success: !error,
+              success: executionSuccess,
               error: error,
               duration: duration,
               start_time: startTime.toISOString(),
@@ -911,6 +936,28 @@ export default async function handler(req, res) {
         } catch (execError) {
           const endTime = new Date();
           const duration = (endTime - startTime) / 1000;
+          
+          // Record the failed job execution in cron.job_run_details
+          try {
+            await supabase
+              .from('cron.job_run_details')
+              .insert({
+                jobid: parseInt(jobid),
+                runid: null, // Will be auto-generated
+                job_pid: null,
+                database: null,
+                username: null,
+                command: job.command,
+                status: 'failed',
+                return_message: execError.message || 'Job execution failed',
+                start_time: startTime.toISOString(),
+                end_time: endTime.toISOString(),
+                duration_ms: Math.round(duration * 1000)
+              });
+          } catch (recordError) {
+            // Log error but don't fail the response
+            console.error('Error recording job execution:', recordError);
+          }
           
           return res.status(200).json({
             ok: true,
