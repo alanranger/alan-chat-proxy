@@ -650,7 +650,18 @@
           throw new Error(data.error || 'Failed to load jobs');
         }
 
-        renderJobs(data.jobs || []);
+        // Pre-load regression test data for risky jobs
+        const jobs = data.jobs || [];
+        const regressionPromises = jobs
+          .filter(job => riskyJobs.includes(job.jobid))
+          .map(job => loadRegressionTestData(job.jobid).then(data => ({ jobid: job.jobid, data })));
+        
+        const regressionResults = await Promise.all(regressionPromises);
+        regressionResults.forEach(({ jobid, data }) => {
+          regressionTestData[jobid] = data;
+        });
+
+        renderJobs(jobs);
       } catch (error) {
         container.innerHTML = `<div class="error">Error loading jobs: ${error.message}</div>`;
       }
