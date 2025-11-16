@@ -11,7 +11,14 @@ const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || proce
 // Match the hardcoded UI token as a fallback so the button works
 const EXPECTED_TOKEN = (process.env.INGEST_TOKEN || '').trim() || 'b6c3f0c9e6f44cce9e1a4f3f2d3a5c76';
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+// Initialize Supabase client with error handling
+if (!SUPABASE_SERVICE_ROLE_KEY) {
+  console.error('ERROR: SUPABASE_SERVICE_ROLE_KEY is not set!');
+}
+
+const supabase = SUPABASE_SERVICE_ROLE_KEY 
+  ? createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+  : null;
 
 export default async function handler(req, res) {
   // Wrap entire handler in try-catch to ensure JSON responses
@@ -35,8 +42,16 @@ export default async function handler(req, res) {
 
     const { action } = req.query || {};
 
-  // QA Spot Checks (GET /api/admin?action=qa)
-  if (req.method === 'GET' && action === 'qa') {
+    // Check if Supabase client is initialized
+    if (!supabase) {
+      return res.status(500).json({ 
+        error: 'Server configuration error', 
+        detail: 'Supabase client not initialized. Check SUPABASE_SERVICE_ROLE_KEY environment variable.' 
+      });
+    }
+
+    // QA Spot Checks (GET /api/admin?action=qa)
+    if (req.method === 'GET' && action === 'qa') {
     const checks = [
       { name: 'page_entities', type: 'table', columns: 'url, kind, title, date_start, date_end, location, price', order: 'date_start', limit: 5 },
       { name: 'page_chunks', type: 'table', columns: 'url, tokens', order: 'tokens', limit: 3 },
