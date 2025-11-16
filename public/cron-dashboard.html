@@ -493,7 +493,16 @@
       22: 'Analyzes chat interactions from the last 30 days to find questions with low confidence scores (< 0.6). Groups identical questions, calculates frequency and average confidence, identifies which questions need better answers, and generates prioritized improvement recommendations (missing content, content gaps, intent confusion, high-impact fixes). Excludes questions already processed. Stores results in content_improvement_tracking table. Powers the Insights tab in analytics.html where you can review recommendations and mark questions as improved or ignored.',
       26: 'Reads all URLs from the site URLs CSV file, makes HEAD requests to check each URL\'s Last-Modified header, compares with database records to detect content changes, and re-ingests only changed URLs (full content extraction, embeddings, page_entities, page_chunks). Processes URLs in batches of 20. Batch 0 handles the first third of URLs plus the camera course URL. Keeps the database in sync with website changes without requiring full re-ingestion.',
       27: 'Reads all URLs from the site URLs CSV file, makes HEAD requests to check each URL\'s Last-Modified header, compares with database records to detect content changes, and re-ingests only changed URLs (full content extraction, embeddings, page_entities, page_chunks). Processes URLs in batches of 20. Batch 1 handles the second third of URLs. Keeps the database in sync with website changes without requiring full re-ingestion.',
-      28: 'Reads all URLs from the site URLs CSV file, makes HEAD requests to check each URL\'s Last-Modified header, compares with database records to detect content changes, and re-ingests only changed URLs (full content extraction, embeddings, page_entities, page_chunks). Processes URLs in batches of 20. Batch 2 handles the final third of URLs. Keeps the database in sync with website changes without requiring full re-ingestion.'
+      28: 'Reads all URLs from the site URLs CSV file, makes HEAD requests to check each URL\'s Last-Modified header, compares with database records to detect content changes, and re-ingests only changed URLs (full content extraction, embeddings, page_entities, page_chunks). Processes URLs in batches of 20. Batch 2 handles the final third of URLs. Keeps the database in sync with website changes without requiring full re-ingestion.',
+      29: 'Deletes old chat data (sessions, interactions, events) older than 90 days to prevent database bloat and maintain performance. Keeps the database size manageable while preserving recent chat history for analytics.',
+      30: 'Removes debug logs older than 30 days from the debug_logs table. Prevents the debug logs table from growing indefinitely and consuming excessive storage space.',
+      31: 'Identifies and removes orphaned records in the database. Deletes page_chunks that reference non-existent page_entities, and page_entities that reference non-existent csv_metadata records. Maintains data integrity and prevents referential inconsistencies.',
+      32: 'Runs VACUUM and ANALYZE on key database tables to reclaim storage space, update query statistics, and optimize query performance. Processes high-traffic tables including chat tables, page entities, events, and products.',
+      33: 'Checks the health of all URLs in the system. Identifies broken URLs (HTTP 4xx/5xx errors), stale URLs (not updated in 90+ days), and healthy URLs. Helps maintain content quality and identify pages that need attention.',
+      34: 'Validates that all page chunks have proper embeddings for RAG search functionality. Counts total chunks, chunks with embeddings, and chunks missing embeddings. Ensures the chat bot can properly search and retrieve content.',
+      35: 'Analyzes content freshness across all URLs. Identifies content that hasn\'t been updated in 60+ days and calculates average content age. Helps identify stale content that may need refreshing or removal.',
+      36: 'Backs up daily analytics data to ensure long-term retention. Verifies that yesterday\'s analytics data has been properly stored in chat_analytics_daily table for historical reporting and analysis.',
+      37: 'Monitors the health of all active cron jobs. Identifies jobs with recent failures (more than 3 failures in 24 hours = critical, any failures = warning) or jobs that haven\'t succeeded in 48+ hours. Helps detect and alert on system issues early.'
     };
 
     // Define linked jobs (jobs that run together and are related)
@@ -600,11 +609,26 @@
       // Define job groups
       const analyticsJobs = [13, 19, 20, 22];
       const refreshBatches = [26, 27, 28];
+      const dataMaintenanceJobs = [29, 30, 31];
+      const databasePerformanceJobs = [32];
+      const contentHealthJobs = [33, 34, 35];
+      const systemHealthJobs = [36, 37];
       
       // Separate jobs into groups
       const analyticsGroup = jobs.filter(j => analyticsJobs.includes(j.jobid)).sort((a, b) => a.jobid - b.jobid);
       const refreshGroup = jobs.filter(j => refreshBatches.includes(j.jobid)).sort((a, b) => a.jobid - b.jobid);
-      const otherJobs = jobs.filter(j => !analyticsJobs.includes(j.jobid) && !refreshBatches.includes(j.jobid)).sort((a, b) => a.jobid - b.jobid);
+      const dataMaintenanceGroup = jobs.filter(j => dataMaintenanceJobs.includes(j.jobid)).sort((a, b) => a.jobid - b.jobid);
+      const databasePerformanceGroup = jobs.filter(j => databasePerformanceJobs.includes(j.jobid)).sort((a, b) => a.jobid - b.jobid);
+      const contentHealthGroup = jobs.filter(j => contentHealthJobs.includes(j.jobid)).sort((a, b) => a.jobid - b.jobid);
+      const systemHealthGroup = jobs.filter(j => systemHealthJobs.includes(j.jobid)).sort((a, b) => a.jobid - b.jobid);
+      const otherJobs = jobs.filter(j => 
+        !analyticsJobs.includes(j.jobid) && 
+        !refreshBatches.includes(j.jobid) &&
+        !dataMaintenanceJobs.includes(j.jobid) &&
+        !databasePerformanceJobs.includes(j.jobid) &&
+        !contentHealthJobs.includes(j.jobid) &&
+        !systemHealthJobs.includes(j.jobid)
+      ).sort((a, b) => a.jobid - b.jobid);
 
       let html = '';
 
@@ -733,7 +757,14 @@
       const displayName = jobDisplayNames[job.jobid] || job.jobname || `Job ${job.jobid}`;
       const frequency = parseCronFrequency(job.schedule);
       
-      const borderColor = groupType === 'analytics' ? '#f5576c' : groupType === 'refresh' ? '#00f2fe' : '#3498db';
+      const borderColor = 
+        groupType === 'analytics' ? '#f5576c' : 
+        groupType === 'refresh' ? '#00f2fe' : 
+        groupType === 'maintenance' ? '#f5576c' :
+        groupType === 'performance' ? '#4facfe' :
+        groupType === 'health' ? '#43e97b' :
+        groupType === 'system' ? '#fa709a' :
+        '#3498db';
       
       return `
         <div class="job-card" ${isLinkedJob ? `style="border: 2px solid ${borderColor};"` : ''}>
