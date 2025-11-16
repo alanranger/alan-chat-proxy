@@ -546,7 +546,7 @@ export default async function handler(req, res) {
           }
         }
       } else {
-        // No test run yet - check for standalone baseline test results
+        // No test run yet - check for standalone baseline and after test results
         const { data: baselineTests, error: baselineError } = await supabase
           .from('regression_test_results')
           .select('*')
@@ -557,6 +557,30 @@ export default async function handler(req, res) {
         
         if (!baselineError && baselineTests && baselineTests.length > 0) {
           baselineResult = baselineTests[0];
+        }
+        
+        // Also get latest after test if exists
+        const { data: afterTests, error: afterError } = await supabase
+          .from('regression_test_results')
+          .select('*')
+          .eq('job_id', jobid)
+          .eq('test_phase', 'after')
+          .order('test_timestamp', { ascending: false })
+          .limit(1);
+        
+        if (!afterError && afterTests && afterTests.length > 0) {
+          afterResult = afterTests[0];
+          
+          // If we have both baseline and after, try to compare
+          if (baselineResult && afterResult) {
+            const { data: compareData, error: compareError } = await supabase.rpc('compare_regression_test_results_detailed', {
+              baseline_test_id: baselineResult.id,
+              current_test_id: afterResult.id
+            });
+            if (!compareError && compareData && compareData.length > 0) {
+              comparison = compareData[0];
+            }
+          }
         }
       }
 

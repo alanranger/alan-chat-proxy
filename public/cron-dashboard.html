@@ -908,15 +908,25 @@
 
       const { baseline, after, comparison, test_run } = regressionData;
       
+      // Calculate stats
+      const baselineStats = baseline ? {
+        success_rate: baseline.total_questions > 0 
+          ? ((baseline.successful_tests / baseline.total_questions) * 100).toFixed(1)
+          : 0,
+        avg_confidence: (baseline.avg_confidence * 100).toFixed(1),
+        total_questions: baseline.total_questions || 40
+      } : null;
+      
+      const afterStats = after ? {
+        success_rate: after.total_questions > 0 
+          ? ((after.successful_tests / after.total_questions) * 100).toFixed(1)
+          : 0,
+        avg_confidence: (after.avg_confidence * 100).toFixed(1),
+        total_questions: after.total_questions || 40
+      } : null;
+      
       // Show baseline only if no after test yet
       if (baseline && !after) {
-        const baselineStats = {
-          success_rate: baseline.total_questions > 0 
-            ? ((baseline.successful_tests / baseline.total_questions) * 100).toFixed(1)
-            : 0,
-          avg_confidence: (baseline.avg_confidence * 100).toFixed(1)
-        };
-        
         return `
           <div class="regression-test-section no-regression">
             <div style="font-weight: bold; margin-bottom: 8px;">
@@ -933,7 +943,7 @@
               </div>
               <div class="regression-stat">
                 <div class="regression-stat-label">Total Questions</div>
-                <div class="regression-stat-value">${baseline.total_questions || 40}</div>
+                <div class="regression-stat-value">${baselineStats.total_questions}</div>
               </div>
               <div class="regression-stat">
                 <div class="regression-stat-label">Status</div>
@@ -947,59 +957,72 @@
         `;
       }
       
-      if (!baseline || !after) {
-        return '<div class="regression-test-section"><em>Regression test in progress...</em></div>';
-      }
-
-      if (!comparison) {
-        return '<div class="regression-test-section"><em>Comparison analysis pending...</em></div>';
-      }
-
-      const severity = comparison.regression_severity || 'none';
-      const detected = comparison.regression_detected || false;
-      const details = comparison.regression_details || {};
-      const baselineStats = comparison.baseline_stats || {};
-      const currentStats = comparison.current_stats || {};
-
-      const severityClass = detected ? severity : 'no-regression';
-      const severityIcon = detected 
-        ? (severity === 'severe' ? '🔴' : severity === 'moderate' ? '🟡' : '🟠')
-        : '✅';
-
-      return `
-        <div class="regression-test-section ${severityClass}">
-          <div style="font-weight: bold; margin-bottom: 8px;">
-            ${severityIcon} Regression Test: ${detected ? severity.toUpperCase() + ' REGRESSION DETECTED' : 'No Regression'}
+      // Show both baseline and latest run results
+      if (baseline && after) {
+        const severity = comparison ? (comparison.regression_severity || 'none') : 'none';
+        const detected = comparison ? (comparison.regression_detected || false) : false;
+        const details = comparison ? (comparison.regression_details || {}) : {};
+        const comparisonBaselineStats = comparison ? (comparison.baseline_stats || {}) : {};
+        const comparisonCurrentStats = comparison ? (comparison.current_stats || {}) : {};
+        
+        const severityClass = detected ? severity : 'no-regression';
+        const severityIcon = detected 
+          ? (severity === 'severe' ? '🔴' : severity === 'moderate' ? '🟡' : '🟠')
+          : '✅';
+        
+        return `
+          <div class="regression-test-section ${severityClass}">
+            <div style="font-weight: bold; margin-bottom: 8px;">
+              ${comparison ? `${severityIcon} Regression Test: ${detected ? severity.toUpperCase() + ' REGRESSION DETECTED' : 'No Regression'}` : '📊 Baseline vs Latest Run'}
+            </div>
+            <div class="regression-summary">
+              <div class="regression-stat">
+                <div class="regression-stat-label">Baseline Success Rate</div>
+                <div class="regression-stat-value">${comparison ? parseFloat(comparisonBaselineStats.success_rate || baselineStats.success_rate || 0).toFixed(1) : baselineStats.success_rate}%</div>
+              </div>
+              <div class="regression-stat">
+                <div class="regression-stat-label">Latest Run Success Rate</div>
+                <div class="regression-stat-value">${comparison ? parseFloat(comparisonCurrentStats.success_rate || afterStats.success_rate || 0).toFixed(1) : afterStats.success_rate}%</div>
+              </div>
+              <div class="regression-stat">
+                <div class="regression-stat-label">Baseline Confidence</div>
+                <div class="regression-stat-value">${comparison ? parseFloat(comparisonBaselineStats.avg_confidence || baselineStats.avg_confidence || 0).toFixed(3) : baselineStats.avg_confidence}%</div>
+              </div>
+              <div class="regression-stat">
+                <div class="regression-stat-label">Latest Run Confidence</div>
+                <div class="regression-stat-value">${comparison ? parseFloat(comparisonCurrentStats.avg_confidence || afterStats.avg_confidence || 0).toFixed(3) : afterStats.avg_confidence}%</div>
+              </div>
+              ${comparison ? `
+              <div class="regression-stat">
+                <div class="regression-stat-label">Article Changes</div>
+                <div class="regression-stat-value">${details.article_change_count || 0} queries</div>
+              </div>
+              <div class="regression-stat">
+                <div class="regression-stat-label">Severe Changes</div>
+                <div class="regression-stat-value">${details.severe_article_changes || 0}</div>
+              </div>
+              ` : `
+              <div class="regression-stat">
+                <div class="regression-stat-label">Baseline Questions</div>
+                <div class="regression-stat-value">${baselineStats.total_questions}</div>
+              </div>
+              <div class="regression-stat">
+                <div class="regression-stat-label">Latest Run Questions</div>
+                <div class="regression-stat-value">${afterStats.total_questions}</div>
+              </div>
+              `}
+            </div>
+            ${comparison && detected ? `<div style="margin-top: 8px; font-size: 11px; color: #721c24;"><strong>Action:</strong> ${severity === 'severe' || severity === 'moderate' ? 'ROLLBACK RECOMMENDED' : 'Review recommended'}</div>` : ''}
+            ${!comparison ? `<div style="margin-top: 8px; font-size: 11px; color: #155724;">Comparison analysis pending...</div>` : ''}
           </div>
-          <div class="regression-summary">
-            <div class="regression-stat">
-              <div class="regression-stat-label">Baseline Success Rate</div>
-              <div class="regression-stat-value">${parseFloat(baselineStats.success_rate || 0).toFixed(1)}%</div>
-            </div>
-            <div class="regression-stat">
-              <div class="regression-stat-label">Current Success Rate</div>
-              <div class="regression-stat-value">${parseFloat(currentStats.success_rate || 0).toFixed(1)}%</div>
-            </div>
-            <div class="regression-stat">
-              <div class="regression-stat-label">Baseline Confidence</div>
-              <div class="regression-stat-value">${parseFloat(baselineStats.avg_confidence || 0).toFixed(3)}</div>
-            </div>
-            <div class="regression-stat">
-              <div class="regression-stat-label">Current Confidence</div>
-              <div class="regression-stat-value">${parseFloat(currentStats.avg_confidence || 0).toFixed(3)}</div>
-            </div>
-            <div class="regression-stat">
-              <div class="regression-stat-label">Article Changes</div>
-              <div class="regression-stat-value">${details.article_change_count || 0} queries</div>
-            </div>
-            <div class="regression-stat">
-              <div class="regression-stat-label">Severe Changes</div>
-              <div class="regression-stat-value">${details.severe_article_changes || 0}</div>
-            </div>
-          </div>
-          ${detected ? `<div style="margin-top: 8px; font-size: 11px; color: #721c24;"><strong>Action:</strong> ${severity === 'severe' || severity === 'moderate' ? 'ROLLBACK RECOMMENDED' : 'Review recommended'}</div>` : ''}
-        </div>
-      `;
+        `;
+      }
+      
+      if (!baseline) {
+        return '<div class="regression-test-section"><em>No baseline test found. Run baseline tests first.</em></div>';
+      }
+      
+      return '<div class="regression-test-section"><em>Regression test in progress...</em></div>';
     }
 
     function renderJobCard(job, isLinked, groupType) {
