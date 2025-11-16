@@ -467,12 +467,13 @@
     };
 
     // Define linked jobs (jobs that run together and are related)
-    // Jobs 19, 20, and 22 are all linked together (analytics jobs)
+    // Jobs 13, 19, 20, and 22 are all linked together (analytics jobs)
     // Jobs 26, 27, and 28 are all linked together (refresh batches)
     const linkedJobs = {
-      19: [20, 22],  // Job 19 is linked to Jobs 20 and 22
-      20: [19, 22],  // Job 20 is linked to Jobs 19 and 22
-      22: [19, 20],  // Job 22 is linked to Jobs 19 and 20
+      13: [19, 20, 22],  // Job 13 is linked to Jobs 19, 20, and 22
+      19: [13, 20, 22],  // Job 19 is linked to Jobs 13, 20, and 22
+      20: [13, 19, 22],  // Job 20 is linked to Jobs 13, 19, and 22
+      22: [13, 19, 20],  // Job 22 is linked to Jobs 13, 19, and 20
       26: [27, 28],  // Job 26 is linked to Jobs 27 and 28
       27: [26, 28],  // Job 27 is linked to Jobs 26 and 28
       28: [26, 27]   // Job 28 is linked to Jobs 26 and 27
@@ -582,7 +583,7 @@
         html += '<div class="job-section">';
         html += '<div class="job-section-header analytics">📊 Chat Quality Analytics Jobs</div>';
         html += '<div class="job-section-content">';
-        html += '<div class="jobs-grid" style="grid-template-columns: repeat(3, 1fr);">';
+        html += '<div class="jobs-grid" style="grid-template-columns: repeat(4, 1fr);">';
         
         analyticsGroup.forEach((job) => {
           html += renderJobCard(job, true, 'analytics');
@@ -596,7 +597,7 @@
         html += '<div class="job-section">';
         html += '<div class="job-section-header refresh">🔄 Website Pages Refresh Batches</div>';
         html += '<div class="job-section-content">';
-        html += '<div class="jobs-grid" style="grid-template-columns: repeat(3, 1fr);">';
+        html += '<div class="jobs-grid" style="grid-template-columns: repeat(4, 1fr);">';
         
         refreshGroup.forEach((job) => {
           html += renderJobCard(job, true, 'refresh');
