@@ -135,6 +135,74 @@
       background: #7f8c8d;
     }
 
+    .debug-log-container {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: #1e1e1e;
+      color: #d4d4d4;
+      border-top: 2px solid #007acc;
+      max-height: 300px;
+      display: flex;
+      flex-direction: column;
+      z-index: 10000;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+    }
+
+    .debug-log-header {
+      background: #252526;
+      padding: 8px 15px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #3e3e42;
+    }
+
+    .debug-log-title {
+      font-weight: bold;
+      color: #4ec9b0;
+    }
+
+    .debug-log-controls {
+      display: flex;
+      gap: 10px;
+    }
+
+    .debug-log-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 10px 15px;
+      line-height: 1.6;
+    }
+
+    .debug-log-entry {
+      margin-bottom: 4px;
+      padding: 2px 0;
+    }
+
+    .debug-log-entry.error {
+      color: #f48771;
+    }
+
+    .debug-log-entry.success {
+      color: #4ec9b0;
+    }
+
+    .debug-log-entry.warning {
+      color: #dcdcaa;
+    }
+
+    .debug-log-entry.info {
+      color: #9cdcfe;
+    }
+
+    .debug-log-timestamp {
+      color: #808080;
+      margin-right: 8px;
+    }
+
     .btn-warning {
       background: #f39c12;
       color: white;
@@ -726,6 +794,7 @@
     });
 
     async function loadJobs() {
+      addDebugLog('Loading jobs...', 'info');
       const container = document.getElementById('jobsContainer');
       container.innerHTML = '<div class="loading">Loading cron jobs...</div>';
 
@@ -735,6 +804,8 @@
             'Authorization': `Bearer ${authToken}`
           }
         });
+        
+        addDebugLog(`Jobs API response: ${response.status} ${response.statusText}`, 'info');
 
         if (response.status === 401) {
           clearAuth();
@@ -763,6 +834,19 @@
 
         // Pre-load regression test data for risky jobs
         const jobs = data.jobs || [];
+        addDebugLog(`Loaded ${jobs.length} jobs from API`, 'success', { jobCount: jobs.length, jobIds: jobs.map(j => j.jobid) });
+        
+        // Log stats for each job
+        jobs.forEach(job => {
+          addDebugLog(`Job ${job.jobid} (${job.jobname || 'unnamed'}): ${job.total_runs || 0} runs, ${job.success_count || 0} succeeded, ${job.failed_count || 0} failed`, 'info', {
+            jobid: job.jobid,
+            total_runs: job.total_runs,
+            success_count: job.success_count,
+            failed_count: job.failed_count,
+            last_run: job.last_run
+          });
+        });
+        
         const regressionPromises = jobs
           .filter(job => riskyJobs.includes(job.jobid))
           .map(job => loadRegressionTestData(job.jobid).then(data => ({ jobid: job.jobid, data })));
@@ -773,7 +857,9 @@
         });
 
         renderJobs(jobs);
+        addDebugLog('Jobs rendered successfully', 'success');
       } catch (error) {
+        addDebugLog(`Error loading jobs: ${error.message}`, 'error', { error: error.message, stack: error.stack });
         container.innerHTML = `<div class="error">Error loading jobs: ${error.message}</div>`;
       }
     }
@@ -1431,10 +1517,15 @@
     }
 
     async function runJobNow(jobId, jobName) {
+      addDebugLog(`Run job now requested: ${jobName} (ID: ${jobId})`, 'info', { jobId, jobName });
+      
       const modal = document.getElementById('jobExecutionModal');
       const modalContent = document.getElementById('jobExecutionContent');
       
-      if (!modal || !modalContent) return;
+      if (!modal || !modalContent) {
+        addDebugLog('Modal elements not found', 'error');
+        return;
+      }
       
       // Show loading state
       modalContent.innerHTML = `
@@ -1447,6 +1538,7 @@
       modal.style.display = 'block';
       
       try {
+        addDebugLog(`Sending run job request for job ${jobId}`, 'info');
         const response = await fetch(`${API_BASE}/api/admin?action=run_cron_job`, {
           method: 'POST',
           headers: {
@@ -1456,17 +1548,23 @@
           body: JSON.stringify({ jobid: jobId })
         });
         
+        addDebugLog(`Run job API response: ${response.status} ${response.statusText}`, 'info');
+        
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
         
         const data = await response.json();
+        addDebugLog('Run job API response data received', 'info', data);
         
         if (!data.ok) {
           throw new Error(data.error || 'Job execution failed');
         }
         
         const { job, execution, regression_test } = data;
+        addDebugLog(`Job execution completed: success=${execution.success}, duration=${execution.duration}s`, 
+          execution.success ? 'success' : 'error', { execution });
+        
         const isRiskyJob = [21, 26, 27, 28, 31].includes(parseInt(jobId));
         
         let html = `
@@ -1560,6 +1658,7 @@
         modalContent.innerHTML = html;
         
         // Refresh jobs list to update stats immediately
+        addDebugLog('Refreshing jobs after execution to update stats...', 'info');
         loadJobs();
         
       } catch (error) {
@@ -1791,11 +1890,15 @@
     }
 
     async function resetJobStats(jobid, jobname) {
+      addDebugLog(`Reset stats requested for job ${jobid} (${jobname})`, 'info', { jobid, jobname });
+      
       if (!confirm(`Are you sure you want to reset the success/fail statistics for "${jobname}" (Job ${jobid})?\n\nThis will delete all execution history for this job.`)) {
+        addDebugLog('Reset stats cancelled by user', 'warning');
         return;
       }
 
       try {
+        addDebugLog(`Sending reset request for job ${jobid}`, 'info');
         const response = await fetch(`${API_BASE}/api/admin?action=reset_job_stats`, {
           method: 'POST',
           headers: {
@@ -1805,11 +1908,14 @@
           body: JSON.stringify({ jobid: jobid })
         });
 
+        addDebugLog(`Reset API response: ${response.status} ${response.statusText}`, 'info');
+
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
 
         const data = await response.json();
+        addDebugLog('Reset API response data', 'info', data);
         
         if (!data.ok) {
           throw new Error(data.error || 'Failed to reset job statistics');
@@ -1817,6 +1923,10 @@
 
         const deletedCount = data.deleted_count || 0;
         const remainingCount = data.remaining_count || 0;
+        const beforeCount = data.before_count || 0;
+        
+        addDebugLog(`Reset stats result: before=${beforeCount}, deleted=${deletedCount}, remaining=${remainingCount}`, 
+          remainingCount > 0 ? 'warning' : 'success', data);
         
         if (remainingCount > 0) {
           showMessage(`Warning: Reset completed but ${remainingCount} records still remain for "${jobname}" (Job ${jobid}). Deleted: ${deletedCount}`, 'error');
@@ -1825,10 +1935,13 @@
         }
         
         // Small delay to ensure database has updated before refreshing
+        addDebugLog('Waiting 500ms before refreshing jobs...', 'info');
         setTimeout(() => {
+          addDebugLog('Refreshing jobs after reset...', 'info');
           loadJobs();
         }, 500);
       } catch (error) {
+        addDebugLog(`Error resetting job stats: ${error.message}`, 'error', { error: error.message, stack: error.stack });
         console.error('Error resetting job stats:', error);
         showMessage(`Error resetting statistics: ${error.message}`, 'error');
       }
@@ -1935,6 +2048,105 @@
         closeJobExecutionModal();
       }
     }
+  </script>
+
+  <!-- Debug Log -->
+  <div class="debug-log-container" id="debugLogContainer">
+    <div class="debug-log-header">
+      <div class="debug-log-title">🔍 Debug Log</div>
+      <div class="debug-log-controls">
+        <button class="btn btn-secondary btn-small" onclick="clearDebugLog()" style="padding: 4px 8px; font-size: 11px;">Clear</button>
+        <button class="btn btn-primary btn-small" onclick="copyDebugLog()" style="padding: 4px 8px; font-size: 11px;">📋 Copy Log</button>
+        <button class="btn btn-secondary btn-small" onclick="toggleDebugLog()" style="padding: 4px 8px; font-size: 11px;">▼ Hide</button>
+      </div>
+    </div>
+    <div class="debug-log-content" id="debugLogContent"></div>
+  </div>
+
+  <script>
+    // Global debug log
+    const debugLog = [];
+    const MAX_LOG_ENTRIES = 500;
+
+    function addDebugLog(message, type = 'info', data = null) {
+      const timestamp = new Date().toLocaleTimeString();
+      const entry = {
+        timestamp,
+        message,
+        type,
+        data
+      };
+      
+      debugLog.push(entry);
+      
+      // Keep only last MAX_LOG_ENTRIES
+      if (debugLog.length > MAX_LOG_ENTRIES) {
+        debugLog.shift();
+      }
+      
+      // Update UI
+      updateDebugLogDisplay();
+    }
+
+    function updateDebugLogDisplay() {
+      const content = document.getElementById('debugLogContent');
+      if (!content) return;
+      
+      const html = debugLog.map(entry => {
+        const dataStr = entry.data ? `\n${JSON.stringify(entry.data, null, 2)}` : '';
+        return `<div class="debug-log-entry ${entry.type}">
+          <span class="debug-log-timestamp">[${entry.timestamp}]</span>
+          ${entry.message}${dataStr ? `<pre style="margin: 4px 0 4px 20px; color: #808080; font-size: 11px;">${escapeHtml(dataStr)}</pre>` : ''}
+        </div>`;
+      }).join('');
+      
+      content.innerHTML = html;
+      content.scrollTop = content.scrollHeight;
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    function clearDebugLog() {
+      debugLog.length = 0;
+      updateDebugLogDisplay();
+      addDebugLog('Debug log cleared', 'info');
+    }
+
+    function copyDebugLog() {
+      const logText = debugLog.map(entry => {
+        const dataStr = entry.data ? `\n${JSON.stringify(entry.data, null, 2)}` : '';
+        return `[${entry.timestamp}] ${entry.type.toUpperCase()}: ${entry.message}${dataStr}`;
+      }).join('\n\n');
+      
+      navigator.clipboard.writeText(logText).then(() => {
+        addDebugLog('Debug log copied to clipboard', 'success');
+      }).catch(err => {
+        addDebugLog('Failed to copy log: ' + err.message, 'error');
+      });
+    }
+
+    function toggleDebugLog() {
+      const container = document.getElementById('debugLogContainer');
+      const content = document.getElementById('debugLogContent');
+      const btn = event.target;
+      
+      if (content.style.display === 'none') {
+        content.style.display = 'block';
+        container.style.maxHeight = '300px';
+        btn.textContent = '▼ Hide';
+      } else {
+        content.style.display = 'none';
+        container.style.maxHeight = '40px';
+        btn.textContent = '▲ Show';
+      }
+    }
+
+    // Initialize debug log
+    addDebugLog('Debug log initialized', 'info');
   </script>
 </body>
 </html>
