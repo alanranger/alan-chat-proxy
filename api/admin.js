@@ -872,27 +872,40 @@ export default async function handler(req, res) {
             }
           }
 
-          // Record the job execution in cron.job_run_details using RPC function
+          // Record the job execution in cron.job_run_details using direct SQL via PostgREST
+          // Using service role key to execute raw SQL that inserts into cron schema
           const executionSuccess = !error;
           let recordInserted = false;
           let recordCount = 0;
           
           try {
-            const { data: insertData, error: insertError } = await supabase.rpc('insert_job_run_detail', {
-              p_jobid: parseInt(jobid),
-              p_command: job.command,
-              p_status: executionSuccess ? 'succeeded' : 'failed',
-              p_return_message: executionSuccess 
-                ? (executionResult ? JSON.stringify(executionResult).substring(0, 500) : 'Job completed successfully')
-                : error || 'Job execution failed',
-              p_start_time: startTime.toISOString(),
-              p_end_time: endTime.toISOString()
+            // Use PostgREST REST API directly with service role key to insert into cron.job_run_details
+            // The service role key has full access to all schemas
+            const insertResponse = await fetch(`${SUPABASE_URL}/rest/v1/rpc/insert_job_run_detail`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+                'apikey': SUPABASE_SERVICE_ROLE_KEY,
+                'Prefer': 'return=representation'
+              },
+              body: JSON.stringify({
+                p_jobid: parseInt(jobid),
+                p_command: job.command,
+                p_status: executionSuccess ? 'succeeded' : 'failed',
+                p_return_message: executionSuccess 
+                  ? (executionResult ? JSON.stringify(executionResult).substring(0, 500) : 'Job completed successfully')
+                  : error || 'Job execution failed',
+                p_start_time: startTime.toISOString(),
+                p_end_time: endTime.toISOString()
+              })
             });
             
-            if (insertError) {
-              console.error('Error recording job execution:', insertError);
-              console.error('Insert error details:', JSON.stringify(insertError, null, 2));
-              console.log('RPC function may not exist, job execution will not be recorded in job_run_details');
+            const insertData = await insertResponse.json();
+            
+            if (!insertResponse.ok) {
+              console.error('Error recording job execution:', insertResponse.status, insertResponse.statusText);
+              console.error('Insert error details:', JSON.stringify(insertData, null, 2));
             } else if (insertData && insertData.inserted > 0) {
               recordInserted = true;
               recordCount = insertData.inserted;
@@ -935,19 +948,31 @@ export default async function handler(req, res) {
           const endTime = new Date();
           const duration = (endTime - startTime) / 1000;
           
-          // Record the failed job execution in cron.job_run_details using RPC function
+          // Record the failed job execution in cron.job_run_details using direct SQL via PostgREST
           try {
-            const { data: insertData, error: insertError } = await supabase.rpc('insert_job_run_detail', {
-              p_jobid: parseInt(jobid),
-              p_command: job.command,
-              p_status: 'failed',
-              p_return_message: execError.message || 'Job execution failed',
-              p_start_time: startTime.toISOString(),
-              p_end_time: endTime.toISOString()
+            const insertResponse = await fetch(`${SUPABASE_URL}/rest/v1/rpc/insert_job_run_detail`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+                'apikey': SUPABASE_SERVICE_ROLE_KEY,
+                'Prefer': 'return=representation'
+              },
+              body: JSON.stringify({
+                p_jobid: parseInt(jobid),
+                p_command: job.command,
+                p_status: 'failed',
+                p_return_message: execError.message || 'Job execution failed',
+                p_start_time: startTime.toISOString(),
+                p_end_time: endTime.toISOString()
+              })
             });
             
-            if (insertError) {
-              console.error('Error recording failed job execution:', insertError);
+            const insertData = await insertResponse.json();
+            
+            if (!insertResponse.ok) {
+              console.error('Error recording failed job execution:', insertResponse.status, insertResponse.statusText);
+              console.error('Insert error details:', JSON.stringify(insertData, null, 2));
             } else if (insertData && insertData.inserted > 0) {
               console.log(`Successfully recorded failed job execution for job ${jobid}:`, insertData);
             } else {
