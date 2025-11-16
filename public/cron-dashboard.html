@@ -193,6 +193,18 @@
       font-weight: 400;
     }
 
+    .frequency-pill {
+      display: inline-block;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 15px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
     .job-schedule {
       background: #ecf0f1;
       padding: 8px;
@@ -456,14 +468,14 @@
 
     // Job descriptions
     const jobDescriptions = {
-      13: 'Aggregates daily analytics from chat bot usage logs (user sessions, questions asked, answers given, confidence scores, and response times) for a specific date 7 days ago. Stores the results in chat_analytics_daily for historical reporting. Runs every Monday at 2 AM.',
-      19: 'Analyzes all chat questions from the last 7 days, groups identical questions, counts how many times each was asked, calculates average confidence scores, and tracks which questions have low confidence. Updates the chat_question_frequency table to identify frequently asked questions and which ones need better answers. Powers the Questions tab in analytics.html. Runs hourly in sync with Jobs 20 & 22.',
-      20: 'Aggregates today\'s analytics from chat bot usage logs (sessions, questions, interactions, averages) and updates session records with total questions and interactions per session. Powers the Overview tab in analytics.html. Runs hourly in sync with Jobs 19 & 22.',
+      13: 'Aggregates daily analytics from chat bot usage logs (user sessions, questions asked, answers given, confidence scores, and response times) for a specific date 7 days ago. Stores the results in chat_analytics_daily for historical reporting.',
+      19: 'Analyzes all chat questions from the last 7 days, groups identical questions, counts how many times each was asked, calculates average confidence scores, and tracks which questions have low confidence. Updates the chat_question_frequency table to identify frequently asked questions and which ones need better answers. Powers the Questions tab in analytics.html.',
+      20: 'Aggregates today\'s analytics from chat bot usage logs (sessions, questions, interactions, averages) and updates session records with total questions and interactions per session. Powers the Overview tab in analytics.html.',
       21: 'Refreshes the unified products materialized view which consolidates product data from multiple sources (page_entities, product_display_price, CSV metadata) into a single deduplicated view. Resolves product types (workshop vs course), extracts location hints, availability status, and pricing. Then updates display prices for all products by processing them in batches. The refreshed view feeds into v_products_unified_open → v_events_for_chat, which provides product pricing for events displayed in the chat bot. Ensures event pricing shown in chat responses is current.',
-      22: 'Analyzes chat interactions from the last 30 days to find questions with low confidence scores (< 0.6). Groups identical questions, calculates frequency and average confidence, identifies which questions need better answers, and generates prioritized improvement recommendations (missing content, content gaps, intent confusion, high-impact fixes). Excludes questions already processed. Stores results in content_improvement_tracking table. Powers the Insights tab in analytics.html where you can review recommendations and mark questions as improved or ignored. Runs hourly in sync with Jobs 19 & 20.',
-      26: 'Reads all URLs from the site URLs CSV file, makes HEAD requests to check each URL\'s Last-Modified header, compares with database records to detect content changes, and re-ingests only changed URLs (full content extraction, embeddings, page_entities, page_chunks). Processes URLs in batches of 20. Batch 0 handles the first third of URLs plus the camera course URL. Keeps the database in sync with website changes without requiring full re-ingestion. Runs every 4 hours at minute 0, in sync with batches 1 and 2 (at minutes 1 and 2).',
-      27: 'Reads all URLs from the site URLs CSV file, makes HEAD requests to check each URL\'s Last-Modified header, compares with database records to detect content changes, and re-ingests only changed URLs (full content extraction, embeddings, page_entities, page_chunks). Processes URLs in batches of 20. Batch 1 handles the second third of URLs. Keeps the database in sync with website changes without requiring full re-ingestion. Runs every 4 hours at minute 1, in sync with batches 0 and 2 (at minutes 0 and 2).',
-      28: 'Reads all URLs from the site URLs CSV file, makes HEAD requests to check each URL\'s Last-Modified header, compares with database records to detect content changes, and re-ingests only changed URLs (full content extraction, embeddings, page_entities, page_chunks). Processes URLs in batches of 20. Batch 2 handles the final third of URLs. Keeps the database in sync with website changes without requiring full re-ingestion. Runs every 4 hours at minute 2, in sync with batches 0 and 1 (at minutes 0 and 1).'
+      22: 'Analyzes chat interactions from the last 30 days to find questions with low confidence scores (< 0.6). Groups identical questions, calculates frequency and average confidence, identifies which questions need better answers, and generates prioritized improvement recommendations (missing content, content gaps, intent confusion, high-impact fixes). Excludes questions already processed. Stores results in content_improvement_tracking table. Powers the Insights tab in analytics.html where you can review recommendations and mark questions as improved or ignored.',
+      26: 'Reads all URLs from the site URLs CSV file, makes HEAD requests to check each URL\'s Last-Modified header, compares with database records to detect content changes, and re-ingests only changed URLs (full content extraction, embeddings, page_entities, page_chunks). Processes URLs in batches of 20. Batch 0 handles the first third of URLs plus the camera course URL. Keeps the database in sync with website changes without requiring full re-ingestion.',
+      27: 'Reads all URLs from the site URLs CSV file, makes HEAD requests to check each URL\'s Last-Modified header, compares with database records to detect content changes, and re-ingests only changed URLs (full content extraction, embeddings, page_entities, page_chunks). Processes URLs in batches of 20. Batch 1 handles the second third of URLs. Keeps the database in sync with website changes without requiring full re-ingestion.',
+      28: 'Reads all URLs from the site URLs CSV file, makes HEAD requests to check each URL\'s Last-Modified header, compares with database records to detect content changes, and re-ingests only changed URLs (full content extraction, embeddings, page_entities, page_chunks). Processes URLs in batches of 20. Batch 2 handles the final third of URLs. Keeps the database in sync with website changes without requiring full re-ingestion.'
     };
 
     // Define linked jobs (jobs that run together and are related)
@@ -618,6 +630,73 @@
       container.innerHTML = html;
     }
 
+    // Parse cron schedule to human-readable frequency
+    function parseCronFrequency(cron) {
+      const parts = cron.trim().split(/\s+/);
+      if (parts.length !== 5) return cron;
+      
+      const [minute, hour, dayOfMonth, month, dayOfWeek] = parts;
+      
+      // Every minute
+      if (minute === '*' && hour === '*' && dayOfMonth === '*' && month === '*' && dayOfWeek === '*') {
+        return 'Every minute';
+      }
+      
+      // Every hour at specific minute (e.g., "0 * * * *")
+      if (minute !== '*' && hour === '*' && dayOfMonth === '*' && month === '*' && dayOfWeek === '*') {
+        if (minute === '0') {
+          return 'Every hour';
+        }
+        return `Every hour (at :${minute.padStart(2, '0')})`;
+      }
+      
+      // Every N hours (e.g., "0 */4 * * *" or "1 */4 * * *")
+      if (hour.startsWith('*/') && dayOfMonth === '*' && month === '*' && dayOfWeek === '*') {
+        const hours = hour.substring(2);
+        const minText = minute !== '0' ? ` at :${minute.padStart(2, '0')}` : '';
+        return `Every ${hours} hour${hours !== '1' ? 's' : ''}${minText}`;
+      }
+      
+      // Daily at specific time (e.g., "0 2 * * *")
+      if (minute !== '*' && hour !== '*' && dayOfMonth === '*' && month === '*' && dayOfWeek === '*') {
+        const h = parseInt(hour);
+        const m = minute.padStart(2, '0');
+        const ampm = h >= 12 ? 'PM' : 'AM';
+        const h12 = h > 12 ? h - 12 : (h === 0 ? 12 : h);
+        return `Daily at ${h12}:${m} ${ampm}`;
+      }
+      
+      // Weekly (specific day of week, e.g., "0 2 * * 1")
+      if (dayOfWeek !== '*' && dayOfWeek !== '0' && dayOfWeek !== '7' && dayOfMonth === '*' && month === '*') {
+        const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        const day = parseInt(dayOfWeek);
+        const dayName = days[day] || dayOfWeek;
+        if (hour !== '*' && minute !== '*') {
+          const h = parseInt(hour);
+          const m = minute.padStart(2, '0');
+          const ampm = h >= 12 ? 'PM' : 'AM';
+          const h12 = h > 12 ? h - 12 : (h === 0 ? 12 : h);
+          return `Every ${dayName} at ${h12}:${m} ${ampm}`;
+        }
+        return `Every ${dayName}`;
+      }
+      
+      // Monthly
+      if (dayOfMonth !== '*' && dayOfMonth !== '0' && month === '*' && dayOfWeek === '*') {
+        if (hour !== '*' && minute !== '*') {
+          const h = parseInt(hour);
+          const m = minute.padStart(2, '0');
+          const ampm = h >= 12 ? 'PM' : 'AM';
+          const h12 = h > 12 ? h - 12 : (h === 0 ? 12 : h);
+          return `Monthly on day ${dayOfMonth} at ${h12}:${m} ${ampm}`;
+        }
+        return `Monthly on day ${dayOfMonth}`;
+      }
+      
+      // Fallback: return the cron expression
+      return cron;
+    }
+
     function renderJobCard(job, isLinked, groupType) {
       const successRate = job.total_runs > 0 
         ? ((job.success_count / job.total_runs) * 100).toFixed(1)
@@ -634,6 +713,7 @@
       const linkedIdsArray = Array.isArray(linkedJobIds) ? linkedJobIds : [linkedJobIds];
       const linkedIdsText = linkedIdsArray.join(', ');
       const displayName = jobDisplayNames[job.jobid] || job.jobname || `Job ${job.jobid}`;
+      const frequency = parseCronFrequency(job.schedule);
       
       const borderColor = groupType === 'analytics' ? '#f5576c' : groupType === 'refresh' ? '#00f2fe' : '#3498db';
       
@@ -648,6 +728,7 @@
               ${job.active ? 'Active' : 'Inactive'}
             </span>
           </div>
+          <div class="frequency-pill">⏰ ${frequency}</div>
           <div class="job-description">${description}</div>
           <div class="job-schedule">Schedule: ${job.schedule}</div>
           <div class="job-stats">
