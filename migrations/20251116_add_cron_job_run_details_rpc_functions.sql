@@ -40,14 +40,14 @@ END;
 $$;
 
 -- Function to insert a job run detail record
+-- Note: duration_ms column doesn't exist in the table, so it's not included
 CREATE OR REPLACE FUNCTION insert_job_run_detail(
   p_jobid int,
   p_command text,
   p_status text,
   p_return_message text,
   p_start_time timestamptz,
-  p_end_time timestamptz,
-  p_duration_ms int
+  p_end_time timestamptz
 )
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -57,7 +57,7 @@ DECLARE
   v_inserted_id bigint;
   v_inserted_count int;
 BEGIN
-  -- Insert the record
+  -- Insert the record (duration_ms column doesn't exist in the table)
   INSERT INTO cron.job_run_details (
     jobid,
     runid,
@@ -68,8 +68,7 @@ BEGIN
     status,
     return_message,
     start_time,
-    end_time,
-    duration_ms
+    end_time
   ) VALUES (
     p_jobid,
     NULL, -- runid will be auto-generated
@@ -80,8 +79,7 @@ BEGIN
     p_status,
     p_return_message,
     p_start_time,
-    p_end_time,
-    p_duration_ms
+    p_end_time
   )
   RETURNING runid INTO v_inserted_id;
   
@@ -106,5 +104,5 @@ $$;
 
 -- Grant execute permissions to authenticated users (adjust as needed for your security model)
 GRANT EXECUTE ON FUNCTION delete_job_run_details(int) TO authenticated;
-GRANT EXECUTE ON FUNCTION insert_job_run_detail(int, text, text, text, timestamptz, timestamptz, int) TO authenticated;
+GRANT EXECUTE ON FUNCTION insert_job_run_detail(int, text, text, text, timestamptz, timestamptz) TO authenticated;
 
