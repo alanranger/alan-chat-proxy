@@ -729,9 +729,23 @@
           return;
         }
 
-        const data = await response.json();
-        if (!data.ok) {
-          throw new Error(data.error || 'Failed to load jobs');
+        // Check if response is JSON and handle parsing errors
+        let data;
+        try {
+          const contentType = response.headers.get('content-type');
+          if (!contentType || !contentType.includes('application/json')) {
+            const text = await response.text();
+            throw new Error(`Server returned non-JSON response (${response.status}): ${text.substring(0, 200)}`);
+          }
+          data = await response.json();
+        } catch (parseError) {
+          // If JSON parsing fails, try to get the text response
+          const text = await response.text().catch(() => 'Unable to read response');
+          throw new Error(`Failed to parse server response (${response.status}): ${text.substring(0, 200)}`);
+        }
+
+        if (!data || !data.ok) {
+          throw new Error(data?.error || data?.detail || 'Failed to load jobs');
         }
 
         // Pre-load regression test data for risky jobs

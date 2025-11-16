@@ -258,6 +258,7 @@ export default async function handler(req, res) {
   // Cron Job Management (GET /api/admin?action=cron_jobs)
   if (req.method === 'GET' && action === 'cron_jobs') {
     try {
+      // Ensure we always return JSON, even on errors
       // For Job 21, only count stats from the last successful run (when it was fixed)
       // Get the last success time for Job 21
       const { data: lastSuccess, error: successError } = await supabase
@@ -916,9 +917,17 @@ export default async function handler(req, res) {
     }
   }
 
-  // Default response
-  return res.status(400).json({ 
-    error: 'bad_request', 
-    detail: 'Use ?action=qa for spot checks, ?action=refresh for mapping refresh, ?action=aggregate_analytics for analytics aggregation, ?action=cron_jobs for cron job list, ?action=cron_logs for logs, ?action=update_cron_schedule to update schedule, ?action=toggle_cron_job to pause/resume jobs, ?action=run_regression_test to run 40Q test, ?action=compare_regression_tests to compare results, or ?action=run_cron_job to run a job now' 
-  });
+    // Default response
+    return res.status(400).json({ 
+      error: 'bad_request', 
+      detail: 'Use ?action=qa for spot checks, ?action=refresh for mapping refresh, ?action=aggregate_analytics for analytics aggregation, ?action=cron_jobs for cron job list, ?action=cron_logs for logs, ?action=update_cron_schedule to update schedule, ?action=toggle_cron_job to pause/resume jobs, ?action=run_regression_test to run 40Q test, ?action=compare_regression_tests to compare results, or ?action=run_cron_job to run a job now' 
+    });
+  } catch (error) {
+    // Global error handler - ensure we always return JSON
+    console.error('Unhandled error in admin handler:', error);
+    return res.status(500).json({ 
+      error: 'Internal server error', 
+      detail: error.message || 'An unexpected error occurred' 
+    });
+  }
 }
