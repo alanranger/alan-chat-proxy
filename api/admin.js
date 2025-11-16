@@ -908,7 +908,7 @@ export default async function handler(req, res) {
           // Record the job execution in cron.job_run_details
           const executionSuccess = !error;
           try {
-            await supabase
+            const { data: insertData, error: insertError } = await supabase
               .from('cron.job_run_details')
               .insert({
                 jobid: parseInt(jobid),
@@ -924,11 +924,29 @@ export default async function handler(req, res) {
                 start_time: startTime.toISOString(),
                 end_time: endTime.toISOString(),
                 duration_ms: Math.round(duration * 1000)
-              });
+              })
+              .select();
+            
+            if (insertError) {
+              console.error('Error recording job execution:', insertError);
+              console.error('Insert error details:', JSON.stringify(insertError, null, 2));
+            } else {
+              console.log(`Successfully recorded job execution for job ${jobid}:`, insertData);
+            }
           } catch (recordError) {
             // Log error but don't fail the response
-            console.error('Error recording job execution:', recordError);
+            console.error('Error recording job execution (catch):', recordError);
+            console.error('Record error details:', JSON.stringify(recordError, null, 2));
           }
+
+          // Check if insert was successful
+          const { data: verifyInsert } = await supabase
+            .from('cron.job_run_details')
+            .select('*')
+            .eq('jobid', parseInt(jobid))
+            .gte('start_time', startTime.toISOString())
+            .order('start_time', { ascending: false })
+            .limit(1);
 
           return res.status(200).json({
             ok: true,
@@ -944,7 +962,9 @@ export default async function handler(req, res) {
               start_time: startTime.toISOString(),
               end_time: endTime.toISOString(),
               result: executionResult,
-              records_affected: recordsAffected
+              records_affected: recordsAffected,
+              record_inserted: verifyInsert && verifyInsert.length > 0,
+              record_count: verifyInsert ? verifyInsert.length : 0
             },
             regression_test: regressionTestResults
           });
@@ -1031,7 +1051,10 @@ export default async function handler(req, res) {
           console.error('Error deleting job run details:', deleteError);
           return res.status(500).json({ 
             error: 'Failed to reset job statistics', 
-            detail: deleteError.message 
+            detail: deleteError.message || deleteError.code || 'Unknown error',
+            code: deleteError.code,
+            hint: deleteError.hint,
+            fullError: JSON.stringify(deleteError)
           });
         }
 
