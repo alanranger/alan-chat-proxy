@@ -292,6 +292,87 @@
       font-weight: bold;
     }
 
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0,0,0,0.5);
+      overflow: auto;
+    }
+
+    .modal-content {
+      background-color: #fefefe;
+      margin: 5% auto;
+      padding: 20px;
+      border: 1px solid #888;
+      border-radius: 8px;
+      width: 90%;
+      max-width: 1200px;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+
+    .close {
+      color: #aaa;
+      float: right;
+      font-size: 28px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .close:hover {
+      color: #000;
+    }
+
+    .details-section {
+      margin: 20px 0;
+      padding: 15px;
+      background: #f8f9fa;
+      border-radius: 6px;
+    }
+
+    .details-section h3 {
+      margin-bottom: 10px;
+      color: #2c3e50;
+    }
+
+    .query-change {
+      margin: 10px 0;
+      padding: 10px;
+      background: white;
+      border-left: 4px solid #3498db;
+      border-radius: 4px;
+    }
+
+    .query-change.severe {
+      border-left-color: #e74c3c;
+    }
+
+    .query-change.moderate {
+      border-left-color: #f39c12;
+    }
+
+    .query-change.minor {
+      border-left-color: #3498db;
+    }
+
+    .article-list {
+      margin: 5px 0;
+      font-size: 13px;
+    }
+
+    .article-removed {
+      color: #e74c3c;
+    }
+
+    .article-added {
+      color: #27ae60;
+    }
+
     .job-schedule {
       background: #ecf0f1;
       padding: 8px;
@@ -1014,6 +1095,7 @@
             </div>
             ${comparison && detected ? `<div style="margin-top: 8px; font-size: 11px; color: #721c24;"><strong>Action:</strong> ${severity === 'severe' || severity === 'moderate' ? 'ROLLBACK RECOMMENDED' : 'Review recommended'}</div>` : ''}
             ${!comparison ? `<div style="margin-top: 8px; font-size: 11px; color: #155724;">Comparison analysis pending...</div>` : ''}
+            ${comparison ? `<div style="margin-top: 10px;"><button class="btn btn-primary btn-small" onclick="showRegressionDetails(${job.jobid})">View Details</button></div>` : ''}
           </div>
         `;
       }
