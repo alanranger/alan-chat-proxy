@@ -510,55 +510,72 @@ export default async function handler(req, res) {
         throw new Error(runError.message);
       }
 
-      if (!testRun) {
-        return res.status(200).json({
-          ok: true,
-          has_results: false,
-          message: 'No regression test results found for this job'
-        });
-      }
-
       // Get baseline and after test results
       let baselineResult = null;
       let afterResult = null;
       let comparison = null;
 
-      if (testRun.baseline_test_id) {
-        const { data, error } = await supabase
-          .from('regression_test_results')
-          .select('*')
-          .eq('id', testRun.baseline_test_id)
-          .single();
-        if (!error) baselineResult = data;
-      }
-
-      if (testRun.after_test_id) {
-        const { data, error } = await supabase
-          .from('regression_test_results')
-          .select('*')
-          .eq('id', testRun.after_test_id)
-          .single();
-        if (!error) afterResult = data;
-      }
-
-      // Get comparison if both exist
-      if (testRun.baseline_test_id && testRun.after_test_id) {
-        const { data, error } = await supabase.rpc('compare_regression_test_results_detailed', {
-          baseline_test_id: testRun.baseline_test_id,
-          current_test_id: testRun.after_test_id
-        });
-        if (!error && data && data.length > 0) {
-          comparison = data[0];
+      // If we have a test run, use its baseline/after IDs
+      if (testRun) {
+        if (testRun.baseline_test_id) {
+          const { data, error } = await supabase
+            .from('regression_test_results')
+            .select('*')
+            .eq('id', testRun.baseline_test_id)
+            .single();
+          if (!error) baselineResult = data;
         }
+
+        if (testRun.after_test_id) {
+          const { data, error } = await supabase
+            .from('regression_test_results')
+            .select('*')
+            .eq('id', testRun.after_test_id)
+            .single();
+          if (!error) afterResult = data;
+        }
+
+        // Get comparison if both exist
+        if (testRun.baseline_test_id && testRun.after_test_id) {
+          const { data, error } = await supabase.rpc('compare_regression_test_results_detailed', {
+            baseline_test_id: testRun.baseline_test_id,
+            current_test_id: testRun.after_test_id
+          });
+          if (!error && data && data.length > 0) {
+            comparison = data[0];
+          }
+        }
+      } else {
+        // No test run yet - check for standalone baseline test results
+        const { data: baselineTests, error: baselineError } = await supabase
+          .from('regression_test_results')
+          .select('*')
+          .eq('job_id', jobid)
+          .eq('test_phase', 'before')
+          .order('test_timestamp', { ascending: false })
+          .limit(1);
+        
+        if (!baselineError && baselineTests && baselineTests.length > 0) {
+          baselineResult = baselineTests[0];
+        }
+      }
+
+      // Return results even if only baseline exists
+      if (baselineResult || afterResult || testRun) {
+        return res.status(200).json({
+          ok: true,
+          has_results: true,
+          test_run: testRun || null,
+          baseline: baselineResult,
+          after: afterResult,
+          comparison: comparison
+        });
       }
 
       return res.status(200).json({
         ok: true,
-        has_results: true,
-        test_run: testRun,
-        baseline: baselineResult,
-        after: afterResult,
-        comparison: comparison
+        has_results: false,
+        message: 'No regression test results found for this job'
       });
 
     } catch (error) {

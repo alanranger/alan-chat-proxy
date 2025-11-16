@@ -908,6 +908,45 @@
 
       const { baseline, after, comparison, test_run } = regressionData;
       
+      // Show baseline only if no after test yet
+      if (baseline && !after) {
+        const baselineStats = {
+          success_rate: baseline.total_questions > 0 
+            ? ((baseline.successful_tests / baseline.total_questions) * 100).toFixed(1)
+            : 0,
+          avg_confidence: (baseline.avg_confidence * 100).toFixed(1)
+        };
+        
+        return `
+          <div class="regression-test-section no-regression">
+            <div style="font-weight: bold; margin-bottom: 8px;">
+              📊 Baseline Test Complete
+            </div>
+            <div class="regression-summary">
+              <div class="regression-stat">
+                <div class="regression-stat-label">Baseline Success Rate</div>
+                <div class="regression-stat-value">${baselineStats.success_rate}%</div>
+              </div>
+              <div class="regression-stat">
+                <div class="regression-stat-label">Baseline Confidence</div>
+                <div class="regression-stat-value">${baselineStats.avg_confidence}%</div>
+              </div>
+              <div class="regression-stat">
+                <div class="regression-stat-label">Total Questions</div>
+                <div class="regression-stat-value">${baseline.total_questions || 40}</div>
+              </div>
+              <div class="regression-stat">
+                <div class="regression-stat-label">Status</div>
+                <div class="regression-stat-value">Waiting for job run</div>
+              </div>
+            </div>
+            <div style="margin-top: 8px; font-size: 11px; color: #155724;">
+              Baseline established. Will compare against this when job runs.
+            </div>
+          </div>
+        `;
+      }
+      
       if (!baseline || !after) {
         return '<div class="regression-test-section"><em>Regression test in progress...</em></div>';
       }
