@@ -1148,7 +1148,7 @@
       return null;
     }
 
-    function renderRegressionTestSummary(regressionData) {
+    function renderRegressionTestSummary(regressionData, jobId = null) {
       if (!regressionData || !regressionData.has_results) {
         return '<div class="regression-test-section"><em>No regression test results yet</em></div>';
       }
@@ -1272,7 +1272,7 @@
       
       if (!baseline) {
         return `<div class="regression-test-section">
-          <em>No baseline test found for job ${jobid}.</em>
+          <em>No baseline test found for job ${jobId}.</em>
           <div style="margin-top: 8px; font-size: 11px; color: #856404;">
             <strong>To create a baseline:</strong> The baseline test is automatically created the first time this job runs with regression testing enabled. 
             If no baseline exists, it means the job hasn't been run with regression testing yet, or the baseline test wasn't created properly.
