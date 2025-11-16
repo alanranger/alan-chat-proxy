@@ -1119,7 +1119,15 @@
       }
       
       if (!baseline) {
-        return '<div class="regression-test-section"><em>No baseline test found. Run baseline tests first.</em></div>';
+        return `<div class="regression-test-section">
+          <em>No baseline test found for job ${jobid}.</em>
+          <div style="margin-top: 8px; font-size: 11px; color: #856404;">
+            <strong>To create a baseline:</strong> The baseline test is automatically created the first time this job runs with regression testing enabled. 
+            If no baseline exists, it means the job hasn't been run with regression testing yet, or the baseline test wasn't created properly.
+            <br><br>
+            <strong>Note:</strong> The wrapper function <code>refresh_v_products_unified_with_regression_test()</code> should create a baseline test automatically on the first run.
+          </div>
+        </div>`;
       }
       
       return '<div class="regression-test-section"><em>Regression test in progress...</em></div>';
@@ -1310,7 +1318,7 @@
         const isRiskyJob = [21, 26, 27, 28, 31].includes(parseInt(jobId));
         
         let html = `
-          <h2>Job Execution Results: ${job.name || jobName}</h2>
+          <h2>Job Execution Results: ${job.name || jobName} (ID: ${job.id || jobId})</h2>
           <div class="details-section">
             <h3>Execution Summary</h3>
             <p><strong>Status:</strong> <span style="color: ${execution.success ? '#27ae60' : '#e74c3c'}; font-weight: bold;">
