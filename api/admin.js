@@ -112,9 +112,9 @@ export default async function handler(req, res) {
     // Refresh Mappings (POST /api/admin?action=refresh)
     if (req.method === 'POST' && action === 'refresh') {
       try {
-      // Attempt to raise statement timeout for this session (best-effort)
-      try {
-        await supabase.rpc('set_config', { parameter: 'statement_timeout', value: '120000', is_local: true });
+        // Attempt to raise statement timeout for this session (best-effort)
+        try {
+          await supabase.rpc('set_config', { parameter: 'statement_timeout', value: '120000', is_local: true });
       } catch (e) {
         // Ignore timeout config errors
       }
@@ -199,741 +199,742 @@ export default async function handler(req, res) {
         return res.status(405).json({ error: 'Method not allowed for cron_status action' });
       }
       try {
-      const { data: cronJobs, error: cronError } = await supabase
-        .rpc('get_cron_jobs');
+        const { data: cronJobs, error: cronError } = await supabase
+          .rpc('get_cron_jobs');
 
-      if (cronError) {
-        console.error('Error getting cron jobs:', cronError);
-        return res.status(500).json({ 
-          error: 'Failed to get cron jobs', 
-          detail: cronError.message 
-        });
-      }
-
-      return res.status(200).json({
-        ok: true,
-        cron_jobs: cronJobs || []
-      });
-
-    } catch (error) {
-      console.error('Unexpected error in cron status check:', error);
-      return res.status(500).json({ 
-        error: 'Internal server error', 
-        detail: error.message 
-      });
-    }
-  } else if (action === 'aggregate_analytics') {
-    if (req.method !== 'POST') {
-      return res.status(405).json({ error: 'Method not allowed for aggregate_analytics action' });
-    }
-    try {
-      const { date } = req.body || {};
-      const targetDate = date || new Date().toISOString().split('T')[0];
-
-      console.log('Running analytics aggregation for date:', targetDate);
-      
-      const { data: aggData, error: aggError } = await supabase
-        .rpc('aggregate_daily_analytics', { target_date: targetDate });
-
-      if (aggError) {
-        console.error('Error running analytics aggregation:', aggError);
-        return res.status(500).json({ 
-          error: 'Failed to aggregate analytics', 
-          detail: aggError.message 
-        });
-      }
-
-      console.log('Analytics aggregation completed successfully');
-
-      const { data: updateData, error: updateError } = await supabase
-        .rpc('update_question_frequency');
-
-      if (updateError) {
-        console.error('Error updating question frequency:', updateError);
-        return res.status(500).json({ 
-          error: 'Failed to update question frequency', 
-          detail: updateError.message 
-        });
-      }
-
-      return res.status(200).json({
-        ok: true,
-        message: 'Analytics aggregation completed successfully',
-        date: targetDate,
-        aggregationResult: aggData,
-        frequencyUpdateResult: updateData
-      });
-
-    } catch (error) {
-      console.error('Unexpected error in analytics aggregation:', error);
-      return res.status(500).json({ 
-        error: 'Internal server error', 
-        detail: error.message 
-      });
-    }
-  }
-
-  // Cron Job Management (GET /api/admin?action=cron_jobs)
-  if (req.method === 'GET' && action === 'cron_jobs') {
-    try {
-      // Ensure we always return JSON, even on errors
-      // For Job 21, only count stats from the last successful run (when it was fixed)
-      // Get the last success time for Job 21
-      const { data: lastSuccess, error: successError } = await supabase
-        .from('cron.job_run_details')
-        .select('start_time')
-        .eq('jobid', 21)
-        .eq('status', 'succeeded')
-        .order('start_time', { ascending: false })
-        .limit(1)
-        .single();
-
-      let fromDate = null;
-      if (!successError && lastSuccess) {
-        fromDate = lastSuccess.start_time;
-      }
-
-      // Get all jobs with stats
-      const { data: allJobs, error: allJobsError } = await supabase
-        .rpc('get_cron_jobs_summary');
-
-      if (allJobsError) {
-        console.error('Error getting cron jobs:', allJobsError);
-        return res.status(500).json({ error: 'Failed to get cron jobs', detail: allJobsError.message });
-      }
-
-      // For Job 21, recalculate stats from the last successful run
-      if (fromDate && allJobs) {
-        const job21 = allJobs.find(j => j.jobid === 21);
-        if (job21) {
-          const { data: job21Stats, error: statsError } = await supabase
-            .from('cron.job_run_details')
-            .select('status')
-            .eq('jobid', 21)
-            .gte('start_time', fromDate);
-
-          if (!statsError && job21Stats) {
-            job21.success_count = job21Stats.filter(s => s.status === 'succeeded').length;
-            job21.failed_count = job21Stats.filter(s => s.status === 'failed').length;
-            job21.total_runs = job21Stats.length;
-          }
-        }
-      }
-
-      return res.status(200).json({ ok: true, jobs: allJobs || [] });
-
-    } catch (error) {
-      console.error('Error getting cron jobs:', error);
-      return res.status(500).json({ error: 'Internal server error', detail: error.message });
-    }
-  }
-
-  // Get Cron Job Logs (GET /api/admin?action=cron_logs&jobid=19&limit=50)
-  if (req.method === 'GET' && action === 'cron_logs') {
-    try {
-      const jobid = parseInt(req.query.jobid);
-      const limit = parseInt(req.query.limit) || 50;
-
-      if (!jobid) {
-        return res.status(400).json({ error: 'jobid parameter required' });
-      }
-
-      const { data: logs, error: logsError } = await supabase
-        .rpc('get_cron_job_logs', {
-          p_jobid: jobid,
-          p_limit: limit
-        });
-
-      if (logsError) {
-        return res.status(500).json({ error: 'Failed to get logs', detail: logsError.message });
-      }
-
-      return res.status(200).json({ ok: true, logs: logs || [] });
-
-    } catch (error) {
-      console.error('Error getting cron logs:', error);
-      return res.status(500).json({ error: 'Internal server error', detail: error.message });
-    }
-  }
-
-  // Update Cron Job Schedule (POST /api/admin?action=update_cron_schedule)
-  if (req.method === 'POST' && action === 'update_cron_schedule') {
-    try {
-      const { jobid, schedule } = req.body;
-
-      if (!jobid || !schedule) {
-        return res.status(400).json({ error: 'jobid and schedule parameters required' });
-      }
-
-      // Validate cron schedule format (basic check)
-      const cronPattern = /^(\*|([0-9]|[1-5][0-9])|\*\/([0-9]|[1-5][0-9])) (\*|([0-9]|1[0-9]|2[0-3])|\*\/([0-9]|1[0-9]|2[0-3])) (\*|([1-9]|[12][0-9]|3[01])|\*\/([1-9]|[12][0-9]|3[01])) (\*|([1-9]|1[0-2])|\*\/([1-9]|1[0-2])) (\*|([0-6])|\*\/([0-6]))$/;
-      if (!cronPattern.test(schedule)) {
-        return res.status(400).json({ error: 'Invalid cron schedule format' });
-      }
-
-      // Update the schedule using cron.alter_job via a database function
-      const { error } = await supabase.rpc('update_cron_schedule', {
-        p_jobid: jobid,
-        p_schedule: schedule
-      });
-
-      if (error) {
-        return res.status(500).json({ error: 'Failed to update schedule', detail: error.message });
-      }
-
-      return res.status(200).json({ 
-        ok: true, 
-        message: 'Schedule updated successfully',
-        jobid,
-        schedule
-      });
-
-    } catch (error) {
-      console.error('Error updating cron schedule:', error);
-      return res.status(500).json({ error: 'Internal server error', detail: error.message });
-    }
-  }
-
-  // Toggle Cron Job Active Status (POST /api/admin?action=toggle_cron_job)
-  if (req.method === 'POST' && action === 'toggle_cron_job') {
-    try {
-      const { jobid, active } = req.body;
-
-      if (jobid === undefined || active === undefined) {
-        return res.status(400).json({ error: 'jobid and active parameters required' });
-      }
-
-      if (typeof active !== 'boolean') {
-        return res.status(400).json({ error: 'active must be a boolean' });
-      }
-
-      // Toggle the active status using cron.alter_job via a database function
-      const { error } = await supabase.rpc('toggle_cron_job_active', {
-        p_jobid: jobid,
-        p_active: active
-      });
-
-      if (error) {
-        return res.status(500).json({ error: 'Failed to toggle job status', detail: error.message });
-      }
-
-      return res.status(200).json({ 
-        ok: true, 
-        message: `Job ${jobid} ${active ? 'activated' : 'paused'} successfully`,
-        jobid,
-        active
-      });
-
-    } catch (error) {
-      console.error('Error toggling cron job status:', error);
-      return res.status(500).json({ error: 'Internal server error', detail: error.message });
-    }
-  }
-
-  // Run Regression Test (POST /api/admin?action=run_regression_test)
-  if (req.method === 'POST' && action === 'run_regression_test') {
-    try {
-      const { job_id, job_name, test_phase } = req.body;
-
-      if (!job_id || !test_phase) {
-        return res.status(400).json({ error: 'job_id and test_phase (before/after) required' });
-      }
-
-      // Call the Edge Function to run the 40Q test
-      const edgeFunctionUrl = `${SUPABASE_URL}/functions/v1/run-40q-regression-test`;
-      
-      const response = await fetch(edgeFunctionUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`
-        },
-        body: JSON.stringify({
-          job_id,
-          job_name: job_name || `Job ${job_id}`,
-          test_phase
-        })
-      });
-
-      const data = await response.json();
-      
-      if (!data.ok) {
-        throw new Error(data.error || 'Failed to run regression test');
-      }
-
-      return res.status(200).json({
-        ok: true,
-        test_result_id: data.test_result_id,
-        successful_tests: data.successful_tests,
-        failed_tests: data.failed_tests,
-        avg_confidence: data.avg_confidence,
-        total_questions: data.total_questions,
-        duration: data.duration
-      });
-
-    } catch (error) {
-      console.error('Error running regression test:', error);
-      return res.status(500).json({ error: 'Internal server error', detail: error.message });
-    }
-  }
-
-  // Compare Regression Test Results (POST /api/admin?action=compare_regression_tests)
-  if (req.method === 'POST' && action === 'compare_regression_tests') {
-    try {
-      const { baseline_test_id, current_test_id } = req.body;
-
-      if (!baseline_test_id || !current_test_id) {
-        return res.status(400).json({ error: 'baseline_test_id and current_test_id required' });
-      }
-
-      // Call SQL function to compare
-      const { data, error } = await supabase.rpc('compare_regression_test_results', {
-        baseline_test_id,
-        current_test_id
-      });
-
-      if (error) {
-        throw new Error(error.message);
-      }
-
-      return res.status(200).json({
-        ok: true,
-        comparison: data[0] || data
-      });
-
-    } catch (error) {
-      console.error('Error comparing regression tests:', error);
-      return res.status(500).json({ error: 'Internal server error', detail: error.message });
-    }
-  }
-
-  // Get Regression Test Results for a Job (GET /api/admin?action=regression_test_results&jobid=21)
-  if (req.method === 'GET' && action === 'regression_test_results') {
-    try {
-      const jobid = parseInt(req.query.jobid);
-
-      if (!jobid) {
-        return res.status(400).json({ error: 'jobid parameter required' });
-      }
-
-      // Get latest test run for this job
-      const { data: testRun, error: runError } = await supabase
-        .from('regression_test_runs')
-        .select('*')
-        .eq('job_id', jobid)
-        .order('run_started_at', { ascending: false })
-        .limit(1)
-        .single();
-
-      if (runError && runError.code !== 'PGRST116') {
-        throw new Error(runError.message);
-      }
-
-      // Get baseline and after test results
-      let baselineResult = null;
-      let afterResult = null;
-      let comparison = null;
-
-      // If we have a test run, use its baseline/after IDs
-      if (testRun) {
-        if (testRun.baseline_test_id) {
-          const { data, error } = await supabase
-            .from('regression_test_results')
-            .select('*')
-            .eq('id', testRun.baseline_test_id)
-            .single();
-          if (!error) baselineResult = data;
-        }
-
-        if (testRun.after_test_id) {
-          const { data, error } = await supabase
-            .from('regression_test_results')
-            .select('*')
-            .eq('id', testRun.after_test_id)
-            .single();
-          if (!error) afterResult = data;
-        }
-
-        // Get comparison if both exist
-        if (testRun.baseline_test_id && testRun.after_test_id) {
-          const { data, error } = await supabase.rpc('compare_regression_test_results_detailed', {
-            baseline_test_id: testRun.baseline_test_id,
-            current_test_id: testRun.after_test_id
+        if (cronError) {
+          console.error('Error getting cron jobs:', cronError);
+          return res.status(500).json({ 
+            error: 'Failed to get cron jobs', 
+            detail: cronError.message 
           });
-          if (!error && data && data.length > 0) {
-            comparison = data[0];
-          }
         }
-      } else {
-        // No test run yet - check for standalone baseline and after test results
-        const { data: baselineTests, error: baselineError } = await supabase
-          .from('regression_test_results')
-          .select('*')
-          .eq('job_id', jobid)
-          .eq('test_phase', 'before')
-          .order('test_timestamp', { ascending: false })
-          .limit(1);
-        
-        if (!baselineError && baselineTests && baselineTests.length > 0) {
-          baselineResult = baselineTests[0];
-        }
-        
-        // Also get latest after test if exists
-        const { data: afterTests, error: afterError } = await supabase
-          .from('regression_test_results')
-          .select('*')
-          .eq('job_id', jobid)
-          .eq('test_phase', 'after')
-          .order('test_timestamp', { ascending: false })
-          .limit(1);
-        
-        if (!afterError && afterTests && afterTests.length > 0) {
-          afterResult = afterTests[0];
-          
-          // If we have both baseline and after, try to compare
-          if (baselineResult && afterResult) {
-            const { data: compareData, error: compareError } = await supabase.rpc('compare_regression_test_results_detailed', {
-              baseline_test_id: baselineResult.id,
-              current_test_id: afterResult.id
-            });
-            if (!compareError && compareData && compareData.length > 0) {
-              comparison = compareData[0];
-            }
-          }
-        }
-      }
 
-      // Return results even if only baseline exists
-      if (baselineResult || afterResult || testRun) {
         return res.status(200).json({
           ok: true,
-          has_results: true,
-          test_run: testRun || null,
-          baseline: baselineResult,
-          after: afterResult,
-          comparison: comparison
+          cron_jobs: cronJobs || []
+        });
+
+      } catch (error) {
+        console.error('Unexpected error in cron status check:', error);
+        return res.status(500).json({ 
+          error: 'Internal server error', 
+          detail: error.message 
         });
       }
-
-      return res.status(200).json({
-        ok: true,
-        has_results: false,
-        message: 'No regression test results found for this job'
-      });
-
-    } catch (error) {
-      console.error('Error getting regression test results:', error);
-      return res.status(500).json({ error: 'Internal server error', detail: error.message });
-    }
-  }
-
-  // Run Cron Job Now (POST /api/admin?action=run_cron_job)
-  if (req.method === 'POST' && action === 'run_cron_job') {
-    try {
-      const { jobid } = req.body;
-
-      if (!jobid) {
-        return res.status(400).json({ error: 'jobid parameter required' });
+    } else if (action === 'aggregate_analytics') {
+      if (req.method !== 'POST') {
+        return res.status(405).json({ error: 'Method not allowed for aggregate_analytics action' });
       }
-
-      // Get job details
-      const { data: jobData, error: jobError } = await supabase.rpc('get_cron_job_details', {
-        p_jobid: jobid
-      });
-
-      if (jobError || !jobData || jobData.length === 0) {
-        return res.status(404).json({ error: 'Job not found' });
-      }
-
-      const job = jobData[0];
-      const startTime = new Date();
-      
-      let executionResult = null;
-      let error = null;
-      let recordsAffected = null;
-      let regressionTestResults = null;
-
       try {
-        // Execute the job command
-        // For risky jobs, they use wrapper functions that return results
-        // For other jobs, we execute the command directly
+        const { date } = req.body || {};
+        const targetDate = date || new Date().toISOString().split('T')[0];
+
+        console.log('Running analytics aggregation for date:', targetDate);
         
-        const isRiskyJob = [21, 26, 27, 28, 31].includes(parseInt(jobid));
+        const { data: aggData, error: aggError } = await supabase
+          .rpc('aggregate_daily_analytics', { target_date: targetDate });
+
+        if (aggError) {
+          console.error('Error running analytics aggregation:', aggError);
+          return res.status(500).json({ 
+            error: 'Failed to aggregate analytics', 
+            detail: aggError.message 
+          });
+        }
+
+        console.log('Analytics aggregation completed successfully');
+
+        const { data: updateData, error: updateError } = await supabase
+          .rpc('update_question_frequency');
+
+        if (updateError) {
+          console.error('Error updating question frequency:', updateError);
+          return res.status(500).json({ 
+            error: 'Failed to update question frequency', 
+            detail: updateError.message 
+          });
+        }
+
+        return res.status(200).json({
+          ok: true,
+          message: 'Analytics aggregation completed successfully',
+          date: targetDate,
+          aggregationResult: aggData,
+          frequencyUpdateResult: updateData
+        });
+
+      } catch (error) {
+        console.error('Unexpected error in analytics aggregation:', error);
+        return res.status(500).json({ 
+          error: 'Internal server error', 
+          detail: error.message 
+        });
+      }
+    }
+
+    // Cron Job Management (GET /api/admin?action=cron_jobs)
+    if (req.method === 'GET' && action === 'cron_jobs') {
+      try {
+        // Ensure we always return JSON, even on errors
+        // For Job 21, only count stats from the last successful run (when it was fixed)
+        // Get the last success time for Job 21
+        const { data: lastSuccess, error: successError } = await supabase
+          .from('cron.job_run_details')
+          .select('start_time')
+          .eq('jobid', 21)
+          .eq('status', 'succeeded')
+          .order('start_time', { ascending: false })
+          .limit(1)
+          .single();
+
+        let fromDate = null;
+        if (!successError && lastSuccess) {
+          fromDate = lastSuccess.start_time;
+        }
+
+        // Get all jobs with stats
+        const { data: allJobs, error: allJobsError } = await supabase
+          .rpc('get_cron_jobs_summary');
+
+        if (allJobsError) {
+          console.error('Error getting cron jobs:', allJobsError);
+          return res.status(500).json({ error: 'Failed to get cron jobs', detail: allJobsError.message });
+        }
+
+        // For Job 21, recalculate stats from the last successful run
+        if (fromDate && allJobs) {
+          const job21 = allJobs.find(j => j.jobid === 21);
+          if (job21) {
+            const { data: job21Stats, error: statsError } = await supabase
+              .from('cron.job_run_details')
+              .select('status')
+              .eq('jobid', 21)
+              .gte('start_time', fromDate);
+
+            if (!statsError && job21Stats) {
+              job21.success_count = job21Stats.filter(s => s.status === 'succeeded').length;
+              job21.failed_count = job21Stats.filter(s => s.status === 'failed').length;
+              job21.total_runs = job21Stats.length;
+            }
+          }
+        }
+
+        return res.status(200).json({ ok: true, jobs: allJobs || [] });
+
+      } catch (error) {
+        console.error('Error getting cron jobs:', error);
+        return res.status(500).json({ error: 'Internal server error', detail: error.message });
+      }
+    }
+
+    // Get Cron Job Logs (GET /api/admin?action=cron_logs&jobid=19&limit=50)
+    if (req.method === 'GET' && action === 'cron_logs') {
+      try {
+        const jobid = parseInt(req.query.jobid);
+        const limit = parseInt(req.query.limit) || 50;
+
+        if (!jobid) {
+          return res.status(400).json({ error: 'jobid parameter required' });
+        }
+
+        const { data: logs, error: logsError } = await supabase
+          .rpc('get_cron_job_logs', {
+            p_jobid: jobid,
+            p_limit: limit
+          });
+
+        if (logsError) {
+          return res.status(500).json({ error: 'Failed to get logs', detail: logsError.message });
+        }
+
+        return res.status(200).json({ ok: true, logs: logs || [] });
+
+      } catch (error) {
+        console.error('Error getting cron logs:', error);
+        return res.status(500).json({ error: 'Internal server error', detail: error.message });
+      }
+    }
+
+    // Update Cron Job Schedule (POST /api/admin?action=update_cron_schedule)
+    if (req.method === 'POST' && action === 'update_cron_schedule') {
+      try {
+        const { jobid, schedule } = req.body;
+
+        if (!jobid || !schedule) {
+          return res.status(400).json({ error: 'jobid and schedule parameters required' });
+        }
+
+        // Validate cron schedule format (basic check)
+        const cronPattern = /^(\*|([0-9]|[1-5][0-9])|\*\/([0-9]|[1-5][0-9])) (\*|([0-9]|1[0-9]|2[0-3])|\*\/([0-9]|1[0-9]|2[0-3])) (\*|([1-9]|[12][0-9]|3[01])|\*\/([1-9]|[12][0-9]|3[01])) (\*|([1-9]|1[0-2])|\*\/([1-9]|1[0-2])) (\*|([0-6])|\*\/([0-6]))$/;
+        if (!cronPattern.test(schedule)) {
+          return res.status(400).json({ error: 'Invalid cron schedule format' });
+        }
+
+        // Update the schedule using cron.alter_job via a database function
+        const { error } = await supabase.rpc('update_cron_schedule', {
+          p_jobid: jobid,
+          p_schedule: schedule
+        });
+
+        if (error) {
+          return res.status(500).json({ error: 'Failed to update schedule', detail: error.message });
+        }
+
+        return res.status(200).json({ 
+          ok: true, 
+          message: 'Schedule updated successfully',
+          jobid,
+          schedule
+        });
+
+      } catch (error) {
+        console.error('Error updating cron schedule:', error);
+        return res.status(500).json({ error: 'Internal server error', detail: error.message });
+      }
+    }
+
+    // Toggle Cron Job Active Status (POST /api/admin?action=toggle_cron_job)
+    if (req.method === 'POST' && action === 'toggle_cron_job') {
+      try {
+        const { jobid, active } = req.body;
+
+        if (jobid === undefined || active === undefined) {
+          return res.status(400).json({ error: 'jobid and active parameters required' });
+        }
+
+        if (typeof active !== 'boolean') {
+          return res.status(400).json({ error: 'active must be a boolean' });
+        }
+
+        // Toggle the active status using cron.alter_job via a database function
+        const { error } = await supabase.rpc('toggle_cron_job_active', {
+          p_jobid: jobid,
+          p_active: active
+        });
+
+        if (error) {
+          return res.status(500).json({ error: 'Failed to toggle job status', detail: error.message });
+        }
+
+        return res.status(200).json({ 
+          ok: true, 
+          message: `Job ${jobid} ${active ? 'activated' : 'paused'} successfully`,
+          jobid,
+          active
+        });
+
+      } catch (error) {
+        console.error('Error toggling cron job status:', error);
+        return res.status(500).json({ error: 'Internal server error', detail: error.message });
+      }
+    }
+
+    // Run Regression Test (POST /api/admin?action=run_regression_test)
+    if (req.method === 'POST' && action === 'run_regression_test') {
+      try {
+        const { job_id, job_name, test_phase } = req.body;
+
+        if (!job_id || !test_phase) {
+          return res.status(400).json({ error: 'job_id and test_phase (before/after) required' });
+        }
+
+        // Call the Edge Function to run the 40Q test
+        const edgeFunctionUrl = `${SUPABASE_URL}/functions/v1/run-40q-regression-test`;
         
-        if (isRiskyJob) {
-          // Risky jobs use wrapper functions that handle regression testing
-          let result;
-          if (jobid == 21) {
-            result = await supabase.rpc('refresh_v_products_unified_with_regression_test');
-          } else if (jobid == 26) {
-            result = await supabase.rpc('light_refresh_batch_with_regression_test', { p_batch: 0 });
-          } else if (jobid == 27) {
-            result = await supabase.rpc('light_refresh_batch_with_regression_test', { p_batch: 1 });
-          } else if (jobid == 28) {
-            result = await supabase.rpc('light_refresh_batch_with_regression_test', { p_batch: 2 });
-          } else if (jobid == 31) {
-            result = await supabase.rpc('cleanup_orphaned_records_with_regression_test');
+        const response = await fetch(edgeFunctionUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`
+          },
+          body: JSON.stringify({
+            job_id,
+            job_name: job_name || `Job ${job_id}`,
+            test_phase
+          })
+        });
+
+        const data = await response.json();
+        
+        if (!data.ok) {
+          throw new Error(data.error || 'Failed to run regression test');
+        }
+
+        return res.status(200).json({
+          ok: true,
+          test_result_id: data.test_result_id,
+          successful_tests: data.successful_tests,
+          failed_tests: data.failed_tests,
+          avg_confidence: data.avg_confidence,
+          total_questions: data.total_questions,
+          duration: data.duration
+        });
+
+      } catch (error) {
+        console.error('Error running regression test:', error);
+        return res.status(500).json({ error: 'Internal server error', detail: error.message });
+      }
+    }
+
+    // Compare Regression Test Results (POST /api/admin?action=compare_regression_tests)
+    if (req.method === 'POST' && action === 'compare_regression_tests') {
+      try {
+        const { baseline_test_id, current_test_id } = req.body;
+
+        if (!baseline_test_id || !current_test_id) {
+          return res.status(400).json({ error: 'baseline_test_id and current_test_id required' });
+        }
+
+        // Call SQL function to compare
+        const { data, error } = await supabase.rpc('compare_regression_test_results', {
+          baseline_test_id,
+          current_test_id
+        });
+
+        if (error) {
+          throw new Error(error.message);
+        }
+
+        return res.status(200).json({
+          ok: true,
+          comparison: data[0] || data
+        });
+
+      } catch (error) {
+        console.error('Error comparing regression tests:', error);
+        return res.status(500).json({ error: 'Internal server error', detail: error.message });
+      }
+    }
+
+    // Get Regression Test Results for a Job (GET /api/admin?action=regression_test_results&jobid=21)
+    if (req.method === 'GET' && action === 'regression_test_results') {
+      try {
+        const jobid = parseInt(req.query.jobid);
+
+        if (!jobid) {
+          return res.status(400).json({ error: 'jobid parameter required' });
+        }
+
+        // Get latest test run for this job
+        const { data: testRun, error: runError } = await supabase
+          .from('regression_test_runs')
+          .select('*')
+          .eq('job_id', jobid)
+          .order('run_started_at', { ascending: false })
+          .limit(1)
+          .single();
+
+        if (runError && runError.code !== 'PGRST116') {
+          throw new Error(runError.message);
+        }
+
+        // Get baseline and after test results
+        let baselineResult = null;
+        let afterResult = null;
+        let comparison = null;
+
+        // If we have a test run, use its baseline/after IDs
+        if (testRun) {
+          if (testRun.baseline_test_id) {
+            const { data, error } = await supabase
+              .from('regression_test_results')
+              .select('*')
+              .eq('id', testRun.baseline_test_id)
+              .single();
+            if (!error) baselineResult = data;
           }
-          
-          if (result && result.data) {
-            executionResult = result.data;
+
+          if (testRun.after_test_id) {
+            const { data, error } = await supabase
+              .from('regression_test_results')
+              .select('*')
+              .eq('id', testRun.after_test_id)
+              .single();
+            if (!error) afterResult = data;
           }
-          if (result && result.error) {
-            error = result.error.message;
-          }
-          
-          // Get regression test results
-          const { data: testRun } = await supabase
-            .from('regression_test_runs')
-            .select('*')
-            .eq('job_id', jobid)
-            .order('run_started_at', { ascending: false })
-            .limit(1)
-            .single();
-          
-          if (testRun) {
-            const { data: comparison } = await supabase.rpc('analyze_regression_test_run', {
-              p_run_id: testRun.id
+
+          // Get comparison if both exist
+          if (testRun.baseline_test_id && testRun.after_test_id) {
+            const { data, error } = await supabase.rpc('compare_regression_test_results_detailed', {
+              baseline_test_id: testRun.baseline_test_id,
+              current_test_id: testRun.after_test_id
             });
-            regressionTestResults = {
-              test_run: testRun,
-              comparison: comparison && comparison.length > 0 ? comparison[0] : null
-            };
+            if (!error && data && data.length > 0) {
+              comparison = data[0];
+            }
           }
         } else {
-          // For non-risky jobs, parse and execute the command
-          const command = job.command.trim();
+          // No test run yet - check for standalone baseline and after test results
+          const { data: baselineTests, error: baselineError } = await supabase
+            .from('regression_test_results')
+            .select('*')
+            .eq('job_id', jobid)
+            .eq('test_phase', 'before')
+            .order('test_timestamp', { ascending: false })
+            .limit(1);
           
-          // Handle multiple statements (e.g., Job 20 has two SELECT statements)
-          const statements = command.split(/;\s*(?=SELECT)/i).filter(s => s.trim().length > 0);
+          if (!baselineError && baselineTests && baselineTests.length > 0) {
+            baselineResult = baselineTests[0];
+          }
           
-          let allResults = [];
-          let lastError = null;
+          // Also get latest after test if exists
+          const { data: afterTests, error: afterError } = await supabase
+            .from('regression_test_results')
+            .select('*')
+            .eq('job_id', jobid)
+            .eq('test_phase', 'after')
+            .order('test_timestamp', { ascending: false })
+            .limit(1);
           
-          // Execute each statement
-          for (const statement of statements) {
-            // Parse function calls like: SELECT function_name(); or SELECT function_name(params);
-            const functionCallMatch = statement.match(/SELECT\s+(\w+)\s*\(([^)]*)\)/i);
+          if (!afterError && afterTests && afterTests.length > 0) {
+            afterResult = afterTests[0];
             
-            if (functionCallMatch) {
-            const functionName = functionCallMatch[1];
-            const paramsStr = functionCallMatch[2].trim();
-            
-            // Parse parameters - try multiple common parameter names
-            let params = {};
-            if (paramsStr) {
-              // Handle different parameter formats
-              // Simple numeric: cleanup_old_chat_data(90)
-              const numMatch = paramsStr.match(/^(\d+)$/);
-              if (numMatch) {
-                const numValue = parseInt(numMatch[1]);
-                // Try common parameter names based on function name
-                if (functionName.includes('batch')) {
-                  params = { p_batch: numValue };
-                } else if (functionName.includes('cleanup') && (functionName.includes('old_chat') || functionName.includes('old_debug'))) {
-                  // cleanup_old_chat_data and cleanup_old_debug_logs use 'retention_days'
-                  params = { retention_days: numValue };
-                } else if (functionName.includes('cleanup')) {
-                  params = { days: numValue };
-                } else {
-                  // Try generic parameter names
-                  params = { days: numValue };
-                }
-              } else if (paramsStr.includes('CURRENT_DATE')) {
-                // Handle CURRENT_DATE - INTERVAL '7 days'
-                if (paramsStr.includes("INTERVAL '7 days'")) {
-                  const dateValue = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-                  // Try common date parameter names
-                  if (functionName.includes('analytics')) {
-                    params = { target_date: dateValue };
-                  } else {
-                    params = { p_date: dateValue };
-                  }
-                } else {
-                  const dateValue = new Date().toISOString().split('T')[0];
-                  if (functionName.includes('analytics')) {
-                    params = { target_date: dateValue };
-                  } else {
-                    params = { p_date: dateValue };
-                  }
-                }
-              } else if (paramsStr.match(/^\d+$/)) {
-                // Another numeric check
-                params = { p_days: parseInt(paramsStr) };
+            // If we have both baseline and after, try to compare
+            if (baselineResult && afterResult) {
+              const { data: compareData, error: compareError } = await supabase.rpc('compare_regression_test_results_detailed', {
+                baseline_test_id: baselineResult.id,
+                current_test_id: afterResult.id
+              });
+              if (!compareError && compareData && compareData.length > 0) {
+                comparison = compareData[0];
               }
             }
+          }
+        }
+
+        // Return results even if only baseline exists
+        if (baselineResult || afterResult || testRun) {
+          return res.status(200).json({
+            ok: true,
+            has_results: true,
+            test_run: testRun || null,
+            baseline: baselineResult,
+            after: afterResult,
+            comparison: comparison
+          });
+        }
+
+        return res.status(200).json({
+          ok: true,
+          has_results: false,
+          message: 'No regression test results found for this job'
+        });
+
+      } catch (error) {
+        console.error('Error getting regression test results:', error);
+        return res.status(500).json({ error: 'Internal server error', detail: error.message });
+      }
+    }
+
+    // Run Cron Job Now (POST /api/admin?action=run_cron_job)
+    if (req.method === 'POST' && action === 'run_cron_job') {
+      try {
+        const { jobid } = req.body;
+
+        if (!jobid) {
+          return res.status(400).json({ error: 'jobid parameter required' });
+        }
+
+        // Get job details
+        const { data: jobData, error: jobError } = await supabase.rpc('get_cron_job_details', {
+          p_jobid: jobid
+        });
+
+        if (jobError || !jobData || jobData.length === 0) {
+          return res.status(404).json({ error: 'Job not found' });
+        }
+
+        const job = jobData[0];
+        const startTime = new Date();
+        
+        let executionResult = null;
+        let error = null;
+        let recordsAffected = null;
+        let regressionTestResults = null;
+
+        try {
+          // Execute the job command
+          // For risky jobs, they use wrapper functions that return results
+          // For other jobs, we execute the command directly
+          
+          const isRiskyJob = [21, 26, 27, 28, 31].includes(parseInt(jobid));
+          
+          if (isRiskyJob) {
+            // Risky jobs use wrapper functions that handle regression testing
+            let result;
+            if (jobid == 21) {
+              result = await supabase.rpc('refresh_v_products_unified_with_regression_test');
+            } else if (jobid == 26) {
+              result = await supabase.rpc('light_refresh_batch_with_regression_test', { p_batch: 0 });
+            } else if (jobid == 27) {
+              result = await supabase.rpc('light_refresh_batch_with_regression_test', { p_batch: 1 });
+            } else if (jobid == 28) {
+              result = await supabase.rpc('light_refresh_batch_with_regression_test', { p_batch: 2 });
+            } else if (jobid == 31) {
+              result = await supabase.rpc('cleanup_orphaned_records_with_regression_test');
+            }
             
-            // Call the function via RPC - try with params first, then without
-            try {
-              let rpcData, rpcError;
+            if (result && result.data) {
+              executionResult = result.data;
+            }
+            if (result && result.error) {
+              error = result.error.message;
+            }
+            
+            // Get regression test results
+            const { data: testRun } = await supabase
+              .from('regression_test_runs')
+              .select('*')
+              .eq('job_id', jobid)
+              .order('run_started_at', { ascending: false })
+              .limit(1)
+              .single();
+            
+            if (testRun) {
+              const { data: comparison } = await supabase.rpc('analyze_regression_test_run', {
+                p_run_id: testRun.id
+              });
+              regressionTestResults = {
+                test_run: testRun,
+                comparison: comparison && comparison.length > 0 ? comparison[0] : null
+              };
+            }
+          } else {
+            // For non-risky jobs, parse and execute the command
+            const command = job.command.trim();
+            
+            // Handle multiple statements (e.g., Job 20 has two SELECT statements)
+            const statements = command.split(/;\s*(?=SELECT)/i).filter(s => s.trim().length > 0);
+            
+            let allResults = [];
+            let lastError = null;
+            
+            // Execute each statement
+            for (const statement of statements) {
+              // Parse function calls like: SELECT function_name(); or SELECT function_name(params);
+              const functionCallMatch = statement.match(/SELECT\s+(\w+)\s*\(([^)]*)\)/i);
               
-              if (Object.keys(params).length > 0) {
-                const result = await supabase.rpc(functionName, params);
-                rpcData = result.data;
-                rpcError = result.error;
+              if (functionCallMatch) {
+                const functionName = functionCallMatch[1];
+                const paramsStr = functionCallMatch[2].trim();
                 
-                // If that fails, try without params or with different param names
-                if (rpcError && paramsStr) {
-                  // Try alternative parameter names based on function type
-                  if (paramsStr.includes('CURRENT_DATE')) {
-                    const dateValue = paramsStr.includes("INTERVAL '7 days'")
-                      ? new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-                      : new Date().toISOString().split('T')[0];
-                    
-                    // Try different date parameter names
-                    const altNames = ['target_date', 'p_date', 'date_param', 'date'];
-                    for (const paramName of altNames) {
-                      const altResult = await supabase.rpc(functionName, { [paramName]: dateValue });
-                      if (!altResult.error) {
-                        rpcData = altResult.data;
-                        rpcError = null;
-                        break;
+                // Parse parameters - try multiple common parameter names
+                let params = {};
+                if (paramsStr) {
+                  // Handle different parameter formats
+                  // Simple numeric: cleanup_old_chat_data(90)
+                  const numMatch = paramsStr.match(/^(\d+)$/);
+                  if (numMatch) {
+                    const numValue = parseInt(numMatch[1]);
+                    // Try common parameter names based on function name
+                    if (functionName.includes('batch')) {
+                      params = { p_batch: numValue };
+                    } else if (functionName.includes('cleanup') && (functionName.includes('old_chat') || functionName.includes('old_debug'))) {
+                      // cleanup_old_chat_data and cleanup_old_debug_logs use 'retention_days'
+                      params = { retention_days: numValue };
+                    } else if (functionName.includes('cleanup')) {
+                      params = { days: numValue };
+                    } else {
+                      // Try generic parameter names
+                      params = { days: numValue };
+                    }
+                  } else if (paramsStr.includes('CURRENT_DATE')) {
+                    // Handle CURRENT_DATE - INTERVAL '7 days'
+                    if (paramsStr.includes("INTERVAL '7 days'")) {
+                      const dateValue = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+                      // Try common date parameter names
+                      if (functionName.includes('analytics')) {
+                        params = { target_date: dateValue };
+                      } else {
+                        params = { p_date: dateValue };
+                      }
+                    } else {
+                      const dateValue = new Date().toISOString().split('T')[0];
+                      if (functionName.includes('analytics')) {
+                        params = { target_date: dateValue };
+                      } else {
+                        params = { p_date: dateValue };
                       }
                     }
-                  } else {
-                    const numMatch = paramsStr.match(/^(\d+)$/);
-                    if (numMatch) {
-                      // Try with different numeric parameter names
-                      // Order matters - try most common first
-                      const altNames = functionName.includes('cleanup') && (functionName.includes('old_chat') || functionName.includes('old_debug'))
-                        ? ['retention_days', 'days', 'p_days', 'p_value', 'value']
-                        : functionName.includes('cleanup')
-                        ? ['days', 'retention_days', 'p_days', 'p_value', 'value']
-                        : ['p_value', 'p_days', 'days', 'value', 'batch', 'p_batch'];
-                      for (const paramName of altNames) {
-                        const altResult = await supabase.rpc(functionName, { [paramName]: parseInt(numMatch[1]) });
-                        if (!altResult.error) {
-                          rpcData = altResult.data;
-                          rpcError = null;
-                          break;
+                  } else if (paramsStr.match(/^\d+$/)) {
+                    // Another numeric check
+                    params = { p_days: parseInt(paramsStr) };
+                  }
+                }
+                
+                // Call the function via RPC - try with params first, then without
+                let rpcData, rpcError;
+                try {
+                  
+                  if (Object.keys(params).length > 0) {
+                    const result = await supabase.rpc(functionName, params);
+                    rpcData = result.data;
+                    rpcError = result.error;
+                    
+                    // If that fails, try without params or with different param names
+                    if (rpcError && paramsStr) {
+                      // Try alternative parameter names based on function type
+                      if (paramsStr.includes('CURRENT_DATE')) {
+                        const dateValue = paramsStr.includes("INTERVAL '7 days'")
+                          ? new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+                          : new Date().toISOString().split('T')[0];
+                        
+                        // Try different date parameter names
+                        const altNames = ['target_date', 'p_date', 'date_param', 'date'];
+                        for (const paramName of altNames) {
+                          const altResult = await supabase.rpc(functionName, { [paramName]: dateValue });
+                          if (!altResult.error) {
+                            rpcData = altResult.data;
+                            rpcError = null;
+                            break;
+                          }
+                        }
+                      } else {
+                        const numMatch = paramsStr.match(/^(\d+)$/);
+                        if (numMatch) {
+                          // Try with different numeric parameter names
+                          // Order matters - try most common first
+                          const altNames = functionName.includes('cleanup') && (functionName.includes('old_chat') || functionName.includes('old_debug'))
+                            ? ['retention_days', 'days', 'p_days', 'p_value', 'value']
+                            : functionName.includes('cleanup')
+                            ? ['days', 'retention_days', 'p_days', 'p_value', 'value']
+                            : ['p_value', 'p_days', 'days', 'value', 'batch', 'p_batch'];
+                          for (const paramName of altNames) {
+                            const altResult = await supabase.rpc(functionName, { [paramName]: parseInt(numMatch[1]) });
+                            if (!altResult.error) {
+                              rpcData = altResult.data;
+                              rpcError = null;
+                              break;
+                            }
+                          }
                         }
                       }
                     }
+                  } else {
+                    const result = await supabase.rpc(functionName);
+                    rpcData = result.data;
+                    rpcError = result.error;
                   }
+                  
+                  if (rpcError) {
+                    error = rpcError.message;
+                  } else {
+                    executionResult = rpcData;
+                    
+                    // Extract records affected for specific functions
+                    if (functionName.includes('cleanup')) {
+                      recordsAffected = rpcData;
+                    } else if (functionName.includes('check') || functionName.includes('validate') || functionName.includes('monitor')) {
+                      recordsAffected = rpcData;
+                    }
+                  }
+                } catch (rpcErr) {
+                  lastError = rpcErr.message || 'Failed to execute function';
                 }
-              } else {
-                const result = await supabase.rpc(functionName);
-                rpcData = result.data;
-                rpcError = result.error;
-              }
-              
-              if (rpcError) {
-                error = rpcError.message;
-              } else {
-                executionResult = rpcData;
                 
-                // Extract records affected for specific functions
-                if (functionName.includes('cleanup')) {
-                  recordsAffected = rpcData;
-                } else if (functionName.includes('check') || functionName.includes('validate') || functionName.includes('monitor')) {
-                  recordsAffected = rpcData;
+                // Store result for this statement
+                if (rpcData !== undefined) {
+                  allResults.push({ function: functionName, result: rpcData, error: rpcError });
                 }
+              } else if (statement.includes('net.http_post')) {
+                // For Edge Function calls, we can't easily execute them here
+                // They'll be executed by pg_net, but we can't capture results easily
+                allResults.push({ 
+                  function: 'net.http_post', 
+                  result: 'Job triggered (Edge Function call - check logs for results)',
+                  error: null 
+                });
+              } else {
+                // Unknown command format
+                allResults.push({ 
+                  function: 'unknown', 
+                  result: 'Job command format not recognized - check logs for execution status',
+                  error: null 
+                });
               }
-            } catch (rpcErr) {
-              lastError = rpcErr.message || 'Failed to execute function';
             }
             
-            // Store result for this statement
-            if (rpcData !== undefined) {
-              allResults.push({ function: functionName, result: rpcData, error: rpcError });
+            // Combine results from all statements
+            if (allResults.length > 0) {
+              if (allResults.length === 1) {
+                executionResult = allResults[0].result;
+                if (allResults[0].error) {
+                  error = allResults[0].error;
+                }
+              } else {
+                // Multiple statements - combine results
+                executionResult = allResults.map(r => ({
+                  function: r.function,
+                  success: !r.error,
+                  result: r.result,
+                  error: r.error
+                }));
+              }
             }
-          } else if (statement.includes('net.http_post')) {
-            // For Edge Function calls, we can't easily execute them here
-            // They'll be executed by pg_net, but we can't capture results easily
-            allResults.push({ 
-              function: 'net.http_post', 
-              result: 'Job triggered (Edge Function call - check logs for results)',
-              error: null 
-            });
-          } else {
-            // Unknown command format
-            allResults.push({ 
-              function: 'unknown', 
-              result: 'Job command format not recognized - check logs for execution status',
-              error: null 
-            });
-          }
-        }
-        
-        // Combine results from all statements
-        if (allResults.length > 0) {
-          if (allResults.length === 1) {
-            executionResult = allResults[0].result;
-            if (allResults[0].error) {
-              error = allResults[0].error;
+            
+            if (lastError && !error) {
+              error = lastError;
             }
-          } else {
-            // Multiple statements - combine results
-            executionResult = allResults.map(r => ({
-              function: r.function,
-              success: !r.error,
-              result: r.result,
-              error: r.error
-            }));
           }
-        }
-        
-        if (lastError && !error) {
-          error = lastError;
-        }
-        
-        const endTime = new Date();
-        const duration = (endTime - startTime) / 1000;
+          
+          const endTime = new Date();
+          const duration = (endTime - startTime) / 1000;
 
-        // Try to get records affected for specific job types
-        if (jobid == 31) {
-          // Cleanup job returns orphaned_chunks and orphaned_entities
-          if (executionResult && Array.isArray(executionResult) && executionResult.length > 0) {
-            recordsAffected = executionResult[0];
+          // Try to get records affected for specific job types
+          if (jobid == 31) {
+            // Cleanup job returns orphaned_chunks and orphaned_entities
+            if (executionResult && Array.isArray(executionResult) && executionResult.length > 0) {
+              recordsAffected = executionResult[0];
+            }
           }
+
+          return res.status(200).json({
+            ok: true,
+            job: {
+              id: jobid,
+              name: job.jobname || job.name,
+              command: job.command
+            },
+            execution: {
+              success: !error,
+              error: error,
+              duration: duration,
+              start_time: startTime.toISOString(),
+              end_time: endTime.toISOString(),
+              result: executionResult,
+              records_affected: recordsAffected
+            },
+            regression_test: regressionTestResults
+          });
+
+        } catch (execError) {
+          const endTime = new Date();
+          const duration = (endTime - startTime) / 1000;
+          
+          return res.status(200).json({
+            ok: true,
+            job: {
+              id: jobid,
+              name: job.jobname || job.name,
+              command: job.command
+            },
+            execution: {
+              success: false,
+              error: execError.message,
+              duration: duration,
+              start_time: startTime.toISOString(),
+              end_time: endTime.toISOString()
+            },
+            regression_test: regressionTestResults
+          });
         }
 
-        return res.status(200).json({
-          ok: true,
-          job: {
-            id: jobid,
-            name: job.jobname || job.name,
-            command: job.command
-          },
-          execution: {
-            success: !error,
-            error: error,
-            duration: duration,
-            start_time: startTime.toISOString(),
-            end_time: endTime.toISOString(),
-            result: executionResult,
-            records_affected: recordsAffected
-          },
-          regression_test: regressionTestResults
-        });
-
-      } catch (execError) {
-        const endTime = new Date();
-        const duration = (endTime - startTime) / 1000;
-        
-        return res.status(200).json({
-          ok: true,
-          job: {
-            id: jobid,
-            name: job.jobname || job.name,
-            command: job.command
-          },
-          execution: {
-            success: false,
-            error: execError.message,
-            duration: duration,
-            start_time: startTime.toISOString(),
-            end_time: endTime.toISOString()
-          },
-          regression_test: regressionTestResults
-        });
+      } catch (error) {
+        console.error('Error running cron job:', error);
+        return res.status(500).json({ error: 'Internal server error', detail: error.message });
       }
-
-    } catch (error) {
-      console.error('Error running cron job:', error);
-      return res.status(500).json({ error: 'Internal server error', detail: error.message });
     }
-  }
 
     // Default response
     return res.status(400).json({ 
