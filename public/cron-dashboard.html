@@ -426,14 +426,20 @@
 
     // Job descriptions
     const jobDescriptions = {
-      13: 'Weekly analytics aggregation - Aggregates daily analytics data from the past 7 days. Runs every Monday at 2 AM.',
-      19: 'Question frequency update - Updates the frequency statistics for user questions. Runs every minute to keep data current.',
-      20: 'Analytics aggregation - Aggregates daily analytics and updates session counts. Runs every minute for real-time analytics.',
-      21: 'Product pricing refresh - Refreshes the unified products materialized view and updates display prices. Runs every 8 hours.',
-      22: 'Chat improvement analysis - Triggers analysis of chat interactions for improvement suggestions. Runs daily at 6 AM.',
-      26: 'Light refresh batch 0 - Checks for content changes and refreshes embeddings for batch 0 of URLs. Runs every 4 hours.',
-      27: 'Light refresh batch 1 - Checks for content changes and refreshes embeddings for batch 1 of URLs. Runs every 4 hours.',
-      28: 'Light refresh batch 2 - Checks for content changes and refreshes embeddings for batch 2 of URLs. Runs every 4 hours.'
+      13: 'Aggregates daily analytics from chat bot usage logs (user sessions, questions asked, answers given, confidence scores, and response times) for a specific date 7 days ago. Stores the results in chat_analytics_daily for historical reporting. Runs every Monday at 2 AM.',
+      19: 'Analyzes all chat questions from the last 7 days, groups identical questions, counts how many times each was asked, calculates average confidence scores, and tracks which questions have low confidence. Updates the chat_question_frequency table to identify frequently asked questions and which ones need better answers. Powers the Questions tab in analytics.html. Runs hourly in sync with Job 20.',
+      20: 'Aggregates today\'s analytics from chat bot usage logs (sessions, questions, interactions, averages) and updates session records with total questions and interactions per session. Powers the Overview tab in analytics.html. Runs hourly in sync with Job 19.',
+      21: 'Refreshes the unified products materialized view (consolidated product data from multiple sources) and updates display prices for all products. Keeps product pricing and unified product data current. Runs every 8 hours.',
+      22: 'Finds questions with low confidence from the last 30 days, groups identical questions, identifies which need better answers, and generates improvement recommendations. Stores results in content_improvement_tracking. Powers the Insights tab in analytics.html. Runs daily at 6 AM.',
+      26: 'Reads all URLs from the site URLs CSV file, checks each URL\'s Last-Modified header to detect content changes, compares with database records, and re-ingests only changed URLs (full content extraction, embeddings, etc.). Splits URLs across 3 batches. Batch 0. Runs every 4 hours.',
+      27: 'Reads all URLs from the site URLs CSV file, checks each URL\'s Last-Modified header to detect content changes, compares with database records, and re-ingests only changed URLs (full content extraction, embeddings, etc.). Splits URLs across 3 batches. Batch 1. Runs every 4 hours.',
+      28: 'Reads all URLs from the site URLs CSV file, checks each URL\'s Last-Modified header to detect content changes, compares with database records, and re-ingests only changed URLs (full content extraction, embeddings, etc.). Splits URLs across 3 batches. Batch 2. Runs every 4 hours.'
+    };
+
+    // Define linked jobs (jobs that run together and are related)
+    const linkedJobs = {
+      19: 20,  // Job 19 is linked to Job 20
+      20: 19   // Job 20 is linked to Job 19
     };
 
     function setAuthToken() {
@@ -509,8 +515,24 @@
         return;
       }
 
+      // Sort jobs to group linked ones together
+      const sortedJobs = [...jobs].sort((a, b) => {
+        const aLinked = linkedJobs[a.jobid];
+        const bLinked = linkedJobs[b.jobid];
+        if (aLinked && bLinked) {
+          // Both are linked, keep them together
+          return a.jobid - b.jobid;
+        }
+        if (aLinked) return -1;
+        if (bLinked) return 1;
+        return a.jobid - b.jobid;
+      });
+
       container.className = 'jobs-grid';
-      container.innerHTML = jobs.map(job => {
+      let html = '';
+      let lastJobId = null;
+
+      sortedJobs.forEach((job, index) => {
         const successRate = job.total_runs > 0 
           ? ((job.success_count / job.total_runs) * 100).toFixed(1)
           : 0;
@@ -521,13 +543,25 @@
           ? new Date(job.last_run).toLocaleString()
           : 'Never';
         const description = jobDescriptions[job.jobid] || 'No description available.';
+        const linkedJobId = linkedJobs[job.jobid];
+        const isLinked = linkedJobId !== undefined;
+        const showLinkArrow = isLinked && (lastJobId === linkedJobId || sortedJobs[index - 1]?.jobid === linkedJobId);
 
-        return `
-          <div class="job-card">
+        // Add link arrow if this job is linked to the previous one
+        if (showLinkArrow) {
+          html += `
+            <div style="grid-column: 1 / -1; text-align: center; padding: 10px; color: #3498db; font-weight: bold; font-size: 18px;">
+              &lt;-------&gt;
+            </div>
+          `;
+        }
+
+        html += `
+          <div class="job-card" ${isLinked ? 'style="border: 2px solid #3498db;"' : ''}>
             <div class="job-header">
               <div>
                 <div class="job-title">${job.jobname || `Job ${job.jobid}`}</div>
-                <div class="job-id">ID: ${job.jobid}</div>
+                <div class="job-id">ID: ${job.jobid}${isLinked ? ` <span style="color: #3498db;">↔ Linked to Job ${linkedJobId}</span>` : ''}</div>
               </div>
               <span class="status-badge ${job.active ? 'status-active' : 'status-inactive'}">
                 ${job.active ? 'Active' : 'Inactive'}
@@ -561,7 +595,11 @@
             </div>
           </div>
         `;
-      }).join('');
+
+        lastJobId = job.jobid;
+      });
+
+      container.innerHTML = html;
     }
 
     function showMessage(message, type = 'success') {
