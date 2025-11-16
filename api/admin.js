@@ -877,6 +877,7 @@ export default async function handler(req, res) {
           const executionSuccess = !error;
           let recordInserted = false;
           let recordCount = 0;
+          let recordError = null;
           
           try {
             // Use PostgREST REST API directly with service role key to insert into cron.job_run_details
@@ -904,8 +905,15 @@ export default async function handler(req, res) {
             const insertData = await insertResponse.json();
             
             if (!insertResponse.ok) {
-              console.error('Error recording job execution:', insertResponse.status, insertResponse.statusText);
-              console.error('Insert error details:', JSON.stringify(insertData, null, 2));
+              const errorDetails = {
+                status: insertResponse.status,
+                statusText: insertResponse.statusText,
+                error: insertData
+              };
+              console.error('Error recording job execution:', JSON.stringify(errorDetails, null, 2));
+              recordError = `HTTP ${insertResponse.status}: ${insertResponse.statusText} - ${JSON.stringify(insertData)}`;
+              recordInserted = false;
+              recordCount = 0;
             } else if (insertData && insertData.inserted > 0) {
               recordInserted = true;
               recordCount = insertData.inserted;
@@ -914,11 +922,15 @@ export default async function handler(req, res) {
               // RPC returned success but insert failed (error in JSON response)
               const errorMsg = insertData?.error || 'Unknown error';
               const errorCode = insertData?.error_code || 'UNKNOWN';
+              recordError = `Error: ${errorMsg} (Code: ${errorCode})`;
               console.error('Error recording job execution (in response):', errorMsg, 'Code:', errorCode);
               console.error('Full response:', JSON.stringify(insertData, null, 2));
+              recordInserted = false;
+              recordCount = 0;
             }
           } catch (recordError) {
             // Log error but don't fail the response
+            recordError = recordError.message || String(recordError);
             console.error('Error recording job execution (catch):', recordError);
             console.error('Record error details:', JSON.stringify(recordError, null, 2));
           }
@@ -939,7 +951,8 @@ export default async function handler(req, res) {
               result: executionResult,
               records_affected: recordsAffected,
               record_inserted: recordInserted,
-              record_count: recordCount
+              record_count: recordCount,
+              record_error: recordError
             },
             regression_test: regressionTestResults
           });
