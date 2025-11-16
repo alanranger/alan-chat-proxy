@@ -949,7 +949,7 @@
       `;
     }
 
-    async function renderJobCard(job, isLinked, groupType) {
+    function renderJobCard(job, isLinked, groupType) {
       const successRate = job.total_runs > 0 
         ? ((job.success_count / job.total_runs) * 100).toFixed(1)
         : 0;
@@ -970,7 +970,7 @@
       // Load regression test data for risky jobs (use pre-loaded data)
       let regressionSummary = '';
       if (riskyJobs.includes(job.jobid)) {
-        const regressionData = regressionTestData[job.jobid] || await loadRegressionTestData(job.jobid);
+        const regressionData = regressionTestData[job.jobid] || null;
         regressionSummary = renderRegressionTestSummary(regressionData);
       }
       
