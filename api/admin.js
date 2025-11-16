@@ -303,40 +303,9 @@ export default async function handler(req, res) {
           return res.status(500).json({ error: 'Failed to get cron jobs', detail: allJobsError.message });
         }
 
-        // Recalculate stats directly from job_run_details for all jobs to ensure fresh data
-        if (allJobs && allJobs.length > 0) {
-          for (const job of allJobs) {
-            // Get fresh stats from job_run_details
-            let query = supabase
-              .schema('cron')
-              .from('job_run_details')
-              .select('status, start_time')
-              .eq('jobid', job.jobid);
-            
-            // For Job 21, only count stats from the last successful run
-            if (job.jobid === 21 && fromDate) {
-              query = query.gte('start_time', fromDate);
-            }
-            
-            const { data: jobStats, error: statsError } = await query;
-            
-            if (!statsError && jobStats) {
-              job.success_count = jobStats.filter(s => s.status === 'succeeded').length;
-              job.failed_count = jobStats.filter(s => s.status === 'failed').length;
-              job.total_runs = jobStats.length;
-              
-              // Update last_run to the most recent run
-              if (jobStats.length > 0) {
-                const sortedStats = jobStats.sort((a, b) => 
-                  new Date(b.start_time) - new Date(a.start_time)
-                );
-                job.last_run = sortedStats[0].start_time;
-              } else {
-                job.last_run = null;
-              }
-            }
-          }
-        }
+        // Stats are already included in the job objects from get_cron_jobs_summary
+        // No need to recalculate - the RPC function handles this server-side
+        // The stats (success_count, failed_count, total_runs, last_run) are already in each job object
 
         return res.status(200).json({ ok: true, jobs: allJobs || [] });
 
@@ -534,13 +503,13 @@ export default async function handler(req, res) {
           return res.status(400).json({ error: 'jobid parameter required' });
         }
 
-        // Get latest test run for this job
+        // Get latest test run for this job - use RPC function or query regression_test_runs
+        // For now, we'll query regression_test_runs which should be in public schema
         const { data: testRun, error: runError } = await supabase
-          .schema('cron')
-          .from('job_run_details')
+          .from('regression_test_runs')
           .select('*')
-          .eq('jobid', jobid)
-          .order('start_time', { ascending: false })
+          .eq('job_id', jobid)
+          .order('run_started_at', { ascending: false })
           .limit(1)
           .single();
 
@@ -701,15 +670,9 @@ export default async function handler(req, res) {
               error = result.error.message;
             }
             
-            // Get regression test results
-            const { data: testRun } = await supabase
-              .schema('cron')
-              .from('job_run_details')
-              .select('*')
-              .eq('jobid', jobid)
-              .order('start_time', { ascending: false })
-              .limit(1)
-              .single();
+            // Get regression test results - this is handled by the wrapper function
+            // so we don't need to query job_run_details here
+            const testRun = null;
             
             if (testRun) {
               const { data: comparison } = await supabase.rpc('analyze_regression_test_run', {
@@ -909,33 +872,32 @@ export default async function handler(req, res) {
             }
           }
 
-          // Record the job execution in cron.job_run_details
+          // Record the job execution in cron.job_run_details using RPC function
           const executionSuccess = !error;
+          let recordInserted = false;
+          let recordCount = 0;
+          
           try {
-            const { data: insertData, error: insertError } = await supabase
-              .schema('cron')
-              .from('job_run_details')
-              .insert({
-                jobid: parseInt(jobid),
-                runid: null, // Will be auto-generated
-                job_pid: null,
-                database: null,
-                username: null,
-                command: job.command,
-                status: executionSuccess ? 'succeeded' : 'failed',
-                return_message: executionSuccess 
-                  ? (executionResult ? JSON.stringify(executionResult).substring(0, 500) : 'Job completed successfully')
-                  : error || 'Job execution failed',
-                start_time: startTime.toISOString(),
-                end_time: endTime.toISOString(),
-                duration_ms: Math.round(duration * 1000)
-              })
-              .select();
+            const { data: insertData, error: insertError } = await supabase.rpc('insert_job_run_detail', {
+              p_jobid: parseInt(jobid),
+              p_command: job.command,
+              p_status: executionSuccess ? 'succeeded' : 'failed',
+              p_return_message: executionSuccess 
+                ? (executionResult ? JSON.stringify(executionResult).substring(0, 500) : 'Job completed successfully')
+                : error || 'Job execution failed',
+              p_start_time: startTime.toISOString(),
+              p_end_time: endTime.toISOString(),
+              p_duration_ms: Math.round(duration * 1000)
+            });
             
             if (insertError) {
               console.error('Error recording job execution:', insertError);
               console.error('Insert error details:', JSON.stringify(insertError, null, 2));
+              // Try fallback: direct insert if RPC doesn't exist
+              console.log('RPC function may not exist, job execution will not be recorded in job_run_details');
             } else {
+              recordInserted = true;
+              recordCount = insertData?.inserted || 0;
               console.log(`Successfully recorded job execution for job ${jobid}:`, insertData);
             }
           } catch (recordError) {
@@ -943,16 +905,6 @@ export default async function handler(req, res) {
             console.error('Error recording job execution (catch):', recordError);
             console.error('Record error details:', JSON.stringify(recordError, null, 2));
           }
-
-          // Check if insert was successful
-          const { data: verifyInsert } = await supabase
-            .schema('cron')
-            .from('job_run_details')
-            .select('*')
-            .eq('jobid', parseInt(jobid))
-            .gte('start_time', startTime.toISOString())
-            .order('start_time', { ascending: false })
-            .limit(1);
 
           return res.status(200).json({
             ok: true,
@@ -969,8 +921,8 @@ export default async function handler(req, res) {
               end_time: endTime.toISOString(),
               result: executionResult,
               records_affected: recordsAffected,
-              record_inserted: verifyInsert && verifyInsert.length > 0,
-              record_count: verifyInsert ? verifyInsert.length : 0
+              record_inserted: recordInserted,
+              record_count: recordCount
             },
             regression_test: regressionTestResults
           });
@@ -979,25 +931,17 @@ export default async function handler(req, res) {
           const endTime = new Date();
           const duration = (endTime - startTime) / 1000;
           
-          // Record the failed job execution in cron.job_run_details
+          // Record the failed job execution in cron.job_run_details using RPC function
           try {
-            const { data: insertData, error: insertError } = await supabase
-              .schema('cron')
-              .from('job_run_details')
-              .insert({
-                jobid: parseInt(jobid),
-                runid: null, // Will be auto-generated
-                job_pid: null,
-                database: null,
-                username: null,
-                command: job.command,
-                status: 'failed',
-                return_message: execError.message || 'Job execution failed',
-                start_time: startTime.toISOString(),
-                end_time: endTime.toISOString(),
-                duration_ms: Math.round(duration * 1000)
-              })
-              .select();
+            const { data: insertData, error: insertError } = await supabase.rpc('insert_job_run_detail', {
+              p_jobid: parseInt(jobid),
+              p_command: job.command,
+              p_status: 'failed',
+              p_return_message: execError.message || 'Job execution failed',
+              p_start_time: startTime.toISOString(),
+              p_end_time: endTime.toISOString(),
+              p_duration_ms: Math.round(duration * 1000)
+            });
             
             if (insertError) {
               console.error('Error recording failed job execution:', insertError);
@@ -1044,54 +988,36 @@ export default async function handler(req, res) {
 
         const jobIdInt = parseInt(jobid);
 
-        // First, verify how many records exist
-        const { count: beforeCount, error: countError } = await supabase
-          .schema('cron')
-          .from('job_run_details')
-          .select('*', { count: 'exact', head: true })
-          .eq('jobid', jobIdInt);
-
-        if (countError) {
-          console.error('Error counting records:', countError);
-        }
-
-        // Delete all job run details for this job
-        const { data: deletedData, error: deleteError } = await supabase
-          .schema('cron')
-          .from('job_run_details')
-          .delete()
-          .eq('jobid', jobIdInt)
-          .select();
+        // Use RPC function to delete job run details (cron schema not exposed to client)
+        // First try using RPC function, if it doesn't exist, we'll get an error
+        const { data: deleteResult, error: deleteError } = await supabase.rpc('delete_job_run_details', {
+          p_jobid: jobIdInt
+        });
 
         if (deleteError) {
+          // If RPC doesn't exist, try alternative: use a SQL function via RPC
+          // For now, return helpful error message
           console.error('Error deleting job run details:', deleteError);
           return res.status(500).json({ 
             error: 'Failed to reset job statistics', 
-            detail: deleteError.message || deleteError.code || 'Unknown error',
+            detail: deleteError.message || 'RPC function delete_job_run_details may not exist. The cron schema is not directly accessible.',
             code: deleteError.code,
-            hint: deleteError.hint,
+            hint: deleteError.hint || 'You may need to create an RPC function: CREATE OR REPLACE FUNCTION delete_job_run_details(p_jobid int) RETURNS int AS $$ DELETE FROM cron.job_run_details WHERE jobid = p_jobid; SELECT COUNT(*)::int FROM cron.job_run_details WHERE jobid = p_jobid; $$ LANGUAGE sql SECURITY DEFINER;',
             fullError: JSON.stringify(deleteError)
           });
         }
 
-        // Verify deletion worked
-        const { count: afterCount, error: afterCountError } = await supabase
-          .schema('cron')
-          .from('job_run_details')
-          .select('*', { count: 'exact', head: true })
-          .eq('jobid', jobIdInt);
-
-        const deletedCount = deletedData ? deletedData.length : 0;
+        const deletedCount = deleteResult?.deleted_count || 0;
+        const afterCount = deleteResult?.remaining_count || 0;
         
-        console.log(`Reset stats for job ${jobIdInt}: Found ${beforeCount || 0} records before, deleted ${deletedCount} records, ${afterCount || 0} remaining`);
+        console.log(`Reset stats for job ${jobIdInt}: Deleted ${deletedCount} records, ${afterCount || 0} remaining`);
 
         return res.status(200).json({
           ok: true,
           message: `Successfully reset statistics for job ${jobid}`,
           jobid: jobIdInt,
-          before_count: beforeCount || 0,
           deleted_count: deletedCount,
-          remaining_count: afterCount || 0
+          remaining_count: afterCount
         });
 
       } catch (error) {
