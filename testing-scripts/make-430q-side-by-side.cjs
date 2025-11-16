@@ -87,6 +87,23 @@ currentResults.results.forEach(current => {
   const baselineServices = baseline.response?.structured?.services?.length || 0;
   const currentServices = current.response?.structured?.services?.length || 0;
   
+  // Compare articles
+  const baselineArticles = (baseline.response?.structured?.articles || []).map(a => ({
+    id: a.id,
+    title: a.title || a.page_url || 'NO_TITLE'
+  }));
+  const currentArticles = (current.response?.structured?.articles || []).map(a => ({
+    id: a.id,
+    title: a.title || a.page_url || 'NO_TITLE'
+  }));
+  
+  const baselineArticleIds = new Set(baselineArticles.map(a => a.id));
+  const currentArticleIds = new Set(currentArticles.map(a => a.id));
+  
+  const addedArticles = currentArticles.filter(a => !baselineArticleIds.has(a.id));
+  const removedArticles = baselineArticles.filter(a => !currentArticleIds.has(a.id));
+  const sameArticles = baselineArticles.filter(a => currentArticleIds.has(a.id));
+  
   let routingChange = '';
   if (baselineType !== currentType) {
     routingChange = `${baselineType} → ${currentType}`;
@@ -96,6 +113,13 @@ currentResults.results.forEach(current => {
     routingChange = `Services: ${baselineServices} → ${currentServices}`;
   } else {
     routingChange = 'Same';
+  }
+  
+  let articleChange = '';
+  if (addedArticles.length > 0 || removedArticles.length > 0) {
+    articleChange = `+${addedArticles.length}/-${removedArticles.length}`;
+  } else {
+    articleChange = 'Same';
   }
 
   comparison.push({
@@ -117,6 +141,11 @@ currentResults.results.forEach(current => {
     currentEvents,
     baselineServices,
     currentServices,
+    baselineArticles: baselineArticles.length,
+    currentArticles: currentArticles.length,
+    articleChange,
+    addedArticles: addedArticles.map(a => `${a.id}:${a.title.substring(0, 50)}`).join('; '),
+    removedArticles: removedArticles.map(a => `${a.id}:${a.title.substring(0, 50)}`).join('; '),
     baselineAnswer: String(baseline.response?.answer || '').substring(0, 200),
     currentAnswer: String(current.response?.answer || '').substring(0, 200)
   });
@@ -142,6 +171,11 @@ const csvHeader = [
   'Current Events',
   'Baseline Services',
   'Current Services',
+  'Baseline Articles',
+  'Current Articles',
+  'Article Change',
+  'Added Articles',
+  'Removed Articles',
   'Baseline Answer Preview',
   'Current Answer Preview'
 ].join(',');
@@ -165,6 +199,11 @@ const csvRows = comparison.map(row => [
   row.currentEvents,
   row.baselineServices,
   row.currentServices,
+  row.baselineArticles,
+  row.currentArticles,
+  row.articleChange,
+  `"${(row.addedArticles || '').replace(/"/g, '""')}"`,
+  `"${(row.removedArticles || '').replace(/"/g, '""')}"`,
   `"${row.baselineAnswer.replace(/"/g, '""')}"`,
   `"${row.currentAnswer.replace(/"/g, '""')}"`
 ].join(','));
@@ -182,6 +221,7 @@ const improved = comparison.filter(r => r.statusChange === 'Improved').length;
 const worsened = comparison.filter(r => r.statusChange === 'Worsened').length;
 const contentImproved = comparison.filter(r => r.contentQualityChange === 'Improved').length;
 const answersChanged = comparison.filter(r => r.routingChange !== 'Same' || Math.abs(r.answerLengthChange) > 50).length;
+const articlesChanged = comparison.filter(r => r.articleChange !== 'Same').length;
 
 console.log('\n📊 SIDE-BY-SIDE COMPARISON GENERATED');
 console.log('================================================================================');
@@ -194,5 +234,6 @@ console.log(`   ✅ Fixed (Fail → Pass): ${improved}`);
 console.log(`   📈 Content Quality Improved: ${contentImproved}`);
 console.log(`   ❌ Worsened: ${worsened}`);
 console.log(`   🔄 Answers Changed: ${answersChanged}`);
+console.log(`   📰 Articles Changed: ${articlesChanged} (${((articlesChanged / comparison.length) * 100).toFixed(1)}%)`);
 console.log(`   ✅ File saved: ${csvPath}`);
 
