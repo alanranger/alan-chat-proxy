@@ -1107,6 +1107,151 @@
       return '<div class="regression-test-section"><em>Regression test in progress...</em></div>';
     }
 
+    async function showRegressionDetails(jobId) {
+      const modal = document.getElementById('regressionDetailsModal');
+      const modalContent = document.getElementById('regressionDetailsContent');
+      
+      if (!modal || !modalContent) return;
+      
+      // Load fresh comparison data
+      try {
+        const response = await fetch(`${API_BASE}/api/admin?action=regression_test_results&jobid=${jobId}`, {
+          headers: {
+            'Authorization': `Bearer ${authToken}`
+          }
+        });
+        
+        if (!response.ok) {
+          modalContent.innerHTML = '<p>Error loading regression details.</p>';
+          modal.style.display = 'block';
+          return;
+        }
+        
+        const data = await response.json();
+        if (!data.ok || !data.has_results || !data.comparison) {
+          modalContent.innerHTML = '<p>No comparison data available.</p>';
+          modal.style.display = 'block';
+          return;
+        }
+        
+        const comparison = data.comparison;
+        const articleChanges = comparison.article_changes || [];
+        const answerQualityChanges = comparison.answer_quality_changes || [];
+        const queryRegressions = comparison.query_regressions || [];
+        const details = comparison.regression_details || {};
+        
+        let html = `
+          <h2>Regression Test Details - Job ${jobId}</h2>
+          <div class="details-section">
+            <h3>Overall Summary</h3>
+            <p><strong>Regression Detected:</strong> ${comparison.regression_detected ? 'Yes' : 'No'}</p>
+            <p><strong>Severity:</strong> ${comparison.regression_severity || 'none'}</p>
+            <p><strong>Success Rate Change:</strong> ${parseFloat(details.success_rate_diff || 0).toFixed(2)}%</p>
+            <p><strong>Confidence Change:</strong> ${parseFloat(details.confidence_diff || 0).toFixed(3)}</p>
+            <p><strong>Total Article Changes:</strong> ${details.article_change_count || 0} queries</p>
+            <p><strong>Severe Article Changes:</strong> ${details.severe_article_changes || 0}</p>
+            <p><strong>Answer Quality Degradations:</strong> ${details.answer_quality_degradations || 0}</p>
+          </div>
+        `;
+        
+        if (queryRegressions.length > 0) {
+          html += `
+            <div class="details-section">
+              <h3>Query-Specific Regressions (${queryRegressions.length})</h3>
+          `;
+          
+          queryRegressions.forEach(qr => {
+            const severity = qr.severity || 'minor';
+            html += `
+              <div class="query-change ${severity}">
+                <strong>Query:</strong> ${qr.query || 'Unknown'}<br>
+                <strong>Severity:</strong> ${severity}<br>
+                <strong>Article Changes:</strong> ${qr.article_changes || 0}<br>
+                <strong>Answer Degradation:</strong> ${qr.answer_degradation ? 'Yes' : 'No'}
+              </div>
+            `;
+          });
+          
+          html += `</div>`;
+        }
+        
+        if (articleChanges.length > 0) {
+          html += `
+            <div class="details-section">
+              <h3>Article Changes by Query (${articleChanges.length})</h3>
+          `;
+          
+          articleChanges.forEach(ac => {
+            const removed = ac.removed_articles || [];
+            const added = ac.added_articles || [];
+            
+            html += `
+              <div class="query-change">
+                <strong>Query:</strong> ${ac.query || 'Unknown'}<br>
+                <strong>Baseline Articles:</strong> ${ac.baseline_article_count || 0}<br>
+                <strong>Current Articles:</strong> ${ac.current_article_count || 0}<br>
+            `;
+            
+            if (removed.length > 0) {
+              html += `<div class="article-list"><strong>Removed Articles (${ac.removed_count || 0}):</strong><ul>`;
+              removed.forEach(article => {
+                html += `<li class="article-removed">${article.title || article.id || 'Unknown'} (ID: ${article.id || 'N/A'})</li>`;
+              });
+              html += `</ul></div>`;
+            }
+            
+            if (added.length > 0) {
+              html += `<div class="article-list"><strong>Added Articles (${ac.added_count || 0}):</strong><ul>`;
+              added.forEach(article => {
+                html += `<li class="article-added">${article.title || article.id || 'Unknown'} (ID: ${article.id || 'N/A'})</li>`;
+              });
+              html += `</ul></div>`;
+            }
+            
+            html += `</div>`;
+          });
+          
+          html += `</div>`;
+        }
+        
+        if (answerQualityChanges.length > 0) {
+          html += `
+            <div class="details-section">
+              <h3>Answer Quality Changes (${answerQualityChanges.length})</h3>
+          `;
+          
+          answerQualityChanges.forEach(aq => {
+            html += `
+              <div class="query-change">
+                <strong>Query:</strong> ${aq.query || 'Unknown'}<br>
+                <strong>Baseline Answer Length:</strong> ${aq.baseline_answer_length || 0} chars<br>
+                <strong>Current Answer Length:</strong> ${aq.current_answer_length || 0} chars<br>
+                <strong>Length Difference:</strong> ${aq.answer_length_diff || 0} chars<br>
+                <strong>Baseline Confidence:</strong> ${parseFloat(aq.baseline_confidence || 0).toFixed(3)}<br>
+                <strong>Current Confidence:</strong> ${parseFloat(aq.current_confidence || 0).toFixed(3)}<br>
+                <strong>Confidence Difference:</strong> ${parseFloat(aq.confidence_diff || 0).toFixed(3)}
+              </div>
+            `;
+          });
+          
+          html += `</div>`;
+        }
+        
+        modalContent.innerHTML = html;
+        modal.style.display = 'block';
+      } catch (error) {
+        modalContent.innerHTML = `<p>Error loading details: ${error.message}</p>`;
+        modal.style.display = 'block';
+      }
+    }
+
+    function closeRegressionDetails() {
+      const modal = document.getElementById('regressionDetailsModal');
+      if (modal) {
+        modal.style.display = 'none';
+      }
+    }
+
     function renderJobCard(job, isLinked, groupType) {
       const successRate = job.total_runs > 0 
         ? ((job.success_count / job.total_runs) * 100).toFixed(1)
@@ -1379,6 +1524,24 @@
       }
       if (event.target === logsModal) {
         closeLogsModal();
+      }
+    }
+  </script>
+
+  <!-- Regression Details Modal -->
+  <div id="regressionDetailsModal" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="closeRegressionDetails()">&times;</span>
+      <div id="regressionDetailsContent"></div>
+    </div>
+  </div>
+
+  <script>
+    // Close modal when clicking outside
+    window.onclick = function(event) {
+      const modal = document.getElementById('regressionDetailsModal');
+      if (event.target == modal) {
+        closeRegressionDetails();
       }
     }
   </script>
