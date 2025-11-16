@@ -302,20 +302,36 @@ export default async function handler(req, res) {
           return res.status(500).json({ error: 'Failed to get cron jobs', detail: allJobsError.message });
         }
 
-        // For Job 21, recalculate stats from the last successful run
-        if (fromDate && allJobs) {
-          const job21 = allJobs.find(j => j.jobid === 21);
-          if (job21) {
-            const { data: job21Stats, error: statsError } = await supabase
+        // Recalculate stats directly from job_run_details for all jobs to ensure fresh data
+        if (allJobs && allJobs.length > 0) {
+          for (const job of allJobs) {
+            // Get fresh stats from job_run_details
+            let query = supabase
               .from('cron.job_run_details')
-              .select('status')
-              .eq('jobid', 21)
-              .gte('start_time', fromDate);
-
-            if (!statsError && job21Stats) {
-              job21.success_count = job21Stats.filter(s => s.status === 'succeeded').length;
-              job21.failed_count = job21Stats.filter(s => s.status === 'failed').length;
-              job21.total_runs = job21Stats.length;
+              .select('status, start_time')
+              .eq('jobid', job.jobid);
+            
+            // For Job 21, only count stats from the last successful run
+            if (job.jobid === 21 && fromDate) {
+              query = query.gte('start_time', fromDate);
+            }
+            
+            const { data: jobStats, error: statsError } = await query;
+            
+            if (!statsError && jobStats) {
+              job.success_count = jobStats.filter(s => s.status === 'succeeded').length;
+              job.failed_count = jobStats.filter(s => s.status === 'failed').length;
+              job.total_runs = jobStats.length;
+              
+              // Update last_run to the most recent run
+              if (jobStats.length > 0) {
+                const sortedStats = jobStats.sort((a, b) => 
+                  new Date(b.start_time) - new Date(a.start_time)
+                );
+                job.last_run = sortedStats[0].start_time;
+              } else {
+                job.last_run = null;
+              }
             }
           }
         }
