@@ -1815,8 +1815,19 @@
           throw new Error(data.error || 'Failed to reset job statistics');
         }
 
-        showMessage(`Successfully reset statistics for "${jobname}" (Job ${jobid})`, 'success');
-        loadJobs();
+        const deletedCount = data.deleted_count || 0;
+        const remainingCount = data.remaining_count || 0;
+        
+        if (remainingCount > 0) {
+          showMessage(`Warning: Reset completed but ${remainingCount} records still remain for "${jobname}" (Job ${jobid}). Deleted: ${deletedCount}`, 'error');
+        } else {
+          showMessage(`Successfully reset statistics for "${jobname}" (Job ${jobid}). Deleted ${deletedCount} records.`, 'success');
+        }
+        
+        // Small delay to ensure database has updated before refreshing
+        setTimeout(() => {
+          loadJobs();
+        }, 500);
       } catch (error) {
         console.error('Error resetting job stats:', error);
         showMessage(`Error resetting statistics: ${error.message}`, 'error');
