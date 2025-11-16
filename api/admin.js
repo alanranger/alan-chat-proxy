@@ -280,7 +280,8 @@ export default async function handler(req, res) {
         // For Job 21, only count stats from the last successful run (when it was fixed)
         // Get the last success time for Job 21
         const { data: lastSuccess, error: successError } = await supabase
-          .from('cron.job_run_details')
+          .schema('cron')
+          .from('job_run_details')
           .select('start_time')
           .eq('jobid', 21)
           .eq('status', 'succeeded')
@@ -307,7 +308,8 @@ export default async function handler(req, res) {
           for (const job of allJobs) {
             // Get fresh stats from job_run_details
             let query = supabase
-              .from('cron.job_run_details')
+              .schema('cron')
+              .from('job_run_details')
               .select('status, start_time')
               .eq('jobid', job.jobid);
             
@@ -534,10 +536,11 @@ export default async function handler(req, res) {
 
         // Get latest test run for this job
         const { data: testRun, error: runError } = await supabase
-          .from('regression_test_runs')
+          .schema('cron')
+          .from('job_run_details')
           .select('*')
-          .eq('job_id', jobid)
-          .order('run_started_at', { ascending: false })
+          .eq('jobid', jobid)
+          .order('start_time', { ascending: false })
           .limit(1)
           .single();
 
@@ -700,10 +703,11 @@ export default async function handler(req, res) {
             
             // Get regression test results
             const { data: testRun } = await supabase
-              .from('regression_test_runs')
+              .schema('cron')
+              .from('job_run_details')
               .select('*')
-              .eq('job_id', jobid)
-              .order('run_started_at', { ascending: false })
+              .eq('jobid', jobid)
+              .order('start_time', { ascending: false })
               .limit(1)
               .single();
             
@@ -909,7 +913,8 @@ export default async function handler(req, res) {
           const executionSuccess = !error;
           try {
             const { data: insertData, error: insertError } = await supabase
-              .from('cron.job_run_details')
+              .schema('cron')
+              .from('job_run_details')
               .insert({
                 jobid: parseInt(jobid),
                 runid: null, // Will be auto-generated
@@ -941,7 +946,8 @@ export default async function handler(req, res) {
 
           // Check if insert was successful
           const { data: verifyInsert } = await supabase
-            .from('cron.job_run_details')
+            .schema('cron')
+            .from('job_run_details')
             .select('*')
             .eq('jobid', parseInt(jobid))
             .gte('start_time', startTime.toISOString())
@@ -975,8 +981,9 @@ export default async function handler(req, res) {
           
           // Record the failed job execution in cron.job_run_details
           try {
-            await supabase
-              .from('cron.job_run_details')
+            const { data: insertData, error: insertError } = await supabase
+              .schema('cron')
+              .from('job_run_details')
               .insert({
                 jobid: parseInt(jobid),
                 runid: null, // Will be auto-generated
@@ -989,7 +996,14 @@ export default async function handler(req, res) {
                 start_time: startTime.toISOString(),
                 end_time: endTime.toISOString(),
                 duration_ms: Math.round(duration * 1000)
-              });
+              })
+              .select();
+            
+            if (insertError) {
+              console.error('Error recording failed job execution:', insertError);
+            } else {
+              console.log(`Successfully recorded failed job execution for job ${jobid}:`, insertData);
+            }
           } catch (recordError) {
             // Log error but don't fail the response
             console.error('Error recording job execution:', recordError);
@@ -1032,7 +1046,8 @@ export default async function handler(req, res) {
 
         // First, verify how many records exist
         const { count: beforeCount, error: countError } = await supabase
-          .from('cron.job_run_details')
+          .schema('cron')
+          .from('job_run_details')
           .select('*', { count: 'exact', head: true })
           .eq('jobid', jobIdInt);
 
@@ -1042,7 +1057,8 @@ export default async function handler(req, res) {
 
         // Delete all job run details for this job
         const { data: deletedData, error: deleteError } = await supabase
-          .from('cron.job_run_details')
+          .schema('cron')
+          .from('job_run_details')
           .delete()
           .eq('jobid', jobIdInt)
           .select();
@@ -1060,7 +1076,8 @@ export default async function handler(req, res) {
 
         // Verify deletion worked
         const { count: afterCount, error: afterCountError } = await supabase
-          .from('cron.job_run_details')
+          .schema('cron')
+          .from('job_run_details')
           .select('*', { count: 'exact', head: true })
           .eq('jobid', jobIdInt);
 
