@@ -583,10 +583,7 @@
         html += '<div class="job-section-content">';
         html += '<div class="jobs-grid" style="grid-template-columns: repeat(3, 1fr);">';
         
-        analyticsGroup.forEach((job, index) => {
-          if (index > 0) {
-            html += `<div style="display: flex; align-items: center; justify-content: center; color: #3498db; font-weight: bold; font-size: 18px;">&lt;---&gt;</div>`;
-          }
+        analyticsGroup.forEach((job) => {
           html += renderJobCard(job, true, 'analytics');
         });
         
@@ -600,10 +597,7 @@
         html += '<div class="job-section-content">';
         html += '<div class="jobs-grid" style="grid-template-columns: repeat(3, 1fr);">';
         
-        refreshGroup.forEach((job, index) => {
-          if (index > 0) {
-            html += `<div style="display: flex; align-items: center; justify-content: center; color: #3498db; font-weight: bold; font-size: 18px;">&lt;---&gt;</div>`;
-          }
+        refreshGroup.forEach((job) => {
           html += renderJobCard(job, true, 'refresh');
         });
         
