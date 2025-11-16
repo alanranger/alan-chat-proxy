@@ -685,10 +685,18 @@ export default async function handler(req, res) {
           // For non-risky jobs, parse and execute the command
           const command = job.command.trim();
           
-          // Parse function calls like: SELECT function_name(); or SELECT function_name(params);
-          const functionCallMatch = command.match(/SELECT\s+(\w+)\s*\(([^)]*)\)/i);
+          // Handle multiple statements (e.g., Job 20 has two SELECT statements)
+          const statements = command.split(/;\s*(?=SELECT)/i).filter(s => s.trim().length > 0);
           
-          if (functionCallMatch) {
+          let allResults = [];
+          let lastError = null;
+          
+          // Execute each statement
+          for (const statement of statements) {
+            // Parse function calls like: SELECT function_name(); or SELECT function_name(params);
+            const functionCallMatch = statement.match(/SELECT\s+(\w+)\s*\(([^)]*)\)/i);
+            
+            if (functionCallMatch) {
             const functionName = functionCallMatch[1];
             const paramsStr = functionCallMatch[2].trim();
             
@@ -701,15 +709,16 @@ export default async function handler(req, res) {
               if (numMatch) {
                 const numValue = parseInt(numMatch[1]);
                 // Try common parameter names based on function name
-                if (functionName.includes('cleanup') && functionName.includes('days')) {
-                  params = { p_days: numValue };
-                } else if (functionName.includes('cleanup')) {
-                  params = { p_days: numValue };
-                } else if (functionName.includes('batch')) {
+                if (functionName.includes('batch')) {
                   params = { p_batch: numValue };
+                } else if (functionName.includes('cleanup') && (functionName.includes('old_chat') || functionName.includes('old_debug'))) {
+                  // cleanup_old_chat_data and cleanup_old_debug_logs use 'retention_days'
+                  params = { retention_days: numValue };
+                } else if (functionName.includes('cleanup')) {
+                  params = { days: numValue };
                 } else {
                   // Try generic parameter names
-                  params = { p_days: numValue };
+                  params = { days: numValue };
                 }
               } else if (paramsStr.includes('CURRENT_DATE')) {
                 // Handle CURRENT_DATE - INTERVAL '7 days'
@@ -766,7 +775,12 @@ export default async function handler(req, res) {
                     const numMatch = paramsStr.match(/^(\d+)$/);
                     if (numMatch) {
                       // Try with different numeric parameter names
-                      const altNames = ['p_value', 'p_days', 'days', 'value'];
+                      // Order matters - try most common first
+                      const altNames = functionName.includes('cleanup') && (functionName.includes('old_chat') || functionName.includes('old_debug'))
+                        ? ['retention_days', 'days', 'p_days', 'p_value', 'value']
+                        : functionName.includes('cleanup')
+                        ? ['days', 'retention_days', 'p_days', 'p_value', 'value']
+                        : ['p_value', 'p_days', 'days', 'value', 'batch', 'p_batch'];
                       for (const paramName of altNames) {
                         const altResult = await supabase.rpc(functionName, { [paramName]: parseInt(numMatch[1]) });
                         if (!altResult.error) {
@@ -797,18 +811,53 @@ export default async function handler(req, res) {
                 }
               }
             } catch (rpcErr) {
-              error = rpcErr.message || 'Failed to execute function';
+              lastError = rpcErr.message || 'Failed to execute function';
             }
-          } else if (command.includes('net.http_post')) {
+            
+            // Store result for this statement
+            if (rpcData !== undefined) {
+              allResults.push({ function: functionName, result: rpcData, error: rpcError });
+            }
+          } else if (statement.includes('net.http_post')) {
             // For Edge Function calls, we can't easily execute them here
             // They'll be executed by pg_net, but we can't capture results easily
-            executionResult = 'Job triggered (Edge Function call - check logs for results)';
+            allResults.push({ 
+              function: 'net.http_post', 
+              result: 'Job triggered (Edge Function call - check logs for results)',
+              error: null 
+            });
           } else {
             // Unknown command format
-            executionResult = 'Job command format not recognized - check logs for execution status';
+            allResults.push({ 
+              function: 'unknown', 
+              result: 'Job command format not recognized - check logs for execution status',
+              error: null 
+            });
           }
         }
-
+        
+        // Combine results from all statements
+        if (allResults.length > 0) {
+          if (allResults.length === 1) {
+            executionResult = allResults[0].result;
+            if (allResults[0].error) {
+              error = allResults[0].error;
+            }
+          } else {
+            // Multiple statements - combine results
+            executionResult = allResults.map(r => ({
+              function: r.function,
+              success: !r.error,
+              result: r.result,
+              error: r.error
+            }));
+          }
+        }
+        
+        if (lastError && !error) {
+          error = lastError;
+        }
+        
         const endTime = new Date();
         const duration = (endTime - startTime) / 1000;
 
