@@ -375,9 +375,45 @@ export default async function handler(req, res) {
     }
   }
 
+  // Toggle Cron Job Active Status (POST /api/admin?action=toggle_cron_job)
+  if (req.method === 'POST' && action === 'toggle_cron_job') {
+    try {
+      const { jobid, active } = req.body;
+
+      if (jobid === undefined || active === undefined) {
+        return res.status(400).json({ error: 'jobid and active parameters required' });
+      }
+
+      if (typeof active !== 'boolean') {
+        return res.status(400).json({ error: 'active must be a boolean' });
+      }
+
+      // Toggle the active status using cron.alter_job via a database function
+      const { error } = await supabase.rpc('toggle_cron_job_active', {
+        p_jobid: jobid,
+        p_active: active
+      });
+
+      if (error) {
+        return res.status(500).json({ error: 'Failed to toggle job status', detail: error.message });
+      }
+
+      return res.status(200).json({ 
+        ok: true, 
+        message: `Job ${jobid} ${active ? 'activated' : 'paused'} successfully`,
+        jobid,
+        active
+      });
+
+    } catch (error) {
+      console.error('Error toggling cron job status:', error);
+      return res.status(500).json({ error: 'Internal server error', detail: error.message });
+    }
+  }
+
   // Default response
   return res.status(400).json({ 
     error: 'bad_request', 
-    detail: 'Use ?action=qa for spot checks, ?action=refresh for mapping refresh, ?action=aggregate_analytics for analytics aggregation, ?action=cron_jobs for cron job list, ?action=cron_logs for logs, or ?action=update_cron_schedule to update schedule' 
+    detail: 'Use ?action=qa for spot checks, ?action=refresh for mapping refresh, ?action=aggregate_analytics for analytics aggregation, ?action=cron_jobs for cron job list, ?action=cron_logs for logs, ?action=update_cron_schedule to update schedule, or ?action=toggle_cron_job to pause/resume jobs' 
   });
 }

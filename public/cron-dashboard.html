@@ -119,6 +119,24 @@
       background: #7f8c8d;
     }
 
+    .btn-warning {
+      background: #f39c12;
+      color: white;
+    }
+
+    .btn-warning:hover {
+      background: #e67e22;
+    }
+
+    .btn-success {
+      background: #27ae60;
+      color: white;
+    }
+
+    .btn-success:hover {
+      background: #229954;
+    }
+
     .status-badge {
       display: inline-block;
       padding: 4px 8px;
@@ -754,6 +772,9 @@
           <div class="job-actions">
             <button class="btn btn-primary btn-small" onclick="viewLogs(${job.jobid})">View Logs</button>
             <button class="btn btn-secondary btn-small" onclick="editSchedule(${job.jobid}, '${job.schedule}', '${displayName}')">Edit Schedule</button>
+            <button class="btn ${job.active ? 'btn-warning' : 'btn-success'} btn-small" onclick="toggleJob(${job.jobid}, ${!job.active}, '${displayName}')">
+              ${job.active ? '⏸ Pause' : '▶ Resume'}
+            </button>
           </div>
         </div>
       `;
