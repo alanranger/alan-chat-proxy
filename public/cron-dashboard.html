@@ -239,6 +239,19 @@
       font-size: 13px;
       font-weight: 600;
       margin-bottom: 15px;
+      margin-right: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .next-scheduled-pill {
+      display: inline-block;
+      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+      color: white;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 15px;
       box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
 
@@ -970,6 +983,145 @@
       return cron;
     }
 
+    // Calculate next scheduled run time from cron expression
+    function getNextScheduledTime(cron, jobActive = true, lastRun = null) {
+      if (!cron || !jobActive) return null;
+      
+      try {
+        const parts = cron.trim().split(/\s+/);
+        if (parts.length !== 5) return null;
+        
+        const [minute, hour, dayOfMonth, month, dayOfWeek] = parts;
+        const now = new Date();
+        const nextRun = new Date(now);
+        nextRun.setSeconds(0);
+        nextRun.setMilliseconds(0);
+        
+        // Helper to check if a value matches cron pattern
+        const matches = (value, pattern) => {
+          if (pattern === '*') return true;
+          if (pattern.startsWith('*/')) {
+            const interval = parseInt(pattern.substring(2));
+            return value % interval === 0;
+          }
+          return parseInt(pattern) === value;
+        };
+        
+        // Every hour at specific minute
+        if (minute !== '*' && hour === '*' && dayOfMonth === '*' && month === '*' && dayOfWeek === '*') {
+          const targetMinute = parseInt(minute);
+          nextRun.setMinutes(targetMinute);
+          if (nextRun <= now) {
+            nextRun.setHours(nextRun.getHours() + 1);
+          }
+          return nextRun;
+        }
+        
+        // Every N hours
+        if (hour.startsWith('*/') && dayOfMonth === '*' && month === '*' && dayOfWeek === '*') {
+          const hours = parseInt(hour.substring(2));
+          const targetMinute = minute === '*' ? 0 : parseInt(minute);
+          
+          // Set to current hour with target minute
+          nextRun.setMinutes(targetMinute);
+          
+          // If the minute has passed this hour, move to next interval
+          if (nextRun <= now) {
+            const currentHour = now.getHours();
+            const currentMinute = now.getMinutes();
+            
+            // Calculate how many hours until next run
+            const hoursSinceLastRun = currentHour % hours;
+            let hoursToAdd = hours - hoursSinceLastRun;
+            
+            // If we're at the exact hour but minute hasn't passed, don't add hours
+            if (hoursSinceLastRun === 0 && currentMinute < targetMinute) {
+              hoursToAdd = 0;
+            }
+            
+            nextRun.setHours(currentHour + hoursToAdd);
+            
+            // If we've gone past midnight, adjust
+            if (nextRun.getHours() < currentHour) {
+              nextRun.setDate(nextRun.getDate() + 1);
+            }
+          }
+          
+          return nextRun;
+        }
+        
+        // Daily at specific time
+        if (minute !== '*' && hour !== '*' && dayOfMonth === '*' && month === '*' && dayOfWeek === '*') {
+          const targetHour = parseInt(hour);
+          const targetMinute = parseInt(minute);
+          nextRun.setHours(targetHour);
+          nextRun.setMinutes(targetMinute);
+          
+          if (nextRun <= now) {
+            nextRun.setDate(nextRun.getDate() + 1);
+          }
+          return nextRun;
+        }
+        
+        // Weekly (specific day of week)
+        if (dayOfWeek !== '*' && dayOfWeek !== '0' && dayOfWeek !== '7' && dayOfMonth === '*' && month === '*') {
+          const targetDay = parseInt(dayOfWeek);
+          const targetHour = hour === '*' ? 0 : parseInt(hour);
+          const targetMinute = minute === '*' ? 0 : parseInt(minute);
+          
+          const currentDay = now.getDay();
+          let daysUntilNext = (targetDay - currentDay + 7) % 7;
+          if (daysUntilNext === 0) {
+            // Same day - check if time has passed
+            nextRun.setHours(targetHour);
+            nextRun.setMinutes(targetMinute);
+            if (nextRun <= now) {
+              daysUntilNext = 7;
+            }
+          }
+          
+          nextRun.setDate(now.getDate() + daysUntilNext);
+          nextRun.setHours(targetHour);
+          nextRun.setMinutes(targetMinute);
+          return nextRun;
+        }
+        
+        // For other patterns, try a simple increment approach
+        // This is a fallback and may not be 100% accurate for all cron patterns
+        return null;
+      } catch (e) {
+        console.error('Error calculating next scheduled time:', e);
+        return null;
+      }
+    }
+
+    // Format next scheduled time for display
+    function formatNextScheduledTime(cron, jobActive, lastRun = null) {
+      if (!jobActive) return 'Paused';
+      
+      const nextRun = getNextScheduledTime(cron, jobActive, lastRun);
+      if (!nextRun) return 'Unknown';
+      
+      const now = new Date();
+      const diffMs = nextRun - now;
+      const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+      const diffMinutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+      
+      // If less than 24 hours away, show relative time
+      if (diffMs < 24 * 60 * 60 * 1000) {
+        if (diffHours > 0) {
+          return `In ${diffHours}h ${diffMinutes}m`;
+        } else if (diffMinutes > 0) {
+          return `In ${diffMinutes}m`;
+        } else {
+          return 'Now';
+        }
+      }
+      
+      // Otherwise show date and time
+      return nextRun.toLocaleString();
+    }
+
     // Risky jobs that have regression testing
     const riskyJobs = [21, 26, 27, 28, 31];
     const regressionTestData = {};
@@ -1447,6 +1599,7 @@
       const linkedIdsText = linkedIdsArray.join(', ');
       const displayName = jobDisplayNames[job.jobid] || job.jobname || `Job ${job.jobid}`;
       const frequency = parseCronFrequency(job.schedule);
+      const nextScheduled = formatNextScheduledTime(job.schedule, job.active, job.last_run);
       
       // Load regression test data for risky jobs (use pre-loaded data)
       let regressionSummary = '';
@@ -1475,7 +1628,10 @@
               ${job.active ? 'Active' : 'Inactive'}
             </span>
           </div>
-          <div class="frequency-pill">⏰ ${frequency}</div>
+          <div style="margin-bottom: 15px;">
+            <div class="frequency-pill">⏰ ${frequency}</div>
+            <div class="next-scheduled-pill">📅 Next: ${nextScheduled}</div>
+          </div>
           ${regressionSummary}
           <div class="job-description">${description}</div>
           <div class="job-schedule">Schedule: ${job.schedule}</div>
