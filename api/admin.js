@@ -928,11 +928,11 @@ export default async function handler(req, res) {
               recordInserted = false;
               recordCount = 0;
             }
-          } catch (recordError) {
+          } catch (catchError) {
             // Log error but don't fail the response
-            recordError = recordError.message || String(recordError);
-            console.error('Error recording job execution (catch):', recordError);
-            console.error('Record error details:', JSON.stringify(recordError, null, 2));
+            recordError = catchError.message || String(catchError);
+            console.error('Error recording job execution (catch):', catchError);
+            console.error('Record error details:', JSON.stringify(catchError, null, 2));
           }
 
           return res.status(200).json({
