@@ -136,8 +136,8 @@ const createSession = async (sessionId, userAgent, ip) => {
 };
 
 const logQuestion = async (sessionId, question) => {
-  // Skip logging for test sessions to avoid performance issues
-  if (sessionId && (sessionId.includes('interactive-test') || sessionId.includes('baseline-test'))) {
+  // Skip logging for test sessions to avoid polluting analytics with test questions
+  if (sessionId && (sessionId.includes('interactive-test') || sessionId.includes('baseline-test') || sessionId.includes('regression-test'))) {
     return;
   }
  try {
@@ -161,8 +161,8 @@ const logQuestion = async (sessionId, question) => {
 };
 
 const logAnswer = async (sessionId, question, answer, intent, confidence, responseTimeMs, sources, pageContext, structuredResponse = null) => {
-  // Skip logging for test sessions to avoid performance issues
-  if (sessionId && (sessionId.includes('interactive-test') || sessionId.includes('baseline-test'))) {
+  // Skip logging for test sessions to avoid polluting analytics with test questions
+  if (sessionId && (sessionId.includes('interactive-test') || sessionId.includes('baseline-test') || sessionId.includes('regression-test'))) {
     return;
   }
   try {
@@ -10154,8 +10154,8 @@ async function initializeSession(context) {
     return;
   }
   
-  // Skip session creation for interactive testing to avoid performance issues
-  if (context.sessionId && (context.sessionId.includes('interactive-test') || context.sessionId.includes('baseline-test'))) {
+  // Skip session creation for test sessions to avoid polluting analytics with test data
+  if (context.sessionId && (context.sessionId.includes('interactive-test') || context.sessionId.includes('baseline-test') || context.sessionId.includes('regression-test'))) {
     return; // Skip session logging for test sessions
   }
   
