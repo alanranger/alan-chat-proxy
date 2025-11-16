@@ -886,8 +886,7 @@ export default async function handler(req, res) {
                 ? (executionResult ? JSON.stringify(executionResult).substring(0, 500) : 'Job completed successfully')
                 : error || 'Job execution failed',
               p_start_time: startTime.toISOString(),
-              p_end_time: endTime.toISOString(),
-              p_duration_ms: Math.round(duration * 1000)
+              p_end_time: endTime.toISOString()
             });
             
             if (insertError) {
@@ -939,8 +938,7 @@ export default async function handler(req, res) {
               p_status: 'failed',
               p_return_message: execError.message || 'Job execution failed',
               p_start_time: startTime.toISOString(),
-              p_end_time: endTime.toISOString(),
-              p_duration_ms: Math.round(duration * 1000)
+              p_end_time: endTime.toISOString()
             });
             
             if (insertError) {
