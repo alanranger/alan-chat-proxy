@@ -427,19 +427,21 @@
     // Job descriptions
     const jobDescriptions = {
       13: 'Aggregates daily analytics from chat bot usage logs (user sessions, questions asked, answers given, confidence scores, and response times) for a specific date 7 days ago. Stores the results in chat_analytics_daily for historical reporting. Runs every Monday at 2 AM.',
-      19: 'Analyzes all chat questions from the last 7 days, groups identical questions, counts how many times each was asked, calculates average confidence scores, and tracks which questions have low confidence. Updates the chat_question_frequency table to identify frequently asked questions and which ones need better answers. Powers the Questions tab in analytics.html. Runs hourly in sync with Job 20.',
-      20: 'Aggregates today\'s analytics from chat bot usage logs (sessions, questions, interactions, averages) and updates session records with total questions and interactions per session. Powers the Overview tab in analytics.html. Runs hourly in sync with Job 19.',
+      19: 'Analyzes all chat questions from the last 7 days, groups identical questions, counts how many times each was asked, calculates average confidence scores, and tracks which questions have low confidence. Updates the chat_question_frequency table to identify frequently asked questions and which ones need better answers. Powers the Questions tab in analytics.html. Runs hourly in sync with Jobs 20 & 22.',
+      20: 'Aggregates today\'s analytics from chat bot usage logs (sessions, questions, interactions, averages) and updates session records with total questions and interactions per session. Powers the Overview tab in analytics.html. Runs hourly in sync with Jobs 19 & 22.',
       21: 'Refreshes the unified products materialized view which consolidates product data from multiple sources (page_entities, product_display_price, CSV metadata) into a single deduplicated view. Resolves product types (workshop vs course), extracts location hints, availability status, and pricing. Then updates display prices for all products by processing them in batches. The refreshed view feeds into v_products_unified_open → v_events_for_chat, which provides product pricing for events displayed in the chat bot. Ensures event pricing shown in chat responses is current.',
-      22: 'Finds questions with low confidence from the last 30 days, groups identical questions, identifies which need better answers, and generates improvement recommendations. Stores results in content_improvement_tracking. Powers the Insights tab in analytics.html. Runs daily at 6 AM.',
+      22: 'Analyzes chat interactions from the last 30 days to find questions with low confidence scores (< 0.6). Groups identical questions, calculates frequency and average confidence, identifies which questions need better answers, and generates prioritized improvement recommendations (missing content, content gaps, intent confusion, high-impact fixes). Excludes questions already processed. Stores results in content_improvement_tracking table. Powers the Insights tab in analytics.html where you can review recommendations and mark questions as improved or ignored. Runs hourly in sync with Jobs 19 & 20.',
       26: 'Reads all URLs from the site URLs CSV file, checks each URL\'s Last-Modified header to detect content changes, compares with database records, and re-ingests only changed URLs (full content extraction, embeddings, etc.). Splits URLs across 3 batches. Batch 0. Runs every 4 hours.',
       27: 'Reads all URLs from the site URLs CSV file, checks each URL\'s Last-Modified header to detect content changes, compares with database records, and re-ingests only changed URLs (full content extraction, embeddings, etc.). Splits URLs across 3 batches. Batch 1. Runs every 4 hours.',
       28: 'Reads all URLs from the site URLs CSV file, checks each URL\'s Last-Modified header to detect content changes, compares with database records, and re-ingests only changed URLs (full content extraction, embeddings, etc.). Splits URLs across 3 batches. Batch 2. Runs every 4 hours.'
     };
 
     // Define linked jobs (jobs that run together and are related)
+    // Jobs 19, 20, and 22 are all linked together (analytics jobs)
     const linkedJobs = {
-      19: 20,  // Job 19 is linked to Job 20
-      20: 19   // Job 20 is linked to Job 19
+      19: [20, 22],  // Job 19 is linked to Jobs 20 and 22
+      20: [19, 22],  // Job 20 is linked to Jobs 19 and 22
+      22: [19, 20]   // Job 22 is linked to Jobs 19 and 20
     };
 
     function setAuthToken() {
@@ -515,12 +517,20 @@
         return;
       }
 
+      // Build a set of all linked job IDs
+      const linkedJobSet = new Set();
+      Object.keys(linkedJobs).forEach(jobId => {
+        linkedJobSet.add(parseInt(jobId));
+        const links = Array.isArray(linkedJobs[jobId]) ? linkedJobs[jobId] : [linkedJobs[jobId]];
+        links.forEach(linkId => linkedJobSet.add(linkId));
+      });
+
       // Sort jobs to group linked ones together
       const sortedJobs = [...jobs].sort((a, b) => {
-        const aLinked = linkedJobs[a.jobid];
-        const bLinked = linkedJobs[b.jobid];
+        const aLinked = linkedJobSet.has(a.jobid);
+        const bLinked = linkedJobSet.has(b.jobid);
         if (aLinked && bLinked) {
-          // Both are linked, keep them together
+          // Both are linked, keep them together in order
           return a.jobid - b.jobid;
         }
         if (aLinked) return -1;
@@ -530,7 +540,8 @@
 
       container.className = 'jobs-grid';
       let html = '';
-      let lastJobId = null;
+      let inLinkedGroup = false;
+      let linkedGroupStart = false;
 
       sortedJobs.forEach((job, index) => {
         const successRate = job.total_runs > 0 
@@ -543,17 +554,31 @@
           ? new Date(job.last_run).toLocaleString()
           : 'Never';
         const description = jobDescriptions[job.jobid] || 'No description available.';
-        const linkedJobId = linkedJobs[job.jobid];
-        const isLinked = linkedJobId !== undefined;
-        const showLinkArrow = isLinked && (lastJobId === linkedJobId || sortedJobs[index - 1]?.jobid === linkedJobId);
+        const linkedJobIds = linkedJobs[job.jobid];
+        const isLinked = linkedJobIds !== undefined;
+        const linkedIdsArray = Array.isArray(linkedJobIds) ? linkedJobIds : [linkedJobIds];
+        const linkedIdsText = linkedIdsArray.join(', ');
 
-        // Add link arrow if this job is linked to the previous one
-        if (showLinkArrow) {
-          html += `
-            <div style="grid-column: 1 / -1; text-align: center; padding: 10px; color: #3498db; font-weight: bold; font-size: 18px;">
-              &lt;-------&gt;
-            </div>
-          `;
+        // Check if we're starting a new linked group
+        const wasInLinkedGroup = inLinkedGroup;
+        inLinkedGroup = isLinked;
+        
+        // Add link arrow before the first job in a linked group, or between linked jobs
+        if (isLinked) {
+          if (!wasInLinkedGroup) {
+            // Starting a new linked group
+            linkedGroupStart = true;
+          } else if (index > 0 && sortedJobs[index - 1] && linkedJobSet.has(sortedJobs[index - 1].jobid)) {
+            // Continuing a linked group - add arrow between jobs
+            html += `
+              <div style="grid-column: span 1; text-align: center; padding: 10px; color: #3498db; font-weight: bold; font-size: 18px; display: flex; align-items: center; justify-content: center;">
+                &lt;---&gt;
+              </div>
+            `;
+          }
+        } else if (wasInLinkedGroup) {
+          // Ending a linked group
+          linkedGroupStart = false;
         }
 
         html += `
@@ -561,7 +586,7 @@
             <div class="job-header">
               <div>
                 <div class="job-title">${job.jobname || `Job ${job.jobid}`}</div>
-                <div class="job-id">ID: ${job.jobid}${isLinked ? ` <span style="color: #3498db;">↔ Linked to Job ${linkedJobId}</span>` : ''}</div>
+                <div class="job-id">ID: ${job.jobid}${isLinked ? ` <span style="color: #3498db;">↔ Linked to Jobs ${linkedIdsText}</span>` : ''}</div>
               </div>
               <span class="status-badge ${job.active ? 'status-active' : 'status-inactive'}">
                 ${job.active ? 'Active' : 'Inactive'}
@@ -595,8 +620,6 @@
             </div>
           </div>
         `;
-
-        lastJobId = job.jobid;
       });
 
       container.innerHTML = html;
