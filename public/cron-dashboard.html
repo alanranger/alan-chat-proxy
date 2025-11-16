@@ -667,10 +667,66 @@
         html += '<div class="job-section">';
         html += '<div class="job-section-header refresh">🔄 Website Pages Refresh Batches</div>';
         html += '<div class="job-section-content">';
-        html += '<div class="jobs-grid" style="grid-template-columns: repeat(4, 1fr);">';
+        html += '<div class="jobs-grid" style="grid-template-columns: repeat(3, 1fr);">';
         
         refreshGroup.forEach((job) => {
           html += renderJobCard(job, true, 'refresh');
+        });
+        
+        html += '</div></div></div>';
+      }
+
+      // Render Data Maintenance & Cleanup Section
+      if (dataMaintenanceGroup.length > 0) {
+        html += '<div class="job-section">';
+        html += '<div class="job-section-header maintenance">🧹 Data Maintenance & Cleanup Jobs</div>';
+        html += '<div class="job-section-content">';
+        html += '<div class="jobs-grid" style="grid-template-columns: repeat(3, 1fr);">';
+        
+        dataMaintenanceGroup.forEach((job) => {
+          html += renderJobCard(job, false, 'maintenance');
+        });
+        
+        html += '</div></div></div>';
+      }
+
+      // Render Database Performance Section
+      if (databasePerformanceGroup.length > 0) {
+        html += '<div class="job-section">';
+        html += '<div class="job-section-header performance">⚡ Database Performance Jobs</div>';
+        html += '<div class="job-section-content">';
+        html += '<div class="jobs-grid" style="grid-template-columns: repeat(1, 1fr);">';
+        
+        databasePerformanceGroup.forEach((job) => {
+          html += renderJobCard(job, false, 'performance');
+        });
+        
+        html += '</div></div></div>';
+      }
+
+      // Render Content Health & Monitoring Section
+      if (contentHealthGroup.length > 0) {
+        html += '<div class="job-section">';
+        html += '<div class="job-section-header health">🏥 Content Health & Monitoring Jobs</div>';
+        html += '<div class="job-section-content">';
+        html += '<div class="jobs-grid" style="grid-template-columns: repeat(3, 1fr);">';
+        
+        contentHealthGroup.forEach((job) => {
+          html += renderJobCard(job, false, 'health');
+        });
+        
+        html += '</div></div></div>';
+      }
+
+      // Render System Health & Backup Section
+      if (systemHealthGroup.length > 0) {
+        html += '<div class="job-section">';
+        html += '<div class="job-section-header system">🛡️ System Health & Backup Jobs</div>';
+        html += '<div class="job-section-content">';
+        html += '<div class="jobs-grid" style="grid-template-columns: repeat(2, 1fr);">';
+        
+        systemHealthGroup.forEach((job) => {
+          html += renderJobCard(job, false, 'system');
         });
         
         html += '</div></div></div>';
