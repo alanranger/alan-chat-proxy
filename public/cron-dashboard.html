@@ -736,7 +736,7 @@
       background: #2980b9;
     }
 
-    .next-run-indicator {
+    .next-run-badge {
       display: inline-block;
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       color: white;
@@ -744,32 +744,43 @@
       border-radius: 12px;
       font-size: 11px;
       font-weight: 600;
+      margin-left: 8px;
+    }
+
+    .health-status {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      margin-bottom: 10px;
       margin-top: 5px;
     }
 
-    .health-badge {
-      display: inline-block;
-      padding: 6px 12px;
-      border-radius: 4px;
-      font-size: 12px;
-      font-weight: bold;
-      margin-bottom: 10px;
-    }
-
-    .health-badge.unhealthy {
-      background: #ff4d4d;
+    .health-status.health-ok {
+      background: #4CAF50;
       color: white;
     }
 
-    .health-badge.stuck {
+    .health-status.health-warning {
       background: #ff9900;
       color: white;
     }
 
+    .health-status.health-error {
+      background: #ff4d4d;
+      color: white;
+    }
+
+    .sparkline-section {
+      margin-top: 15px;
+      margin-bottom: 10px;
+    }
+
     .sparkline {
       width: 150px;
-      height: 40px;
-      margin-top: 10px;
+      height: 50px;
+      display: block;
     }
 
     .view-logs-btn {
@@ -787,24 +798,99 @@
       background: #5a6268;
     }
 
-    .modal.hidden {
-      display: none;
-    }
-
-    #logModal .modal-content {
-      max-width: 800px;
-    }
-
-    #logContent {
-      background: #1e1e1e;
-      color: #d4d4d4;
-      padding: 15px;
+    .log-drawer {
+      margin-top: 10px;
+      border: 1px solid #ddd;
       border-radius: 4px;
-      max-height: 500px;
+      background: #f8f9fa;
+      padding: 0;
+    }
+
+    .log-drawer-header {
+      background: #e9ecef;
+      padding: 8px 12px;
+      font-weight: 600;
+      font-size: 13px;
+      border-bottom: 1px solid #ddd;
+      border-radius: 4px 4px 0 0;
+    }
+
+    .log-drawer-content {
+      max-height: 220px;
       overflow-y: auto;
-      font-family: 'Courier New', monospace;
+      padding: 10px;
+    }
+
+    .log-entry {
+      padding: 8px;
+      margin-bottom: 8px;
+      background: white;
+      border-radius: 4px;
+      border-left: 3px solid #ddd;
+    }
+
+    .log-entry-header {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 5px;
+      font-size: 11px;
+    }
+
+    .log-status-badge {
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 10px;
+      font-weight: 600;
+    }
+
+    .log-status-badge.status-success {
+      background: #4CAF50;
+      color: white;
+    }
+
+    .log-status-badge.status-failed {
+      background: #E53935;
+      color: white;
+    }
+
+    .log-timestamp {
+      color: #666;
+    }
+
+    .log-duration {
+      color: #999;
+      font-size: 10px;
+    }
+
+    .log-message {
       font-size: 12px;
-      white-space: pre-wrap;
+      color: #333;
+      word-wrap: break-word;
+    }
+
+    .log-error-message {
+      color: #E53935;
+    }
+
+    .log-loading {
+      padding: 20px;
+      text-align: center;
+      color: #666;
+    }
+
+    .log-empty {
+      padding: 20px;
+      text-align: center;
+      color: #999;
+    }
+
+    .log-error {
+      padding: 15px;
+      color: #E53935;
+      background: #fee;
+      border-radius: 4px;
+      margin: 10px;
     }
   </style>
 </head>
@@ -853,12 +939,32 @@
   </div>
 
   <script>
+    /**
+     * @typedef {Object} JobSummary
+     * @property {number} jobid
+     * @property {string} name
+     * @property {number} frequency_minutes
+     * @property {string|null} last_run      // ISO string, may be null
+     * @property {number} total_runs
+     * @property {number} success_count
+     * @property {number} failed_count
+     * @property {('active'|'paused'|'inactive')} status
+     * @property {Array<{ date: string, success: boolean }>} recent_runs
+     * @property {string} schedule
+     * @property {string} jobname
+     * @property {string} command
+     */
+
     const API_BASE = window.location.origin;
     
     // Default admin token (INGEST_TOKEN)
     const DEFAULT_TOKEN = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlnenZ3YnZndm16dnZ6b2NsdWZ4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NzY3NzkyOCwiZXhwIjoyMDczMjUzOTI4fQ.W9tkTSYu6Wml0mUr-gJD6hcLMZDcbaYYaOsyDXuwd8M';
     
     let authToken = localStorage.getItem('cron_dashboard_token') || DEFAULT_TOKEN;
+
+    // State for inline log viewer
+    let activeLogJobId = null;
+    const jobLogsCache = new Map(); // jobId -> { loading, error, entries }
 
     // Job descriptions
     const jobDescriptions = {
@@ -943,6 +1049,28 @@
       'Authorization': `Bearer ${authToken}`
     });
 
+    /**
+     * Normalize API job data to JobSummary shape
+     * @param {Object} apiJob - Raw job data from API
+     * @returns {JobSummary}
+     */
+    function normalizeJob(apiJob) {
+      return {
+        jobid: apiJob.jobid,
+        name: apiJob.jobname || apiJob.name || `Job ${apiJob.jobid}`,
+        frequency_minutes: apiJob.frequency_minutes || 60,
+        last_run: apiJob.last_run || null,
+        total_runs: apiJob.total_runs || 0,
+        success_count: apiJob.success_count || 0,
+        failed_count: apiJob.failed_count || 0,
+        status: apiJob.active ? 'active' : 'inactive',
+        recent_runs: apiJob.recent_runs || [],
+        schedule: apiJob.schedule || '',
+        jobname: apiJob.jobname || apiJob.name || `Job ${apiJob.jobid}`,
+        command: apiJob.command || ''
+      };
+    }
+
     async function loadJobs() {
       addDebugLog('Loading jobs...', 'info');
       const container = document.getElementById('jobsContainer');
@@ -980,13 +1108,15 @@
           throw new Error(data?.error || data?.detail || 'Failed to load jobs');
         }
 
-        // Pre-load regression test data for risky jobs
-        const jobs = data.jobs || [];
+        // Normalize jobs to JobSummary shape
+        const rawJobs = data.jobs || [];
+        const jobs = rawJobs.map(normalizeJob);
+        
         addDebugLog(`Loaded ${jobs.length} jobs from API`, 'success', { jobCount: jobs.length, jobIds: jobs.map(j => j.jobid) });
         
         // Log stats for each job
         jobs.forEach(job => {
-          addDebugLog(`Job ${job.jobid} (${job.jobname || 'unnamed'}): ${job.total_runs || 0} runs, ${job.success_count || 0} succeeded, ${job.failed_count || 0} failed`, 'info', {
+          addDebugLog(`Job ${job.jobid} (${job.name}): ${job.total_runs} runs, ${job.success_count} succeeded, ${job.failed_count} failed`, 'info', {
             jobid: job.jobid,
             total_runs: job.total_runs,
             success_count: job.success_count,
@@ -1149,7 +1279,7 @@
 
       container.innerHTML = html;
       
-      // Fetch run history, render sparklines, and update health badges for each job
+      // Fetch run history and render sparklines for each job
       for (const job of jobs) {
         try {
           const logRes = await fetch(`${API_BASE}/api/admin?action=get_job_logs&jobid=${job.jobid}`, {
@@ -1158,30 +1288,17 @@
           const { logs } = await logRes.json();
           
           if (logs && logs.length > 0) {
-            const runHistory = logs.slice(0, 10).map(log => ({
-              status: log.status,
+            // Build recent_runs array for sparkline
+            const recentRuns = logs.slice(0, 14).map(log => ({
+              date: log.start_time || log.end_time || new Date().toISOString(),
               success: log.status === 'succeeded' || log.status === 'success'
             }));
-            renderSparkline(`sparkline-${job.jobid}`, runHistory);
             
-            // Update health badges with actual run history
-            const healthIssues = detectHealthIssues(job, logs.slice(0, 3));
-            const jobCard = document.querySelector(`[data-job-card-id="${job.jobid}"]`);
-            if (jobCard) {
-              // Remove existing health badges
-              jobCard.querySelectorAll('.health-badge').forEach(badge => badge.remove());
-              
-              // Add new health badges if any
-              if (healthIssues.length > 0) {
-                const healthBadgesHtml = healthIssues.map(issue => 
-                  `<div class="health-badge ${issue.type}">${issue.message}</div>`
-                ).join('');
-                const nextRunIndicator = jobCard.querySelector('.next-run-indicator');
-                if (nextRunIndicator) {
-                  nextRunIndicator.insertAdjacentHTML('afterend', healthBadgesHtml);
-                }
-              }
-            }
+            // Update job with recent_runs
+            job.recent_runs = recentRuns;
+            
+            // Render sparkline
+            renderSparkline(`sparkline-${job.jobid}`, recentRuns);
           }
         } catch (error) {
           console.error(`Error fetching logs for job ${job.jobid}:`, error);
@@ -1220,17 +1337,34 @@
         });
       });
       
-      // Setup event handlers for view logs buttons
+      // Setup event handlers for view logs buttons (inline drawer)
       document.querySelectorAll('.view-logs-btn').forEach(btn => {
         btn.addEventListener('click', async function() {
           const jobid = parseInt(this.dataset.jobid);
-          await openLogModal(jobid);
+          await toggleLogDrawer(jobid);
         });
       });
       
       // Render charts and setup log viewers for each job
       await renderJobCharts(jobs);
       setupLogViewers();
+      
+      // Restore active log drawer if it was open
+      if (activeLogJobId !== null) {
+        const drawer = document.getElementById(`log-drawer-${activeLogJobId}`);
+        const btn = document.querySelector(`.view-logs-btn[data-jobid="${activeLogJobId}"]`);
+        if (drawer && btn) {
+          drawer.style.display = 'block';
+          btn.textContent = 'Hide Logs';
+          // Re-render logs if cached
+          if (jobLogsCache.has(activeLogJobId)) {
+            const cached = jobLogsCache.get(activeLogJobId);
+            if (cached.entries) {
+              renderLogDrawer(activeLogJobId, cached.entries);
+            }
+          }
+        }
+      }
     }
     
     async function renderJobCharts(jobs) {
@@ -1983,53 +2117,74 @@
       }
     }
 
-    // Helper function to calculate next run in minutes
-    function calculateNextRunMinutes(job) {
-      if (!job.last_run) {
-        return null; // "In scheduled window"
-      }
-      
-      const freqMinutes = job.frequency_minutes || 60;
+    /**
+     * Calculate next run in minutes
+     * @param {JobSummary} job
+     * @param {Date} now
+     * @returns {number|null} Minutes until next run, or null if not scheduled
+     */
+    function calculateNextRunInMinutes(job, now = new Date()) {
+      if (!job.frequency_minutes || job.frequency_minutes <= 0) return null;
+
+      if (!job.last_run) return job.frequency_minutes; // first run: assume full interval
+
       const lastRun = new Date(job.last_run);
+      const diffMs = lastRun.getTime() + job.frequency_minutes * 60_000 - now.getTime();
+      const diffMinutes = Math.ceil(diffMs / 60_000);
+
+      // if negative (overdue), clamp to 0 so health logic handles "overdue"
+      return diffMinutes < 0 ? 0 : diffMinutes;
+    }
+
+    /**
+     * Get job health status
+     * @param {JobSummary} job
+     * @param {number|null} nextRunInMinutes
+     * @returns {{ level: 'ok'|'warning'|'error', label: string, reason: string }}
+     */
+    function getJobHealth(job, nextRunInMinutes) {
       const now = new Date();
-      const minutesSinceLastRun = Math.floor((now - lastRun) / (1000 * 60));
-      const delta = freqMinutes - minutesSinceLastRun;
-      
-      return delta <= 0 ? 0 : delta; // 0 means "Due now"
+      const lastRun = job.last_run ? new Date(job.last_run) : null;
+      const minutesSinceLastRun = lastRun ? Math.floor((now - lastRun) / (1000 * 60)) : null;
+      const freqMinutes = job.frequency_minutes || 60;
+
+      // Error conditions
+      if (job.failed_count > 0 && job.success_count === 0) {
+        return { level: 'error', label: 'Error', reason: 'Always fails - no successful runs' };
+      }
+      if (nextRunInMinutes === 0 && lastRun && minutesSinceLastRun > freqMinutes * 3) {
+        return { level: 'error', label: 'Error', reason: 'Severely overdue - last run was ' + Math.floor(minutesSinceLastRun / freqMinutes) + 'x scheduled interval ago' };
+      }
+
+      // Warning conditions
+      if (job.total_runs === 0 && job.status === 'active') {
+        return { level: 'warning', label: 'Warning', reason: 'Never run - job is active but has no execution history' };
+      }
+      if (job.failed_count > 0 && job.failed_count < job.success_count) {
+        return { level: 'warning', label: 'Warning', reason: 'Some failures detected - ' + job.failed_count + ' failed, ' + job.success_count + ' succeeded' };
+      }
+      if (nextRunInMinutes === 0 && lastRun && minutesSinceLastRun > freqMinutes * 2) {
+        return { level: 'warning', label: 'Warning', reason: 'Possibly stuck - overdue by ' + Math.floor(minutesSinceLastRun / freqMinutes) + 'x scheduled interval' };
+      }
+
+      // OK conditions (all must be true)
+      const hasRuns = job.total_runs > 0;
+      const noFailures = job.failed_count === 0;
+      const notOverdue = nextRunInMinutes === null || nextRunInMinutes <= 1.5 * freqMinutes;
+
+      if (hasRuns && noFailures && notOverdue) {
+        return { level: 'ok', label: 'OK', reason: 'All runs successful, on schedule' };
+      }
+
+      // Default to warning if conditions not met
+      return { level: 'warning', label: 'Warning', reason: 'Check job status' };
     }
 
-    // Helper function to detect health issues
-    function detectHealthIssues(job, runHistory = []) {
-      const issues = [];
-      
-      // Check for repeated failures
-      if (runHistory.length >= 3) {
-        const lastThree = runHistory.slice(0, 3);
-        const allFailed = lastThree.every(run => {
-          const status = run.status || '';
-          return status === 'failed' || status === 'error' || status.toLowerCase().includes('fail');
-        });
-        if (allFailed) {
-          issues.push({ type: 'unhealthy', message: '⚠ Unhealthy: Repeated Failures' });
-        }
-      }
-      
-      // Check for stuck job
-      if (job.last_run) {
-        const freqMinutes = job.frequency_minutes || 60;
-        const lastRun = new Date(job.last_run);
-        const now = new Date();
-        const minutesSinceLastRun = Math.floor((now - lastRun) / (1000 * 60));
-        
-        if (minutesSinceLastRun > freqMinutes * 2) {
-          issues.push({ type: 'stuck', message: '⚠ Possibly Stuck' });
-        }
-      }
-      
-      return issues;
-    }
-
-    // Helper function to render sparkline
+    /**
+     * Render sparkline chart for job runs
+     * @param {string} canvasId
+     * @param {Array<{ date: string, success: boolean }>} runHistory
+     */
     function renderSparkline(canvasId, runHistory) {
       const canvas = document.getElementById(canvasId);
       if (!canvas) return;
@@ -2041,28 +2196,56 @@
       // Clear canvas
       ctx.clearRect(0, 0, width, height);
       
-      // Get last 10 runs
-      const last10 = (runHistory || []).slice(0, 10).reverse();
-      if (last10.length === 0) return;
+      // Get last 10-14 runs
+      const lastRuns = (runHistory || []).slice(0, 14);
+      if (lastRuns.length === 0) return;
       
-      const barWidth = width / last10.length;
-      const maxHeight = height - 4;
+      const barWidth = Math.floor(width / lastRuns.length);
+      const maxHeight = height - 12; // Leave space for labels
+      const barHeight = maxHeight * 0.8;
       
-      last10.forEach((run, index) => {
-        const isSuccess = run.status === 'succeeded' || run.status === 'success' || run.success === true;
+      lastRuns.forEach((run, index) => {
+        const isSuccess = run.success === true || run.status === 'succeeded' || run.status === 'success';
         const color = isSuccess ? '#4CAF50' : '#E53935';
-        const barHeight = maxHeight * 0.8;
+        
+        const x = index * barWidth;
+        const y = height - barHeight - 10;
         
         ctx.fillStyle = color;
-        ctx.fillRect(
-          index * barWidth + 2,
-          height - barHeight - 2,
-          barWidth - 4,
-          barHeight
-        );
+        ctx.fillRect(x + 1, y, barWidth - 2, barHeight);
       });
+      
+      // Add subtle x-axis labels (dates or sequential)
+      ctx.fillStyle = '#999';
+      ctx.font = '9px sans-serif';
+      ctx.textAlign = 'center';
+      const labelCount = Math.min(lastRuns.length, 5);
+      const labelStep = Math.floor(lastRuns.length / labelCount);
+      
+      for (let i = 0; i < labelCount; i++) {
+        const idx = i * labelStep;
+        if (idx < lastRuns.length) {
+          const run = lastRuns[idx];
+          const x = idx * barWidth + barWidth / 2;
+          let label = '';
+          if (run.date) {
+            const date = new Date(run.date);
+            label = `${date.getDate()}/${date.getMonth() + 1}`;
+          } else {
+            label = String(idx + 1);
+          }
+          ctx.fillText(label, x, height - 2);
+        }
+      }
     }
 
+    /**
+     * Render a single job card
+     * @param {JobSummary} job
+     * @param {boolean} isLinked
+     * @param {string} groupType
+     * @returns {string}
+     */
     function renderJobCard(job, isLinked, groupType) {
       const successRate = job.total_runs > 0 
         ? ((job.success_count / job.total_runs) * 100).toFixed(1)
@@ -2078,26 +2261,21 @@
       const isLinkedJob = linkedJobIds !== undefined;
       const linkedIdsArray = Array.isArray(linkedJobIds) ? linkedJobIds : [linkedJobIds];
       const linkedIdsText = linkedIdsArray.join(', ');
-      const displayName = jobDisplayNames[job.jobid] || job.jobname || `Job ${job.jobid}`;
+      const displayName = jobDisplayNames[job.jobid] || job.name || `Job ${job.jobid}`;
       const frequency = parseCronFrequency(job.schedule);
-      const nextScheduled = formatNextScheduledTime(job.schedule, job.active, job.last_run);
       
-      // Calculate next run in minutes
-      const nextRunMinutes = calculateNextRunMinutes(job);
+      // Calculate next run and health
+      const nextRunInMinutes = calculateNextRunInMinutes(job);
       let nextRunText = '';
-      if (nextRunMinutes === null) {
-        nextRunText = 'Next run: In scheduled window';
-      } else if (nextRunMinutes === 0) {
+      if (nextRunInMinutes === null) {
+        nextRunText = 'Not scheduled';
+      } else if (nextRunInMinutes === 0) {
         nextRunText = 'Due now';
       } else {
-        nextRunText = `Next run in ${nextRunMinutes} min`;
+        nextRunText = `Next run in ${nextRunInMinutes}m`;
       }
       
-      // Detect health issues (will be populated after fetching run history)
-      const healthIssues = detectHealthIssues(job, job.run_history || []);
-      const healthBadges = healthIssues.map(issue => 
-        `<div class="health-badge ${issue.type}">${issue.message}</div>`
-      ).join('');
+      const health = getJobHealth(job, nextRunInMinutes);
       
       // Load regression test data for risky jobs (use pre-loaded data)
       let regressionSummary = '';
@@ -2116,6 +2294,7 @@
         '#3498db';
       
       const currentFreqMinutes = job.frequency_minutes || 60;
+      const isLogDrawerOpen = activeLogJobId === job.jobid;
       
       return `
         <div class="job-card" data-job-card-id="${job.jobid}" ${isLinkedJob ? `style="border: 2px solid ${borderColor};"` : ''}>
@@ -2124,21 +2303,20 @@
               <div class="job-title">${displayName}</div>
               <div class="job-id">ID: ${job.jobid}${isLinkedJob ? ` <span style="color: ${borderColor}; font-size: 16px; font-weight: 700;">↔ Linked to Jobs ${linkedIdsText}</span>` : ''}</div>
             </div>
-            <span class="status-badge ${job.active ? 'status-active' : 'status-inactive'}">
-              ${job.active ? 'Active' : 'Inactive'}
+            <span class="status-badge ${job.status === 'active' ? 'status-active' : 'status-inactive'}">
+              ${job.status === 'active' ? 'Active' : 'Inactive'}
             </span>
           </div>
+          <div class="health-status health-${health.level}" title="${health.reason}">${health.label}</div>
           <div style="margin-bottom: 15px;">
             <div class="frequency-pill">⏰ ${frequency}</div>
-            <div class="next-scheduled-pill">📅 Next: ${nextScheduled}</div>
+            <div class="next-run-badge">${nextRunText}</div>
           </div>
           <div style="margin-bottom: 10px;">
             <label>Frequency (minutes)</label>
             <input type="number" class="freq-input" data-jobid="${job.jobid}" min="1" value="${currentFreqMinutes}">
             <button class="save-freq-btn" data-jobid="${job.jobid}">Save</button>
           </div>
-          <div class="next-run-indicator">${nextRunText}</div>
-          ${healthBadges}
           ${regressionSummary}
           <div class="job-description">${description}</div>
           <div class="job-schedule">Schedule: ${job.schedule}</div>
@@ -2149,30 +2327,32 @@
             </div>
             <div class="stat-item">
               <div class="stat-label">Total Runs</div>
-              <div class="stat-value">${job.total_runs || 0}</div>
+              <div class="stat-value">${job.total_runs}</div>
             </div>
             <div class="stat-item">
               <div class="stat-label">Success Rate</div>
               <div class="stat-value success-rate">${successRate > 50 ? `<span class="badge-success">${successRate}%</span>` : `<span class="badge-failure">${successRate}%</span>`}</div>
-              <div style="font-size: 11px; color: #7f8c8d;">${job.success_count || 0} succeeded</div>
+              <div style="font-size: 11px; color: #7f8c8d;">${job.success_count} succeeded</div>
             </div>
             <div class="stat-item">
               <div class="stat-label">Failure Rate</div>
               <div class="stat-value failure-rate">${failureRate > 50 ? `<span class="badge-failure">${failureRate}%</span>` : `<span class="badge-success">${failureRate}%</span>`}</div>
-              <div style="font-size: 11px; color: #7f8c8d;">${job.failed_count || 0} failed</div>
+              <div style="font-size: 11px; color: #7f8c8d;">${job.failed_count} failed</div>
             </div>
           </div>
-          <canvas class="sparkline" id="sparkline-${job.jobid}" width="150" height="40"></canvas>
+          <div class="sparkline-section">
+            <div style="font-size: 12px; font-weight: 600; margin-bottom: 5px; color: #666;">Last runs</div>
+            <canvas class="sparkline" id="sparkline-${job.jobid}" width="150" height="50"></canvas>
+          </div>
           <canvas id="chart-${job.jobid}" style="max-height: 100px; margin-top: 10px;"></canvas>
-          <button class="view-logs-btn" data-jobid="${job.jobid}">View Logs</button>
-          <div id="log-panel-${job.jobid}" class="log-panel" style="display:none;"></div>
+          <button class="view-logs-btn" data-jobid="${job.jobid}">${isLogDrawerOpen ? 'Hide Logs' : 'View Logs'}</button>
+          <div id="log-drawer-${job.jobid}" class="log-drawer" style="display: ${isLogDrawerOpen ? 'block' : 'none'};"></div>
           <div class="job-actions">
             <button class="btn btn-primary btn-small" onclick="runJobNow(${job.jobid}, '${displayName}')">▶ Run Now</button>
-            <button class="btn btn-primary btn-small" onclick="viewLogs(${job.jobid})">View Logs</button>
             <button class="btn btn-secondary btn-small" onclick="editSchedule(${job.jobid}, '${job.schedule}', '${displayName}')">Edit Schedule</button>
             <button class="btn btn-secondary btn-small" onclick="resetJobStats(${job.jobid}, '${displayName}')" title="Reset success/fail counts">🔄 Reset Stats</button>
-            <button class="btn ${job.active ? 'btn-warning' : 'btn-success'} btn-small" onclick="toggleJob(${job.jobid}, ${!job.active}, '${displayName}')">
-              ${job.active ? '⏸ Pause' : '▶ Resume'}
+            <button class="btn ${job.status === 'active' ? 'btn-warning' : 'btn-success'} btn-small" onclick="toggleJob(${job.jobid}, ${job.status !== 'active'}, '${displayName}')">
+              ${job.status === 'active' ? '⏸ Pause' : '▶ Resume'}
             </button>
           </div>
         </div>
@@ -2189,86 +2369,49 @@
       }, 5000);
     }
 
-    async function viewLogs(jobid) {
-      const modal = document.getElementById('logsModal');
-      const content = document.getElementById('logsModalContent');
-      content.innerHTML = '<div class="loading">Loading logs...</div>';
-      modal.classList.add('active');
-
-      try {
-        const response = await fetch(`${API_BASE}/api/admin?action=cron_logs&jobid=${jobid}&limit=100`, {
-          headers: buildAuthHeaders()
-        });
-
-        const data = await response.json();
-        if (!data.ok) {
-          throw new Error(data.error || 'Failed to load logs');
-        }
-
-        const logs = data.logs || [];
-        if (logs.length === 0) {
-          content.innerHTML = '<div class="loading">No logs found for this job.</div>';
+    /**
+     * Toggle inline log drawer for a job
+     * @param {number} jobid
+     */
+    async function toggleLogDrawer(jobid) {
+      const drawer = document.getElementById(`log-drawer-${jobid}`);
+      const btn = document.querySelector(`.view-logs-btn[data-jobid="${jobid}"]`);
+      
+      if (!drawer || !btn) return;
+      
+      // If same job is already active, toggle (collapse)
+      if (activeLogJobId === jobid) {
+        activeLogJobId = null;
+        drawer.style.display = 'none';
+        btn.textContent = 'View Logs';
+        return;
+      }
+      
+      // Close any other open drawer
+      if (activeLogJobId !== null) {
+        const prevDrawer = document.getElementById(`log-drawer-${activeLogJobId}`);
+        const prevBtn = document.querySelector(`.view-logs-btn[data-jobid="${activeLogJobId}"]`);
+        if (prevDrawer) prevDrawer.style.display = 'none';
+        if (prevBtn) prevBtn.textContent = 'View Logs';
+      }
+      
+      // Open this drawer
+      activeLogJobId = jobid;
+      drawer.style.display = 'block';
+      btn.textContent = 'Hide Logs';
+      
+      // Check cache
+      if (jobLogsCache.has(jobid)) {
+        const cached = jobLogsCache.get(jobid);
+        if (cached.entries) {
+          renderLogDrawer(jobid, cached.entries);
           return;
         }
-
-        content.innerHTML = `
-          <table class="logs-table">
-            <thead>
-              <tr>
-                <th>Start Time</th>
-                <th>End Time</th>
-                <th>Duration</th>
-                <th>Status</th>
-                <th>Message</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${logs.map(log => {
-                const startTime = new Date(log.start_time).toLocaleString();
-                const endTime = log.end_time ? new Date(log.end_time).toLocaleString() : 'N/A';
-                const duration = log.end_time 
-                  ? ((new Date(log.end_time) - new Date(log.start_time)) / 1000).toFixed(2) + 's'
-                  : 'N/A';
-                const statusClass = log.status === 'succeeded' ? 'status-success' : 'status-failed';
-                const message = log.return_message || 'No message';
-                
-                return `
-                  <tr>
-                    <td>${startTime}</td>
-                    <td>${endTime}</td>
-                    <td>${duration}</td>
-                    <td><span class="status-badge ${statusClass}">${log.status}</span></td>
-                    <td style="max-width: 400px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${message}">${message}</td>
-                  </tr>
-                `;
-              }).join('')}
-            </tbody>
-          </table>
-        `;
-      } catch (error) {
-        content.innerHTML = `<div class="error">Error loading logs: ${error.message}</div>`;
       }
-    }
-
-    function closeLogsModal() {
-      document.getElementById('logsModal').classList.remove('active');
-    }
-
-    async function openLogModal(jobid) {
-      const modal = document.getElementById('logModal');
-      const jobNameSpan = document.getElementById('logJobName');
-      const logContent = document.getElementById('logContent');
       
-      // Get job name
-      const jobs = await fetch(`${API_BASE}/api/admin?action=cron_jobs`, {
-        headers: buildAuthHeaders()
-      }).then(r => r.json()).then(d => d.jobs || []);
-      const job = jobs.find(j => j.jobid === jobid);
-      const jobName = job ? (jobDisplayNames[jobid] || job.jobname || `Job ${jobid}`) : `Job ${jobid}`;
-      
-      jobNameSpan.textContent = jobName;
-      logContent.textContent = 'Loading logs...';
-      modal.classList.remove('hidden');
+      // Fetch logs
+      drawer.innerHTML = '<div class="log-loading">Loading logs...</div>';
+      jobLogsCache.set(jobid, { loading: true, error: null, entries: null });
       
       try {
         const response = await fetch(`${API_BASE}/api/admin?action=get_job_logs&jobid=${jobid}`, {
@@ -2278,41 +2421,66 @@
         const { logs } = await response.json();
         
         if (!logs || logs.length === 0) {
-          logContent.textContent = 'No logs found for this job.';
+          drawer.innerHTML = '<div class="log-empty">No logs found for this job.</div>';
+          jobLogsCache.set(jobid, { loading: false, error: null, entries: [] });
           return;
         }
         
-        const logText = logs.map(log => {
-          const startTime = new Date(log.start_time).toLocaleString();
-          const endTime = log.end_time ? new Date(log.end_time).toLocaleString() : 'N/A';
-          const duration = log.end_time 
-            ? ((new Date(log.end_time) - new Date(log.start_time)) / 1000).toFixed(2) + 's'
-            : 'N/A';
-          const status = (log.status || 'unknown').toUpperCase();
-          const message = log.return_message || 'No message';
-          
-          return `[${status}] ${startTime} → ${endTime} (${duration})
-${message}
-${'='.repeat(80)}`;
-        }).join('\n\n');
-        
-        logContent.textContent = logText;
+        jobLogsCache.set(jobid, { loading: false, error: null, entries: logs });
+        renderLogDrawer(jobid, logs);
       } catch (error) {
-        logContent.textContent = `Error loading logs: ${error.message}`;
+        drawer.innerHTML = `
+          <div class="log-error">
+            Failed to load logs: ${error.message}
+            <a href="#" onclick="toggleLogDrawer(${jobid}); return false;" style="color: #3498db; text-decoration: underline; margin-left: 10px;">Retry</a>
+          </div>
+        `;
+        jobLogsCache.set(jobid, { loading: false, error: error.message, entries: null });
       }
     }
 
-    function closeLogModal() {
-      document.getElementById('logModal').classList.add('hidden');
+    /**
+     * Render log entries in the drawer
+     * @param {number} jobid
+     * @param {Array} logs
+     */
+    function renderLogDrawer(jobid, logs) {
+      const drawer = document.getElementById(`log-drawer-${jobid}`);
+      if (!drawer) return;
+      
+      // Get job name
+      const jobCard = document.querySelector(`[data-job-card-id="${jobid}"]`);
+      const jobName = jobCard ? (jobCard.querySelector('.job-title')?.textContent || `Job ${jobid}`) : `Job ${jobid}`;
+      
+      const logsHtml = logs.map(log => {
+        const startTime = new Date(log.start_time).toLocaleString();
+        const endTime = log.end_time ? new Date(log.end_time).toLocaleString() : 'N/A';
+        const duration = log.end_time 
+          ? ((new Date(log.end_time) - new Date(log.start_time)) / 1000).toFixed(2) + 's'
+          : 'N/A';
+        const isSuccess = log.status === 'succeeded' || log.status === 'success';
+        const statusClass = isSuccess ? 'status-success' : 'status-failed';
+        const statusText = isSuccess ? 'Success' : 'Fail';
+        const message = log.return_message || 'No message';
+        
+        return `
+          <div class="log-entry">
+            <div class="log-entry-header">
+              <span class="log-status-badge ${statusClass}">${statusText}</span>
+              <span class="log-timestamp">${startTime}</span>
+              <span class="log-duration">${duration}</span>
+            </div>
+            <div class="log-message ${!isSuccess ? 'log-error-message' : ''}">${message}</div>
+          </div>
+        `;
+      }).join('');
+      
+      drawer.innerHTML = `
+        <div class="log-drawer-header">Recent logs for: ${jobName}</div>
+        <div class="log-drawer-content">${logsHtml}</div>
+      `;
     }
 
-    // Setup close button for log modal
-    document.addEventListener('DOMContentLoaded', function() {
-      const closeBtn = document.getElementById('closeLogModalBtn');
-      if (closeBtn) {
-        closeBtn.addEventListener('click', closeLogModal);
-      }
-    });
 
     function editSchedule(jobid, currentSchedule, jobname) {
       const modal = document.getElementById('scheduleModal');
@@ -2700,4 +2868,5 @@ ${'='.repeat(80)}`;
   </script>
 </body>
 </html>
+
 
