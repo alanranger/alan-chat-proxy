@@ -910,7 +910,7 @@
           regressionTestData[jobid] = data;
         });
 
-        renderJobs(jobs);
+        await renderJobs(jobs);
         addDebugLog('Jobs rendered successfully', 'success');
       } catch (error) {
         addDebugLog(`Error loading jobs: ${error.message}`, 'error', { error: error.message, stack: error.stack });
@@ -918,7 +918,7 @@
       }
     }
 
-    function renderJobs(jobs) {
+    async function renderJobs(jobs) {
       const container = document.getElementById('jobsContainer');
       
       if (jobs.length === 0) {
@@ -1789,7 +1789,7 @@
         
         // Refresh jobs list to update stats immediately
         addDebugLog('Refreshing jobs after execution to update stats...', 'info');
-        loadJobs();
+          loadJobs();
         
       } catch (error) {
         addDebugLog(`Error running job: ${error.message}`, 'error', { error: error.message, stack: error.stack });
@@ -1857,7 +1857,7 @@
             </span>
           </div>
           <div style="margin-bottom: 15px;">
-            <div class="frequency-pill">⏰ ${frequency}</div>
+          <div class="frequency-pill">⏰ ${frequency}</div>
             <div class="next-scheduled-pill">📅 Next: ${nextScheduled}</div>
           </div>
           ${regressionSummary}
