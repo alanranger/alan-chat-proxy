@@ -1886,15 +1886,13 @@
     async function runJobNow(jobId, jobName) {
       addDebugLog(`Run job now requested: ${jobName} (ID: ${jobId})`, 'info', { jobId, jobName });
       
-      // Reset progress and start polling for jobs 26, 27, 28
+      // Reset progress for jobs 26, 27, 28 (polling will start after job execution)
       if ([26, 27, 28].includes(jobId)) {
         try {
           await fetch(`${API_BASE}/api/admin?action=reset_job_progress&jobid=${jobId}`, {
             method: 'GET',
             headers: buildAuthHeaders()
           });
-          // Start polling for progress
-          pollJobProgress(jobId);
         } catch (err) {
           console.warn('Failed to reset progress:', err);
         }
@@ -1943,9 +1941,13 @@
         addDebugLog(`Job execution completed: success=${execution.success}, duration=${execution.duration}s`, 
           execution.success ? 'success' : 'error', { execution });
         
-        // Start progress polling for jobs 26, 27, 28 after execution
-        if ([26, 27, 28].includes(parseInt(jobId))) {
-          pollJobProgress(jobId);
+        // Start progress polling for jobs 26, 27, 28 after successful execution
+        // For fire-and-forget jobs, start polling immediately to track background progress
+        if ([26, 27, 28].includes(parseInt(jobId)) && execution.success) {
+          // Small delay to allow PostgreSQL function to start and create progress entry
+          setTimeout(() => {
+            pollJobProgress(parseInt(jobId));
+          }, 500);
         }
         
         const isRiskyJob = [21, 26, 27, 28, 31].includes(parseInt(jobId));
