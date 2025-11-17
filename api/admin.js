@@ -72,14 +72,17 @@ export default async function handler(req, res) {
       return res.status(200).end();
     }
 
-    // Authentication
-    const authHeader = req.headers.authorization || '';
-    const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
-    if (!token || token !== EXPECTED_TOKEN) {
-      return res.status(401).json({ error: 'unauthorized' });
-    }
-
     const { action } = req.query || {};
+    const isSchedulerTick = action === "scheduler_tick";
+
+    // Authentication
+    if (!isSchedulerTick) {
+      const authHeader = req.headers.authorization || '';
+      const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
+      if (!token || token !== EXPECTED_TOKEN) {
+        return res.status(401).json({ error: 'unauthorized' });
+      }
+    }
 
     // Scheduler tick endpoint
     if (action === "scheduler_tick") {
@@ -336,76 +339,76 @@ export default async function handler(req, res) {
         const { data: cronJobs, error: cronError } = await supabase
           .rpc('get_cron_jobs');
 
-        if (cronError) {
-          console.error('Error getting cron jobs:', cronError);
-          return res.status(500).json({ 
-            error: 'Failed to get cron jobs', 
-            detail: cronError.message 
-          });
-        }
-
-        return res.status(200).json({
-          ok: true,
-          cron_jobs: cronJobs || []
-        });
-
-      } catch (error) {
-        console.error('Unexpected error in cron status check:', error);
+      if (cronError) {
+        console.error('Error getting cron jobs:', cronError);
         return res.status(500).json({ 
-          error: 'Internal server error', 
-          detail: error.message 
+          error: 'Failed to get cron jobs', 
+          detail: cronError.message 
         });
       }
-    } else if (action === 'aggregate_analytics') {
-      if (req.method !== 'POST') {
-        return res.status(405).json({ error: 'Method not allowed for aggregate_analytics action' });
-      }
-      try {
-        const { date } = req.body || {};
-        const targetDate = date || new Date().toISOString().split('T')[0];
 
-        console.log('Running analytics aggregation for date:', targetDate);
-        
-        const { data: aggData, error: aggError } = await supabase
-          .rpc('aggregate_daily_analytics', { target_date: targetDate });
+      return res.status(200).json({
+        ok: true,
+        cron_jobs: cronJobs || []
+      });
 
-        if (aggError) {
-          console.error('Error running analytics aggregation:', aggError);
-          return res.status(500).json({ 
-            error: 'Failed to aggregate analytics', 
-            detail: aggError.message 
-          });
-        }
-
-        console.log('Analytics aggregation completed successfully');
-
-        const { data: updateData, error: updateError } = await supabase
-          .rpc('update_question_frequency');
-
-        if (updateError) {
-          console.error('Error updating question frequency:', updateError);
-          return res.status(500).json({ 
-            error: 'Failed to update question frequency', 
-            detail: updateError.message 
-          });
-        }
-
-        return res.status(200).json({
-          ok: true,
-          message: 'Analytics aggregation completed successfully',
-          date: targetDate,
-          aggregationResult: aggData,
-          frequencyUpdateResult: updateData
-        });
-
-      } catch (error) {
-        console.error('Unexpected error in analytics aggregation:', error);
-        return res.status(500).json({ 
-          error: 'Internal server error', 
-          detail: error.message 
-        });
-      }
+    } catch (error) {
+      console.error('Unexpected error in cron status check:', error);
+      return res.status(500).json({ 
+        error: 'Internal server error', 
+        detail: error.message 
+      });
     }
+  } else if (action === 'aggregate_analytics') {
+    if (req.method !== 'POST') {
+      return res.status(405).json({ error: 'Method not allowed for aggregate_analytics action' });
+    }
+    try {
+      const { date } = req.body || {};
+      const targetDate = date || new Date().toISOString().split('T')[0];
+
+      console.log('Running analytics aggregation for date:', targetDate);
+      
+      const { data: aggData, error: aggError } = await supabase
+        .rpc('aggregate_daily_analytics', { target_date: targetDate });
+
+      if (aggError) {
+        console.error('Error running analytics aggregation:', aggError);
+        return res.status(500).json({ 
+          error: 'Failed to aggregate analytics', 
+          detail: aggError.message 
+        });
+      }
+
+      console.log('Analytics aggregation completed successfully');
+
+      const { data: updateData, error: updateError } = await supabase
+        .rpc('update_question_frequency');
+
+      if (updateError) {
+        console.error('Error updating question frequency:', updateError);
+        return res.status(500).json({ 
+          error: 'Failed to update question frequency', 
+          detail: updateError.message 
+        });
+      }
+
+      return res.status(200).json({
+        ok: true,
+        message: 'Analytics aggregation completed successfully',
+        date: targetDate,
+        aggregationResult: aggData,
+        frequencyUpdateResult: updateData
+      });
+
+    } catch (error) {
+      console.error('Unexpected error in analytics aggregation:', error);
+      return res.status(500).json({ 
+        error: 'Internal server error', 
+        detail: error.message 
+      });
+    }
+  }
 
     // Cron Job Management (GET /api/admin?action=cron_jobs)
     if (req.method === 'GET' && action === 'cron_jobs') {
@@ -890,10 +893,10 @@ export default async function handler(req, res) {
             
             // Execute each statement
             for (const statement of statements) {
-              // Parse function calls like: SELECT function_name(); or SELECT function_name(params);
-              const functionCallMatch = statement.match(/SELECT\s+(\w+)\s*\(([^)]*)\)/i);
-              
-              if (functionCallMatch) {
+            // Parse function calls like: SELECT function_name(); or SELECT function_name(params);
+            const functionCallMatch = statement.match(/SELECT\s+(\w+)\s*\(([^)]*)\)/i);
+            
+            if (functionCallMatch) {
                 const functionName = functionCallMatch[1];
                 const paramsStr = functionCallMatch[2].trim();
                 
@@ -942,7 +945,7 @@ export default async function handler(req, res) {
                 }
                 
                 // Call the function via RPC - try with params first, then without
-                let rpcData, rpcError;
+                  let rpcData, rpcError;
                 try {
                   
                   if (Object.keys(params).length > 0) {
