@@ -76,7 +76,8 @@ async function runJob(supabase, job) {
       if (jobid == 21) {
         result = await supabase.rpc('refresh_v_products_unified_with_regression_test');
       } else if (jobid == 26) {
-        result = await supabase.rpc('light_refresh_batch_with_regression_test', { p_batch: 0 });
+        // Job 26 now runs all batches sequentially with a single before/after regression test
+        result = await supabase.rpc('light_refresh_all_batches_with_regression_test');
       } else if (jobid == 27) {
         result = await supabase.rpc('light_refresh_batch_with_regression_test', { p_batch: 1 });
       } else if (jobid == 28) {
@@ -1191,7 +1192,8 @@ export default async function handler(req, res) {
             if (jobid == 21) {
               result = await supabase.rpc('refresh_v_products_unified_with_regression_test');
             } else if (jobid == 26) {
-              result = await supabase.rpc('light_refresh_batch_with_regression_test', { p_batch: 0 });
+              // Job 26 now runs all batches sequentially with a single before/after regression test
+              result = await supabase.rpc('light_refresh_all_batches_with_regression_test');
             } else if (jobid == 27) {
               result = await supabase.rpc('light_refresh_batch_with_regression_test', { p_batch: 1 });
             } else if (jobid == 28) {
