@@ -801,7 +801,8 @@
       try {
         const response = await fetch(`${API_BASE}/api/admin?action=cron_jobs`, {
           headers: {
-            'Authorization': `Bearer ${authToken}`
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer b6c3f0c9e6f44cce9e1a4f3f2d3a5c76'
           }
         });
         
@@ -1218,7 +1219,8 @@
       try {
         const response = await fetch(`${API_BASE}/api/admin?action=regression_test_results&jobid=${jobid}`, {
           headers: {
-            'Authorization': `Bearer ${authToken}`
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer b6c3f0c9e6f44cce9e1a4f3f2d3a5c76'
           }
         });
         
@@ -1381,7 +1383,8 @@
       try {
         const response = await fetch(`${API_BASE}/api/admin?action=regression_test_results&jobid=${jobId}`, {
           headers: {
-            'Authorization': `Bearer ${authToken}`
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer b6c3f0c9e6f44cce9e1a4f3f2d3a5c76'
           }
         });
         
@@ -1543,7 +1546,7 @@
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${authToken}`
+            'Authorization': 'Bearer b6c3f0c9e6f44cce9e1a4f3f2d3a5c76'
           },
           body: JSON.stringify({ jobid: jobId })
         });
@@ -1785,7 +1788,8 @@
       try {
         const response = await fetch(`${API_BASE}/api/admin?action=cron_logs&jobid=${jobid}&limit=100`, {
           headers: {
-            'Authorization': `Bearer ${authToken}`
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer b6c3f0c9e6f44cce9e1a4f3f2d3a5c76'
           }
         });
 
@@ -1904,7 +1908,7 @@
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${authToken}`
+            'Authorization': 'Bearer b6c3f0c9e6f44cce9e1a4f3f2d3a5c76'
           },
           body: JSON.stringify({ jobid: jobid })
         });
@@ -1967,7 +1971,7 @@
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${authToken}`
+            'Authorization': 'Bearer b6c3f0c9e6f44cce9e1a4f3f2d3a5c76'
           },
           body: JSON.stringify({ jobid, active })
         });
@@ -1997,7 +2001,7 @@
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${authToken}`
+            'Authorization': 'Bearer b6c3f0c9e6f44cce9e1a4f3f2d3a5c76'
           },
           body: JSON.stringify({ jobid, schedule: newSchedule })
         });
