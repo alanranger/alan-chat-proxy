@@ -50,6 +50,39 @@ export default async function handler(req, res) {
       });
     }
 
+    // Read-only aggregate helper
+    const fetchJobRunAggregates = async (jobIds = []) => {
+      if (!Array.isArray(jobIds) || jobIds.length === 0) {
+        return { statusAggregates: [], lastRunRows: [] };
+      }
+
+      // 1) Success / fail / total counts grouped by job + status
+      const { data: statusAggregates, error: aggErr } = await supabase
+        .from('job_run_details')
+        .select('jobid, status, count: count(*)')
+        .in('jobid', jobIds)
+        .group('jobid, status');
+
+      if (aggErr) {
+        console.error('Error fetching status aggregates:', aggErr);
+        return { statusAggregates: [], lastRunRows: [] };
+      }
+
+      // 2) Last run timestamps per job
+      const { data: lastRunRows, error: lastErr } = await supabase
+        .from('job_run_details')
+        .select('jobid, last_run: max(start_time)')
+        .in('jobid', jobIds)
+        .group('jobid');
+
+      if (lastErr) {
+        console.error('Error fetching last run rows:', lastErr);
+        return { statusAggregates, lastRunRows: [] };
+      }
+
+      return { statusAggregates, lastRunRows };
+    };
+
     // QA Spot Checks (GET /api/admin?action=qa)
     if (req.method === 'GET' && action === 'qa') {
       const checks = [
@@ -276,38 +309,71 @@ export default async function handler(req, res) {
     // Cron Job Management (GET /api/admin?action=cron_jobs)
     if (req.method === 'GET' && action === 'cron_jobs') {
       try {
-        // Ensure we always return JSON, even on errors
-        // For Job 21, only count stats from the last successful run (when it was fixed)
-        // Get the last success time for Job 21
-        const { data: lastSuccess, error: successError } = await supabase
-          .schema('cron')
-          .from('job_run_details')
-          .select('start_time')
-          .eq('jobid', 21)
-          .eq('status', 'succeeded')
-          .order('start_time', { ascending: false })
-          .limit(1)
-          .single();
+        const { data: baseJobs, error: jobsError } = await supabase.rpc('get_cron_jobs');
 
-        let fromDate = null;
-        if (!successError && lastSuccess) {
-          fromDate = lastSuccess.start_time;
+        if (jobsError) {
+          console.error('Error getting cron jobs:', jobsError);
+          return res.status(500).json({ error: 'Failed to get cron jobs', detail: jobsError.message });
         }
 
-        // Get all jobs with stats
-        const { data: allJobs, error: allJobsError } = await supabase
-          .rpc('get_cron_jobs_summary');
+        const jobs = baseJobs || [];
+        const jobIds = jobs
+          .map((job) => parseInt(job.jobid, 10))
+          .filter((id) => Number.isFinite(id));
 
-        if (allJobsError) {
-          console.error('Error getting cron jobs:', allJobsError);
-          return res.status(500).json({ error: 'Failed to get cron jobs', detail: allJobsError.message });
+        let statusAggregates = [];
+        let lastRunRows = [];
+        if (jobIds.length > 0) {
+          const aggregates = await fetchJobRunAggregates(jobIds);
+          statusAggregates = aggregates.statusAggregates;
+          lastRunRows = aggregates.lastRunRows;
         }
 
-        // Stats are already included in the job objects from get_cron_jobs_summary
-        // No need to recalculate - the RPC function handles this server-side
-        // The stats (success_count, failed_count, total_runs, last_run) are already in each job object
+        const statsMap = new Map();
+        jobIds.forEach((id) => {
+          statsMap.set(id, { success_count: 0, failed_count: 0, total_runs: 0 });
+        });
 
-        return res.status(200).json({ ok: true, jobs: allJobs || [] });
+        statusAggregates.forEach((row) => {
+          const jobId = parseInt(row.jobid, 10);
+          if (!Number.isFinite(jobId)) return;
+
+          const countValue = Number(row.count) || 0;
+          const normalizedStatus = (row.status || '').toLowerCase();
+          const current = statsMap.get(jobId) || { success_count: 0, failed_count: 0, total_runs: 0 };
+
+          current.total_runs += countValue;
+          if (normalizedStatus === 'succeeded' || normalizedStatus === 'success') {
+            current.success_count += countValue;
+          } else if (normalizedStatus === 'failed' || normalizedStatus === 'error') {
+            current.failed_count += countValue;
+          }
+
+          statsMap.set(jobId, current);
+        });
+
+        const lastRunMap = new Map();
+        lastRunRows.forEach((row) => {
+          const jobId = parseInt(row.jobid, 10);
+          if (!Number.isFinite(jobId) || !row.last_run) return;
+          lastRunMap.set(jobId, row.last_run);
+        });
+
+        const enrichedJobs = jobs.map((job) => {
+          const jobId = parseInt(job.jobid, 10);
+          const stats = statsMap.get(jobId) || { success_count: 0, failed_count: 0, total_runs: 0 };
+          const aggregatedLastRun = lastRunMap.get(jobId);
+
+          return {
+            ...job,
+            total_runs: stats.total_runs,
+            success_count: stats.success_count,
+            failed_count: stats.failed_count,
+            last_run: aggregatedLastRun || job.last_run || null
+          };
+        });
+
+        return res.status(200).json({ ok: true, jobs: enrichedJobs });
 
       } catch (error) {
         console.error('Error getting cron jobs:', error);
@@ -318,20 +384,23 @@ export default async function handler(req, res) {
     // Get Cron Job Logs (GET /api/admin?action=cron_logs&jobid=19&limit=50)
     if (req.method === 'GET' && action === 'cron_logs') {
       try {
-        const jobid = parseInt(req.query.jobid);
-        const limit = parseInt(req.query.limit) || 50;
+        const jobid = parseInt(req.query.jobid, 10);
+        const limitParam = parseInt(req.query.limit, 10) || 50;
+        const limit = Math.min(Math.max(limitParam, 1), 500);
 
-        if (!jobid) {
+        if (!Number.isFinite(jobid)) {
           return res.status(400).json({ error: 'jobid parameter required' });
         }
 
         const { data: logs, error: logsError } = await supabase
-          .rpc('get_cron_job_logs', {
-            p_jobid: jobid,
-            p_limit: limit
-          });
+          .from('job_run_details')
+          .select('id, jobid, status, command, return_message, start_time, end_time, duration_ms, created_at')
+          .eq('jobid', jobid)
+          .order('start_time', { ascending: false })
+          .limit(limit);
 
         if (logsError) {
+          console.error('Error querying job run details:', logsError);
           return res.status(500).json({ error: 'Failed to get logs', detail: logsError.message });
         }
 
@@ -982,7 +1051,7 @@ export default async function handler(req, res) {
 
         const jobIdInt = parseInt(jobid);
 
-        // Use RPC function to delete job run details (cron schema not exposed to client)
+        // Use RPC function to delete job run details from public.job_run_details
         // First try using RPC function, if it doesn't exist, we'll get an error
         const { data: deleteResult, error: deleteError } = await supabase.rpc('delete_job_run_details', {
           p_jobid: jobIdInt
@@ -994,9 +1063,9 @@ export default async function handler(req, res) {
           console.error('Error deleting job run details:', deleteError);
           return res.status(500).json({ 
             error: 'Failed to reset job statistics', 
-            detail: deleteError.message || 'RPC function delete_job_run_details may not exist. The cron schema is not directly accessible.',
+            detail: deleteError.message || 'RPC function delete_job_run_details may not exist or cannot access public.job_run_details.',
             code: deleteError.code,
-            hint: deleteError.hint || 'You may need to create an RPC function: CREATE OR REPLACE FUNCTION delete_job_run_details(p_jobid int) RETURNS int AS $$ DELETE FROM cron.job_run_details WHERE jobid = p_jobid; SELECT COUNT(*)::int FROM cron.job_run_details WHERE jobid = p_jobid; $$ LANGUAGE sql SECURITY DEFINER;',
+            hint: deleteError.hint || "You may need to create an RPC function: CREATE OR REPLACE FUNCTION delete_job_run_details(p_jobid int) RETURNS jsonb AS $$ DELETE FROM public.job_run_details WHERE jobid = p_jobid; GET DIAGNOSTICS v_deleted_count = ROW_COUNT; RETURN jsonb_build_object('deleted_count', v_deleted_count); $$ LANGUAGE plpgsql SECURITY DEFINER;",
             fullError: JSON.stringify(deleteError)
           });
         }
