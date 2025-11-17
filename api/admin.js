@@ -243,9 +243,14 @@ async function runJob(supabase, job) {
   }
 
   const endTime = new Date();
+  // For fire-and-forget jobs, executionSuccess is already set above
+  if (executionSuccess === false) {
+    executionSuccess = !error;
+  }
   return {
-    success: !error,
+    success: executionSuccess,
     error: error,
+    executionResult: executionResult,
     start_time: startTime,
     end_time: endTime
   };
@@ -1244,6 +1249,30 @@ export default async function handler(req, res) {
           return res.status(400).json({ error: 'jobid parameter required' });
         }
 
+        // Check if job is already running (for jobs 26, 27, 28 that use progress tracking)
+        if ([26, 27, 28].includes(parseInt(jobid))) {
+          const { data: progressData } = await supabase
+            .from('job_progress')
+            .select('progress, updated_at')
+            .eq('jobid', jobid)
+            .single();
+          
+          if (progressData && progressData.progress < 100) {
+            // Check if updated recently (within last 5 minutes) - job might still be running
+            const updatedAt = new Date(progressData.updated_at);
+            const now = new Date();
+            const minutesSinceUpdate = (now - updatedAt) / (1000 * 60);
+            
+            if (minutesSinceUpdate < 5) {
+              return res.status(409).json({ 
+                error: 'Job is already running',
+                message: `Job ${jobid} is currently running (${progressData.progress}% complete). Please wait for it to finish.`,
+                progress: progressData.progress
+              });
+            }
+          }
+        }
+
         // Get job details
         const { data: jobData, error: jobError } = await supabase.rpc('get_cron_job_details', {
           p_jobid: jobid
@@ -1258,6 +1287,7 @@ export default async function handler(req, res) {
         
         let executionResult = null;
         let error = null;
+        let executionSuccess = false; // Will be set based on result
         let recordsAffected = null;
         let regressionTestResults = null;
 
@@ -1275,12 +1305,30 @@ export default async function handler(req, res) {
               result = await supabase.rpc('refresh_v_products_unified_with_regression_test');
             } else if (jobid == 26) {
               // Map long jobs to PostgreSQL wrapper functions
-              // Wrapper returns instantly, PostgreSQL executes full job internally
-              result = await supabase.rpc('trigger_refresh_master_job');
+              // Fire-and-forget: trigger the job and return immediately
+              supabase.rpc('trigger_refresh_master_job').catch(err => {
+                console.error('Error triggering master job (fire-and-forget):', err);
+              });
+              result = { 
+                data: 'Job triggered successfully. Running in background.', 
+                fireAndForget: true 
+              };
             } else if (jobid == 27) {
-              result = await supabase.rpc('trigger_refresh_batch1_job');
+              supabase.rpc('trigger_refresh_batch1_job').catch(err => {
+                console.error('Error triggering batch1 job (fire-and-forget):', err);
+              });
+              result = { 
+                data: 'Job triggered successfully. Running in background.', 
+                fireAndForget: true 
+              };
             } else if (jobid == 28) {
-              result = await supabase.rpc('trigger_refresh_batch2_job');
+              supabase.rpc('trigger_refresh_batch2_job').catch(err => {
+                console.error('Error triggering batch2 job (fire-and-forget):', err);
+              });
+              result = { 
+                data: 'Job triggered successfully. Running in background.', 
+                fireAndForget: true 
+              };
             } else if (jobid == 31) {
               result = await supabase.rpc('cleanup_orphaned_records_with_regression_test');
             }
@@ -1290,6 +1338,11 @@ export default async function handler(req, res) {
             }
             if (result && result.error) {
               error = result.error.message;
+            }
+            // For fire-and-forget jobs, mark as successful immediately
+            if (result && result.fireAndForget) {
+              executionSuccess = true;
+              executionResult = result.data || 'Job triggered successfully. Running in background.';
             }
             
             // Get regression test results - this is handled by the wrapper function
@@ -1506,7 +1559,7 @@ export default async function handler(req, res) {
 
           // Record the job execution via public.log_job_run so the dashboard stays in sync
           // executionSuccess is already set above for fire-and-forget jobs, otherwise use !error
-          if (executionSuccess === false) {
+          if (executionSuccess === false || executionSuccess === undefined) {
             executionSuccess = !error;
           }
           let recordInserted = false;
@@ -1584,11 +1637,24 @@ export default async function handler(req, res) {
           const duration = (endTime - startTime) / 1000;
           const runtimeMs = endTime - startTime;
           
+          // Ensure executionSuccess is defined even in error case
+          if (typeof executionSuccess === 'undefined') {
+            executionSuccess = false;
+          }
+          
+          // Override command for jobs 26, 27, 28 to use wrapper functions
+          const displayCommand = (
+            parseInt(jobid) === 26 ? "SELECT trigger_refresh_master_job();" :
+            parseInt(jobid) === 27 ? "SELECT trigger_refresh_batch1_job();" :
+            parseInt(jobid) === 28 ? "SELECT trigger_refresh_batch2_job();" :
+            job.command
+          );
+          
           // Record the failed job execution via public.log_job_run
           try {
             const { error: logError } = await supabase.rpc('log_job_run', {
               jobid: parseInt(jobid),
-              command: job.command,
+              command: displayCommand,
               status: 'failed',
               return_message: execError.message || 'Job execution failed',
               start_time: startTime.toISOString(),
@@ -1604,7 +1670,7 @@ export default async function handler(req, res) {
 
           await logJobRun(
             parseInt(jobid, 10),
-            job.command,
+            displayCommand,
             "failed",
             execError.message || 'Job execution failed',
             startTime.toISOString(),
@@ -1616,9 +1682,10 @@ export default async function handler(req, res) {
             job: {
               id: jobid,
               name: job.jobname || job.name,
-              command: job.command
+              command: displayCommand
             },
             execution: {
+              success: false,
               success: false,
               error: execError.message,
               duration: duration,
