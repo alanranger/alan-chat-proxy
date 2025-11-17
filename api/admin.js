@@ -240,6 +240,45 @@ export default async function handler(req, res) {
       }
     }
 
+    // Job progress endpoint (public info, no auth required)
+    if (action === "job_progress") {
+      const jobid = parseInt(req.query.jobid, 10);
+      if (!jobid) {
+        return res.status(400).json({ error: 'jobid parameter required' });
+      }
+      
+      const { data, error } = await supabase
+        .from("job_progress")
+        .select("*")
+        .eq("jobid", jobid)
+        .single();
+      
+      if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
+        return res.status(500).json({ error: 'Failed to fetch progress', detail: error.message });
+      }
+      
+      return res.status(200).json({ ok: true, progress: data || null });
+    }
+    
+    // Reset job progress endpoint
+    if (action === "reset_job_progress") {
+      const jobid = parseInt(req.query.jobid, 10);
+      if (!jobid) {
+        return res.status(400).json({ error: 'jobid parameter required' });
+      }
+      
+      const { error } = await supabase
+        .from("job_progress")
+        .delete()
+        .eq("jobid", jobid);
+      
+      if (error) {
+        return res.status(500).json({ error: 'Failed to reset progress', detail: error.message });
+      }
+      
+      return res.status(200).json({ ok: true });
+    }
+
     // Scheduler tick endpoint
     /**
      * Map a human-readable schedule description to an approximate interval in minutes.

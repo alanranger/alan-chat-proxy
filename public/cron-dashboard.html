@@ -745,6 +745,38 @@
     .sparkline-wrapper canvas:last-of-type {
       display: none;
     }
+    
+    /* Progress bar styles */
+    .progress-section {
+      margin-top: 10px;
+    }
+    
+    .progress-bar-background {
+      width: 100%;
+      height: 10px;
+      background: #eee;
+      border-radius: 4px;
+      overflow: hidden;
+      margin-top: 4px;
+    }
+    
+    .progress-bar {
+      height: 10px;
+      width: 0%;
+      background: linear-gradient(90deg, #4caf50, #66bb6a);
+      transition: width 0.3s ease-in-out;
+    }
+    
+    .progress-status {
+      font-weight: 600;
+      color: #444;
+    }
+    
+    .progress-message {
+      font-size: 0.85rem;
+      color: #666;
+      margin-top: 4px;
+    }
 
     .sparkline-section {
       margin-top: 15px;
@@ -992,6 +1024,41 @@
         loadJobs();
       }
     }
+    
+    // Progress polling function (live updating every 5 seconds)
+    function startProgressPolling(jobId) {
+      setInterval(async () => {
+        try {
+          const res = await fetch(`${API_BASE}/api/admin?action=job_progress&jobid=${jobId}`);
+          const json = await res.json();
+          if (!json?.progress) return;
+          
+          const el = document.querySelector(`#progress-${jobId}`);
+          if (!el) return;
+          
+          const progressBar = el.querySelector(".progress-bar");
+          const progressStatus = el.querySelector(".progress-status");
+          const progressMessage = el.querySelector(".progress-message");
+          
+          if (progressBar) {
+            progressBar.style.width = `${json.progress.percent}%`;
+          }
+          if (progressStatus) {
+            progressStatus.innerText = json.progress.phase.replace(/_/g, " ");
+          }
+          if (progressMessage) {
+            progressMessage.innerText = json.progress.message || "";
+          }
+        } catch (err) {
+          console.warn(`Failed to poll progress for job ${jobId}:`, err);
+        }
+      }, 5000);
+    }
+    
+    // Start polling for jobs 26, 27, 28
+    startProgressPolling(26);
+    startProgressPolling(27);
+    startProgressPolling(28);
 
     function clearAuth() {
       authToken = '';
@@ -1825,6 +1892,18 @@
     async function runJobNow(jobId, jobName) {
       addDebugLog(`Run job now requested: ${jobName} (ID: ${jobId})`, 'info', { jobId, jobName });
       
+      // Reset progress for jobs 26, 27, 28
+      if ([26, 27, 28].includes(jobId)) {
+        try {
+          await fetch(`${API_BASE}/api/admin?action=reset_job_progress&jobid=${jobId}`, {
+            method: 'GET',
+            headers: buildAuthHeaders()
+          });
+        } catch (err) {
+          console.warn('Failed to reset progress:', err);
+        }
+      }
+      
       const modal = document.getElementById('jobExecutionModal');
       const modalContent = document.getElementById('jobExecutionContent');
       
@@ -2288,6 +2367,17 @@
               <div style="font-size: 11px; color: #7f8c8d;">${job.failed_count} failed</div>
             </div>
           </div>
+          ${[26, 27, 28].includes(job.jobid) ? `
+          <div class="progress-section" id="progress-${job.jobid}">
+            <div class="progress-header">
+              <span class="progress-status">Idle</span>
+            </div>
+            <div class="progress-bar-background">
+              <div class="progress-bar"></div>
+            </div>
+            <div class="progress-message"></div>
+          </div>
+          ` : ''}
           <div class="sparkline-section">
             <div style="font-size: 12px; font-weight: 600; margin-bottom: 5px; color: #666;">Last runs</div>
             <div class="sparkline-container" id="sparkline-${job.jobid}"></div>
