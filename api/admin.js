@@ -5,20 +5,22 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-// Prefer environment variables set in the deployment; fall back only if missing
-const SUPABASE_URL = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://igzvwbvgvmzvvzoclufx.supabase.co';
-const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY;
-// Match the hardcoded UI token as a fallback so the button works
-const EXPECTED_TOKEN = (process.env.INGEST_TOKEN || '').trim() || 'b6c3f0c9e6f44cce9e1a4f3f2d3a5c76';
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-// Initialize Supabase client with error handling
+if (!SUPABASE_URL) {
+  console.error("ERROR: SUPABASE_URL is not set");
+}
 if (!SUPABASE_SERVICE_ROLE_KEY) {
-  console.error('ERROR: SUPABASE_SERVICE_ROLE_KEY is not set!');
+  console.error("ERROR: SUPABASE_SERVICE_ROLE_KEY is not set");
 }
 
-const supabase = SUPABASE_SERVICE_ROLE_KEY 
+const supabase = (SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY)
   ? createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
   : null;
+
+// Match the hardcoded UI token as a fallback so the button works
+const EXPECTED_TOKEN = (process.env.INGEST_TOKEN || '').trim() || 'b6c3f0c9e6f44cce9e1a4f3f2d3a5c76';
 
 export default async function handler(req, res) {
   // Wrap entire handler in try-catch to ensure JSON responses
