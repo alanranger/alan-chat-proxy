@@ -516,6 +516,28 @@ export default async function handler(req, res) {
       }
     }
 
+    // Get Job Logs (GET /api/admin?action=get_job_logs&jobid=13)
+    if (req.method === 'GET' && action === 'get_job_logs') {
+      // Authentication is already handled at the top of the handler
+      const jobid = Number(req.query.jobid);
+      if (!jobid) {
+        return res.status(400).json({ error: 'missing jobid' });
+      }
+
+      const { data, error } = await supabase
+        .from('job_run_details')
+        .select('*')
+        .eq('jobid', jobid)
+        .order('start_time', { ascending: false })
+        .limit(50);
+
+      if (error) {
+        return res.status(500).json({ error: 'db_error', detail: error.message });
+      }
+
+      return res.status(200).json({ logs: data || [] });
+    }
+
     // Update Cron Job Schedule (POST /api/admin?action=update_cron_schedule)
     if (req.method === 'POST' && action === 'update_cron_schedule') {
       try {
