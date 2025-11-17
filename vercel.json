@@ -1,8 +1,8 @@
 {
   "crons": [
     {
-      "path": "/api/light-refresh?action=run",
-      "schedule": "0 */4 * * *"
+      "path": "/api/admin?action=scheduler_tick",
+      "schedule": "*/1 * * * *"
     }
   ],
   "functions": {

@@ -2109,6 +2109,52 @@
       }
     }
 
+    // Helper function to calculate frequency_minutes from cron schedule
+    function calculateFrequencyMinutes(cronSchedule) {
+      const parts = cronSchedule.trim().split(/\s+/);
+      if (parts.length !== 5) return null;
+      
+      const [minute, hour, dayOfMonth, month, dayOfWeek] = parts;
+      
+      // Every minute
+      if (minute === '*' && hour === '*' && dayOfMonth === '*' && month === '*' && dayOfWeek === '*') {
+        return 1;
+      }
+      
+      // Every N minutes
+      if (minute.startsWith('*/') && hour === '*' && dayOfMonth === '*' && month === '*' && dayOfWeek === '*') {
+        return parseInt(minute.substring(2)) || null;
+      }
+      
+      // Every hour at specific minute
+      if (minute !== '*' && hour === '*' && dayOfMonth === '*' && month === '*' && dayOfWeek === '*') {
+        return 60;
+      }
+      
+      // Every N hours
+      if (hour.startsWith('*/') && dayOfMonth === '*' && month === '*' && dayOfWeek === '*') {
+        const hours = parseInt(hour.substring(2)) || 1;
+        return hours * 60;
+      }
+      
+      // Daily
+      if (dayOfMonth === '*' && month === '*' && dayOfWeek === '*') {
+        return 1440; // 24 hours
+      }
+      
+      // Weekly
+      if (dayOfWeek !== '*' && dayOfMonth === '*' && month === '*') {
+        return 10080; // 7 days
+      }
+      
+      // Monthly
+      if (dayOfMonth !== '*' && month === '*' && dayOfWeek === '*') {
+        return 43200; // ~30 days
+      }
+      
+      return null;
+    }
+
     async function updateSchedule(jobid) {
       const newSchedule = document.getElementById('newSchedule').value.trim();
       
@@ -2118,15 +2164,34 @@
       }
 
       try {
-        const response = await fetch(`${API_BASE}/api/admin?action=update_cron_schedule`, {
+        // Update cron schedule
+        const scheduleResponse = await fetch(`${API_BASE}/api/admin?action=update_cron_schedule`, {
           method: 'POST',
           headers: buildAuthHeaders(),
           body: JSON.stringify({ jobid, schedule: newSchedule })
         });
 
-        const data = await response.json();
-        if (!data.ok) {
-          throw new Error(data.error || 'Failed to update schedule');
+        const scheduleData = await scheduleResponse.json();
+        if (!scheduleData.ok) {
+          throw new Error(scheduleData.error || 'Failed to update schedule');
+        }
+
+        // Calculate and update frequency_minutes
+        const frequencyMinutes = calculateFrequencyMinutes(newSchedule);
+        if (frequencyMinutes !== null) {
+          try {
+            await fetch(`${API_BASE}/api/admin?action=update_schedule`, {
+              method: 'POST',
+              headers: buildAuthHeaders(),
+              body: JSON.stringify({
+                jobId: jobid,
+                frequency_minutes: frequencyMinutes
+              })
+            });
+          } catch (freqError) {
+            // If frequency update fails, log but don't fail the whole operation
+            console.warn('Failed to update frequency_minutes:', freqError);
+          }
         }
 
         showMessage('Schedule updated successfully!', 'success');
