@@ -226,6 +226,57 @@ export default async function handler(req, res) {
     }
 
     // Scheduler tick endpoint
+    /**
+     * Map a human-readable schedule description to an approximate interval in minutes.
+     * This is used by scheduler_tick so the tick engine can emulate the cron schedule.
+     * 
+     * Known patterns (from the dashboard pills / Edit Schedule UI):
+     * - "Every hour"
+     * - "Every 4 hours at :01" / "Every 4 hours at :02" (any "Every N hours at")
+     * - "Every Mon at 2:00 AM"
+     * - "Every day at HH:MM" (if present)
+     * 
+     * Fallback: 60 minutes.
+     */
+    function getIntervalMinutesFromSchedule(scheduleText) {
+      if (!scheduleText || typeof scheduleText !== 'string') {
+        return 60; // safe default
+      }
+
+      const s = scheduleText.trim();
+
+      // 1) Simple hourly
+      if (/^Every hour$/i.test(s)) {
+        return 60;
+      }
+
+      // 2) "Every N hours at :MM"
+      // Examples: "Every 4 hours at :01", "Every 2 hours at :00"
+      const everyHoursMatch = s.match(/^Every\s+(\d+)\s+hours?/i);
+      if (everyHoursMatch) {
+        const n = parseInt(everyHoursMatch[1], 10);
+        if (Number.isFinite(n) && n > 0) {
+          return n * 60;
+        }
+      }
+
+      // 3) "Every Mon at 2:00 AM" style weekly schedule
+      // Treat as once per week => 7 days
+      if (/^Every\s+(Mon|Tue|Wed|Thu|Fri|Sat|Sun)\s+at\s+/i.test(s)) {
+        return 7 * 24 * 60;
+      }
+
+      // 4) "Every day at HH:MM" (if you have this variant)
+      if (/^Every\s+day\s+at\s+/i.test(s) || /^Daily\s+at\s+/i.test(s)) {
+        return 24 * 60;
+      }
+
+      // If other descriptive forms exist, consider adding specific cases here.
+
+      // Fallback: 60 minutes
+      return 60;
+    }
+
     if (action === "scheduler_tick") {
       // Disable pg_cron jobs silently
       await disablePgCronJobs(supabase);
@@ -256,22 +307,58 @@ export default async function handler(req, res) {
       for (const job of cronJobs) {
         if (!job.active) continue;
 
-        // Get frequency_minutes - try direct field, or calculate from schedule
-        let freqMinutes = job.frequency_minutes;
-        if (!freqMinutes && job.schedule) {
-          // Calculate from cron schedule (simplified - assumes hourly or daily)
+        // Derive frequency from schedule text (human-readable description)
+        // First try to get the schedule description, fall back to parsing cron expression
+        let scheduleText = job.schedule_description || job.schedule_label || '';
+        
+        // If no description, parse the cron schedule to get a description
+        if (!scheduleText && job.schedule) {
           const parts = job.schedule.trim().split(/\s+/);
           if (parts.length === 5) {
-            const hour = parts[1];
-            if (hour === '*') {
-              freqMinutes = 60; // Every hour
-            } else if (hour.startsWith('*/')) {
-              freqMinutes = parseInt(hour.substring(2)) * 60; // Every N hours
-            } else {
-              freqMinutes = 1440; // Daily
+            const [minute, hour, dayOfMonth, month, dayOfWeek] = parts;
+            
+            // Every hour
+            if (minute !== '*' && hour === '*' && dayOfMonth === '*' && month === '*' && dayOfWeek === '*') {
+              if (minute === '0') {
+                scheduleText = 'Every hour';
+              } else {
+                scheduleText = `Every hour (at :${minute.padStart(2, '0')})`;
+              }
+            }
+            // Every N hours
+            else if (hour.startsWith('*/') && dayOfMonth === '*' && month === '*' && dayOfWeek === '*') {
+              const hours = hour.substring(2);
+              const minText = minute !== '0' ? ` at :${minute.padStart(2, '0')}` : '';
+              scheduleText = `Every ${hours} hour${hours !== '1' ? 's' : ''}${minText}`;
+            }
+            // Daily at specific time
+            else if (minute !== '*' && hour !== '*' && dayOfMonth === '*' && month === '*' && dayOfWeek === '*') {
+              const h = parseInt(hour);
+              const m = minute.padStart(2, '0');
+              const ampm = h >= 12 ? 'PM' : 'AM';
+              const h12 = h > 12 ? h - 12 : (h === 0 ? 12 : h);
+              scheduleText = `Daily at ${h12}:${m} ${ampm}`;
+            }
+            // Weekly
+            else if (dayOfWeek !== '*' && dayOfWeek !== '0' && dayOfWeek !== '7' && dayOfMonth === '*' && month === '*') {
+              const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+              const day = parseInt(dayOfWeek);
+              const dayName = days[day] || dayOfWeek;
+              if (hour !== '*' && minute !== '*') {
+                const h = parseInt(hour);
+                const m = minute.padStart(2, '0');
+                const ampm = h >= 12 ? 'PM' : 'AM';
+                const h12 = h > 12 ? h - 12 : (h === 0 ? 12 : h);
+                scheduleText = `Every ${dayName} at ${h12}:${m} ${ampm}`;
+              } else {
+                scheduleText = `Every ${dayName}`;
+              }
             }
           }
         }
+        
+        // Get frequency from schedule text
+        const freqMinutes = getIntervalMinutesFromSchedule(scheduleText);
         if (!freqMinutes) continue;
 
         const lastRun = job.last_run ? new Date(job.last_run) : null;

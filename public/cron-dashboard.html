@@ -699,28 +699,6 @@
       background: #bdc3c7;
     }
 
-    .freq-input {
-      width: 80px;
-      padding: 4px 8px;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-      margin: 0 5px;
-      font-size: 14px;
-    }
-
-    .save-freq-btn {
-      padding: 4px 12px;
-      background: #3498db;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 12px;
-    }
-
-    .save-freq-btn:hover {
-      background: #2980b9;
-    }
 
     .next-run-badge {
       display: inline-block;
@@ -1046,17 +1024,21 @@
      * @returns {JobSummary}
      */
     function normalizeJob(apiJob) {
+      // Parse schedule to get human-readable description
+      const schedule = apiJob.schedule || '';
+      const scheduleDescription = parseCronFrequency(schedule);
+      
       return {
         jobid: apiJob.jobid,
         name: apiJob.jobname || apiJob.name || `Job ${apiJob.jobid}`,
-        frequency_minutes: apiJob.frequency_minutes || 60,
         last_run: apiJob.last_run || null,
         total_runs: apiJob.total_runs || 0,
         success_count: apiJob.success_count || 0,
         failed_count: apiJob.failed_count || 0,
         status: apiJob.active ? 'active' : 'inactive',
         recent_runs: apiJob.recent_runs || [],
-        schedule: apiJob.schedule || '',
+        schedule: schedule,
+        schedule_description: scheduleDescription,
         jobname: apiJob.jobname || apiJob.name || `Job ${apiJob.jobid}`,
         command: apiJob.command || ''
       };
@@ -1295,38 +1277,6 @@
           console.error(`Error fetching logs for job ${job.jobid}:`, error);
         }
       }
-      
-      // Setup event handlers for frequency save buttons
-      document.querySelectorAll('.save-freq-btn').forEach(btn => {
-        btn.addEventListener('click', async function() {
-          const jobid = parseInt(this.dataset.jobid);
-          const input = document.querySelector(`.freq-input[data-jobid="${jobid}"]`);
-          const newValue = parseInt(input.value, 10);
-          
-          if (!newValue || newValue < 1) {
-            showMessage('Frequency must be at least 1 minute', 'error');
-            return;
-          }
-          
-          try {
-            const response = await fetch(`${API_BASE}/api/admin?action=update_schedule`, {
-              method: 'POST',
-              headers: buildAuthHeaders(),
-              body: JSON.stringify({ jobid, frequency_minutes: newValue })
-            });
-            
-            const data = await response.json();
-            if (!data.ok) {
-              throw new Error(data.error || 'Failed to update frequency');
-            }
-            
-            showMessage('Frequency updated successfully!', 'success');
-            loadJobs(); // Refresh job list
-          } catch (error) {
-            showMessage(`Error updating frequency: ${error.message}`, 'error');
-          }
-        });
-      });
       
       // Setup event handlers for view logs buttons (inline drawer)
       document.querySelectorAll('.view-logs-btn').forEach(btn => {
@@ -2029,22 +1979,76 @@
     }
 
     /**
-     * Calculate next run in minutes
+     * Map a human-readable schedule description to an approximate interval in minutes.
+     * Must match the backend getIntervalMinutesFromSchedule function exactly.
+     */
+    function getIntervalMinutesFromSchedule(scheduleText) {
+      if (!scheduleText || typeof scheduleText !== 'string') return 60;
+      const s = scheduleText.trim();
+
+      if (/^Every hour$/i.test(s)) return 60;
+
+      const everyHoursMatch = s.match(/^Every\s+(\d+)\s+hours?/i);
+      if (everyHoursMatch) {
+        const n = parseInt(everyHoursMatch[1], 10);
+        if (Number.isFinite(n) && n > 0) return n * 60;
+      }
+
+      if (/^Every\s+(Mon|Tue|Wed|Thu|Fri|Sat|Sun)\s+at\s+/i.test(s)) {
+        return 7 * 24 * 60;
+      }
+
+      if (/^Every\s+day\s+at\s+/i.test(s) || /^Daily\s+at\s+/i.test(s)) {
+        return 24 * 60;
+      }
+
+      return 60;
+    }
+
+    /**
+     * Format next run label from total minutes
+     * @param {number} totalMinutes
+     * @returns {string}
+     */
+    function formatNextRunLabel(totalMinutes) {
+      if (totalMinutes <= 0) return 'Due now';
+
+      const days = Math.floor(totalMinutes / (60 * 24));
+      const hours = Math.floor((totalMinutes % (60 * 24)) / 60);
+      const mins = totalMinutes % 60;
+
+      const parts = [];
+      if (days) parts.push(`${days}d`);
+      if (hours) parts.push(`${hours}h`);
+      if (mins || parts.length === 0) parts.push(`${mins}m`);
+
+      return `Next run in ${parts.join(' ')}`;
+    }
+
+    /**
+     * Calculate next run in minutes from schedule
      * @param {JobSummary} job
      * @param {Date} now
-     * @returns {number|null} Minutes until next run, or null if not scheduled
+     * @returns {number} Minutes until next run, or 0 if due now
      */
     function calculateNextRunInMinutes(job, now = new Date()) {
-      if (!job.frequency_minutes || job.frequency_minutes <= 0) return null;
+      const lastRun = job.last_run ? new Date(job.last_run) : null;
 
-      if (!job.last_run) return job.frequency_minutes; // first run: assume full interval
+      // Get schedule text (human-readable description)
+      const scheduleText = job.schedule_description || job.schedule_label || parseCronFrequency(job.schedule) || '';
+      const freqMinutes = getIntervalMinutesFromSchedule(scheduleText);
 
-      const lastRun = new Date(job.last_run);
-      const diffMs = lastRun.getTime() + job.frequency_minutes * 60_000 - now.getTime();
-      const diffMinutes = Math.ceil(diffMs / 60_000);
+      if (!lastRun || isNaN(lastRun.getTime())) {
+        // If never run before, just say it's due now
+        return 0;
+      }
 
-      // if negative (overdue), clamp to 0 so health logic handles "overdue"
-      return diffMinutes < 0 ? 0 : diffMinutes;
+      const intervalMs = freqMinutes * 60 * 1000;
+      const nextRunTime = new Date(lastRun.getTime() + intervalMs);
+      const diffMs = nextRunTime.getTime() - now.getTime();
+
+      const diffMinutes = Math.max(0, Math.round(diffMs / (60 * 1000)));
+      return diffMinutes;
     }
 
     /**
@@ -2057,7 +2061,8 @@
       const now = new Date();
       const lastRun = job.last_run ? new Date(job.last_run) : null;
       const minutesSinceLastRun = lastRun ? Math.floor((now - lastRun) / (1000 * 60)) : null;
-      const freqMinutes = job.frequency_minutes || 60;
+      const scheduleText = job.schedule_description || job.schedule_label || parseCronFrequency(job.schedule) || '';
+      const freqMinutes = getIntervalMinutesFromSchedule(scheduleText);
 
       // Error conditions
       if (job.failed_count > 0 && job.success_count === 0) {
@@ -2217,14 +2222,7 @@
       
       // Calculate next run and health
       const nextRunInMinutes = calculateNextRunInMinutes(job);
-      let nextRunText = '';
-      if (nextRunInMinutes === null) {
-        nextRunText = 'Not scheduled';
-      } else if (nextRunInMinutes === 0) {
-        nextRunText = 'Due now';
-      } else {
-        nextRunText = `Next run in ${nextRunInMinutes}m`;
-      }
+      const nextRunText = formatNextRunLabel(nextRunInMinutes);
       
       const health = getJobHealth(job, nextRunInMinutes);
       
@@ -2244,7 +2242,6 @@
         groupType === 'system' ? '#fa709a' :
         '#3498db';
       
-      const currentFreqMinutes = job.frequency_minutes || 60;
       const isLogDrawerOpen = activeLogJobId === job.jobid;
       
       return `
@@ -2262,11 +2259,6 @@
           <div style="margin-bottom: 15px;">
             <div class="frequency-pill">⏰ ${frequency}</div>
             <div class="next-run-badge">${nextRunText}</div>
-          </div>
-          <div style="margin-bottom: 10px;">
-            <label>Frequency (minutes)</label>
-            <input type="number" class="freq-input" data-jobid="${job.jobid}" min="1" value="${currentFreqMinutes}">
-            <button class="save-freq-btn" data-jobid="${job.jobid}">Save</button>
           </div>
           ${regressionSummary}
           <div class="job-description">${description}</div>
