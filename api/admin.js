@@ -872,67 +872,35 @@ export default async function handler(req, res) {
             }
           }
 
-          // Record the job execution in cron.job_run_details using direct SQL via PostgREST
-          // Using service role key to execute raw SQL that inserts into cron schema
+          // Record the job execution via public.log_job_run so the dashboard stays in sync
           const executionSuccess = !error;
           let recordInserted = false;
           let recordCount = 0;
           let recordError = null;
           
           try {
-            // Use PostgREST REST API directly with service role key to insert into cron.job_run_details
-            // The service role key has full access to all schemas
-            const insertResponse = await fetch(`${SUPABASE_URL}/rest/v1/rpc/insert_job_run_detail`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-                'apikey': SUPABASE_SERVICE_ROLE_KEY,
-                'Prefer': 'return=representation'
-              },
-              body: JSON.stringify({
-                p_jobid: parseInt(jobid),
-                p_command: job.command,
-                p_status: executionSuccess ? 'succeeded' : 'failed',
-                p_return_message: executionSuccess 
-                  ? (executionResult ? JSON.stringify(executionResult).substring(0, 500) : 'Job completed successfully')
-                  : error || 'Job execution failed',
-                p_start_time: startTime.toISOString(),
-                p_end_time: endTime.toISOString()
-              })
+            const { data: logData, error: logError } = await supabase.rpc('log_job_run', {
+              jobid: parseInt(jobid),
+              command: job.command,
+              status: executionSuccess ? 'succeeded' : 'failed',
+              return_message: executionSuccess 
+                ? (executionResult ? JSON.stringify(executionResult).substring(0, 500) : 'Job completed successfully')
+                : error || 'Job execution failed',
+              start_time: startTime.toISOString(),
+              end_time: endTime.toISOString()
             });
             
-            const insertData = await insertResponse.json();
-            
-            if (!insertResponse.ok) {
-              const errorDetails = {
-                status: insertResponse.status,
-                statusText: insertResponse.statusText,
-                error: insertData
-              };
-              console.error('Error recording job execution:', JSON.stringify(errorDetails, null, 2));
-              recordError = `HTTP ${insertResponse.status}: ${insertResponse.statusText} - ${JSON.stringify(insertData)}`;
-              recordInserted = false;
-              recordCount = 0;
-            } else if (insertData && insertData.inserted > 0) {
-              recordInserted = true;
-              recordCount = insertData.inserted;
-              console.log(`Successfully recorded job execution for job ${jobid}:`, insertData);
+            if (logError) {
+              console.error('Error logging job run via RPC:', logError);
+              recordError = logError.message || 'Unknown RPC error';
             } else {
-              // RPC returned success but insert failed (error in JSON response)
-              const errorMsg = insertData?.error || 'Unknown error';
-              const errorCode = insertData?.error_code || 'UNKNOWN';
-              recordError = `Error: ${errorMsg} (Code: ${errorCode})`;
-              console.error('Error recording job execution (in response):', errorMsg, 'Code:', errorCode);
-              console.error('Full response:', JSON.stringify(insertData, null, 2));
-              recordInserted = false;
-              recordCount = 0;
+              recordInserted = true;
+              recordCount = Array.isArray(logData) ? logData.length : logData ? 1 : 0;
+              console.log(`Successfully logged job run for job ${jobid}:`, logData);
             }
           } catch (catchError) {
-            // Log error but don't fail the response
             recordError = catchError.message || String(catchError);
-            console.error('Error recording job execution (catch):', catchError);
-            console.error('Record error details:', JSON.stringify(catchError, null, 2));
+            console.error('Unexpected error logging job run:', catchError);
           }
 
           return res.status(200).json({
@@ -961,41 +929,22 @@ export default async function handler(req, res) {
           const endTime = new Date();
           const duration = (endTime - startTime) / 1000;
           
-          // Record the failed job execution in cron.job_run_details using direct SQL via PostgREST
+          // Record the failed job execution via public.log_job_run
           try {
-            const insertResponse = await fetch(`${SUPABASE_URL}/rest/v1/rpc/insert_job_run_detail`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-                'apikey': SUPABASE_SERVICE_ROLE_KEY,
-                'Prefer': 'return=representation'
-              },
-              body: JSON.stringify({
-                p_jobid: parseInt(jobid),
-                p_command: job.command,
-                p_status: 'failed',
-                p_return_message: execError.message || 'Job execution failed',
-                p_start_time: startTime.toISOString(),
-                p_end_time: endTime.toISOString()
-              })
+            const { error: logError } = await supabase.rpc('log_job_run', {
+              jobid: parseInt(jobid),
+              command: job.command,
+              status: 'failed',
+              return_message: execError.message || 'Job execution failed',
+              start_time: startTime.toISOString(),
+              end_time: endTime.toISOString()
             });
             
-            const insertData = await insertResponse.json();
-            
-            if (!insertResponse.ok) {
-              console.error('Error recording failed job execution:', insertResponse.status, insertResponse.statusText);
-              console.error('Insert error details:', JSON.stringify(insertData, null, 2));
-            } else if (insertData && insertData.inserted > 0) {
-              console.log(`Successfully recorded failed job execution for job ${jobid}:`, insertData);
-            } else {
-              const errorMsg = insertData?.error || 'Unknown error';
-              const errorCode = insertData?.error_code || 'UNKNOWN';
-              console.error('Error recording failed job execution (in response):', errorMsg, 'Code:', errorCode);
+            if (logError) {
+              console.error('Error logging failed job run via RPC:', logError);
             }
           } catch (recordError) {
-            // Log error but don't fail the response
-            console.error('Error recording job execution:', recordError);
+            console.error('Unexpected error logging failed job run:', recordError);
           }
           
           return res.status(200).json({
