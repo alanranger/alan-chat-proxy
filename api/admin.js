@@ -4,6 +4,7 @@
 // Replaces: qa-spot-checks.js, refresh-mappings.js
 
 import { createClient } from '@supabase/supabase-js';
+import { logJobRun } from '../helpers/logJobRun.js';
 
 // Reliable Vercel environment loading
 const SUPABASE_URL =
@@ -82,6 +83,26 @@ export default async function handler(req, res) {
 
     // Scheduler tick endpoint
     if (action === "scheduler_tick") {
+      // TODO: When automatic job execution is implemented, wrap each job execution with:
+      // const start_time = new Date();
+      // try {
+      //   const result = await runJob(jobid);
+      //   await logJobRun(
+      //     jobid,
+      //     "success",
+      //     JSON.stringify(result || {}),
+      //     start_time,
+      //     new Date()
+      //   );
+      // } catch (err) {
+      //   await logJobRun(
+      //     jobid,
+      //     "error",
+      //     err?.message || "unknown error",
+      //     start_time,
+      //     new Date()
+      //   );
+      // }
       return res.status(200).json({ ok: true, message: "scheduler tick available" });
     }
 
@@ -1052,12 +1073,15 @@ export default async function handler(req, res) {
             console.error('Unexpected error logging job run:', catchError);
           }
 
-          await logCronRun({
-            jobid: parseInt(jobid, 10),
-            success: executionSuccess,
-            errorMessage: executionSuccess ? null : (error || recordError || 'Job execution failed'),
-            runtimeMs
-          });
+          await logJobRun(
+            parseInt(jobid, 10),
+            executionSuccess ? "success" : "error",
+            executionSuccess 
+              ? (executionResult ? JSON.stringify(executionResult).substring(0, 500) : 'Job completed successfully')
+              : (error || recordError || 'Job execution failed'),
+            startTime.toISOString(),
+            endTime.toISOString()
+          );
 
           return res.status(200).json({
             ok: true,
@@ -1104,12 +1128,13 @@ export default async function handler(req, res) {
             console.error('Unexpected error logging failed job run:', recordError);
           }
 
-          await logCronRun({
-            jobid: parseInt(jobid, 10),
-            success: false,
-            errorMessage: execError.message || 'Job execution failed',
-            runtimeMs
-          });
+          await logJobRun(
+            parseInt(jobid, 10),
+            "error",
+            execError.message || 'Job execution failed',
+            startTime.toISOString(),
+            endTime.toISOString()
+          );
           
           return res.status(200).json({
             ok: true,
