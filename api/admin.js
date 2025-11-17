@@ -23,6 +23,11 @@ const supabase = (SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY)
 const EXPECTED_TOKEN = (process.env.INGEST_TOKEN || '').trim() || 'b6c3f0c9e6f44cce9e1a4f3f2d3a5c76';
 
 export default async function handler(req, res) {
+  console.log("DEBUG ENV", {
+    SUPABASE_URL: process.env.SUPABASE_URL,
+    NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
+    SERVICE_ROLE_SET: !!process.env.SUPABASE_SERVICE_ROLE_KEY
+  });
   // Wrap entire handler in try-catch to ensure JSON responses
   try {
     // CORS headers
