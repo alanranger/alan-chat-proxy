@@ -5,19 +5,13 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-const SUPABASE_URL = process.env.SUPABASE_URL;
-const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const supabaseUrl = process.env.SUPABASE_URL;
+const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-if (!SUPABASE_URL) {
-  console.error("ERROR: SUPABASE_URL is not set");
-}
-if (!SUPABASE_SERVICE_ROLE_KEY) {
-  console.error("ERROR: SUPABASE_SERVICE_ROLE_KEY is not set");
-}
+if (!supabaseUrl) throw new Error('Missing SUPABASE_URL');
+if (!serviceRoleKey) throw new Error('Missing SUPABASE_SERVICE_ROLE_KEY');
 
-const supabase = (SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY)
-  ? createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
-  : null;
+const supabase = createClient(supabaseUrl, serviceRoleKey);
 
 // Match the hardcoded UI token as a fallback so the button works
 const EXPECTED_TOKEN = (process.env.INGEST_TOKEN || '').trim() || 'b6c3f0c9e6f44cce9e1a4f3f2d3a5c76';
