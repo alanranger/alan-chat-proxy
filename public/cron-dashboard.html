@@ -712,6 +712,100 @@
     .preset-btn:hover {
       background: #bdc3c7;
     }
+
+    .freq-input {
+      width: 80px;
+      padding: 4px 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      margin: 0 5px;
+      font-size: 14px;
+    }
+
+    .save-freq-btn {
+      padding: 4px 12px;
+      background: #3498db;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+
+    .save-freq-btn:hover {
+      background: #2980b9;
+    }
+
+    .next-run-indicator {
+      display: inline-block;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+      margin-top: 5px;
+    }
+
+    .health-badge {
+      display: inline-block;
+      padding: 6px 12px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+
+    .health-badge.unhealthy {
+      background: #ff4d4d;
+      color: white;
+    }
+
+    .health-badge.stuck {
+      background: #ff9900;
+      color: white;
+    }
+
+    .sparkline {
+      width: 150px;
+      height: 40px;
+      margin-top: 10px;
+    }
+
+    .view-logs-btn {
+      background: #6c757d;
+      color: white;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+      margin-top: 10px;
+    }
+
+    .view-logs-btn:hover {
+      background: #5a6268;
+    }
+
+    .modal.hidden {
+      display: none;
+    }
+
+    #logModal .modal-content {
+      max-width: 800px;
+    }
+
+    #logContent {
+      background: #1e1e1e;
+      color: #d4d4d4;
+      padding: 15px;
+      border-radius: 4px;
+      max-height: 500px;
+      overflow-y: auto;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      white-space: pre-wrap;
+    }
   </style>
 </head>
 <body>
@@ -1054,6 +1148,85 @@
       }
 
       container.innerHTML = html;
+      
+      // Fetch run history, render sparklines, and update health badges for each job
+      for (const job of jobs) {
+        try {
+          const logRes = await fetch(`${API_BASE}/api/admin?action=get_job_logs&jobid=${job.jobid}`, {
+            headers: buildAuthHeaders()
+          });
+          const { logs } = await logRes.json();
+          
+          if (logs && logs.length > 0) {
+            const runHistory = logs.slice(0, 10).map(log => ({
+              status: log.status,
+              success: log.status === 'succeeded' || log.status === 'success'
+            }));
+            renderSparkline(`sparkline-${job.jobid}`, runHistory);
+            
+            // Update health badges with actual run history
+            const healthIssues = detectHealthIssues(job, logs.slice(0, 3));
+            const jobCard = document.querySelector(`[data-job-card-id="${job.jobid}"]`);
+            if (jobCard) {
+              // Remove existing health badges
+              jobCard.querySelectorAll('.health-badge').forEach(badge => badge.remove());
+              
+              // Add new health badges if any
+              if (healthIssues.length > 0) {
+                const healthBadgesHtml = healthIssues.map(issue => 
+                  `<div class="health-badge ${issue.type}">${issue.message}</div>`
+                ).join('');
+                const nextRunIndicator = jobCard.querySelector('.next-run-indicator');
+                if (nextRunIndicator) {
+                  nextRunIndicator.insertAdjacentHTML('afterend', healthBadgesHtml);
+                }
+              }
+            }
+          }
+        } catch (error) {
+          console.error(`Error fetching logs for job ${job.jobid}:`, error);
+        }
+      }
+      
+      // Setup event handlers for frequency save buttons
+      document.querySelectorAll('.save-freq-btn').forEach(btn => {
+        btn.addEventListener('click', async function() {
+          const jobid = parseInt(this.dataset.jobid);
+          const input = document.querySelector(`.freq-input[data-jobid="${jobid}"]`);
+          const newValue = parseInt(input.value, 10);
+          
+          if (!newValue || newValue < 1) {
+            showMessage('Frequency must be at least 1 minute', 'error');
+            return;
+          }
+          
+          try {
+            const response = await fetch(`${API_BASE}/api/admin?action=update_schedule`, {
+              method: 'POST',
+              headers: buildAuthHeaders(),
+              body: JSON.stringify({ jobid, frequency_minutes: newValue })
+            });
+            
+            const data = await response.json();
+            if (!data.ok) {
+              throw new Error(data.error || 'Failed to update frequency');
+            }
+            
+            showMessage('Frequency updated successfully!', 'success');
+            loadJobs(); // Refresh job list
+          } catch (error) {
+            showMessage(`Error updating frequency: ${error.message}`, 'error');
+          }
+        });
+      });
+      
+      // Setup event handlers for view logs buttons
+      document.querySelectorAll('.view-logs-btn').forEach(btn => {
+        btn.addEventListener('click', async function() {
+          const jobid = parseInt(this.dataset.jobid);
+          await openLogModal(jobid);
+        });
+      });
       
       // Render charts and setup log viewers for each job
       await renderJobCharts(jobs);
@@ -1810,6 +1983,86 @@
       }
     }
 
+    // Helper function to calculate next run in minutes
+    function calculateNextRunMinutes(job) {
+      if (!job.last_run) {
+        return null; // "In scheduled window"
+      }
+      
+      const freqMinutes = job.frequency_minutes || 60;
+      const lastRun = new Date(job.last_run);
+      const now = new Date();
+      const minutesSinceLastRun = Math.floor((now - lastRun) / (1000 * 60));
+      const delta = freqMinutes - minutesSinceLastRun;
+      
+      return delta <= 0 ? 0 : delta; // 0 means "Due now"
+    }
+
+    // Helper function to detect health issues
+    function detectHealthIssues(job, runHistory = []) {
+      const issues = [];
+      
+      // Check for repeated failures
+      if (runHistory.length >= 3) {
+        const lastThree = runHistory.slice(0, 3);
+        const allFailed = lastThree.every(run => {
+          const status = run.status || '';
+          return status === 'failed' || status === 'error' || status.toLowerCase().includes('fail');
+        });
+        if (allFailed) {
+          issues.push({ type: 'unhealthy', message: '⚠ Unhealthy: Repeated Failures' });
+        }
+      }
+      
+      // Check for stuck job
+      if (job.last_run) {
+        const freqMinutes = job.frequency_minutes || 60;
+        const lastRun = new Date(job.last_run);
+        const now = new Date();
+        const minutesSinceLastRun = Math.floor((now - lastRun) / (1000 * 60));
+        
+        if (minutesSinceLastRun > freqMinutes * 2) {
+          issues.push({ type: 'stuck', message: '⚠ Possibly Stuck' });
+        }
+      }
+      
+      return issues;
+    }
+
+    // Helper function to render sparkline
+    function renderSparkline(canvasId, runHistory) {
+      const canvas = document.getElementById(canvasId);
+      if (!canvas) return;
+      
+      const ctx = canvas.getContext('2d');
+      const width = canvas.width;
+      const height = canvas.height;
+      
+      // Clear canvas
+      ctx.clearRect(0, 0, width, height);
+      
+      // Get last 10 runs
+      const last10 = (runHistory || []).slice(0, 10).reverse();
+      if (last10.length === 0) return;
+      
+      const barWidth = width / last10.length;
+      const maxHeight = height - 4;
+      
+      last10.forEach((run, index) => {
+        const isSuccess = run.status === 'succeeded' || run.status === 'success' || run.success === true;
+        const color = isSuccess ? '#4CAF50' : '#E53935';
+        const barHeight = maxHeight * 0.8;
+        
+        ctx.fillStyle = color;
+        ctx.fillRect(
+          index * barWidth + 2,
+          height - barHeight - 2,
+          barWidth - 4,
+          barHeight
+        );
+      });
+    }
+
     function renderJobCard(job, isLinked, groupType) {
       const successRate = job.total_runs > 0 
         ? ((job.success_count / job.total_runs) * 100).toFixed(1)
@@ -1829,6 +2082,23 @@
       const frequency = parseCronFrequency(job.schedule);
       const nextScheduled = formatNextScheduledTime(job.schedule, job.active, job.last_run);
       
+      // Calculate next run in minutes
+      const nextRunMinutes = calculateNextRunMinutes(job);
+      let nextRunText = '';
+      if (nextRunMinutes === null) {
+        nextRunText = 'Next run: In scheduled window';
+      } else if (nextRunMinutes === 0) {
+        nextRunText = 'Due now';
+      } else {
+        nextRunText = `Next run in ${nextRunMinutes} min`;
+      }
+      
+      // Detect health issues (will be populated after fetching run history)
+      const healthIssues = detectHealthIssues(job, job.run_history || []);
+      const healthBadges = healthIssues.map(issue => 
+        `<div class="health-badge ${issue.type}">${issue.message}</div>`
+      ).join('');
+      
       // Load regression test data for risky jobs (use pre-loaded data)
       let regressionSummary = '';
       if (riskyJobs.includes(job.jobid)) {
@@ -1845,8 +2115,10 @@
         groupType === 'system' ? '#fa709a' :
         '#3498db';
       
+      const currentFreqMinutes = job.frequency_minutes || 60;
+      
       return `
-        <div class="job-card" ${isLinkedJob ? `style="border: 2px solid ${borderColor};"` : ''}>
+        <div class="job-card" data-job-card-id="${job.jobid}" ${isLinkedJob ? `style="border: 2px solid ${borderColor};"` : ''}>
           <div class="job-header">
             <div>
               <div class="job-title">${displayName}</div>
@@ -1857,9 +2129,16 @@
             </span>
           </div>
           <div style="margin-bottom: 15px;">
-          <div class="frequency-pill">⏰ ${frequency}</div>
+            <div class="frequency-pill">⏰ ${frequency}</div>
             <div class="next-scheduled-pill">📅 Next: ${nextScheduled}</div>
           </div>
+          <div style="margin-bottom: 10px;">
+            <label>Frequency (minutes)</label>
+            <input type="number" class="freq-input" data-jobid="${job.jobid}" min="1" value="${currentFreqMinutes}">
+            <button class="save-freq-btn" data-jobid="${job.jobid}">Save</button>
+          </div>
+          <div class="next-run-indicator">${nextRunText}</div>
+          ${healthBadges}
           ${regressionSummary}
           <div class="job-description">${description}</div>
           <div class="job-schedule">Schedule: ${job.schedule}</div>
@@ -1883,8 +2162,9 @@
               <div style="font-size: 11px; color: #7f8c8d;">${job.failed_count || 0} failed</div>
             </div>
           </div>
+          <canvas class="sparkline" id="sparkline-${job.jobid}" width="150" height="40"></canvas>
           <canvas id="chart-${job.jobid}" style="max-height: 100px; margin-top: 10px;"></canvas>
-          <button class="view-log-btn" data-jobid="${job.jobid}">View Logs</button>
+          <button class="view-logs-btn" data-jobid="${job.jobid}">View Logs</button>
           <div id="log-panel-${job.jobid}" class="log-panel" style="display:none;"></div>
           <div class="job-actions">
             <button class="btn btn-primary btn-small" onclick="runJobNow(${job.jobid}, '${displayName}')">▶ Run Now</button>
@@ -1973,6 +2253,66 @@
     function closeLogsModal() {
       document.getElementById('logsModal').classList.remove('active');
     }
+
+    async function openLogModal(jobid) {
+      const modal = document.getElementById('logModal');
+      const jobNameSpan = document.getElementById('logJobName');
+      const logContent = document.getElementById('logContent');
+      
+      // Get job name
+      const jobs = await fetch(`${API_BASE}/api/admin?action=cron_jobs`, {
+        headers: buildAuthHeaders()
+      }).then(r => r.json()).then(d => d.jobs || []);
+      const job = jobs.find(j => j.jobid === jobid);
+      const jobName = job ? (jobDisplayNames[jobid] || job.jobname || `Job ${jobid}`) : `Job ${jobid}`;
+      
+      jobNameSpan.textContent = jobName;
+      logContent.textContent = 'Loading logs...';
+      modal.classList.remove('hidden');
+      
+      try {
+        const response = await fetch(`${API_BASE}/api/admin?action=get_job_logs&jobid=${jobid}`, {
+          headers: buildAuthHeaders()
+        });
+        
+        const { logs } = await response.json();
+        
+        if (!logs || logs.length === 0) {
+          logContent.textContent = 'No logs found for this job.';
+          return;
+        }
+        
+        const logText = logs.map(log => {
+          const startTime = new Date(log.start_time).toLocaleString();
+          const endTime = log.end_time ? new Date(log.end_time).toLocaleString() : 'N/A';
+          const duration = log.end_time 
+            ? ((new Date(log.end_time) - new Date(log.start_time)) / 1000).toFixed(2) + 's'
+            : 'N/A';
+          const status = (log.status || 'unknown').toUpperCase();
+          const message = log.return_message || 'No message';
+          
+          return `[${status}] ${startTime} → ${endTime} (${duration})
+${message}
+${'='.repeat(80)}`;
+        }).join('\n\n');
+        
+        logContent.textContent = logText;
+      } catch (error) {
+        logContent.textContent = `Error loading logs: ${error.message}`;
+      }
+    }
+
+    function closeLogModal() {
+      document.getElementById('logModal').classList.add('hidden');
+    }
+
+    // Setup close button for log modal
+    document.addEventListener('DOMContentLoaded', function() {
+      const closeBtn = document.getElementById('closeLogModalBtn');
+      if (closeBtn) {
+        closeBtn.addEventListener('click', closeLogModal);
+      }
+    });
 
     function editSchedule(jobid, currentSchedule, jobname) {
       const modal = document.getElementById('scheduleModal');
@@ -2245,6 +2585,20 @@
       }
     }
   </script>
+
+  <!-- Log Modal -->
+  <div id="logModal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div class="modal-title">Run Logs for <span id="logJobName"></span></div>
+        <button class="close-btn" onclick="closeLogModal()">&times;</button>
+      </div>
+      <pre id="logContent"></pre>
+      <div style="margin-top: 15px;">
+        <button class="btn btn-secondary" id="closeLogModalBtn">Close</button>
+      </div>
+    </div>
+  </div>
 
   <!-- Debug Log -->
   <div class="debug-log-container" id="debugLogContainer">

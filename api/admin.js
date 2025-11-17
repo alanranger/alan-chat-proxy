@@ -790,23 +790,40 @@ export default async function handler(req, res) {
     // Update Schedule with frequency_minutes (POST /api/admin?action=update_schedule)
     if (req.method === 'POST' && action === 'update_schedule') {
       try {
-        const { jobId, frequency_minutes } = req.body;
+        const { jobid, frequency_minutes } = req.body;
 
-        if (!jobId || frequency_minutes === undefined) {
-          return res.status(400).json({ error: 'jobId and frequency_minutes parameters required' });
+        if (!jobid || frequency_minutes === undefined) {
+          return res.status(400).json({ error: 'jobid and frequency_minutes parameters required' });
+        }
+
+        // Validate frequency_minutes as integer >= 1
+        const freqInt = parseInt(frequency_minutes, 10);
+        if (!Number.isInteger(freqInt) || freqInt < 1) {
+          return res.status(400).json({ error: 'frequency_minutes must be an integer >= 1' });
         }
 
         // Update frequency_minutes in public.jobs
-        const { error } = await supabase
+        const { error: updateError } = await supabase
           .from("public.jobs")
-          .update({ frequency_minutes })
-          .eq("id", jobId);
+          .update({ frequency_minutes: freqInt })
+          .eq("id", jobid);
 
-        if (error) {
-          return res.status(500).json({ error: 'Failed to update schedule', detail: error.message });
+        if (updateError) {
+          return res.status(500).json({ error: 'Failed to update schedule', detail: updateError.message });
         }
 
-        return res.status(200).json({ ok: true });
+        // Get updated job data
+        const { data: jobData, error: fetchError } = await supabase
+          .from("public.jobs")
+          .select("*")
+          .eq("id", jobid)
+          .single();
+
+        if (fetchError) {
+          return res.status(200).json({ ok: true });
+        }
+
+        return res.status(200).json({ ok: true, job: jobData });
 
       } catch (error) {
         console.error('Error updating schedule:', error);
