@@ -108,7 +108,16 @@ async function runJob(supabase, job) {
       }
     } else {
       // For non-risky jobs, parse and execute the command
-      const command = job.command.trim();
+      // Override command for jobs 26, 27, 28 to use wrapper functions (shouldn't reach here, but safety check)
+      let command = job.command;
+      if (jobid === 26) {
+        command = "SELECT trigger_refresh_master_job();";
+      } else if (jobid === 27) {
+        command = "SELECT trigger_refresh_batch1_job();";
+      } else if (jobid === 28) {
+        command = "SELECT trigger_refresh_batch2_job();";
+      }
+      command = command.trim();
       
       // Handle multiple statements
       const statements = command.split(/;\s*(?=SELECT)/i).filter(s => s.trim().length > 0);
@@ -804,8 +813,17 @@ export default async function handler(req, res) {
           const stats = statsMap.get(jobId) || { success_count: 0, failed_count: 0, total_runs: 0 };
           const aggregatedLastRun = lastRunMap.get(jobId);
 
+          // Override command for jobs 26, 27, 28 to use wrapper functions
+          const command = (
+            jobId === 26 ? "SELECT trigger_refresh_master_job();" :
+            jobId === 27 ? "SELECT trigger_refresh_batch1_job();" :
+            jobId === 28 ? "SELECT trigger_refresh_batch2_job();" :
+            job.command
+          );
+
           return {
             ...job,
+            command: command,
             total_runs: stats.total_runs,
             success_count: stats.success_count,
             failed_count: stats.failed_count,
@@ -1262,7 +1280,16 @@ export default async function handler(req, res) {
             }
           } else {
             // For non-risky jobs, parse and execute the command
-            const command = job.command.trim();
+            // Override command for jobs 26, 27, 28 to use wrapper functions (shouldn't reach here, but safety check)
+            let command = job.command;
+            if (parseInt(jobid) === 26) {
+              command = "SELECT trigger_refresh_master_job();";
+            } else if (parseInt(jobid) === 27) {
+              command = "SELECT trigger_refresh_batch1_job();";
+            } else if (parseInt(jobid) === 28) {
+              command = "SELECT trigger_refresh_batch2_job();";
+            }
+            command = command.trim();
             
             // Handle multiple statements (e.g., Job 20 has two SELECT statements)
             const statements = command.split(/;\s*(?=SELECT)/i).filter(s => s.trim().length > 0);
@@ -1456,10 +1483,18 @@ export default async function handler(req, res) {
           let recordCount = 0;
           let recordError = null;
           
+          // Override command for jobs 26, 27, 28 to use wrapper functions
+          const displayCommand = (
+            parseInt(jobid) === 26 ? "SELECT trigger_refresh_master_job();" :
+            parseInt(jobid) === 27 ? "SELECT trigger_refresh_batch1_job();" :
+            parseInt(jobid) === 28 ? "SELECT trigger_refresh_batch2_job();" :
+            job.command
+          );
+          
           try {
             const { data: logData, error: logError } = await supabase.rpc('log_job_run', {
               jobid: parseInt(jobid),
-              command: job.command,
+              command: displayCommand,
               status: executionSuccess ? 'succeeded' : 'failed',
               return_message: executionSuccess 
                 ? (executionResult ? JSON.stringify(executionResult).substring(0, 500) : 'Job completed successfully')
@@ -1483,7 +1518,7 @@ export default async function handler(req, res) {
 
           await logJobRun(
             parseInt(jobid, 10),
-            job.command,
+            displayCommand,
             executionSuccess ? "succeeded" : "failed",
             executionSuccess 
               ? (executionResult ? JSON.stringify(executionResult).substring(0, 500) : 'Job completed successfully')
@@ -1497,7 +1532,7 @@ export default async function handler(req, res) {
             job: {
               id: jobid,
               name: job.jobname || job.name,
-              command: job.command
+              command: displayCommand
             },
             execution: {
               success: executionSuccess,

@@ -1943,7 +1943,20 @@
         addDebugLog(`Job execution completed: success=${execution.success}, duration=${execution.duration}s`, 
           execution.success ? 'success' : 'error', { execution });
         
+        // Start progress polling for jobs 26, 27, 28 after execution
+        if ([26, 27, 28].includes(parseInt(jobId))) {
+          pollJobProgress(jobId);
+        }
+        
         const isRiskyJob = [21, 26, 27, 28, 31].includes(parseInt(jobId));
+        
+        // Override command display for jobs 26, 27, 28 to show wrapper function
+        const displayCommand = (
+          parseInt(jobId) === 26 ? "SELECT trigger_refresh_master_job();" :
+          parseInt(jobId) === 27 ? "SELECT trigger_refresh_batch1_job();" :
+          parseInt(jobId) === 28 ? "SELECT trigger_refresh_batch2_job();" :
+          job.command
+        );
         
         let html = `
           <h2>Job Execution Results: ${job.name || jobName} (ID: ${job.id || jobId})</h2>
@@ -2029,7 +2042,7 @@
         html += `
           <div class="details-section">
             <h3>Command Executed</h3>
-            <pre style="background: #f4f4f4; padding: 10px; border-radius: 4px; overflow-x: auto;">${job.command || 'N/A'}</pre>
+            <pre style="background: #f4f4f4; padding: 10px; border-radius: 4px; overflow-x: auto;">${displayCommand || job.command || 'N/A'}</pre>
           </div>
         `;
         
