@@ -136,7 +136,7 @@ export default async function handler(req, res) {
         // 1) Count successes + failures (simple query)
         const { data: statusRows, error: statusError } = await supabase
           .from("job_run_details")
-          .select("jobid, status", { count: "exact" })
+          .select("jobid, status")
           .in("jobid", cleanedIds);
 
         if (statusError) {
@@ -144,27 +144,18 @@ export default async function handler(req, res) {
           return { statusAggregates: [], lastRunRows: [] };
         }
 
-        // Manual grouping
-        const statusAggregates = []
-        const map = {};
-
+        // Manual grouping - count by status per job
+        const statusCounts = {};
         for (const row of statusRows) {
-          if (!map[row.jobid]) {
-            map[row.jobid] = {
-              jobid: row.jobid,
-              succeeded: 0,
-              failed: 0,
-              total: 0
-            };
+          const key = `${row.jobid}_${row.status}`;
+          if (!statusCounts[key]) {
+            statusCounts[key] = { jobid: row.jobid, status: row.status, count: 0 };
           }
-          if (row.status === "succeeded") map[row.jobid].succeeded++;
-          if (row.status === "failed") map[row.jobid].failed++;
-          map[row.jobid].total++;
+          statusCounts[key].count++;
         }
 
-        for (const key of Object.keys(map)) {
-          statusAggregates.push(map[key]);
-        }
+        // Convert to array format expected by the calling code
+        const statusAggregates = Object.values(statusCounts);
 
         // 2) Get the latest run per job (one simple query)
         const { data: lastRunRows, error: lastRunError } = await supabase
@@ -455,10 +446,13 @@ export default async function handler(req, res) {
         });
 
         const lastRunMap = new Map();
+        // Group by jobid and get the first (latest) run for each job
+        const seenJobIds = new Set();
         lastRunRows.forEach((row) => {
           const jobId = parseInt(row.jobid, 10);
-          if (!Number.isFinite(jobId) || !row.last_run) return;
-          lastRunMap.set(jobId, row.last_run);
+          if (!Number.isFinite(jobId) || !row.end_time || seenJobIds.has(jobId)) return;
+          seenJobIds.add(jobId);
+          lastRunMap.set(jobId, row.end_time);
         });
 
         const enrichedJobs = jobs.map((job) => {
