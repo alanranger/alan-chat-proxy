@@ -93,7 +93,8 @@ async function runJob(supabase, job) {
         // Map long jobs to PostgreSQL wrapper functions
         // Fire-and-forget: trigger the job and return immediately
         // The job runs in PostgreSQL background, progress tracked via job_progress table
-        supabase.rpc('trigger_refresh_master_job').catch(err => {
+        // Wrap in Promise to handle errors properly
+        Promise.resolve(supabase.rpc('trigger_refresh_master_job')).catch(err => {
           console.error('Error triggering master job (fire-and-forget):', err);
         });
         // Return success immediately - job is running in background
@@ -103,7 +104,7 @@ async function runJob(supabase, job) {
           fireAndForget: true 
         };
       } else if (jobid == 27) {
-        supabase.rpc('trigger_refresh_batch1_job').catch(err => {
+        Promise.resolve(supabase.rpc('trigger_refresh_batch1_job')).catch(err => {
           console.error('Error triggering batch1 job (fire-and-forget):', err);
         });
         result = { 
@@ -111,7 +112,7 @@ async function runJob(supabase, job) {
           fireAndForget: true 
         };
       } else if (jobid == 28) {
-        supabase.rpc('trigger_refresh_batch2_job').catch(err => {
+        Promise.resolve(supabase.rpc('trigger_refresh_batch2_job')).catch(err => {
           console.error('Error triggering batch2 job (fire-and-forget):', err);
         });
         result = { 
@@ -1306,7 +1307,8 @@ export default async function handler(req, res) {
             } else if (jobid == 26) {
               // Map long jobs to PostgreSQL wrapper functions
               // Fire-and-forget: trigger the job and return immediately
-              supabase.rpc('trigger_refresh_master_job').catch(err => {
+              // Wrap in Promise to handle errors properly
+              Promise.resolve(supabase.rpc('trigger_refresh_master_job')).catch(err => {
                 console.error('Error triggering master job (fire-and-forget):', err);
               });
               result = { 
@@ -1314,7 +1316,7 @@ export default async function handler(req, res) {
                 fireAndForget: true 
               };
             } else if (jobid == 27) {
-              supabase.rpc('trigger_refresh_batch1_job').catch(err => {
+              Promise.resolve(supabase.rpc('trigger_refresh_batch1_job')).catch(err => {
                 console.error('Error triggering batch1 job (fire-and-forget):', err);
               });
               result = { 
@@ -1322,7 +1324,7 @@ export default async function handler(req, res) {
                 fireAndForget: true 
               };
             } else if (jobid == 28) {
-              supabase.rpc('trigger_refresh_batch2_job').catch(err => {
+              Promise.resolve(supabase.rpc('trigger_refresh_batch2_job')).catch(err => {
                 console.error('Error triggering batch2 job (fire-and-forget):', err);
               });
               result = { 
