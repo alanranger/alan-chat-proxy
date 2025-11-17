@@ -146,16 +146,24 @@ export default async function handler(req, res) {
 
         // Manual grouping - count by status per job
         const statusCounts = {};
-        for (const row of statusRows) {
-          const key = `${row.jobid}_${row.status}`;
-          if (!statusCounts[key]) {
-            statusCounts[key] = { jobid: row.jobid, status: row.status, count: 0 };
+        if (statusRows && Array.isArray(statusRows)) {
+          for (const row of statusRows) {
+            if (!row || !row.jobid || !row.status) continue;
+            const key = `${row.jobid}_${row.status}`;
+            if (!statusCounts[key]) {
+              statusCounts[key] = { jobid: row.jobid, status: row.status, count: 0 };
+            }
+            statusCounts[key].count++;
           }
-          statusCounts[key].count++;
         }
 
         // Convert to array format expected by the calling code
         const statusAggregates = Object.values(statusCounts);
+        
+        // Debug logging
+        if (statusAggregates.length > 0) {
+          console.log(`[fetchJobRunAggregates] Found ${statusAggregates.length} status aggregates for jobIds:`, cleanedIds);
+        }
 
         // 2) Get the latest run per job (one simple query)
         const { data: lastRunRows, error: lastRunError } = await supabase
