@@ -7,11 +7,7 @@ import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = process.env.SUPABASE_URL;
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-if (!supabaseUrl) throw new Error('Missing SUPABASE_URL');
-if (!serviceRoleKey) throw new Error('Missing SUPABASE_SERVICE_ROLE_KEY');
-
-const supabase = createClient(supabaseUrl, serviceRoleKey);
+let supabase = null;
 
 // Match the hardcoded UI token as a fallback so the button works
 const EXPECTED_TOKEN = (process.env.INGEST_TOKEN || '').trim() || 'b6c3f0c9e6f44cce9e1a4f3f2d3a5c76';
@@ -22,6 +18,15 @@ export default async function handler(req, res) {
     NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
     SERVICE_ROLE_SET: !!process.env.SUPABASE_SERVICE_ROLE_KEY
   });
+  if (!supabase) {
+    if (!supabaseUrl) {
+      throw new Error('Missing SUPABASE_URL');
+    }
+    if (!serviceRoleKey) {
+      throw new Error('Missing SUPABASE_SERVICE_ROLE_KEY');
+    }
+    supabase = createClient(supabaseUrl, serviceRoleKey);
+  }
   // Wrap entire handler in try-catch to ensure JSON responses
   try {
     // CORS headers
