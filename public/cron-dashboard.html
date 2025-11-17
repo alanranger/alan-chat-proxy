@@ -279,20 +279,6 @@
       overflow-y: auto;
     }
 
-    .view-log-btn {
-      background: #6c757d;
-      color: white;
-      border: none;
-      padding: 6px 12px;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 12px;
-      margin-top: 10px;
-    }
-
-    .view-log-btn:hover {
-      background: #5a6268;
-    }
 
     canvas {
       width: 100% !important;
@@ -770,6 +756,11 @@
     .health-status.health-error {
       background: #ff4d4d;
       color: white;
+    }
+
+    .sparkline-container {
+      margin-top: 6px;
+      position: relative;
     }
 
     .sparkline-section {
@@ -1298,7 +1289,7 @@
             job.recent_runs = recentRuns;
             
             // Render sparkline
-            renderSparkline(`sparkline-${job.jobid}`, recentRuns);
+            renderSparkline(job.jobid, recentRuns);
           }
         } catch (error) {
           console.error(`Error fetching logs for job ${job.jobid}:`, error);
@@ -1345,9 +1336,6 @@
         });
       });
       
-      // Render charts and setup log viewers for each job
-      await renderJobCharts(jobs);
-      setupLogViewers();
       
       // Restore active log drawer if it was open
       if (activeLogJobId !== null) {
@@ -1367,84 +1355,7 @@
       }
     }
     
-    async function renderJobCharts(jobs) {
-      for (const job of jobs) {
-        try {
-          const logRes = await fetch(`${API_BASE}/api/admin?action=get_job_logs&jobid=${job.jobid}`, {
-            headers: buildAuthHeaders()
-          });
-          const { logs } = await logRes.json();
-          
-          if (!logs || logs.length === 0) continue;
-          
-          const last7 = logs.slice(0, 7).reverse();
-          const canvas = document.getElementById(`chart-${job.jobid}`);
-          if (!canvas) continue;
-          
-          new Chart(canvas, {
-            type: "bar",
-            data: {
-              labels: last7.map(l => new Date(l.start_time).toLocaleDateString()),
-              datasets: [{
-                label: "Status",
-                data: last7.map(l => (l.status === "succeeded" || l.status === "success") ? 1 : 0),
-                backgroundColor: last7.map(l => (l.status === "succeeded" || l.status === "success") ? "#4CAF50" : "#E53935")
-              }]
-            },
-            options: {
-              plugins: { legend: { display: false } },
-              scales: { y: { min: 0, max: 1, ticks: { stepSize: 1 } } },
-              responsive: true,
-              maintainAspectRatio: false
-            }
-          });
-        } catch (error) {
-          console.error(`Error rendering chart for job ${job.jobid}:`, error);
-        }
-      }
-    }
     
-    function setupLogViewers() {
-      document.querySelectorAll(".view-log-btn").forEach(btn => {
-        btn.addEventListener("click", async () => {
-          const id = btn.dataset.jobid;
-          const panel = document.getElementById(`log-panel-${id}`);
-          
-          if (panel.style.display === "block") {
-            panel.style.display = "none";
-            btn.textContent = "View Logs";
-            return;
-          }
-          
-          btn.textContent = "Loading...";
-          try {
-            const res = await fetch(`${API_BASE}/api/admin?action=get_job_logs&jobid=${id}`, {
-              headers: buildAuthHeaders()
-            });
-            const { logs } = await res.json();
-            
-            if (logs && logs.length > 0) {
-              panel.innerHTML = logs.map(l => `
-                <div style="margin-bottom: 8px; padding: 4px; border-bottom: 1px solid #ddd;">
-                  <strong>${(l.status || 'unknown').toUpperCase()}</strong>
-                  • ${new Date(l.start_time).toLocaleString()}
-                  → ${(l.return_message || 'No message').substring(0, 100)}
-                </div>
-              `).join("");
-            } else {
-              panel.innerHTML = "<div>No logs available for this job.</div>";
-            }
-            
-            panel.style.display = "block";
-            btn.textContent = "Hide Logs";
-          } catch (error) {
-            panel.innerHTML = `<div style="color: red;">Error loading logs: ${error.message}</div>`;
-            panel.style.display = "block";
-            btn.textContent = "View Logs";
-          }
-        });
-      });
-    }
 
     // Parse cron schedule to human-readable frequency
     function parseCronFrequency(cron) {
@@ -2181,62 +2092,102 @@
     }
 
     /**
-     * Render sparkline chart for job runs
-     * @param {string} canvasId
+     * Render sparkline chart for job runs (SVG-based for tooltips)
+     * @param {string|number} jobId
      * @param {Array<{ date: string, success: boolean }>} runHistory
      */
-    function renderSparkline(canvasId, runHistory) {
-      const canvas = document.getElementById(canvasId);
-      if (!canvas) return;
+    function renderSparkline(jobId, runHistory) {
+      const container = document.getElementById(`sparkline-${jobId}`);
+      if (!container) return;
       
-      const ctx = canvas.getContext('2d');
-      const width = canvas.width;
-      const height = canvas.height;
+      container.innerHTML = '';
       
-      // Clear canvas
-      ctx.clearRect(0, 0, width, height);
+      const width = 150;
+      const height = 50;
+      const barWidth = 6;
+      const gap = 2;
       
-      // Get last 10-14 runs
-      const lastRuns = (runHistory || []).slice(0, 14);
+      const lastRuns = (runHistory || []).slice(-14);
       if (lastRuns.length === 0) return;
       
-      const barWidth = Math.floor(width / lastRuns.length);
-      const maxHeight = height - 12; // Leave space for labels
-      const barHeight = maxHeight * 0.8;
+      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      svg.setAttribute('width', width);
+      svg.setAttribute('height', height);
+      svg.style.display = 'block';
       
       lastRuns.forEach((run, index) => {
         const isSuccess = run.success === true || run.status === 'succeeded' || run.status === 'success';
-        const color = isSuccess ? '#4CAF50' : '#E53935';
+        const barHeight = isSuccess ? 35 : 12;
+        const color = isSuccess ? '#5cb85c' : '#d9534f';
         
-        const x = index * barWidth;
-        const y = height - barHeight - 10;
+        const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        rect.setAttribute('x', index * (barWidth + gap));
+        rect.setAttribute('y', height - barHeight);
+        rect.setAttribute('width', barWidth);
+        rect.setAttribute('height', barHeight);
+        rect.setAttribute('fill', color);
+        rect.setAttribute('data-index', index);
+        rect.setAttribute('data-success', isSuccess);
         
-        ctx.fillStyle = color;
-        ctx.fillRect(x + 1, y, barWidth - 2, barHeight);
+        svg.appendChild(rect);
       });
       
-      // Add subtle x-axis labels (dates or sequential)
-      ctx.fillStyle = '#999';
-      ctx.font = '9px sans-serif';
-      ctx.textAlign = 'center';
-      const labelCount = Math.min(lastRuns.length, 5);
-      const labelStep = Math.floor(lastRuns.length / labelCount);
+      container.appendChild(svg);
       
-      for (let i = 0; i < labelCount; i++) {
-        const idx = i * labelStep;
-        if (idx < lastRuns.length) {
-          const run = lastRuns[idx];
-          const x = idx * barWidth + barWidth / 2;
-          let label = '';
-          if (run.date) {
-            const date = new Date(run.date);
-            label = `${date.getDate()}/${date.getMonth() + 1}`;
-          } else {
-            label = String(idx + 1);
-          }
-          ctx.fillText(label, x, height - 2);
-        }
-      }
+      // Add tooltips after rendering
+      addSparklineTooltips(jobId);
+    }
+
+    /**
+     * Add tooltips on sparkline bar hover
+     * @param {string|number} jobId
+     */
+    function addSparklineTooltips(jobId) {
+      const container = document.getElementById(`sparkline-${jobId}`);
+      if (!container) return;
+
+      const svg = container.querySelector('svg');
+      if (!svg) return;
+
+      const bars = svg.querySelectorAll('rect');
+
+      bars.forEach((bar, idx) => {
+        const success = bar.getAttribute('fill') === '#5cb85c';
+        const tooltipText = success
+          ? `Run #${idx + 1}: Success`
+          : `Run #${idx + 1}: Failed`;
+
+        bar.style.cursor = 'pointer';
+        
+        bar.addEventListener('mouseenter', (e) => {
+          const tooltip = document.createElement('div');
+          tooltip.id = `sparkline-tooltip-${jobId}-${idx}`;
+          tooltip.textContent = tooltipText;
+          tooltip.style.position = 'absolute';
+          tooltip.style.background = 'rgba(0,0,0,0.75)';
+          tooltip.style.padding = '4px 6px';
+          tooltip.style.color = 'white';
+          tooltip.style.fontSize = '11px';
+          tooltip.style.borderRadius = '4px';
+          tooltip.style.pointerEvents = 'none';
+          tooltip.style.zIndex = '1000';
+          tooltip.style.whiteSpace = 'nowrap';
+          
+          // Position tooltip near the bar
+          const rect = bar.getBoundingClientRect();
+          const containerRect = container.getBoundingClientRect();
+          tooltip.style.left = (rect.left - containerRect.left + rect.width / 2) + 'px';
+          tooltip.style.top = (rect.top - containerRect.top - 25) + 'px';
+          tooltip.style.transform = 'translateX(-50%)';
+          
+          container.appendChild(tooltip);
+        });
+
+        bar.addEventListener('mouseleave', () => {
+          const tooltip = document.getElementById(`sparkline-tooltip-${jobId}-${idx}`);
+          if (tooltip) tooltip.remove();
+        });
+      });
     }
 
     /**
@@ -2342,9 +2293,8 @@
           </div>
           <div class="sparkline-section">
             <div style="font-size: 12px; font-weight: 600; margin-bottom: 5px; color: #666;">Last runs</div>
-            <canvas class="sparkline" id="sparkline-${job.jobid}" width="150" height="50"></canvas>
+            <div class="sparkline-container" id="sparkline-${job.jobid}"></div>
           </div>
-          <canvas id="chart-${job.jobid}" style="max-height: 100px; margin-top: 10px;"></canvas>
           <button class="view-logs-btn" data-jobid="${job.jobid}">${isLogDrawerOpen ? 'Hide Logs' : 'View Logs'}</button>
           <div id="log-drawer-${job.jobid}" class="log-drawer" style="display: ${isLogDrawerOpen ? 'block' : 'none'};"></div>
           <div class="job-actions">
