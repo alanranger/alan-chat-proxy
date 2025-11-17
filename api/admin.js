@@ -1686,7 +1686,6 @@ export default async function handler(req, res) {
             },
             execution: {
               success: false,
-              success: false,
               error: execError.message,
               duration: duration,
               start_time: startTime.toISOString(),
