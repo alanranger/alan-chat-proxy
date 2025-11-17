@@ -13,18 +13,20 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
  * Log a single job run event
  * Records:
  *  - jobid
- *  - status ("success" | "error")
+ *  - command
+ *  - status ("succeeded" | "failed")
  *  - return_message
  *  - start_time
  *  - end_time
  */
-export async function logJobRun(jobid, status, return_message, start_time, end_time) {
+export async function logJobRun(jobid, command, status, return_message, start_time, end_time) {
   try {
     const { error } = await supabase
       .from('job_run_details')
       .insert([
         {
           jobid,
+          command,
           status,
           return_message,
           start_time,

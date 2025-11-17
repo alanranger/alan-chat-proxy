@@ -89,18 +89,20 @@ export default async function handler(req, res) {
       //   const result = await runJob(jobid);
       //   await logJobRun(
       //     jobid,
-      //     "success",
+      //     job.command,
+      //     "succeeded",
       //     JSON.stringify(result || {}),
-      //     start_time,
-      //     new Date()
+      //     start_time.toISOString(),
+      //     new Date().toISOString()
       //   );
       // } catch (err) {
       //   await logJobRun(
       //     jobid,
-      //     "error",
+      //     job.command,
+      //     "failed",
       //     err?.message || "unknown error",
-      //     start_time,
-      //     new Date()
+      //     start_time.toISOString(),
+      //     new Date().toISOString()
       //   );
       // }
       return res.status(200).json({ ok: true, message: "scheduler tick available" });
@@ -1075,7 +1077,8 @@ export default async function handler(req, res) {
 
           await logJobRun(
             parseInt(jobid, 10),
-            executionSuccess ? "success" : "error",
+            job.command,
+            executionSuccess ? "succeeded" : "failed",
             executionSuccess 
               ? (executionResult ? JSON.stringify(executionResult).substring(0, 500) : 'Job completed successfully')
               : (error || recordError || 'Job execution failed'),
@@ -1130,7 +1133,8 @@ export default async function handler(req, res) {
 
           await logJobRun(
             parseInt(jobid, 10),
-            "error",
+            job.command,
+            "failed",
             execError.message || 'Job execution failed',
             startTime.toISOString(),
             endTime.toISOString()
