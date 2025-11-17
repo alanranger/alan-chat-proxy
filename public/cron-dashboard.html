@@ -720,8 +720,9 @@
 
     <div class="auth-section" id="authSection">
       <h3>Authentication</h3>
-      <input type="password" id="authToken" placeholder="Enter admin token" />
+      <input type="password" id="authToken" placeholder="Enter admin token (default: b6c3f0c9e6f44cce9e1a4f3f2d3a5c76)" value="b6c3f0c9e6f44cce9e1a4f3f2d3a5c76" />
       <button onclick="setAuthToken()">Authenticate</button>
+      <div style="margin-top: 8px; font-size: 12px; color: #666;">Token: Use INGEST_TOKEN or the default token shown above</div>
     </div>
 
     <div id="dashboard" style="display: none;">
