@@ -50,38 +50,74 @@ export default async function handler(req, res) {
       });
     }
 
-    // Read-only aggregate helper
-    const fetchJobRunAggregates = async (jobIds = []) => {
-      if (!Array.isArray(jobIds) || jobIds.length === 0) {
+    async function fetchJobRunAggregates(jobIds = []) {
+      const supabase = createClient();
+
+      try {
+        if (!Array.isArray(jobIds) || jobIds.length === 0) {
+          return { statusAggregates: [], lastRunRows: [] };
+        }
+
+        // Normalize jobIds (numeric only)
+        const cleanedIds = jobIds
+          .map(id => Number(id))
+          .filter(n => Number.isFinite(n));
+
+        if (cleanedIds.length === 0) {
+          return { statusAggregates: [], lastRunRows: [] };
+        }
+
+        // 1) Count successes + failures (simple query)
+        const { data: statusRows, error: statusError } = await supabase
+          .from("job_run_details")
+          .select("jobid, status", { count: "exact" })
+          .in("jobid", cleanedIds);
+
+        if (statusError) {
+          console.error("Status aggregate query failed", statusError);
+          return { statusAggregates: [], lastRunRows: [] };
+        }
+
+        // Manual grouping
+        const statusAggregates = []
+        const map = {};
+
+        for (const row of statusRows) {
+          if (!map[row.jobid]) {
+            map[row.jobid] = {
+              jobid: row.jobid,
+              succeeded: 0,
+              failed: 0,
+              total: 0
+            };
+          }
+          if (row.status === "succeeded") map[row.jobid].succeeded++;
+          if (row.status === "failed") map[row.jobid].failed++;
+          map[row.jobid].total++;
+        }
+
+        for (const key of Object.keys(map)) {
+          statusAggregates.push(map[key]);
+        }
+
+        // 2) Get the latest run per job (one simple query)
+        const { data: lastRunRows, error: lastRunError } = await supabase
+          .from("job_run_details")
+          .select("jobid, end_time, status, return_message")
+          .in("jobid", cleanedIds)
+          .order("end_time", { ascending: false });
+
+        if (lastRunError) {
+          console.error("Last run query failed", lastRunError);
+          return { statusAggregates, lastRunRows: [] };
+        }
+
+        return { statusAggregates, lastRunRows };
+      } catch (err) {
+        console.error("fetchJobRunAggregates - unexpected error", err);
         return { statusAggregates: [], lastRunRows: [] };
       }
-
-      // 1) Success / fail / total counts grouped by job + status
-      const { data: statusAggregates, error: aggErr } = await supabase
-        .from('job_run_details')
-        .select('jobid, status, count: count(*)')
-        .in('jobid', jobIds)
-        .group('jobid, status');
-
-      if (aggErr) {
-        console.error('Error fetching status aggregates:', aggErr);
-        return { statusAggregates: [], lastRunRows: [] };
-      }
-
-      // 2) Last run timestamps per job
-      const { data: lastRunRows, error: lastErr } = await supabase
-        .from('job_run_details')
-        .select('jobid, last_run: max(start_time)')
-        .in('jobid', jobIds)
-        .group('jobid');
-
-      if (lastErr) {
-        console.error('Error fetching last run rows:', lastErr);
-        return { statusAggregates, lastRunRows: [] };
-      }
-
-      return { statusAggregates, lastRunRows };
-    };
+    }
 
     // QA Spot Checks (GET /api/admin?action=qa)
     if (req.method === 'GET' && action === 'qa') {
