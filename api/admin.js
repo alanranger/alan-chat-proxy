@@ -78,6 +78,7 @@ async function runJob(supabase, job) {
   const startTime = new Date();
   let executionResult = null;
   let error = null;
+  let executionSuccess = false; // Will be set based on result
   const jobid = parseInt(job.jobid || job.id, 10);
 
   try {
@@ -90,12 +91,33 @@ async function runJob(supabase, job) {
         result = await supabase.rpc('refresh_v_products_unified_with_regression_test');
       } else if (jobid == 26) {
         // Map long jobs to PostgreSQL wrapper functions
-        // Wrapper returns instantly, PostgreSQL executes full job internally
-        result = await supabase.rpc('trigger_refresh_master_job');
+        // Fire-and-forget: trigger the job and return immediately
+        // The job runs in PostgreSQL background, progress tracked via job_progress table
+        supabase.rpc('trigger_refresh_master_job').catch(err => {
+          console.error('Error triggering master job (fire-and-forget):', err);
+        });
+        // Return success immediately - job is running in background
+        // Mark as fire-and-forget so we don't wait for completion
+        result = { 
+          data: 'Job triggered successfully. Running in background.', 
+          fireAndForget: true 
+        };
       } else if (jobid == 27) {
-        result = await supabase.rpc('trigger_refresh_batch1_job');
+        supabase.rpc('trigger_refresh_batch1_job').catch(err => {
+          console.error('Error triggering batch1 job (fire-and-forget):', err);
+        });
+        result = { 
+          data: 'Job triggered successfully. Running in background.', 
+          fireAndForget: true 
+        };
       } else if (jobid == 28) {
-        result = await supabase.rpc('trigger_refresh_batch2_job');
+        supabase.rpc('trigger_refresh_batch2_job').catch(err => {
+          console.error('Error triggering batch2 job (fire-and-forget):', err);
+        });
+        result = { 
+          data: 'Job triggered successfully. Running in background.', 
+          fireAndForget: true 
+        };
       } else if (jobid == 31) {
         result = await supabase.rpc('cleanup_orphaned_records_with_regression_test');
       }
@@ -105,6 +127,11 @@ async function runJob(supabase, job) {
       }
       if (result && result.error) {
         error = result.error.message;
+      }
+      // For fire-and-forget jobs, mark as successful immediately
+      if (result && result.fireAndForget) {
+        executionSuccess = true;
+        executionResult = result.data || 'Job triggered successfully. Running in background.';
       }
     } else {
       // For non-risky jobs, parse and execute the command
@@ -1478,7 +1505,10 @@ export default async function handler(req, res) {
           }
 
           // Record the job execution via public.log_job_run so the dashboard stays in sync
-          const executionSuccess = !error;
+          // executionSuccess is already set above for fire-and-forget jobs, otherwise use !error
+          if (executionSuccess === false) {
+            executionSuccess = !error;
+          }
           let recordInserted = false;
           let recordCount = 0;
           let recordError = null;
