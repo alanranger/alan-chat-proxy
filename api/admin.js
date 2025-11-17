@@ -63,7 +63,7 @@ export default async function handler(req, res) {
     }
 
     async function fetchJobRunAggregates(jobIds = []) {
-      const supabase = createClient();
+      const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
       try {
         if (!Array.isArray(jobIds) || jobIds.length === 0) {
