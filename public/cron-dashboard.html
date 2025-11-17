@@ -793,6 +793,11 @@
       }
     });
 
+    const buildAuthHeaders = () => ({
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${authToken}`
+    });
+
     async function loadJobs() {
       addDebugLog('Loading jobs...', 'info');
       const container = document.getElementById('jobsContainer');
@@ -800,10 +805,7 @@
 
       try {
         const response = await fetch(`${API_BASE}/api/admin?action=cron_jobs`, {
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer b6c3f0c9e6f44cce9e1a4f3f2d3a5c76'
-          }
+          headers: buildAuthHeaders()
         });
         
         addDebugLog(`Jobs API response: ${response.status} ${response.statusText}`, 'info');
@@ -1218,10 +1220,7 @@
       
       try {
         const response = await fetch(`${API_BASE}/api/admin?action=regression_test_results&jobid=${jobid}`, {
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer b6c3f0c9e6f44cce9e1a4f3f2d3a5c76'
-          }
+          headers: buildAuthHeaders()
         });
         
         if (response.ok) {
@@ -1382,10 +1381,7 @@
       // Load fresh comparison data
       try {
         const response = await fetch(`${API_BASE}/api/admin?action=regression_test_results&jobid=${jobId}`, {
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer b6c3f0c9e6f44cce9e1a4f3f2d3a5c76'
-          }
+          headers: buildAuthHeaders()
         });
         
         if (!response.ok) {
@@ -1544,10 +1540,7 @@
         addDebugLog(`Sending run job request for job ${jobId}`, 'info');
         const response = await fetch(`${API_BASE}/api/admin?action=run_cron_job`, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer b6c3f0c9e6f44cce9e1a4f3f2d3a5c76'
-          },
+          headers: buildAuthHeaders(),
           body: JSON.stringify({ jobid: jobId })
         });
         
@@ -1787,10 +1780,7 @@
 
       try {
         const response = await fetch(`${API_BASE}/api/admin?action=cron_logs&jobid=${jobid}&limit=100`, {
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer b6c3f0c9e6f44cce9e1a4f3f2d3a5c76'
-          }
+          headers: buildAuthHeaders()
         });
 
         const data = await response.json();
@@ -1906,10 +1896,7 @@
         addDebugLog(`Sending reset request for job ${jobid}`, 'info');
         const response = await fetch(`${API_BASE}/api/admin?action=reset_job_stats`, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer b6c3f0c9e6f44cce9e1a4f3f2d3a5c76'
-          },
+          headers: buildAuthHeaders(),
           body: JSON.stringify({ jobid: jobid })
         });
 
@@ -1969,10 +1956,7 @@
       try {
         const response = await fetch(`${API_BASE}/api/admin?action=toggle_cron_job`, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer b6c3f0c9e6f44cce9e1a4f3f2d3a5c76'
-          },
+          headers: buildAuthHeaders(),
           body: JSON.stringify({ jobid, active })
         });
 
@@ -1999,10 +1983,7 @@
       try {
         const response = await fetch(`${API_BASE}/api/admin?action=update_cron_schedule`, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer b6c3f0c9e6f44cce9e1a4f3f2d3a5c76'
-          },
+          headers: buildAuthHeaders(),
           body: JSON.stringify({ jobid, schedule: newSchedule })
         });
 
