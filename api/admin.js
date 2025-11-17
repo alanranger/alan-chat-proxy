@@ -29,6 +29,30 @@ const supabase = createClient(
   SUPABASE_SERVICE_ROLE_KEY
 );
 
+// Unified logger for cron job runs
+async function logCronRun({ jobid, success, errorMessage = null, runtimeMs = null }) {
+  if (!supabase) {
+    console.error("ERROR: Supabase client missing in logCronRun");
+    return;
+  }
+
+  try {
+    const { error } = await supabase.from('job_run_details').insert({
+      jobid: parseInt(jobid, 10),
+      success,
+      error_message: errorMessage,
+      runtime_ms: runtimeMs,
+      run_timestamp: new Date().toISOString()
+    });
+
+    if (error) {
+      console.error("ERROR logging job run:", error);
+    }
+  } catch (logErr) {
+    console.error("ERROR logging job run:", logErr);
+  }
+}
+
 // Match the hardcoded UI token as a fallback so the button works
 const EXPECTED_TOKEN = (process.env.INGEST_TOKEN || '').trim() || 'b6c3f0c9e6f44cce9e1a4f3f2d3a5c76';
 
@@ -980,6 +1004,7 @@ export default async function handler(req, res) {
           
           const endTime = new Date();
           const duration = (endTime - startTime) / 1000;
+          const runtimeMs = endTime - startTime;
 
           // Try to get records affected for specific job types
           if (jobid == 31) {
@@ -1020,6 +1045,13 @@ export default async function handler(req, res) {
             console.error('Unexpected error logging job run:', catchError);
           }
 
+          await logCronRun({
+            jobid: parseInt(jobid, 10),
+            success: executionSuccess,
+            errorMessage: executionSuccess ? null : (error || recordError || 'Job execution failed'),
+            runtimeMs
+          });
+
           return res.status(200).json({
             ok: true,
             job: {
@@ -1045,6 +1077,7 @@ export default async function handler(req, res) {
         } catch (execError) {
           const endTime = new Date();
           const duration = (endTime - startTime) / 1000;
+          const runtimeMs = endTime - startTime;
           
           // Record the failed job execution via public.log_job_run
           try {
@@ -1063,6 +1096,13 @@ export default async function handler(req, res) {
           } catch (recordError) {
             console.error('Unexpected error logging failed job run:', recordError);
           }
+
+          await logCronRun({
+            jobid: parseInt(jobid, 10),
+            success: false,
+            errorMessage: execError.message || 'Job execution failed',
+            runtimeMs
+          });
           
           return res.status(200).json({
             ok: true,
