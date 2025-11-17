@@ -740,6 +740,11 @@
       margin-top: 6px;
       position: relative;
     }
+    
+    /* Remove duplicate malformed graph */
+    .sparkline-wrapper canvas:last-of-type {
+      display: none;
+    }
 
     .sparkline-section {
       margin-top: 15px;
@@ -2221,7 +2226,7 @@
       const frequency = parseCronFrequency(job.schedule);
       
       // Calculate next run and health
-      const nextRunInMinutes = calculateNextRunInMinutes(job);
+      const nextRunInMinutes = job.next_run_minutes || calculateNextRunInMinutes(job);
       const nextRunText = formatNextRunLabel(nextRunInMinutes);
       
       const health = getJobHealth(job, nextRunInMinutes);
