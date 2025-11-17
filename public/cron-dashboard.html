@@ -747,32 +747,30 @@
     }
     
     /* Progress bar styles */
-    .progress-section {
-      margin-top: 10px;
+    .job-progress {
+      margin-top: 6px;
+      background: #f7f7f7;
+      padding: 6px;
+      border-radius: 6px;
     }
     
-    .progress-bar-background {
+    .progress-bar-container {
       width: 100%;
-      height: 10px;
-      background: #eee;
+      background: #ddd;
       border-radius: 4px;
+      height: 6px;
       overflow: hidden;
-      margin-top: 4px;
     }
     
     .progress-bar {
-      height: 10px;
       width: 0%;
-      background: linear-gradient(90deg, #4caf50, #66bb6a);
-      transition: width 0.3s ease-in-out;
-    }
-    
-    .progress-status {
-      font-weight: 600;
-      color: #444;
+      height: 6px;
+      background-color: #4caf50;
+      transition: width 0.3s;
     }
     
     .progress-message {
+      display: block;
       font-size: 0.85rem;
       color: #666;
       margin-top: 4px;
@@ -1025,40 +1023,36 @@
       }
     }
     
-    // Progress polling function (live updating every 5 seconds)
-    function startProgressPolling(jobId) {
-      setInterval(async () => {
-        try {
-          const res = await fetch(`${API_BASE}/api/admin?action=job_progress&jobid=${jobId}`);
-          const json = await res.json();
-          if (!json?.progress) return;
-          
-          const el = document.querySelector(`#progress-${jobId}`);
-          if (!el) return;
-          
-          const progressBar = el.querySelector(".progress-bar");
-          const progressStatus = el.querySelector(".progress-status");
-          const progressMessage = el.querySelector(".progress-message");
-          
-          if (progressBar) {
-            progressBar.style.width = `${json.progress.percent}%`;
-          }
-          if (progressStatus) {
-            progressStatus.innerText = json.progress.phase.replace(/_/g, " ");
-          }
-          if (progressMessage) {
-            progressMessage.innerText = json.progress.message || "";
-          }
-        } catch (err) {
-          console.warn(`Failed to poll progress for job ${jobId}:`, err);
+    // Progress polling function (live updating every 2 seconds)
+    async function pollJobProgress(jobid) {
+      try {
+        const res = await fetch(`${API_BASE}/api/admin?action=job_progress&jobid=${jobid}`);
+        const json = await res.json();
+        const prog = json.progress;
+        
+        const container = document.querySelector(`#progress-${jobid}`);
+        if (!container) return;
+        
+        const bar = container.querySelector('.progress-bar');
+        const msg = container.querySelector('.progress-message');
+        
+        if (!prog) return;
+        
+        container.style.display = "block";
+        if (bar) {
+          bar.style.width = `${prog.progress}%`;
         }
-      }, 5000);
+        if (msg) {
+          msg.textContent = prog.message;
+        }
+        
+        if (prog.progress < 100) {
+          setTimeout(() => pollJobProgress(jobid), 2000);
+        }
+      } catch (err) {
+        console.warn(`Failed to poll progress for job ${jobid}:`, err);
+      }
     }
-    
-    // Start polling for jobs 26, 27, 28
-    startProgressPolling(26);
-    startProgressPolling(27);
-    startProgressPolling(28);
 
     function clearAuth() {
       authToken = '';
@@ -1892,13 +1886,15 @@
     async function runJobNow(jobId, jobName) {
       addDebugLog(`Run job now requested: ${jobName} (ID: ${jobId})`, 'info', { jobId, jobName });
       
-      // Reset progress for jobs 26, 27, 28
+      // Reset progress and start polling for jobs 26, 27, 28
       if ([26, 27, 28].includes(jobId)) {
         try {
           await fetch(`${API_BASE}/api/admin?action=reset_job_progress&jobid=${jobId}`, {
             method: 'GET',
             headers: buildAuthHeaders()
           });
+          // Start polling for progress
+          pollJobProgress(jobId);
         } catch (err) {
           console.warn('Failed to reset progress:', err);
         }
@@ -2368,14 +2364,11 @@
             </div>
           </div>
           ${[26, 27, 28].includes(job.jobid) ? `
-          <div class="progress-section" id="progress-${job.jobid}">
-            <div class="progress-header">
-              <span class="progress-status">Idle</span>
-            </div>
-            <div class="progress-bar-background">
+          <div class="job-progress" id="progress-${job.jobid}" style="display:none;">
+            <div class="progress-bar-container">
               <div class="progress-bar"></div>
             </div>
-            <div class="progress-message"></div>
+            <span class="progress-message"></span>
           </div>
           ` : ''}
           <div class="sparkline-section">
