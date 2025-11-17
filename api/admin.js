@@ -5,7 +5,7 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-// Reliable Supabase env loading for Vercel Serverless Functions
+// Reliable Vercel environment loading
 const SUPABASE_URL =
   process.env.SUPABASE_URL ||
   process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -14,20 +14,22 @@ const SUPABASE_SERVICE_ROLE_KEY =
   process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 if (!SUPABASE_URL) {
-  console.error("ADMIN API ERROR: SUPABASE_URL missing", {
+  console.error("ADMIN API ERROR: Missing SUPABASE_URL", {
     SUPABASE_URL: process.env.SUPABASE_URL,
     NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL
   });
 }
 
 if (!SUPABASE_SERVICE_ROLE_KEY) {
-  console.error("ADMIN API ERROR: SERVICE ROLE KEY missing");
+  console.error("ADMIN API ERROR: Missing SUPABASE_SERVICE_ROLE_KEY");
 }
 
 const supabase = createClient(
   SUPABASE_URL,
   SUPABASE_SERVICE_ROLE_KEY
 );
+
+export { supabase };
 
 // Unified logger for cron job runs
 async function logCronRun({ jobid, success, errorMessage = null, runtimeMs = null }) {
@@ -77,6 +79,11 @@ export default async function handler(req, res) {
     }
 
     const { action } = req.query || {};
+
+    // Scheduler tick endpoint
+    if (action === "scheduler_tick") {
+      return res.status(200).json({ ok: true, message: "scheduler tick available" });
+    }
 
     // Check if Supabase client is initialized
     if (!supabase) {
