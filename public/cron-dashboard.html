@@ -782,6 +782,7 @@
       background: #f5f7fb;
       border-radius: 6px;
       border: 1px solid rgba(0,0,0,0.05);
+      color: #111;
     }
 
     .db-maint-summary-grid {
@@ -791,14 +792,14 @@
     }
 
     .db-maint-summary-item .label {
-      font-size: 11px;
-      color: #666;
+      font-size: 12px;
+      color: #333;
     }
 
     .db-maint-summary-item .value {
-      font-size: 14px;
+      font-size: 15px;
       font-weight: 600;
-      color: #1a3a5f;
+      color: #000;
     }
 
     .db-maint-top-tables {
@@ -807,31 +808,34 @@
       background: #ffffff;
       border-radius: 6px;
       border: 1px solid rgba(0,0,0,0.05);
+      color: #111;
     }
 
     .db-maint-top-tables-header {
-      font-size: 12px;
+      font-size: 13px;
       font-weight: 600;
       margin-bottom: 6px;
-      color: #1a3a5f;
+      color: #111;
     }
 
     .db-maint-top-tables table {
       width: 100%;
       border-collapse: collapse;
-      font-size: 11px;
+      font-size: 12px;
+      color: #111;
     }
 
     .db-maint-top-tables th,
     .db-maint-top-tables td {
       padding: 4px;
       text-align: left;
+      color: #111;
     }
 
     .db-maint-top-tables th {
       border-bottom: 1px solid #e0e4ef;
       font-weight: 600;
-      color: #5a6473;
+      color: #000;
     }
 
     .db-maint-top-tables td.name {
@@ -850,7 +854,7 @@
     .db-maint-top-tables-note {
       margin-top: 6px;
       font-size: 10px;
-      color: #7a869a;
+      color: #4a4f58;
     }
 
     .sparkline-section {
@@ -877,6 +881,20 @@
 
     .view-logs-btn:hover {
       background: #5a6268;
+    }
+
+    .log-copy-btn {
+      margin-left: auto;
+      border: none;
+      background: transparent;
+      color: #3498db;
+      cursor: pointer;
+      font-size: 12px;
+      padding: 0 4px;
+    }
+
+    .log-copy-btn:hover {
+      text-decoration: underline;
     }
 
     .log-drawer {
@@ -2726,6 +2744,8 @@
         const statusClass = isSuccess ? 'status-success' : 'status-failed';
         const statusText = isSuccess ? 'Success' : 'Fail';
         const message = log.return_message || 'No message';
+        const encodedMessage = encodeURIComponent(message);
+        const safeMessage = escapeHtml(message);
         
         return `
           <div class="log-entry">
@@ -2733,8 +2753,9 @@
               <span class="log-status-badge ${statusClass}">${statusText}</span>
               <span class="log-timestamp">${startTime}</span>
               <span class="log-duration">${duration}</span>
+              <button class="log-copy-btn" data-message="${encodedMessage}" onclick="copyLogEntryMessage(this)">📋 Copy</button>
             </div>
-            <div class="log-message ${!isSuccess ? 'log-error-message' : ''}">${message}</div>
+            <div class="log-message ${!isSuccess ? 'log-error-message' : ''}">${safeMessage}</div>
           </div>
         `;
       }).join('');
@@ -2743,6 +2764,21 @@
         <div class="log-drawer-header">Recent logs for: ${jobName}</div>
         <div class="log-drawer-content">${logsHtml}</div>
       `;
+    }
+
+    function copyLogEntryMessage(button) {
+      const encoded = button.getAttribute('data-message') || '';
+      let text = '';
+      try {
+        text = decodeURIComponent(encoded);
+      } catch (err) {
+        text = encoded;
+      }
+      navigator.clipboard.writeText(text).then(() => {
+        addDebugLog('Log entry copied to clipboard', 'success');
+      }).catch((err) => {
+        addDebugLog('Failed to copy log entry: ' + err.message, 'error');
+      });
     }
 
 
