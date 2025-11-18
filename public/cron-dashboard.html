@@ -1513,6 +1513,11 @@
       }
     }
 
+    async function refreshDatabaseHealth() {
+      // Reload the entire dashboard to refresh database health
+      await loadJobs();
+    }
+
     function getRiskColor(risk) {
       if (risk <= 25) return 'risk-green';
       if (risk <= 60) return 'risk-amber';
