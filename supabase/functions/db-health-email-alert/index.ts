@@ -1,5 +1,5 @@
-import nodemailer from 'nodemailer';
-import { createClient } from '@supabase/supabase-js';
+import nodemailer from "npm:nodemailer@6.9.8";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 export const config = {
   runtime: 'node'
@@ -10,14 +10,14 @@ const smtp = {
   port: 465,
   secure: true,
   auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS
+    user: Deno.env.get("SMTP_USER"),
+    pass: Deno.env.get("SMTP_PASS")
   }
 };
 
 const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
+  Deno.env.get("SUPABASE_URL")!,
+  Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
 );
 
 export default async function handler(req: Request): Promise<Response> {
@@ -29,7 +29,7 @@ export default async function handler(req: Request): Promise<Response> {
     const transporter = nodemailer.createTransport(smtp);
 
     await transporter.sendMail({
-      from: `"AR System Monitor" <${process.env.SMTP_USER}>`,
+      from: `"AR System Monitor" <${Deno.env.get("SMTP_USER")}>`,
       to: "info@alanranger.com",
       subject,
       html: message
@@ -46,4 +46,3 @@ export default async function handler(req: Request): Promise<Response> {
     });
   }
 }
-
