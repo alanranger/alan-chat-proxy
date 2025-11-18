@@ -1291,7 +1291,8 @@
       34: 'Validates that all page chunks have proper embeddings for RAG search functionality. Counts total chunks, chunks with embeddings, and chunks missing embeddings. Ensures the chat bot can properly search and retrieve content.',
       35: 'Analyzes content freshness across all URLs. Identifies content that hasn\'t been updated in 60+ days and calculates average content age. Helps identify stale content that may need refreshing or removal.',
       36: 'Backs up daily analytics data to ensure long-term retention. Verifies that yesterday\'s analytics data has been properly stored in chat_analytics_daily table for historical reporting and analysis.',
-      37: 'Monitors the health of all active cron jobs. Identifies jobs with recent failures (more than 3 failures in 24 hours = critical, any failures = warning) or jobs that haven\'t succeeded in 48+ hours. Helps detect and alert on system issues early.'
+      37: 'Monitors the health of all active cron jobs. Identifies jobs with recent failures (more than 3 failures in 24 hours = critical, any failures = warning) or jobs that haven\'t succeeded in 48+ hours. Helps detect and alert on system issues early.',
+      39: 'Monitors database health metrics and creates snapshots every 6 hours. Collects database size, table counts, debug log counts, table bloat percentages, and chunk counts. Calculates risk scores for debug logs, table bloat, and chunking health. Creates alerts when thresholds are exceeded (e.g., debug logs >20k, bloat >4%, 0 chunks). Stores historical snapshots in db_health_snapshots and alerts in db_health_alerts tables for trend analysis and early warning detection.'
     };
 
     // Define linked jobs (jobs that run together and are related)
