@@ -44,6 +44,22 @@ const supabase = createClient(
   }
 );
 
+const supabaseCron = createClient(
+  SUPABASE_URL,
+  SUPABASE_SERVICE_ROLE_KEY,
+  {
+    db: {
+      schema: 'cron',
+    },
+    global: {
+      headers: { 'x-client-info': 'admin-api' },
+    },
+    auth: {
+      persistSession: false,
+    },
+  }
+);
+
 export { supabase };
 
 // Unified logger for cron job runs
@@ -656,8 +672,6 @@ export default async function handler(req, res) {
     }
 
     async function fetchJobRunAggregates(jobIds = [], jobNameLookup = new Map()) {
-      const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-
       try {
         if (!Array.isArray(jobIds) || jobIds.length === 0) {
           return { statusAggregates: [], lastRunRows: [] };
@@ -673,15 +687,33 @@ export default async function handler(req, res) {
         }
 
         // 1) Count successes + failures (simple query)
-        const { data: statusRows, error: statusError } = await supabase
+        const { data: statusRowsPublic, error: statusErrorPublic } = await supabase
           .from("job_run_details")
           .select("jobid, status, return_message")
           .in("jobid", cleanedIds);
 
-        if (statusError) {
-          console.error("Status aggregate query failed", statusError);
-          return { statusAggregates: [], lastRunRows: [] };
+        const { data: statusRowsCron, error: statusErrorCron } = await supabaseCron
+          .from("job_run_details")
+          .select("jobid, status, return_message")
+          .in("jobid", cleanedIds);
+
+        if (statusErrorPublic) {
+          console.error("Status aggregate query failed for public schema", statusErrorPublic);
         }
+        if (statusErrorCron) {
+          console.error("Status aggregate query failed for cron schema", statusErrorCron);
+        }
+
+        const statusRows = [
+          ...(Array.isArray(statusRowsPublic) ? statusRowsPublic : []),
+          ...(Array.isArray(statusRowsCron) ? statusRowsCron : []),
+        ];
+
+        console.log("[DEBUG] job_run_details counts", {
+          publicCount: statusRowsPublic?.length || 0,
+          cronCount: statusRowsCron?.length || 0,
+        });
+        console.log("[DEBUG] Sample job run rows", statusRows.slice(0, 5));
 
         // Manual grouping - count by status per job
         const statusCounts = {};
@@ -716,18 +748,37 @@ export default async function handler(req, res) {
         }
 
         // 2) Get the latest run per job (one simple query)
-        const { data: lastRunRows, error: lastRunError } = await supabase
+        const { data: lastRunRowsPublic, error: lastRunErrorPublic } = await supabase
           .from("job_run_details")
-          .select("jobid, end_time, status, return_message")
+          .select("jobid, end_time, status, return_message, start_time")
           .in("jobid", cleanedIds)
           .order("end_time", { ascending: false });
 
-        if (lastRunError) {
-          console.error("Last run query failed", lastRunError);
-          return { statusAggregates, lastRunRows: [] };
+        const { data: lastRunRowsCron, error: lastRunErrorCron } = await supabaseCron
+          .from("job_run_details")
+          .select("jobid, end_time, status, return_message, start_time")
+          .in("jobid", cleanedIds)
+          .order("end_time", { ascending: false });
+
+        if (lastRunErrorPublic) {
+          console.error("Last run query failed for public schema", lastRunErrorPublic);
+        }
+        if (lastRunErrorCron) {
+          console.error("Last run query failed for cron schema", lastRunErrorCron);
         }
 
-        return { statusAggregates, lastRunRows };
+        const combinedLastRunRows = [
+          ...(Array.isArray(lastRunRowsPublic) ? lastRunRowsPublic : []),
+          ...(Array.isArray(lastRunRowsCron) ? lastRunRowsCron : []),
+        ].sort((a, b) => {
+          const timeA = new Date(a.end_time || a.start_time || 0).getTime();
+          const timeB = new Date(b.end_time || b.start_time || 0).getTime();
+          return timeB - timeA;
+        });
+
+        console.log("[DEBUG] Raw run history rows:", combinedLastRunRows.slice(0, 5));
+
+        return { statusAggregates, lastRunRows: combinedLastRunRows };
       } catch (err) {
         console.error("fetchJobRunAggregates - unexpected error", err);
         return { statusAggregates: [], lastRunRows: [] };
@@ -1081,19 +1132,50 @@ export default async function handler(req, res) {
           return res.status(400).json({ error: 'jobid parameter required' });
         }
 
-        const { data: logs, error: logsError } = await supabase
+        const { data: publicLogs, error: publicLogsError } = await supabase
           .from('job_run_details')
           .select('id, jobid, status, command, return_message, start_time, end_time, duration_ms, created_at')
           .eq('jobid', jobid)
           .order('start_time', { ascending: false })
           .limit(limit);
 
-        if (logsError) {
-          console.error('Error querying job run details:', logsError);
-          return res.status(500).json({ error: 'Failed to get logs', detail: logsError.message });
+        if (publicLogsError) {
+          console.error('Error querying job run details (public):', publicLogsError);
         }
 
-        return res.status(200).json({ ok: true, logs: logs || [] });
+        let cronLogs = [];
+        try {
+          const { data: cronData, error: cronError } = await supabaseCron
+            .from('job_run_details')
+            .select('runid as id, jobid, status, command, return_message, start_time, end_time, NULL::int as duration_ms, created_at')
+            .eq('jobid', jobid)
+            .order('start_time', { ascending: false })
+            .limit(limit);
+          if (cronError) {
+            console.error('Error querying job run details (cron):', cronError);
+          } else {
+            cronLogs = cronData || [];
+          }
+        } catch (cronQueryError) {
+          console.error('Unexpected error querying cron.job_run_details:', cronQueryError);
+        }
+
+        const combinedLogs = [
+          ...(Array.isArray(publicLogs) ? publicLogs : []),
+          ...cronLogs,
+        ].sort((a, b) => {
+          const timeA = new Date(a.start_time || a.end_time || 0).getTime();
+          const timeB = new Date(b.start_time || b.end_time || 0).getTime();
+          return timeB - timeA;
+        }).slice(0, limit);
+
+        console.log('[DEBUG] Combined cron_logs rows for job', jobid, combinedLogs.slice(0, 5));
+
+        if (!Array.isArray(publicLogs) && cronLogs.length === 0) {
+          return res.status(500).json({ error: 'Failed to get logs', detail: 'Unable to query job run history.' });
+        }
+
+        return res.status(200).json({ ok: true, logs: combinedLogs });
 
       } catch (error) {
         console.error('Error getting cron logs:', error);
@@ -1109,18 +1191,50 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'missing jobid' });
       }
 
-      const { data, error } = await supabase
+      const { data: publicLogs, error: publicError } = await supabase
         .from('job_run_details')
         .select('*')
         .eq('jobid', jobid)
         .order('start_time', { ascending: false })
         .limit(50);
 
-      if (error) {
-        return res.status(500).json({ error: 'db_error', detail: error.message });
+      if (publicError) {
+        console.error('Error getting job logs (public):', publicError);
       }
 
-      return res.status(200).json({ logs: data || [] });
+      let cronLogs = [];
+      try {
+        const { data: cronData, error: cronError } = await supabaseCron
+          .from('job_run_details')
+          .select('*')
+          .eq('jobid', jobid)
+          .order('start_time', { ascending: false })
+          .limit(50);
+        if (cronError) {
+          console.error('Error getting job logs (cron):', cronError);
+        } else {
+          cronLogs = cronData || [];
+        }
+      } catch (cronQueryError) {
+        console.error('Unexpected error getting cron job logs:', cronQueryError);
+      }
+
+      const combinedLogs = [
+        ...(Array.isArray(publicLogs) ? publicLogs : []),
+        ...cronLogs,
+      ].sort((a, b) => {
+        const timeA = new Date(a.start_time || a.end_time || 0).getTime();
+        const timeB = new Date(b.start_time || b.end_time || 0).getTime();
+        return timeB - timeA;
+      }).slice(0, 50);
+
+      console.log('[DEBUG] Raw run history rows:', combinedLogs.slice(0, 5));
+
+      if (!Array.isArray(publicLogs) && cronLogs.length === 0) {
+        return res.status(500).json({ error: 'db_error', detail: 'Unable to fetch job run history.' });
+      }
+
+      return res.status(200).json({ logs: combinedLogs });
     }
 
     // Update Cron Job Schedule (POST /api/admin?action=update_cron_schedule)
