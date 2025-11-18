@@ -58,8 +58,12 @@ export default async function handler(req, res) {
     }
 
     const data = await rpcRes.json();
-    // RPC returns the jsonb directly
-    return sendJSON(res, 200, data);
+    // RPC returns array with jsonb result: [{ db_health_extended: {...} }]
+    // Extract the actual jsonb object
+    const result = Array.isArray(data) && data.length > 0 
+      ? (data[0].db_health_extended || data[0] || data)
+      : data;
+    return sendJSON(res, 200, result);
 
   } catch (err) {
     console.error(`[db-health-extended] Error at stage ${stage}:`, err);

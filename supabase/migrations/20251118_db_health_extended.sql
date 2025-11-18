@@ -39,8 +39,8 @@ BEGIN
     'log_count', COUNT(*),
     'oldest_log', MIN(timestamp),
     'newest_log', MAX(timestamp),
-    'avg_bytes_per_log', COALESCE(AVG(octet_length(message::text)), 0),
-    'largest_log_bytes', COALESCE(MAX(octet_length(message::text)), 0)
+    'avg_bytes_per_log', COALESCE(AVG(octet_length(data::text)), 0),
+    'largest_log_bytes', COALESCE(MAX(octet_length(data::text)), 0)
   ) INTO debug_logs_data
   FROM debug_logs;
 

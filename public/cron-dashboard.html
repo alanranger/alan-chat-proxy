@@ -1548,18 +1548,20 @@
       };
 
       // Check if we have extended data (with risk scores)
-      const hasExtended = healthData.risk_scores !== undefined;
-      const riskScores = healthData.risk_scores || {};
+      // Handle both direct jsonb response and wrapped response
+      const actualData = healthData.db_health_extended || healthData;
+      const hasExtended = actualData.risk_scores !== undefined;
+      const riskScores = actualData.risk_scores || {};
       const totalRisk = riskScores.total_risk || 0;
       const riskColor = getRiskColor(totalRisk);
       const riskLabel = getRiskLabel(totalRisk);
 
       // Map API response structure to expected format
-      const dbSize = healthData.db_size || {};
-      const tableBloat = healthData.table_bloat || [];
-      const debugLogs = healthData.debug_logs || {};
-      const chunks = healthData.chunks || {};
-      const pageHtml = healthData.page_html || {};
+      const dbSize = actualData.db_size || {};
+      const tableBloat = actualData.table_bloat || [];
+      const debugLogs = actualData.debug_logs || {};
+      const chunks = actualData.chunks || {};
+      const pageHtml = actualData.page_html || {};
 
       let html = '<div class="db-health-tile">';
       
@@ -1659,7 +1661,7 @@
       }
 
       // Top 20 largest tables (from extended data) or top 10 (from basic)
-      const tablesToShow = tableBloat.length > 0 ? tableBloat : (healthData.largest_tables || []).slice(0, 10);
+      const tablesToShow = tableBloat.length > 0 ? tableBloat : (actualData.largest_tables || []).slice(0, 10);
       if (tablesToShow && tablesToShow.length > 0) {
         html += '<div class="db-health-table">';
         html += `<h3 style="margin-bottom: 12px; font-size: 16px; font-weight: 700; color: #000;">Top ${tablesToShow.length} Largest Tables</h3>`;
