@@ -1836,8 +1836,9 @@
       const healthData = await loadDatabaseHealth();
       if (healthData) {
         html += '<div class="job-section">';
-        // Header is now rendered inside the tile if extended data is available
-        if (!healthData.risk_scores) {
+        // Check if extended data is available (header is rendered inside tile if extended)
+        const actualData = healthData.db_health_extended || healthData;
+        if (!actualData.risk_scores) {
           html += '<div class="job-section-header db-health">💾 Database Health</div>';
         }
         html += '<div class="job-section-content">';
