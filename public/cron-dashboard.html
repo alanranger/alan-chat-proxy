@@ -776,6 +776,83 @@
       margin-top: 4px;
     }
 
+    .db-maint-summary {
+      margin-top: 12px;
+      padding: 10px 12px;
+      background: #f5f7fb;
+      border-radius: 6px;
+      border: 1px solid rgba(0,0,0,0.05);
+    }
+
+    .db-maint-summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 8px 16px;
+    }
+
+    .db-maint-summary-item .label {
+      font-size: 11px;
+      color: #666;
+    }
+
+    .db-maint-summary-item .value {
+      font-size: 14px;
+      font-weight: 600;
+      color: #1a3a5f;
+    }
+
+    .db-maint-top-tables {
+      margin-top: 10px;
+      padding: 10px 12px;
+      background: #ffffff;
+      border-radius: 6px;
+      border: 1px solid rgba(0,0,0,0.05);
+    }
+
+    .db-maint-top-tables-header {
+      font-size: 12px;
+      font-weight: 600;
+      margin-bottom: 6px;
+      color: #1a3a5f;
+    }
+
+    .db-maint-top-tables table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 11px;
+    }
+
+    .db-maint-top-tables th,
+    .db-maint-top-tables td {
+      padding: 4px;
+      text-align: left;
+    }
+
+    .db-maint-top-tables th {
+      border-bottom: 1px solid #e0e4ef;
+      font-weight: 600;
+      color: #5a6473;
+    }
+
+    .db-maint-top-tables td.name {
+      font-weight: 500;
+    }
+
+    .db-maint-top-tables .index-size {
+      font-weight: 500;
+    }
+
+    .db-maint-top-tables tr.db-maint-big-index td.index-size {
+      color: #d9534f;
+      font-weight: 700;
+    }
+
+    .db-maint-top-tables-note {
+      margin-top: 6px;
+      font-size: 10px;
+      color: #7a869a;
+    }
+
     .sparkline-section {
       margin-top: 15px;
       margin-bottom: 10px;
@@ -1141,7 +1218,9 @@
         schedule: schedule,
         schedule_description: scheduleDescription,
         jobname: apiJob.jobname || apiJob.name || `Job ${apiJob.jobid}`,
-        command: apiJob.command || ''
+        command: apiJob.command || '',
+        maintenanceSummary: apiJob.maintenanceSummary || null,
+        maintenanceTopTables: apiJob.maintenanceTopTables || null
       };
     }
 
@@ -1473,6 +1552,22 @@
       
       // Fallback: return the cron expression
       return cron;
+    }
+
+    function formatBytesToMB(bytes = 0) {
+      const mb = Number(bytes || 0) / (1024 * 1024);
+      return mb.toFixed(1);
+    }
+
+    function formatNumber(value = 0) {
+      return Number(value || 0).toLocaleString('en-GB');
+    }
+
+    function formatDateTime(value) {
+      if (!value) return '—';
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return value;
+      return date.toLocaleString();
     }
 
     // Calculate next scheduled run time from cron expression
@@ -2327,6 +2422,91 @@
       });
     }
 
+    function renderDatabaseMaintenanceSummary(job) {
+      if (job.jobid !== 32 || !job.maintenanceSummary) return '';
+      const s = job.maintenanceSummary;
+      const deadRemoved = Math.max((s.deadBefore || 0) - (s.deadAfter || 0), 0);
+      const bloatBeforeMB = formatBytesToMB(s.bloatBeforeBytes || 0);
+      const bloatAfterMB = formatBytesToMB(s.bloatAfterBytes || 0);
+      const diskFreedMB = formatBytesToMB(s.diskFreedBytes || 0);
+
+      return `
+        <div class="db-maint-summary">
+          <div class="db-maint-summary-grid">
+            <div class="db-maint-summary-item">
+              <div class="label">Dead tuples removed (last run)</div>
+              <div class="value">${formatNumber(deadRemoved)}</div>
+            </div>
+            <div class="db-maint-summary-item">
+              <div class="label">Estimated bloat before → after</div>
+              <div class="value">${bloatBeforeMB} MB → ${bloatAfterMB} MB</div>
+            </div>
+            <div class="db-maint-summary-item">
+              <div class="label">Estimated disk freed</div>
+              <div class="value">${diskFreedMB} MB</div>
+            </div>
+            <div class="db-maint-summary-item">
+              <div class="label">Tables analysed</div>
+              <div class="value">${formatNumber(s.totalTables || 0)}</div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderDatabaseMaintenanceTopTables(job) {
+      if (job.jobid !== 32 || !Array.isArray(job.maintenanceTopTables) || job.maintenanceTopTables.length === 0) {
+        return '';
+      }
+
+      const rowsHtml = job.maintenanceTopTables.map((t) => {
+        const sizeBefore = formatBytesToMB(t.sizeBeforeBytes || 0);
+        const sizeAfter = formatBytesToMB(t.sizeAfterBytes || 0);
+        const bloatAfter = formatBytesToMB(t.estBloatAfterBytes || 0);
+        const indexMB = formatBytesToMB(t.indexBytes || 0);
+        const isBigIndex = Number(t.indexBytes || 0) >= 200 * 1024 * 1024;
+        const lastAutovac = formatDateTime(t.lastAutovacuum);
+        const lastAutoanalyze = formatDateTime(t.lastAutoanalyze);
+
+        return `
+          <tr class="${isBigIndex ? 'db-maint-big-index' : ''}">
+            <td class="name">${t.tableName}</td>
+            <td>${sizeBefore} → ${sizeAfter}</td>
+            <td>${bloatAfter} MB</td>
+            <td>${formatNumber(t.deadAfter || 0)}</td>
+            <td class="index-size">${indexMB} MB</td>
+            <td>${lastAutovac}</td>
+            <td>${lastAutoanalyze}</td>
+          </tr>
+        `;
+      }).join('');
+
+      return `
+        <div class="db-maint-top-tables">
+          <div class="db-maint-top-tables-header">Top bloated tables (last run)</div>
+          <table>
+            <thead>
+              <tr>
+                <th>Table</th>
+                <th>Size (MB)</th>
+                <th>Estimated bloat (MB)</th>
+                <th>Dead tuples</th>
+                <th>Index size (MB)</th>
+                <th>Last autovacuum</th>
+                <th>Last auto-analyze</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rowsHtml}
+            </tbody>
+          </table>
+          <div class="db-maint-top-tables-note">
+            Estimates from pg_stat_all_tables / pg_stat_user_indexes immediately after the last maintenance run.
+          </div>
+        </div>
+      `;
+    }
+
     /**
      * Render a single job card
      * @param {JobSummary} job
@@ -2415,6 +2595,8 @@
               <div style="font-size: 11px; color: #7f8c8d;">${job.failed_count} failed</div>
             </div>
           </div>
+          ${renderDatabaseMaintenanceSummary(job)}
+          ${renderDatabaseMaintenanceTopTables(job)}
           ${[26, 27, 28].includes(job.jobid) ? `
           <div class="job-progress" id="progress-${job.jobid}" style="display:none;">
             <div class="progress-bar-container">

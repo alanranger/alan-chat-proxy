@@ -70,6 +70,88 @@ async function logCronRun({ jobid, success, errorMessage = null, runtimeMs = nul
   }
 }
 
+function isDatabaseMaintenanceJob(jobid) {
+  return Number(jobid) === 32;
+}
+
+function buildDatabaseMaintenancePayload(rows = []) {
+  if (!Array.isArray(rows) || rows.length === 0) {
+    return null;
+  }
+
+  const tables = rows.map((row) => {
+    const sizeBefore = Number(row.size_before_bytes || 0);
+    const sizeAfter = Number(row.size_after_bytes || 0);
+    const deadBefore = Number(row.dead_before || 0);
+    const deadAfter = Number(row.dead_after || 0);
+    const bloatBefore = Number(row.est_bloat_before_bytes || 0);
+    const bloatAfter = Number(row.est_bloat_after_bytes || 0);
+    const indexBytes = Number(row.index_bytes || 0);
+    const tableName = row.table_name || row.tableName || 'unknown';
+
+    return {
+      tableName,
+      sizeBeforeBytes: sizeBefore,
+      sizeAfterBytes: sizeAfter,
+      deadBefore,
+      deadAfter,
+      deadRemoved: Math.max(deadBefore - deadAfter, 0),
+      estBloatBeforeBytes: bloatBefore,
+      estBloatAfterBytes: bloatAfter,
+      estBloatFreedBytes: Math.max(bloatBefore - bloatAfter, 0),
+      indexBytes,
+      lastAutovacuum: row.last_autovacuum || row.lastAutovacuum || null,
+      lastAutoanalyze: row.last_autoanalyze || row.lastAutoanalyze || null,
+    };
+  });
+
+  const summary = tables.reduce(
+    (acc, t) => {
+      acc.totalTables += 1;
+      acc.deadBefore += t.deadBefore;
+      acc.deadAfter += t.deadAfter;
+      acc.bloatBeforeBytes += t.estBloatBeforeBytes;
+      acc.bloatAfterBytes += t.estBloatAfterBytes;
+      acc.diskFreedBytes += t.estBloatFreedBytes;
+      return acc;
+    },
+    {
+      totalTables: 0,
+      deadBefore: 0,
+      deadAfter: 0,
+      bloatBeforeBytes: 0,
+      bloatAfterBytes: 0,
+      diskFreedBytes: 0,
+    }
+  );
+
+  const topBloatedTables = [...tables]
+    .sort((a, b) => b.estBloatAfterBytes - a.estBloatAfterBytes)
+    .slice(0, 5);
+
+  return {
+    type: 'database_maintenance',
+    summary,
+    tables,
+    topBloatedTables,
+  };
+}
+
+function serializeExecutionResult(jobId, executionResult) {
+  if (!executionResult) return null;
+  try {
+    const jsonString = JSON.stringify(executionResult);
+    if (isDatabaseMaintenanceJob(jobId)) {
+      return jsonString;
+    }
+    return jsonString.substring(0, 500);
+  } catch (err) {
+    return typeof executionResult === 'string'
+      ? executionResult
+      : String(err?.message || 'execution_result_serialization_error');
+  }
+}
+
 // Match the hardcoded UI token as a fallback so the button works
 const EXPECTED_TOKEN = (process.env.INGEST_TOKEN || '').trim() || 'b6c3f0c9e6f44cce9e1a4f3f2d3a5c76';
 
@@ -144,6 +226,8 @@ async function runJob(supabase, job) {
         command = "SELECT trigger_refresh_batch1_job();";
       } else if (jobid === 28) {
         command = "SELECT trigger_refresh_batch2_job();";
+      } else if (isDatabaseMaintenanceJob(jobid) && command?.includes('run_database_maintenance')) {
+        command = "SELECT run_database_maintenance_with_stats();";
       }
       command = command.trim();
       
@@ -156,7 +240,7 @@ async function runJob(supabase, job) {
       for (const statement of statements) {
         const functionCallMatch = statement.match(/SELECT\s+(\w+)\s*\(([^)]*)\)/i);
         
-        if (functionCallMatch) {
+          if (functionCallMatch) {
           const functionName = functionCallMatch[1];
           const paramsStr = functionCallMatch[2].trim();
           
@@ -188,7 +272,7 @@ async function runJob(supabase, job) {
           
           let rpcData, rpcError;
           try {
-            if (Object.keys(params).length > 0) {
+              if (Object.keys(params).length > 0) {
               const result = await supabase.rpc(functionName, params);
               rpcData = result.data;
               rpcError = result.error;
@@ -201,6 +285,12 @@ async function runJob(supabase, job) {
             if (rpcError) {
               error = rpcError.message;
             } else {
+              if (isDatabaseMaintenanceJob(jobid) && functionName.includes('run_database_maintenance')) {
+                const payload = buildDatabaseMaintenancePayload(rpcData);
+                if (payload) {
+                  rpcData = payload;
+                }
+              }
               executionResult = rpcData;
             }
           } catch (rpcErr) {
@@ -461,11 +551,24 @@ export default async function handler(req, res) {
         const result = await runJob(supabase, fullJob);
 
         // Log the run
+        const schedulerJobId = parseInt(fullJob.jobid || fullJob.id, 10);
+        const schedulerDisplayCommand = (
+          schedulerJobId === 26 ? "SELECT trigger_refresh_master_job();" :
+          schedulerJobId === 27 ? "SELECT trigger_refresh_batch1_job();" :
+          schedulerJobId === 28 ? "SELECT trigger_refresh_batch2_job();" :
+          isDatabaseMaintenanceJob(schedulerJobId) ? "SELECT run_database_maintenance_with_stats();" :
+          (fullJob.command || '')
+        );
+        const schedulerSerializedResult = serializeExecutionResult(schedulerJobId, result.executionResult);
+        const schedulerReturnMessage = result.success
+          ? (schedulerSerializedResult || 'ok')
+          : (result.error || 'Job execution failed');
+
         await logJobRun(
-          parseInt(fullJob.jobid || fullJob.id, 10),
-          fullJob.command || '',
+          schedulerJobId,
+          schedulerDisplayCommand,
           result.success ? "succeeded" : "failed",
-          result.error || "ok",
+          schedulerReturnMessage,
           result.start_time.toISOString(),
           result.end_time.toISOString()
         );
@@ -838,21 +941,37 @@ export default async function handler(req, res) {
           const jobId = parseInt(row.jobid, 10);
           if (!Number.isFinite(jobId) || !row.end_time || seenJobIds.has(jobId)) return;
           seenJobIds.add(jobId);
-          lastRunMap.set(jobId, row.end_time);
+          lastRunMap.set(jobId, row);
         });
 
         const enrichedJobs = jobs.map((job) => {
           const jobId = parseInt(job.jobid, 10);
           const stats = statsMap.get(jobId) || { success_count: 0, failed_count: 0, total_runs: 0 };
-          const aggregatedLastRun = lastRunMap.get(jobId);
+          const lastRunDetails = lastRunMap.get(jobId);
+          const aggregatedLastRun = lastRunDetails?.end_time;
 
           // Override command for jobs 26, 27, 28 to use wrapper functions
           const command = (
             jobId === 26 ? "SELECT trigger_refresh_master_job();" :
             jobId === 27 ? "SELECT trigger_refresh_batch1_job();" :
             jobId === 28 ? "SELECT trigger_refresh_batch2_job();" :
+            isDatabaseMaintenanceJob(jobId) ? "SELECT run_database_maintenance_with_stats();" :
             job.command
           );
+
+          let maintenanceSummary = null;
+          let maintenanceTopTables = null;
+          if (isDatabaseMaintenanceJob(jobId) && lastRunDetails?.return_message) {
+            try {
+              const parsed = JSON.parse(lastRunDetails.return_message);
+              if (parsed?.type === 'database_maintenance') {
+                maintenanceSummary = parsed.summary || null;
+                maintenanceTopTables = parsed.topBloatedTables || null;
+              }
+            } catch (parseErr) {
+              console.warn('Failed to parse maintenance summary for job 32:', parseErr);
+            }
+          }
 
           return {
             ...job,
@@ -860,7 +979,9 @@ export default async function handler(req, res) {
             total_runs: stats.total_runs,
             success_count: stats.success_count,
             failed_count: stats.failed_count,
-            last_run: aggregatedLastRun || job.last_run || null
+            last_run: aggregatedLastRun || job.last_run || null,
+            maintenanceSummary,
+            maintenanceTopTables
           };
         });
 
@@ -1370,6 +1491,8 @@ export default async function handler(req, res) {
               command = "SELECT trigger_refresh_batch1_job();";
             } else if (parseInt(jobid) === 28) {
               command = "SELECT trigger_refresh_batch2_job();";
+            } else if (isDatabaseMaintenanceJob(jobid) && command?.includes('run_database_maintenance')) {
+              command = "SELECT run_database_maintenance_with_stats();";
             }
             command = command.trim();
             
@@ -1489,6 +1612,12 @@ export default async function handler(req, res) {
                   if (rpcError) {
                     error = rpcError.message;
                   } else {
+                    if (isDatabaseMaintenanceJob(jobid) && functionName.includes('run_database_maintenance')) {
+                      const payload = buildDatabaseMaintenancePayload(rpcData);
+                      if (payload) {
+                        rpcData = payload;
+                      }
+                    }
                     executionResult = rpcData;
                     
                     // Extract records affected for specific functions
@@ -1527,7 +1656,7 @@ export default async function handler(req, res) {
             // Combine results from all statements
             if (allResults.length > 0) {
               if (allResults.length === 1) {
-                executionResult = allResults[0].result;
+          executionResult = allResults[0].result;
                 if (allResults[0].error) {
                   error = allResults[0].error;
                 }
@@ -1573,8 +1702,12 @@ export default async function handler(req, res) {
             parseInt(jobid) === 26 ? "SELECT trigger_refresh_master_job();" :
             parseInt(jobid) === 27 ? "SELECT trigger_refresh_batch1_job();" :
             parseInt(jobid) === 28 ? "SELECT trigger_refresh_batch2_job();" :
+            isDatabaseMaintenanceJob(jobid) ? "SELECT run_database_maintenance_with_stats();" :
             job.command
           );
+          const serializedResult = serializeExecutionResult(parseInt(jobid, 10), executionResult);
+          const successReturnMessage = serializedResult || 'Job completed successfully';
+          const failureReturnMessage = error || recordError || 'Job execution failed';
           
           try {
             const { data: logData, error: logError } = await supabase.rpc('log_job_run', {
@@ -1582,8 +1715,8 @@ export default async function handler(req, res) {
               command: displayCommand,
               status: executionSuccess ? 'succeeded' : 'failed',
               return_message: executionSuccess 
-                ? (executionResult ? JSON.stringify(executionResult).substring(0, 500) : 'Job completed successfully')
-                : error || 'Job execution failed',
+                ? successReturnMessage
+                : failureReturnMessage,
               start_time: startTime.toISOString(),
               end_time: endTime.toISOString()
             });
@@ -1605,9 +1738,7 @@ export default async function handler(req, res) {
             parseInt(jobid, 10),
             displayCommand,
             executionSuccess ? "succeeded" : "failed",
-            executionSuccess 
-              ? (executionResult ? JSON.stringify(executionResult).substring(0, 500) : 'Job completed successfully')
-              : (error || recordError || 'Job execution failed'),
+            executionSuccess ? successReturnMessage : failureReturnMessage,
             startTime.toISOString(),
             endTime.toISOString()
           );
@@ -1649,16 +1780,20 @@ export default async function handler(req, res) {
             parseInt(jobid) === 26 ? "SELECT trigger_refresh_master_job();" :
             parseInt(jobid) === 27 ? "SELECT trigger_refresh_batch1_job();" :
             parseInt(jobid) === 28 ? "SELECT trigger_refresh_batch2_job();" :
+            isDatabaseMaintenanceJob(jobid) ? "SELECT run_database_maintenance_with_stats();" :
             job.command
           );
           
+          const serializedResult = serializeExecutionResult(parseInt(jobid, 10), executionResult);
+          const failedReturnMessage = serializedResult || execError.message || 'Job execution failed';
+
           // Record the failed job execution via public.log_job_run
           try {
             const { error: logError } = await supabase.rpc('log_job_run', {
               jobid: parseInt(jobid),
               command: displayCommand,
               status: 'failed',
-              return_message: execError.message || 'Job execution failed',
+              return_message: failedReturnMessage,
               start_time: startTime.toISOString(),
               end_time: endTime.toISOString()
             });
@@ -1674,7 +1809,7 @@ export default async function handler(req, res) {
             parseInt(jobid, 10),
             displayCommand,
             "failed",
-            execError.message || 'Job execution failed',
+            failedReturnMessage,
             startTime.toISOString(),
             endTime.toISOString()
           );
