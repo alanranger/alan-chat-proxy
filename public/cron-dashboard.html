@@ -62,6 +62,75 @@
       background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
     }
 
+    .job-section-header.db-health {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+
+    .db-health-tile {
+      background: white;
+      border-radius: 8px;
+      padding: 20px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .db-health-stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+
+    .db-health-stat {
+      background: #f8f9fa;
+      padding: 12px;
+      border-radius: 6px;
+      border-left: 3px solid #667eea;
+    }
+
+    .db-health-stat-label {
+      font-size: 12px;
+      color: #666;
+      margin-bottom: 4px;
+    }
+
+    .db-health-stat-value {
+      font-size: 18px;
+      font-weight: 600;
+      color: #333;
+    }
+
+    .db-health-table {
+      margin-top: 15px;
+    }
+
+    .db-health-table table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+
+    .db-health-table th,
+    .db-health-table td {
+      padding: 8px;
+      text-align: left;
+      border-bottom: 1px solid #e0e0e0;
+    }
+
+    .db-health-table th {
+      background: #f8f9fa;
+      font-weight: 600;
+      color: #333;
+    }
+
+    .db-health-table tr:hover {
+      background: #f8f9fa;
+    }
+
+    .bloat-warning {
+      color: #d9534f;
+      font-weight: 600;
+    }
+
     .job-section-content {
       background: #f8f9fa;
       padding: 20px;
@@ -1242,6 +1311,120 @@
       };
     }
 
+    async function loadDatabaseHealth() {
+      try {
+        const response = await fetch(`${API_BASE}/api/db-health`, {
+          headers: buildAuthHeaders()
+        });
+
+        if (response.status === 401) {
+          return null;
+        }
+
+        if (!response.ok) {
+          console.warn('Failed to load database health:', response.status);
+          return null;
+        }
+
+        const data = await response.json();
+        return data.ok ? data : null;
+      } catch (error) {
+        console.warn('Error loading database health:', error);
+        return null;
+      }
+    }
+
+    function renderDatabaseHealthTile(healthData) {
+      if (!healthData) {
+        return '<div class="db-health-tile"><div class="error">Failed to load database health data</div></div>';
+      }
+
+      const formatBytes = (bytes) => {
+        if (bytes === 0) return '0 B';
+        const k = 1024;
+        const sizes = ['B', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+      };
+
+      const formatDate = (dateStr) => {
+        if (!dateStr) return 'N/A';
+        try {
+          return new Date(dateStr).toLocaleString();
+        } catch {
+          return dateStr;
+        }
+      };
+
+      let html = '<div class="db-health-tile">';
+      
+      // Overall stats
+      html += '<div class="db-health-stats">';
+      html += `<div class="db-health-stat">
+        <div class="db-health-stat-label">Database Size</div>
+        <div class="db-health-stat-value">${healthData.overall?.db_size_mb?.toFixed(2) || 0} MB</div>
+      </div>`;
+      html += `<div class="db-health-stat">
+        <div class="db-health-stat-label">Table Count</div>
+        <div class="db-health-stat-value">${healthData.overall?.table_count || 0}</div>
+      </div>`;
+      html += `<div class="db-health-stat">
+        <div class="db-health-stat-label">Debug Logs</div>
+        <div class="db-health-stat-value">${(healthData.debug_logs?.row_count || 0).toLocaleString()}</div>
+      </div>`;
+      html += `<div class="db-health-stat">
+        <div class="db-health-stat-label">Page Chunks</div>
+        <div class="db-health-stat-value">${(healthData.page_chunks?.row_count || 0).toLocaleString()}</div>
+      </div>`;
+      html += '</div>';
+
+      // Top 10 largest tables
+      if (healthData.top_tables && healthData.top_tables.length > 0) {
+        html += '<div class="db-health-table">';
+        html += '<h3 style="margin-bottom: 10px; font-size: 14px; font-weight: 600;">Top 10 Largest Tables</h3>';
+        html += '<table>';
+        html += '<thead><tr><th>Table</th><th>Size (MB)</th><th>Dead Tuples</th><th>Live Tuples</th><th>Bloat %</th></tr></thead>';
+        html += '<tbody>';
+        healthData.top_tables.forEach(table => {
+          const bloatClass = table.bloat_percent > 10 ? 'bloat-warning' : '';
+          html += `<tr>
+            <td>${table.table_name}</td>
+            <td>${table.size_mb?.toFixed(2) || 0}</td>
+            <td>${(table.dead_tuples || 0).toLocaleString()}</td>
+            <td>${(table.live_tuples || 0).toLocaleString()}</td>
+            <td class="${bloatClass}">${table.bloat_percent?.toFixed(2) || 0}%</td>
+          </tr>`;
+        });
+        html += '</tbody></table>';
+        html += '</div>';
+      }
+
+      // Debug log stats
+      if (healthData.debug_logs) {
+        html += '<div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e0e0e0;">';
+        html += '<h3 style="margin-bottom: 10px; font-size: 14px; font-weight: 600;">Debug Logs</h3>';
+        html += `<div style="font-size: 12px; color: #666;">
+          <div>Oldest: ${formatDate(healthData.debug_logs.oldest)}</div>
+          <div style="margin-top: 4px;">Newest: ${formatDate(healthData.debug_logs.newest)}</div>
+        </div>`;
+        html += '</div>';
+      }
+
+      // Page chunk stats
+      if (healthData.page_chunks) {
+        html += '<div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e0e0e0;">';
+        html += '<h3 style="margin-bottom: 10px; font-size: 14px; font-weight: 600;">Page Chunks</h3>';
+        html += `<div style="font-size: 12px; color: #666;">
+          <div>Avg Size: ${healthData.page_chunks.avg_size_mb?.toFixed(2) || 0} MB</div>
+          <div style="margin-top: 4px;">Max Size: ${healthData.page_chunks.max_size_mb?.toFixed(2) || 0} MB</div>
+        </div>`;
+        html += '</div>';
+      }
+
+      html += '</div>';
+      return html;
+    }
+
     async function loadJobs() {
       addDebugLog('Loading jobs...', 'info');
       const container = document.getElementById('jobsContainer');
@@ -1354,6 +1537,16 @@
       ).sort((a, b) => a.jobid - b.jobid);
 
       let html = '';
+
+      // Render Database Health Section
+      const healthData = await loadDatabaseHealth();
+      if (healthData) {
+        html += '<div class="job-section">';
+        html += '<div class="job-section-header db-health">💾 Database Health</div>';
+        html += '<div class="job-section-content">';
+        html += renderDatabaseHealthTile(healthData);
+        html += '</div></div>';
+      }
 
       // Render Analytics Jobs Section
       if (analyticsGroup.length > 0) {
