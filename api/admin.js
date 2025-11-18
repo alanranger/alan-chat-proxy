@@ -712,8 +712,16 @@ export default async function handler(req, res) {
         console.log("[DEBUG] job_run_details counts", {
           publicCount: statusRowsPublic?.length || 0,
           cronCount: statusRowsCron?.length || 0,
+          totalMerged: statusRows.length,
+          jobIds: cleanedIds
         });
         console.log("[DEBUG] Sample job run rows", statusRows.slice(0, 5));
+        
+        // Debug: Check for job 32 specifically
+        if (cleanedIds.includes(32)) {
+          const job32Rows = statusRows.filter(r => Number(r.jobid) === 32);
+          console.log("[DEBUG] Job 32 run rows:", job32Rows.length, job32Rows.slice(0, 3));
+        }
 
         // Manual grouping - count by status per job
         const statusCounts = {};
@@ -745,6 +753,13 @@ export default async function handler(req, res) {
         // Debug logging
         if (statusAggregates.length > 0) {
           console.log(`[fetchJobRunAggregates] Found ${statusAggregates.length} status aggregates for jobIds:`, cleanedIds);
+          console.log(`[DEBUG] Status aggregates:`, statusAggregates);
+        }
+        
+        // Debug: Check job 32 aggregates specifically
+        if (cleanedIds.includes(32)) {
+          const job32Aggregates = statusAggregates.filter(a => Number(a.jobid) === 32);
+          console.log(`[DEBUG] Job 32 aggregates:`, job32Aggregates);
         }
 
         // 2) Get the latest run per job (one simple query)

@@ -2086,6 +2086,10 @@
         }
         
         const { job, execution, regression_test } = data;
+        
+        // Store execution result for copying
+        lastExecutionResult = execution.result || execution;
+        
         addDebugLog(`Job execution completed: success=${execution.success}, duration=${execution.duration}s`, 
           execution.success ? 'success' : 'error', { execution });
         
@@ -2196,13 +2200,19 @@
             <h3>Command Executed</h3>
             <pre style="background: #f4f4f4; padding: 10px; border-radius: 4px; overflow-x: auto;">${displayCommand || job.command || 'N/A'}</pre>
           </div>
+          <div style="margin-top: 15px; text-align: right;">
+            <button class="btn btn-secondary" onclick="copyExecutionResults(${jobId})" style="margin-right: 10px;">📋 Copy Results</button>
+            <button class="btn btn-primary" onclick="closeJobExecutionModal()">Close</button>
+          </div>
         `;
         
         modalContent.innerHTML = html;
         
-        // Refresh jobs list to update stats immediately
+        // Refresh jobs list to update stats after a short delay to ensure DB insert completes
         addDebugLog('Refreshing jobs after execution to update stats...', 'info');
+        setTimeout(() => {
           loadJobs();
+        }, 1000);
         
       } catch (error) {
         addDebugLog(`Error running job: ${error.message}`, 'error', { error: error.message, stack: error.stack });
@@ -2221,6 +2231,25 @@
       if (modal) {
         modal.style.display = 'none';
       }
+    }
+
+    // Store last execution result for copying
+    let lastExecutionResult = null;
+
+    function copyExecutionResults(jobId) {
+      if (!lastExecutionResult) {
+        showMessage('No execution results to copy', 'error');
+        return;
+      }
+
+      const resultText = JSON.stringify(lastExecutionResult, null, 2);
+      
+      navigator.clipboard.writeText(resultText).then(() => {
+        showMessage('Execution results copied to clipboard!', 'success');
+      }).catch(err => {
+        console.error('Failed to copy:', err);
+        showMessage('Failed to copy results: ' + err.message, 'error');
+      });
     }
 
     /**
