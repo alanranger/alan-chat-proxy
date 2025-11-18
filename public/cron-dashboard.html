@@ -1563,17 +1563,19 @@
       const chunks = actualData.chunks || {};
       const pageHtml = actualData.page_html || {};
 
-      let html = '<div class="db-health-tile">';
+      let html = '';
       
-      // Risk header (if extended data available)
+      // Risk header (if extended data available) - render outside tile
       if (hasExtended) {
-        html += `<div class="db-health-risk-header">
+        html += `<div class="db-health-risk-header" style="margin-bottom: 0;">
           <span>💾 Database Health</span>
           <span class="db-health-risk-score ${riskColor}">
             Total Risk: ${totalRisk} ${riskLabel}
           </span>
         </div>`;
       }
+      
+      html += '<div class="db-health-tile">';
 
       // Traffic light cards (if extended data available)
       if (hasExtended) {
