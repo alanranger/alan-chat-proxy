@@ -677,125 +677,55 @@ export default async function handler(req, res) {
           return { statusAggregates: [], lastRunRows: [] };
         }
 
-        // Normalize jobIds (numeric only)
         const cleanedIds = jobIds
-          .map(id => Number(id))
-          .filter(n => Number.isFinite(n));
+          .map((id) => Number(id))
+          .filter((n) => Number.isFinite(n));
 
         if (cleanedIds.length === 0) {
           return { statusAggregates: [], lastRunRows: [] };
         }
 
-        // 1) Count successes + failures (simple query)
-        const { data: statusRowsPublic, error: statusErrorPublic } = await supabase
-          .from("job_run_details")
-          .select("jobid, status, return_message")
-          .in("jobid", cleanedIds);
-
-        const { data: statusRowsCron, error: statusErrorCron } = await supabaseCron
-          .from("job_run_details")
-          .select("jobid, status, return_message")
-          .in("jobid", cleanedIds);
-
-        if (statusErrorPublic) {
-          console.error("Status aggregate query failed for public schema", statusErrorPublic);
-        }
-        if (statusErrorCron) {
-          console.error("Status aggregate query failed for cron schema", statusErrorCron);
-        }
-
-        const statusRows = [
-          ...(Array.isArray(statusRowsPublic) ? statusRowsPublic : []),
-          ...(Array.isArray(statusRowsCron) ? statusRowsCron : []),
-        ];
-
-        console.log("[DEBUG] job_run_details counts", {
-          publicCount: statusRowsPublic?.length || 0,
-          cronCount: statusRowsCron?.length || 0,
-          totalMerged: statusRows.length,
-          jobIds: cleanedIds
+        const { data: countRows, error: countError } = await supabase.rpc('get_job_run_counts', {
+          job_ids: cleanedIds
         });
-        console.log("[DEBUG] Sample job run rows", statusRows.slice(0, 5));
-        
-        // Debug: Check for job 32 specifically
-        if (cleanedIds.includes(32)) {
-          const job32Rows = statusRows.filter(r => Number(r.jobid) === 32);
-          console.log("[DEBUG] Job 32 run rows:", job32Rows.length, job32Rows.slice(0, 3));
+
+        if (countError) {
+          console.error('get_job_run_counts failed:', countError);
         }
 
-        // Manual grouping - count by status per job
-        const statusCounts = {};
-        if (statusRows && Array.isArray(statusRows)) {
-          for (const row of statusRows) {
-            if (!row || row.jobid === undefined || row.jobid === null) continue;
-            const jobId = Number(row.jobid);
-            if (!Number.isFinite(jobId)) continue;
+        const statusAggregates = Array.isArray(countRows)
+          ? countRows.map((row) => ({
+              jobid: row.jobid,
+              status: (row.status || '').toLowerCase(),
+              count: Number(row.run_count) || 0,
+            }))
+          : [];
 
-            let normalizedStatus = (row.status || '').toLowerCase();
-            if (!normalizedStatus) {
-              const parsedResult = parseReturnMessage(row.return_message);
-              const jobName = jobNameLookup.get(jobId) || '';
-              const inferred = inferSuccess(parsedResult, jobName);
-              normalizedStatus = inferred ? 'succeeded' : 'failed';
-            }
-
-            const key = `${jobId}_${normalizedStatus}`;
-            if (!statusCounts[key]) {
-              statusCounts[key] = { jobid: jobId, status: normalizedStatus, count: 0 };
-            }
-            statusCounts[key].count++;
-          }
-        }
-
-        // Convert to array format expected by the calling code
-        const statusAggregates = Object.values(statusCounts);
-        
-        // Debug logging
         if (statusAggregates.length > 0) {
-          console.log(`[fetchJobRunAggregates] Found ${statusAggregates.length} status aggregates for jobIds:`, cleanedIds);
-          console.log(`[DEBUG] Status aggregates:`, statusAggregates);
+          console.log('[fetchJobRunAggregates] Aggregated counts for jobIds:', cleanedIds);
+          console.log('[DEBUG] Status aggregates sample:', statusAggregates.slice(0, 5));
         }
-        
-        // Debug: Check job 32 aggregates specifically
+
         if (cleanedIds.includes(32)) {
-          const job32Aggregates = statusAggregates.filter(a => Number(a.jobid) === 32);
-          console.log(`[DEBUG] Job 32 aggregates:`, job32Aggregates);
+          const job32Aggregates = statusAggregates.filter((a) => Number(a.jobid) === 32);
+          console.log('[DEBUG] Job 32 aggregated counts:', job32Aggregates);
         }
 
-        // 2) Get the latest run per job (one simple query)
-        const { data: lastRunRowsPublic, error: lastRunErrorPublic } = await supabase
-          .from("job_run_details")
-          .select("jobid, end_time, status, return_message, start_time")
-          .in("jobid", cleanedIds)
-          .order("end_time", { ascending: false });
-
-        const { data: lastRunRowsCron, error: lastRunErrorCron } = await supabaseCron
-          .from("job_run_details")
-          .select("jobid, end_time, status, return_message, start_time")
-          .in("jobid", cleanedIds)
-          .order("end_time", { ascending: false });
-
-        if (lastRunErrorPublic) {
-          console.error("Last run query failed for public schema", lastRunErrorPublic);
-        }
-        if (lastRunErrorCron) {
-          console.error("Last run query failed for cron schema", lastRunErrorCron);
-        }
-
-        const combinedLastRunRows = [
-          ...(Array.isArray(lastRunRowsPublic) ? lastRunRowsPublic : []),
-          ...(Array.isArray(lastRunRowsCron) ? lastRunRowsCron : []),
-        ].sort((a, b) => {
-          const timeA = new Date(a.end_time || a.start_time || 0).getTime();
-          const timeB = new Date(b.end_time || b.start_time || 0).getTime();
-          return timeB - timeA;
+        const { data: lastRunRowsData, error: lastRunError } = await supabase.rpc('get_job_last_runs', {
+          job_ids: cleanedIds
         });
 
-        console.log("[DEBUG] Raw run history rows:", combinedLastRunRows.slice(0, 5));
+        if (lastRunError) {
+          console.error('get_job_last_runs failed:', lastRunError);
+        }
 
-        return { statusAggregates, lastRunRows: combinedLastRunRows };
+        const lastRunRows = Array.isArray(lastRunRowsData) ? lastRunRowsData : [];
+
+        console.log('[DEBUG] Raw run history rows sample:', lastRunRows.slice(0, 5));
+
+        return { statusAggregates, lastRunRows };
       } catch (err) {
-        console.error("fetchJobRunAggregates - unexpected error", err);
+        console.error('fetchJobRunAggregates - unexpected error', err);
         return { statusAggregates: [], lastRunRows: [] };
       }
     }
