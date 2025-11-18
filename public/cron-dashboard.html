@@ -1606,19 +1606,23 @@
         const issues = [];
         if (debugRisk > 30) {
           const level = debugRisk > 60 ? 'critical' : 'warning';
-          issues.push({ level, text: `Debug logs at ${(debugLogs.log_count || 0).toLocaleString()}. ${debugRisk > 60 ? 'Ingestion likely looping.' : 'Consider cleanup.'` });
+          const logCount = (debugLogs.log_count || 0).toLocaleString();
+          const logMessage = debugRisk > 60 ? 'Ingestion likely looping.' : 'Consider cleanup.';
+          issues.push({ level, text: 'Debug logs at ' + logCount + '. ' + logMessage });
         }
         if (bloatRisk > 30) {
           const level = bloatRisk > 60 ? 'critical' : 'warning';
           const tableName = pageHtml.dead_row_pct ? 'page_html' : 'tables';
-          issues.push({ level, text: `${tableName} bloat at ${pageHtml.dead_row_pct?.toFixed(1) || 0}%. Vacuum recommended.` });
+          const bloatPct = (pageHtml.dead_row_pct || 0).toFixed(1);
+          issues.push({ level, text: tableName + ' bloat at ' + bloatPct + '%. Vacuum recommended.' });
         }
         if (chunkRisk > 30) {
           const level = chunkRisk > 60 ? 'critical' : 'warning';
           if (chunks.chunk_count === 0) {
             issues.push({ level, text: '0 page_chunks present — ingestion chunking disabled or broken.' });
           } else {
-            issues.push({ level, text: `Chunk size issues detected. Max: ${formatBytes(chunks.max_chunk_size || 0)}` });
+            const maxSize = formatBytes(chunks.max_chunk_size || 0);
+            issues.push({ level, text: 'Chunk size issues detected. Max: ' + maxSize });
           }
         }
 
