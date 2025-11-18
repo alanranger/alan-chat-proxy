@@ -1700,10 +1700,19 @@
           const bloatClass = deadRowPct > 20 ? 'bloat-warning' : '';
           const tableRisk = deadRowPct > 20 ? 90 : (deadRowPct > 10 ? 60 : (deadRowPct > 3 ? 30 : 10));
           const riskBadge = hasExtended ? `<td><span class="risk-badge ${getRiskColor(tableRisk)}">${getRiskLabel(tableRisk).replace(/[🟢🟠🔴]/g, '').trim()}</span></td>` : '';
+          
+          // Heatmap color based on bloat percentage
+          function getBloatColor(pct) {
+            if (pct >= 10) return "rgb(200,0,0)";       // red
+            if (pct >= 5) return "rgb(255,150,0)";     // amber
+            return "rgb(0,180,0)";                     // green
+          }
+          const bloatColor = getBloatColor(deadRowPct);
+          
           html += `<tr>
             <td style="font-weight: 500;">${table.table_name || 'N/A'}</td>
             <td style="font-weight: 500;">${table.total_pretty || table.total_size_pretty || '0 B'}</td>
-            <td class="${bloatClass}" style="font-weight: 600;">${deadRowPct.toFixed(1)}%</td>
+            <td class="${bloatClass}" style="font-weight: 600; color: ${bloatColor};">${deadRowPct.toFixed(1)}%</td>
             <td style="font-weight: 500; font-size: 12px;">Idx: ${(table.idx_scan || 0).toLocaleString()}<br>Seq: ${(table.seq_scan || 0).toLocaleString()}</td>
             ${riskBadge}
           </tr>`;
