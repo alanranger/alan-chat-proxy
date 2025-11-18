@@ -60,7 +60,7 @@ chunks AS (
 )
 SELECT json_build_object(
   'db_size',        (SELECT row_to_json(db_size)      FROM db_size),
-  'largest_tables', (SELECT json_agg(table_stats ORDER BY total_bytes DESC LIMIT 10) FROM table_stats),
+  'largest_tables', (SELECT json_agg(t) FROM (SELECT * FROM table_stats ORDER BY total_bytes DESC LIMIT 10) t),
   'debug_logs',     (SELECT row_to_json(debug_logs)   FROM debug_logs),
   'chunks',         (SELECT row_to_json(chunks)       FROM chunks)
 ) AS result;
