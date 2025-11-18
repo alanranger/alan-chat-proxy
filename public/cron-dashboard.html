@@ -1834,7 +1834,8 @@
       const dataMaintenanceJobs = [29, 30, 31];
       const databasePerformanceJobs = [32];
       const contentHealthJobs = [33, 34, 35];
-      const systemHealthJobs = [36, 37, 39];
+      const systemHealthJobs = [36, 37];
+      const dbHealthMonitorJob = 39;
       
       // Separate jobs into groups
       const analyticsGroup = jobs.filter(j => analyticsJobs.includes(j.jobid)).sort((a, b) => a.jobid - b.jobid);
@@ -1849,23 +1850,41 @@
         !dataMaintenanceJobs.includes(j.jobid) &&
         !databasePerformanceJobs.includes(j.jobid) &&
         !contentHealthJobs.includes(j.jobid) &&
-        !systemHealthJobs.includes(j.jobid)
+        !systemHealthJobs.includes(j.jobid) &&
+        j.jobid !== dbHealthMonitorJob
       ).sort((a, b) => a.jobid - b.jobid);
 
       let html = '';
 
-      // Render Database Health Section
+      // Render Database Health Section with db-health-monitor job side by side
       const healthData = await loadDatabaseHealth();
-      if (healthData) {
+      const dbHealthJob = jobs.find(j => j.jobid === dbHealthMonitorJob);
+      
+      if (healthData || dbHealthJob) {
         html += '<div class="job-section">';
         // Check if extended data is available (header is rendered inside tile if extended)
-        const actualData = healthData.db_health_extended || healthData;
-        if (!actualData.risk_scores) {
+        const actualData = healthData?.db_health_extended || healthData;
+        if (!actualData?.risk_scores) {
           html += '<div class="job-section-header db-health">💾 Database Health</div>';
         }
         html += '<div class="job-section-content">';
-        html += renderDatabaseHealthTile(healthData);
-        html += '</div></div>';
+        html += '<div class="jobs-grid" style="grid-template-columns: 2fr 1fr; gap: 20px;">';
+        
+        // Database Health Tile (left, larger)
+        if (healthData) {
+          html += '<div>';
+          html += renderDatabaseHealthTile(healthData);
+          html += '</div>';
+        }
+        
+        // db-health-monitor Job Card (right, smaller)
+        if (dbHealthJob) {
+          html += '<div>';
+          html += renderJobCard(dbHealthJob, false, 'db-health');
+          html += '</div>';
+        }
+        
+        html += '</div></div></div>';
       }
 
       // Render Analytics Jobs Section
