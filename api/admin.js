@@ -74,6 +74,18 @@ function isDatabaseMaintenanceJob(jobid) {
   return Number(jobid) === 32;
 }
 
+function serializeError(err) {
+  if (!err) return null;
+  if (typeof err === 'string') return err;
+  if (err instanceof Error && err.message) return err.message;
+  if (typeof err.message === 'string') return err.message;
+  try {
+    return JSON.stringify(err);
+  } catch (jsonErr) {
+    return String(err);
+  }
+}
+
 function buildDatabaseMaintenancePayload(rows = []) {
   if (!Array.isArray(rows) || rows.length === 0) {
     return null;
@@ -338,9 +350,10 @@ async function runJob(supabase, job) {
   if (executionSuccess === false) {
     executionSuccess = !error;
   }
+  const serializedError = serializeError(error);
   return {
     success: executionSuccess,
-    error: error,
+    error: serializedError,
     executionResult: executionResult,
     start_time: startTime,
     end_time: endTime
@@ -1743,6 +1756,8 @@ export default async function handler(req, res) {
             endTime.toISOString()
           );
 
+          const responseError = serializeError(error);
+
           return res.status(200).json({
             ok: true,
             job: {
@@ -1752,7 +1767,7 @@ export default async function handler(req, res) {
             },
             execution: {
               success: executionSuccess,
-              error: error,
+              error: responseError,
               duration: duration,
               start_time: startTime.toISOString(),
               end_time: endTime.toISOString(),
@@ -1823,7 +1838,7 @@ export default async function handler(req, res) {
             },
             execution: {
               success: false,
-              error: execError.message,
+              error: serializeError(execError),
               duration: duration,
               start_time: startTime.toISOString(),
               end_time: endTime.toISOString()
