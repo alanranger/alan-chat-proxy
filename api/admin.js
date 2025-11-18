@@ -149,6 +149,51 @@ function buildDatabaseMaintenancePayload(rows = []) {
   };
 }
 
+function inferSuccess(result, jobName) {
+  if (!result) return false;
+
+  const normalizedJobName = (jobName || '').toLowerCase();
+  const isDatabaseMaintenance =
+    normalizedJobName.includes('database-maintenance') ||
+    normalizedJobName.includes('database_maintenance');
+
+  if (isDatabaseMaintenance) {
+    return (
+      typeof result === 'object' &&
+      result !== null &&
+      !!result.summary &&
+      typeof result.summary === 'object'
+    );
+  }
+
+  if (result?.ok === true) return true;
+
+  if (result?.error || result?.err || result?.exception) return false;
+
+  if (typeof result === 'object') return true;
+
+  return false;
+}
+
+function parseReturnMessage(raw) {
+  if (!raw) return null;
+  if (typeof raw === 'object') return raw;
+  if (typeof raw !== 'string') return null;
+
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+
+  if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+    try {
+      return JSON.parse(trimmed);
+    } catch (err) {
+      return null;
+    }
+  }
+
+  return null;
+}
+
 function serializeExecutionResult(jobId, executionResult) {
   if (!executionResult) return null;
   try {
@@ -610,7 +655,7 @@ export default async function handler(req, res) {
       });
     }
 
-    async function fetchJobRunAggregates(jobIds = []) {
+    async function fetchJobRunAggregates(jobIds = [], jobNameLookup = new Map()) {
       const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
       try {
@@ -630,7 +675,7 @@ export default async function handler(req, res) {
         // 1) Count successes + failures (simple query)
         const { data: statusRows, error: statusError } = await supabase
           .from("job_run_details")
-          .select("jobid, status")
+          .select("jobid, status, return_message")
           .in("jobid", cleanedIds);
 
         if (statusError) {
@@ -642,10 +687,21 @@ export default async function handler(req, res) {
         const statusCounts = {};
         if (statusRows && Array.isArray(statusRows)) {
           for (const row of statusRows) {
-            if (!row || !row.jobid || !row.status) continue;
-            const key = `${row.jobid}_${row.status}`;
+            if (!row || row.jobid === undefined || row.jobid === null) continue;
+            const jobId = Number(row.jobid);
+            if (!Number.isFinite(jobId)) continue;
+
+            let normalizedStatus = (row.status || '').toLowerCase();
+            if (!normalizedStatus) {
+              const parsedResult = parseReturnMessage(row.return_message);
+              const jobName = jobNameLookup.get(jobId) || '';
+              const inferred = inferSuccess(parsedResult, jobName);
+              normalizedStatus = inferred ? 'succeeded' : 'failed';
+            }
+
+            const key = `${jobId}_${normalizedStatus}`;
             if (!statusCounts[key]) {
-              statusCounts[key] = { jobid: row.jobid, status: row.status, count: 0 };
+              statusCounts[key] = { jobid: jobId, status: normalizedStatus, count: 0 };
             }
             statusCounts[key].count++;
           }
@@ -916,10 +972,18 @@ export default async function handler(req, res) {
           .map((job) => parseInt(job.jobid, 10))
           .filter((id) => Number.isFinite(id));
 
+        const jobNameMap = new Map();
+        jobs.forEach((job) => {
+          const jobId = parseInt(job.jobid, 10);
+          if (Number.isFinite(jobId)) {
+            jobNameMap.set(jobId, job.jobname || job.name || `Job ${job.jobid}`);
+          }
+        });
+
         let statusAggregates = [];
         let lastRunRows = [];
         if (jobIds.length > 0) {
-          const aggregates = await fetchJobRunAggregates(jobIds);
+          const aggregates = await fetchJobRunAggregates(jobIds, jobNameMap);
           statusAggregates = aggregates.statusAggregates;
           lastRunRows = aggregates.lastRunRows;
         }
