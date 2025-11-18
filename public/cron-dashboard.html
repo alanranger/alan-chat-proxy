@@ -71,6 +71,7 @@
       border-radius: 8px;
       padding: 20px;
       box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      color: #000;
     }
 
     .db-health-stats {
@@ -88,15 +89,16 @@
     }
 
     .db-health-stat-label {
-      font-size: 12px;
-      color: #666;
-      margin-bottom: 4px;
+      font-size: 14px;
+      color: #000;
+      margin-bottom: 6px;
+      font-weight: 500;
     }
 
     .db-health-stat-value {
-      font-size: 18px;
-      font-weight: 600;
-      color: #333;
+      font-size: 22px;
+      font-weight: 700;
+      color: #000;
     }
 
     .db-health-table {
@@ -106,20 +108,23 @@
     .db-health-table table {
       width: 100%;
       border-collapse: collapse;
-      font-size: 12px;
+      font-size: 14px;
+      color: #000;
     }
 
     .db-health-table th,
     .db-health-table td {
-      padding: 8px;
+      padding: 10px;
       text-align: left;
       border-bottom: 1px solid #e0e0e0;
+      color: #000;
     }
 
     .db-health-table th {
       background: #f8f9fa;
-      font-weight: 600;
-      color: #333;
+      font-weight: 700;
+      color: #000;
+      font-size: 15px;
     }
 
     .db-health-table tr:hover {
@@ -128,7 +133,7 @@
 
     .bloat-warning {
       color: #d9534f;
-      font-weight: 600;
+      font-weight: 700;
     }
 
     .job-section-content {
@@ -1388,16 +1393,16 @@
       // Top 10 largest tables
       if (largestTables && largestTables.length > 0) {
         html += '<div class="db-health-table">';
-        html += '<h3 style="margin-bottom: 10px; font-size: 14px; font-weight: 600;">Top 10 Largest Tables</h3>';
+        html += '<h3 style="margin-bottom: 12px; font-size: 16px; font-weight: 700; color: #000;">Top 10 Largest Tables</h3>';
         html += '<table>';
         html += '<thead><tr><th>Table</th><th>Size</th><th>Dead Row %</th></tr></thead>';
         html += '<tbody>';
         largestTables.forEach(table => {
           const bloatClass = table.dead_row_pct > 20 ? 'bloat-warning' : '';
           html += `<tr>
-            <td>${table.table_name || 'N/A'}</td>
-            <td>${table.total_size_pretty || '0 B'}</td>
-            <td class="${bloatClass}">${table.dead_row_pct?.toFixed(1) || 0}%</td>
+            <td style="font-weight: 500;">${table.table_name || 'N/A'}</td>
+            <td style="font-weight: 500;">${table.total_size_pretty || '0 B'}</td>
+            <td class="${bloatClass}" style="font-weight: 600;">${table.dead_row_pct?.toFixed(1) || 0}%</td>
           </tr>`;
         });
         html += '</tbody></table>';
@@ -1407,11 +1412,11 @@
       // Debug log stats
       if (debugLogs) {
         html += '<div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e0e0e0;">';
-        html += '<h3 style="margin-bottom: 10px; font-size: 14px; font-weight: 600;">Debug Logs</h3>';
-        html += `<div style="font-size: 12px; color: #666;">
-          <div>Count: ${(debugLogs.log_count || 0).toLocaleString()}</div>
-          <div style="margin-top: 4px;">Oldest: ${formatDate(debugLogs.oldest_log)}</div>
-          <div style="margin-top: 4px;">Newest: ${formatDate(debugLogs.newest_log)}</div>
+        html += '<h3 style="margin-bottom: 10px; font-size: 16px; font-weight: 700; color: #000;">Debug Logs</h3>';
+        html += `<div style="font-size: 14px; color: #000;">
+          <div style="font-weight: 500;">Count: ${(debugLogs.log_count || 0).toLocaleString()}</div>
+          <div style="margin-top: 6px; font-weight: 500;">Oldest: ${formatDate(debugLogs.oldest_log)}</div>
+          <div style="margin-top: 6px; font-weight: 500;">Newest: ${formatDate(debugLogs.newest_log)}</div>
         </div>`;
         html += '</div>';
       }
@@ -1419,11 +1424,11 @@
       // Page chunk stats
       if (chunks) {
         html += '<div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e0e0e0;">';
-        html += '<h3 style="margin-bottom: 10px; font-size: 14px; font-weight: 600;">Page Chunks</h3>';
-        html += `<div style="font-size: 12px; color: #666;">
-          <div>Total: ${(chunks.total_chunks || 0).toLocaleString()}</div>
-          <div style="margin-top: 4px;">Avg Size: ${(chunks.avg_chunk || 0).toLocaleString()} bytes</div>
-          <div style="margin-top: 4px;">Max Size: ${(chunks.max_chunk || 0).toLocaleString()} bytes</div>
+        html += '<h3 style="margin-bottom: 10px; font-size: 16px; font-weight: 700; color: #000;">Page Chunks</h3>';
+        html += `<div style="font-size: 14px; color: #000;">
+          <div style="font-weight: 500;">Total: ${(chunks.total_chunks || 0).toLocaleString()}</div>
+          <div style="margin-top: 6px; font-weight: 500;">Avg Size: ${(chunks.avg_chunk || 0).toLocaleString()} bytes</div>
+          <div style="margin-top: 6px; font-weight: 500;">Max Size: ${(chunks.max_chunk || 0).toLocaleString()} bytes</div>
         </div>`;
         html += '</div>';
       }
