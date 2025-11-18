@@ -63,6 +63,10 @@ export default async function handler(req, res) {
     const result = Array.isArray(data) && data.length > 0 
       ? (data[0].db_health_extended || data[0] || data)
       : data;
+    
+    // Add refreshed_at timestamp
+    result.refreshed_at = new Date().toISOString();
+    
     return sendJSON(res, 200, result);
 
   } catch (err) {

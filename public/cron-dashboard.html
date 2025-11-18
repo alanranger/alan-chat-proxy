@@ -1567,11 +1567,26 @@
       
       // Risk header (if extended data available) - render outside tile
       if (hasExtended) {
-        html += `<div class="db-health-risk-header" style="margin-bottom: 0;">
-          <span>💾 Database Health</span>
-          <span class="db-health-risk-score ${riskColor}">
-            Total Risk: ${totalRisk} ${riskLabel}
-          </span>
+        const refreshedAt = actualData.refreshed_at || null;
+        const refreshTime = refreshedAt ? new Date(refreshedAt).toLocaleString() : '';
+        
+        html += `<div class="db-health-risk-header" style="margin-bottom: 0; display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <span>💾 Database Health</span>
+            ${refreshTime ? `<div style="font-size: 12px; opacity: 0.6; margin-top: 4px;">Last refreshed: ${refreshTime}</div>` : ''}
+          </div>
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <span class="db-health-risk-score ${riskColor}">
+              Total Risk: ${totalRisk} ${riskLabel}
+            </span>
+            <button 
+              onclick="refreshDatabaseHealth()" 
+              style="padding: 6px 12px; background: #4A6CF7; color: white; border-radius: 6px; border: none; cursor: pointer; font-size: 14px;"
+              title="Refresh database health data"
+            >
+              🔄 Refresh
+            </button>
+          </div>
         </div>`;
       }
       
@@ -1585,22 +1600,22 @@
 
         html += '<div class="db-health-cards">';
         html += `<div class="db-health-card ${getRiskColor(0)}">
-          <div class="db-health-card-title">Database Size</div>
+          <div class="db-health-card-title" title="Total physical size including heap + toast + indexes">Database Size ℹ️</div>
           <div class="db-health-card-value">${dbSize.total_size_pretty || '0 B'}</div>
           <div style="font-size: 12px; color: #666; margin-top: 4px;">${dbSize.table_count || 0} tables</div>
         </div>`;
         html += `<div class="db-health-card ${getRiskColor(debugRisk)}">
-          <div class="db-health-card-title">Debug Log Health</div>
+          <div class="db-health-card-title" title="Number of debug logs remaining. High = ingestion or error spam.">Debug Log Health ℹ️</div>
           <div class="db-health-card-value">${(debugLogs.log_count || 0).toLocaleString()}</div>
           <div style="font-size: 12px; color: #666; margin-top: 4px;">Risk: ${debugRisk}</div>
         </div>`;
         html += `<div class="db-health-card ${getRiskColor(bloatRisk)}">
-          <div class="db-health-card-title">Table Bloat Health</div>
+          <div class="db-health-card-title" title="Bloat % on large tables. >2.5% requires VACUUM FULL.">Table Bloat Health ℹ️</div>
           <div class="db-health-card-value">${pageHtml.dead_row_pct?.toFixed(1) || 0}%</div>
           <div style="font-size: 12px; color: #666; margin-top: 4px;">Risk: ${bloatRisk}</div>
         </div>`;
         html += `<div class="db-health-card ${getRiskColor(chunkRisk)}">
-          <div class="db-health-card-title">Chunking Health</div>
+          <div class="db-health-card-title" title="Health of Supabase page_chunks ingestion. 0 chunks = broken.">Chunking Health ℹ️</div>
           <div class="db-health-card-value">${(chunks.chunk_count || 0).toLocaleString()}</div>
           <div style="font-size: 12px; color: #666; margin-top: 4px;">Risk: ${chunkRisk}</div>
         </div>`;

@@ -114,35 +114,29 @@ BEGIN
   SELECT (chunk_data->>'chunk_count')::bigint INTO chunk_count;
 
   -- 6. Risk scoring
-  -- Debug Logs Risk
+  -- NEW DEBUG LOGS RISK: < 5k = Low, 5k–20k = Medium, >20k = High
   debug_log_risk := CASE
-    WHEN log_count > 300000 THEN 90
-    WHEN log_count > 100000 THEN 70
-    WHEN log_count > 30000 THEN 40
-    ELSE 10
+    WHEN log_count > 20000 THEN 40
+    WHEN log_count > 5000 THEN 15
+    ELSE 5
   END;
 
-  -- Table Bloat Risk (based on max dead_row_pct)
+  -- NEW PAGE_HTML BLOAT RISK: Bloat % considered high when > 2.5%
   bloat_risk := CASE
-    WHEN max_dead_row_pct > 20 THEN 90
-    WHEN max_dead_row_pct > 10 THEN 60
-    WHEN max_dead_row_pct > 3 THEN 30
+    WHEN max_dead_row_pct > 4 THEN 50
+    WHEN max_dead_row_pct > 2.5 THEN 25
     ELSE 10
   END;
 
-  -- Chunk Risk
+  -- NEW CHUNKING RISK: no chunk rows = broken ingestion
   chunk_risk := CASE
     WHEN chunk_count = 0 THEN 80
-    WHEN (chunk_data->>'max_chunk_size')::bigint < 20480 THEN 40  -- 20KB in bytes
+    WHEN (chunk_data->>'max_chunk_size')::bigint > 50000000 THEN 30  -- 50MB in bytes
     ELSE 10
   END;
 
-  -- Total Risk (weighted average)
-  total_risk := ROUND(
-    0.5 * bloat_risk + 
-    0.3 * debug_log_risk + 
-    0.2 * chunk_risk
-  );
+  -- Total Risk (sum of all risks, not weighted average)
+  total_risk := debug_log_risk + bloat_risk + chunk_risk;
 
   risk_scores := jsonb_build_object(
     'debug_log_risk', debug_log_risk,
