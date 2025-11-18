@@ -686,7 +686,7 @@ export default async function handler(req, res) {
         }
 
         const { data: countRows, error: countError } = await supabase.rpc('get_job_run_counts', {
-          job_ids: cleanedIds
+          p_job_ids: cleanedIds
         });
 
         if (countError) {
@@ -712,7 +712,7 @@ export default async function handler(req, res) {
         }
 
         const { data: lastRunRowsData, error: lastRunError } = await supabase.rpc('get_job_last_runs', {
-          job_ids: cleanedIds
+          p_job_ids: cleanedIds
         });
 
         if (lastRunError) {
