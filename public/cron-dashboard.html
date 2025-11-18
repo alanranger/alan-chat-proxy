@@ -136,6 +136,127 @@
       font-weight: 700;
     }
 
+    /* Traffic light colors for risk scores */
+    .risk-green {
+      background-color: #4CAF50;
+      color: white;
+    }
+
+    .risk-amber {
+      background-color: #FF9800;
+      color: white;
+    }
+
+    .risk-red {
+      background-color: #F44336;
+      color: white;
+    }
+
+    .risk-badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 700;
+      margin-left: 8px;
+    }
+
+    .db-health-risk-header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 15px 20px;
+      border-radius: 8px 8px 0 0;
+      font-size: 18px;
+      font-weight: bold;
+      margin-bottom: 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .db-health-risk-score {
+      font-size: 24px;
+      font-weight: 700;
+      padding: 8px 16px;
+      border-radius: 8px;
+    }
+
+    .db-health-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+
+    .db-health-card {
+      background: white;
+      border-radius: 8px;
+      padding: 15px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      border-left: 4px solid #ddd;
+    }
+
+    .db-health-card.risk-green {
+      border-left-color: #4CAF50;
+    }
+
+    .db-health-card.risk-amber {
+      border-left-color: #FF9800;
+    }
+
+    .db-health-card.risk-red {
+      border-left-color: #F44336;
+    }
+
+    .db-health-card-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #666;
+      margin-bottom: 8px;
+    }
+
+    .db-health-card-value {
+      font-size: 20px;
+      font-weight: 700;
+      color: #000;
+    }
+
+    .db-health-issues {
+      background: #fff3cd;
+      border: 1px solid #ffc107;
+      border-radius: 6px;
+      padding: 15px;
+      margin-top: 15px;
+    }
+
+    .db-health-issues h3 {
+      font-size: 16px;
+      font-weight: 700;
+      color: #000;
+      margin-bottom: 10px;
+    }
+
+    .db-health-issues ul {
+      margin: 0;
+      padding-left: 20px;
+    }
+
+    .db-health-issues li {
+      font-size: 14px;
+      color: #000;
+      margin-bottom: 6px;
+    }
+
+    .db-health-issues li.critical {
+      color: #d9534f;
+      font-weight: 600;
+    }
+
+    .db-health-issues li.warning {
+      color: #f0ad4e;
+      font-weight: 500;
+    }
+
     .job-section-content {
       background: #f8f9fa;
       padding: 20px;
@@ -1318,7 +1439,8 @@
 
     async function loadDatabaseHealth() {
       try {
-        const response = await fetch(`${API_BASE}/api/db-health`, {
+        // Try extended endpoint first, fallback to basic
+        const response = await fetch(`${API_BASE}/api/db-health-extended`, {
           headers: buildAuthHeaders()
         });
 
@@ -1327,17 +1449,36 @@
         }
 
         if (!response.ok) {
+          // Fallback to basic endpoint
+          const basicResponse = await fetch(`${API_BASE}/api/db-health`, {
+            headers: buildAuthHeaders()
+          });
+          if (basicResponse.ok) {
+            const data = await basicResponse.json();
+            return data || null;
+          }
           console.warn('Failed to load database health:', response.status);
           return null;
         }
 
         const data = await response.json();
-        // API returns health data directly (not wrapped in { ok: true })
         return data || null;
       } catch (error) {
         console.warn('Error loading database health:', error);
         return null;
       }
+    }
+
+    function getRiskColor(risk) {
+      if (risk <= 25) return 'risk-green';
+      if (risk <= 60) return 'risk-amber';
+      return 'risk-red';
+    }
+
+    function getRiskLabel(risk) {
+      if (risk <= 25) return '🟢 Healthy';
+      if (risk <= 60) return '🟠 Warning';
+      return '🔴 Critical';
     }
 
     function renderDatabaseHealthTile(healthData) {
@@ -1362,47 +1503,132 @@
         }
       };
 
+      // Check if we have extended data (with risk scores)
+      const hasExtended = healthData.risk_scores !== undefined;
+      const riskScores = healthData.risk_scores || {};
+      const totalRisk = riskScores.total_risk || 0;
+      const riskColor = getRiskColor(totalRisk);
+      const riskLabel = getRiskLabel(totalRisk);
+
       // Map API response structure to expected format
       const dbSize = healthData.db_size || {};
-      const largestTables = healthData.largest_tables || [];
+      const tableBloat = healthData.table_bloat || [];
       const debugLogs = healthData.debug_logs || {};
       const chunks = healthData.chunks || {};
+      const pageHtml = healthData.page_html || {};
 
       let html = '<div class="db-health-tile">';
       
-      // Overall stats
-      html += '<div class="db-health-stats">';
-      html += `<div class="db-health-stat">
-        <div class="db-health-stat-label">Database Size</div>
-        <div class="db-health-stat-value">${dbSize.total_size_pretty || '0 B'}</div>
-      </div>`;
-      html += `<div class="db-health-stat">
-        <div class="db-health-stat-label">Table Count</div>
-        <div class="db-health-stat-value">${dbSize.table_count || 0}</div>
-      </div>`;
-      html += `<div class="db-health-stat">
-        <div class="db-health-stat-label">Debug Logs</div>
-        <div class="db-health-stat-value">${(debugLogs.log_count || 0).toLocaleString()}</div>
-      </div>`;
-      html += `<div class="db-health-stat">
-        <div class="db-health-stat-label">Page Chunks</div>
-        <div class="db-health-stat-value">${(chunks.total_chunks || 0).toLocaleString()}</div>
-      </div>`;
-      html += '</div>';
+      // Risk header (if extended data available)
+      if (hasExtended) {
+        html += `<div class="db-health-risk-header">
+          <span>💾 Database Health</span>
+          <span class="db-health-risk-score ${riskColor}">
+            Total Risk: ${totalRisk} ${riskLabel}
+          </span>
+        </div>`;
+      }
 
-      // Top 10 largest tables
-      if (largestTables && largestTables.length > 0) {
+      // Traffic light cards (if extended data available)
+      if (hasExtended) {
+        const debugRisk = riskScores.debug_log_risk || 0;
+        const bloatRisk = riskScores.bloat_risk || 0;
+        const chunkRisk = riskScores.chunk_risk || 0;
+
+        html += '<div class="db-health-cards">';
+        html += `<div class="db-health-card ${getRiskColor(0)}">
+          <div class="db-health-card-title">Database Size</div>
+          <div class="db-health-card-value">${dbSize.total_size_pretty || '0 B'}</div>
+          <div style="font-size: 12px; color: #666; margin-top: 4px;">${dbSize.table_count || 0} tables</div>
+        </div>`;
+        html += `<div class="db-health-card ${getRiskColor(debugRisk)}">
+          <div class="db-health-card-title">Debug Log Health</div>
+          <div class="db-health-card-value">${(debugLogs.log_count || 0).toLocaleString()}</div>
+          <div style="font-size: 12px; color: #666; margin-top: 4px;">Risk: ${debugRisk}</div>
+        </div>`;
+        html += `<div class="db-health-card ${getRiskColor(bloatRisk)}">
+          <div class="db-health-card-title">Table Bloat Health</div>
+          <div class="db-health-card-value">${pageHtml.dead_row_pct?.toFixed(1) || 0}%</div>
+          <div style="font-size: 12px; color: #666; margin-top: 4px;">Risk: ${bloatRisk}</div>
+        </div>`;
+        html += `<div class="db-health-card ${getRiskColor(chunkRisk)}">
+          <div class="db-health-card-title">Chunking Health</div>
+          <div class="db-health-card-value">${(chunks.chunk_count || 0).toLocaleString()}</div>
+          <div style="font-size: 12px; color: #666; margin-top: 4px;">Risk: ${chunkRisk}</div>
+        </div>`;
+        html += '</div>';
+
+        // Top Issues panel
+        const issues = [];
+        if (debugRisk > 30) {
+          const level = debugRisk > 60 ? 'critical' : 'warning';
+          issues.push({ level, text: `Debug logs at ${(debugLogs.log_count || 0).toLocaleString()}. ${debugRisk > 60 ? 'Ingestion likely looping.' : 'Consider cleanup.'` });
+        }
+        if (bloatRisk > 30) {
+          const level = bloatRisk > 60 ? 'critical' : 'warning';
+          const tableName = pageHtml.dead_row_pct ? 'page_html' : 'tables';
+          issues.push({ level, text: `${tableName} bloat at ${pageHtml.dead_row_pct?.toFixed(1) || 0}%. Vacuum recommended.` });
+        }
+        if (chunkRisk > 30) {
+          const level = chunkRisk > 60 ? 'critical' : 'warning';
+          if (chunks.chunk_count === 0) {
+            issues.push({ level, text: '0 page_chunks present — ingestion chunking disabled or broken.' });
+          } else {
+            issues.push({ level, text: `Chunk size issues detected. Max: ${formatBytes(chunks.max_chunk_size || 0)}` });
+          }
+        }
+
+        if (issues.length > 0) {
+          html += '<div class="db-health-issues">';
+          html += '<h3>⚠️ Top Issues</h3>';
+          html += '<ul>';
+          issues.forEach(issue => {
+            html += `<li class="${issue.level}">${issue.text}</li>`;
+          });
+          html += '</ul>';
+          html += '</div>';
+        }
+      } else {
+        // Fallback to basic stats grid
+        html += '<div class="db-health-stats">';
+        html += `<div class="db-health-stat">
+          <div class="db-health-stat-label">Database Size</div>
+          <div class="db-health-stat-value">${dbSize.total_size_pretty || '0 B'}</div>
+        </div>`;
+        html += `<div class="db-health-stat">
+          <div class="db-health-stat-label">Table Count</div>
+          <div class="db-health-stat-value">${dbSize.table_count || 0}</div>
+        </div>`;
+        html += `<div class="db-health-stat">
+          <div class="db-health-stat-label">Debug Logs</div>
+          <div class="db-health-stat-value">${(debugLogs.log_count || 0).toLocaleString()}</div>
+        </div>`;
+        html += `<div class="db-health-stat">
+          <div class="db-health-stat-label">Page Chunks</div>
+          <div class="db-health-stat-value">${(chunks.chunk_count || chunks.total_chunks || 0).toLocaleString()}</div>
+        </div>`;
+        html += '</div>';
+      }
+
+      // Top 20 largest tables (from extended data) or top 10 (from basic)
+      const tablesToShow = tableBloat.length > 0 ? tableBloat : (healthData.largest_tables || []).slice(0, 10);
+      if (tablesToShow && tablesToShow.length > 0) {
         html += '<div class="db-health-table">';
-        html += '<h3 style="margin-bottom: 12px; font-size: 16px; font-weight: 700; color: #000;">Top 10 Largest Tables</h3>';
+        html += `<h3 style="margin-bottom: 12px; font-size: 16px; font-weight: 700; color: #000;">Top ${tablesToShow.length} Largest Tables</h3>`;
         html += '<table>';
-        html += '<thead><tr><th>Table</th><th>Size</th><th>Dead Row %</th></tr></thead>';
+        html += '<thead><tr><th>Table</th><th>Size</th><th>Dead Row %</th><th>Scans</th>${hasExtended ? '<th>Risk</th>' : ''}</tr></thead>';
         html += '<tbody>';
-        largestTables.forEach(table => {
-          const bloatClass = table.dead_row_pct > 20 ? 'bloat-warning' : '';
+        tablesToShow.forEach(table => {
+          const deadRowPct = table.dead_row_pct || 0;
+          const bloatClass = deadRowPct > 20 ? 'bloat-warning' : '';
+          const tableRisk = deadRowPct > 20 ? 90 : (deadRowPct > 10 ? 60 : (deadRowPct > 3 ? 30 : 10));
+          const riskBadge = hasExtended ? `<td><span class="risk-badge ${getRiskColor(tableRisk)}">${getRiskLabel(tableRisk).replace(/[🟢🟠🔴]/g, '').trim()}</span></td>` : '';
           html += `<tr>
             <td style="font-weight: 500;">${table.table_name || 'N/A'}</td>
-            <td style="font-weight: 500;">${table.total_size_pretty || '0 B'}</td>
-            <td class="${bloatClass}" style="font-weight: 600;">${table.dead_row_pct?.toFixed(1) || 0}%</td>
+            <td style="font-weight: 500;">${table.total_pretty || table.total_size_pretty || '0 B'}</td>
+            <td class="${bloatClass}" style="font-weight: 600;">${deadRowPct.toFixed(1)}%</td>
+            <td style="font-weight: 500; font-size: 12px;">Idx: ${(table.idx_scan || 0).toLocaleString()}<br>Seq: ${(table.seq_scan || 0).toLocaleString()}</td>
+            ${riskBadge}
           </tr>`;
         });
         html += '</tbody></table>';
@@ -1426,9 +1652,11 @@
         html += '<div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e0e0e0;">';
         html += '<h3 style="margin-bottom: 10px; font-size: 16px; font-weight: 700; color: #000;">Page Chunks</h3>';
         html += `<div style="font-size: 14px; color: #000;">
-          <div style="font-weight: 500;">Total: ${(chunks.total_chunks || 0).toLocaleString()}</div>
-          <div style="margin-top: 6px; font-weight: 500;">Avg Size: ${(chunks.avg_chunk || 0).toLocaleString()} bytes</div>
-          <div style="margin-top: 6px; font-weight: 500;">Max Size: ${(chunks.max_chunk || 0).toLocaleString()} bytes</div>
+          <div style="font-weight: 500;">Total: ${(chunks.chunk_count || chunks.total_chunks || 0).toLocaleString()}</div>
+          <div style="margin-top: 6px; font-weight: 500;">Avg Size: ${formatBytes(chunks.avg_chunk_size || chunks.avg_chunk || 0)}</div>
+          <div style="margin-top: 6px; font-weight: 500;">Max Size: ${formatBytes(chunks.max_chunk_size || chunks.max_chunk || 0)}</div>
+          ${chunks.newest_chunk ? `<div style="margin-top: 6px; font-weight: 500;">Newest: ${formatDate(chunks.newest_chunk)}</div>` : ''}
+          ${chunks.oldest_chunk ? `<div style="margin-top: 6px; font-weight: 500;">Oldest: ${formatDate(chunks.oldest_chunk)}</div>` : ''}
         </div>`;
         html += '</div>';
       }
@@ -1554,7 +1782,10 @@
       const healthData = await loadDatabaseHealth();
       if (healthData) {
         html += '<div class="job-section">';
-        html += '<div class="job-section-header db-health">💾 Database Health</div>';
+        // Header is now rendered inside the tile if extended data is available
+        if (!healthData.risk_scores) {
+          html += '<div class="job-section-header db-health">💾 Database Health</div>';
+        }
         html += '<div class="job-section-content">';
         html += renderDatabaseHealthTile(healthData);
         html += '</div></div>';
