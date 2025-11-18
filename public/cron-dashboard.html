@@ -1327,7 +1327,8 @@
         }
 
         const data = await response.json();
-        return data.ok ? data : null;
+        // API returns health data directly (not wrapped in { ok: true })
+        return data || null;
       } catch (error) {
         console.warn('Error loading database health:', error);
         return null;
@@ -1356,43 +1357,47 @@
         }
       };
 
+      // Map API response structure to expected format
+      const dbSize = healthData.db_size || {};
+      const largestTables = healthData.largest_tables || [];
+      const debugLogs = healthData.debug_logs || {};
+      const chunks = healthData.chunks || {};
+
       let html = '<div class="db-health-tile">';
       
       // Overall stats
       html += '<div class="db-health-stats">';
       html += `<div class="db-health-stat">
         <div class="db-health-stat-label">Database Size</div>
-        <div class="db-health-stat-value">${healthData.overall?.db_size_mb?.toFixed(2) || 0} MB</div>
+        <div class="db-health-stat-value">${dbSize.total_size_pretty || '0 B'}</div>
       </div>`;
       html += `<div class="db-health-stat">
         <div class="db-health-stat-label">Table Count</div>
-        <div class="db-health-stat-value">${healthData.overall?.table_count || 0}</div>
+        <div class="db-health-stat-value">${dbSize.table_count || 0}</div>
       </div>`;
       html += `<div class="db-health-stat">
         <div class="db-health-stat-label">Debug Logs</div>
-        <div class="db-health-stat-value">${(healthData.debug_logs?.row_count || 0).toLocaleString()}</div>
+        <div class="db-health-stat-value">${(debugLogs.log_count || 0).toLocaleString()}</div>
       </div>`;
       html += `<div class="db-health-stat">
         <div class="db-health-stat-label">Page Chunks</div>
-        <div class="db-health-stat-value">${(healthData.page_chunks?.row_count || 0).toLocaleString()}</div>
+        <div class="db-health-stat-value">${(chunks.total_chunks || 0).toLocaleString()}</div>
       </div>`;
       html += '</div>';
 
       // Top 10 largest tables
-      if (healthData.top_tables && healthData.top_tables.length > 0) {
+      if (largestTables && largestTables.length > 0) {
         html += '<div class="db-health-table">';
         html += '<h3 style="margin-bottom: 10px; font-size: 14px; font-weight: 600;">Top 10 Largest Tables</h3>';
         html += '<table>';
-        html += '<thead><tr><th>Table</th><th>Size (MB)</th><th>Dead Tuples</th><th>Live Tuples</th><th>Bloat %</th></tr></thead>';
+        html += '<thead><tr><th>Table</th><th>Size</th><th>Dead Row %</th></tr></thead>';
         html += '<tbody>';
-        healthData.top_tables.forEach(table => {
-          const bloatClass = table.bloat_percent > 10 ? 'bloat-warning' : '';
+        largestTables.forEach(table => {
+          const bloatClass = table.dead_row_pct > 20 ? 'bloat-warning' : '';
           html += `<tr>
-            <td>${table.table_name}</td>
-            <td>${table.size_mb?.toFixed(2) || 0}</td>
-            <td>${(table.dead_tuples || 0).toLocaleString()}</td>
-            <td>${(table.live_tuples || 0).toLocaleString()}</td>
-            <td class="${bloatClass}">${table.bloat_percent?.toFixed(2) || 0}%</td>
+            <td>${table.table_name || 'N/A'}</td>
+            <td>${table.total_size_pretty || '0 B'}</td>
+            <td class="${bloatClass}">${table.dead_row_pct?.toFixed(1) || 0}%</td>
           </tr>`;
         });
         html += '</tbody></table>';
@@ -1400,23 +1405,25 @@
       }
 
       // Debug log stats
-      if (healthData.debug_logs) {
+      if (debugLogs) {
         html += '<div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e0e0e0;">';
         html += '<h3 style="margin-bottom: 10px; font-size: 14px; font-weight: 600;">Debug Logs</h3>';
         html += `<div style="font-size: 12px; color: #666;">
-          <div>Oldest: ${formatDate(healthData.debug_logs.oldest)}</div>
-          <div style="margin-top: 4px;">Newest: ${formatDate(healthData.debug_logs.newest)}</div>
+          <div>Count: ${(debugLogs.log_count || 0).toLocaleString()}</div>
+          <div style="margin-top: 4px;">Oldest: ${formatDate(debugLogs.oldest_log)}</div>
+          <div style="margin-top: 4px;">Newest: ${formatDate(debugLogs.newest_log)}</div>
         </div>`;
         html += '</div>';
       }
 
       // Page chunk stats
-      if (healthData.page_chunks) {
+      if (chunks) {
         html += '<div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e0e0e0;">';
         html += '<h3 style="margin-bottom: 10px; font-size: 14px; font-weight: 600;">Page Chunks</h3>';
         html += `<div style="font-size: 12px; color: #666;">
-          <div>Avg Size: ${healthData.page_chunks.avg_size_mb?.toFixed(2) || 0} MB</div>
-          <div style="margin-top: 4px;">Max Size: ${healthData.page_chunks.max_size_mb?.toFixed(2) || 0} MB</div>
+          <div>Total: ${(chunks.total_chunks || 0).toLocaleString()}</div>
+          <div style="margin-top: 4px;">Avg Size: ${(chunks.avg_chunk || 0).toLocaleString()} bytes</div>
+          <div style="margin-top: 4px;">Max Size: ${(chunks.max_chunk || 0).toLocaleString()} bytes</div>
         </div>`;
         html += '</div>';
       }
