@@ -1397,10 +1397,24 @@
         tokenInput.value = DEFAULT_TOKEN;
       }
       
-      if (authToken) {
-        document.getElementById('authSection').style.display = 'none';
-        document.getElementById('dashboard').style.display = 'block';
-        loadJobs();
+      // Auto-authenticate if we have a token (from localStorage or default)
+      if (authToken || DEFAULT_TOKEN) {
+        // Use DEFAULT_TOKEN if authToken is empty
+        if (!authToken && DEFAULT_TOKEN) {
+          authToken = DEFAULT_TOKEN;
+          localStorage.setItem('cron_dashboard_token', DEFAULT_TOKEN);
+        }
+        
+        try {
+          document.getElementById('authSection').style.display = 'none';
+          document.getElementById('dashboard').style.display = 'block';
+          loadJobs();
+        } catch (error) {
+          console.error('Error during auto-authentication:', error);
+          // If there's an error, show auth section
+          document.getElementById('authSection').style.display = 'block';
+          document.getElementById('dashboard').style.display = 'none';
+        }
       }
     });
 
