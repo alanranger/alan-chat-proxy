@@ -1616,7 +1616,11 @@
         html += '<div class="db-health-table">';
         html += `<h3 style="margin-bottom: 12px; font-size: 16px; font-weight: 700; color: #000;">Top ${tablesToShow.length} Largest Tables</h3>`;
         html += '<table>';
-        html += '<thead><tr><th>Table</th><th>Size</th><th>Dead Row %</th><th>Scans</th>${hasExtended ? '<th>Risk</th>' : ''}</tr></thead>';
+        html += '<thead><tr><th>Table</th><th>Size</th><th>Dead Row %</th><th>Scans</th>';
+        if (hasExtended) {
+          html += '<th>Risk</th>';
+        }
+        html += '</tr></thead>';
         html += '<tbody>';
         tablesToShow.forEach(table => {
           const deadRowPct = table.dead_row_pct || 0;
