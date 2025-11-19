@@ -19,6 +19,8 @@ async function runMaintenance() {
     chat_sessions_deleted: 0,
     chat_interactions_deleted: 0,
     page_html_deleted: 0,
+    regression_test_runs_deleted: 0,
+    regression_test_results_deleted: 0,
     backup_tables_dropped: [],
     errors: []
   };
@@ -73,7 +75,71 @@ async function runMaintenance() {
       results.errors.push(errorMsg);
     }
 
-    // 4. Drop backup tables
+    // 4. Purge old regression test data (keep last 30 days + latest baseline per job)
+    console.log('[db-maintenance] Purging old regression test data (older than 30 days, keeping latest baseline per job)...');
+    try {
+      // Strategy: 
+      // 1. Always keep the latest baseline for each job (for comparison)
+      // 2. Keep all test runs from the last 30 days
+      // 3. Delete everything else
+      
+      // Step 1: Delete old test runs (older than 30 days, but protect those with latest baselines)
+      const deleteRunsResult = await pgClient.query(`
+        WITH latest_baseline_runs AS (
+          -- Find test runs that contain the latest baseline for each job
+          SELECT DISTINCT rtr.id
+          FROM regression_test_runs rtr
+          WHERE rtr.baseline_test_id IN (
+            SELECT DISTINCT ON (job_id) id
+            FROM regression_test_results
+            WHERE test_phase = 'before'
+            ORDER BY job_id, test_timestamp DESC
+          )
+        )
+        DELETE FROM regression_test_runs
+        WHERE run_started_at < NOW() - INTERVAL '30 days'
+          AND id NOT IN (SELECT id FROM latest_baseline_runs);
+      `);
+      results.regression_test_runs_deleted = deleteRunsResult.rowCount || 0;
+      
+      // Step 2: Delete orphaned test results (not referenced by any test run, and not the latest baseline)
+      const deleteResultsResult = await pgClient.query(`
+        WITH latest_baselines AS (
+          -- Get latest baseline ID for each job
+          SELECT DISTINCT ON (job_id) id as baseline_id
+          FROM regression_test_results
+          WHERE test_phase = 'before'
+          ORDER BY job_id, test_timestamp DESC
+        ),
+        referenced_results AS (
+          -- Get all test result IDs that are still referenced by test runs
+          SELECT DISTINCT baseline_test_id as test_id
+          FROM regression_test_runs
+          WHERE baseline_test_id IS NOT NULL
+          UNION
+          SELECT DISTINCT after_test_id as test_id
+          FROM regression_test_runs
+          WHERE after_test_id IS NOT NULL
+        )
+        DELETE FROM regression_test_results
+        WHERE id NOT IN (SELECT baseline_id FROM latest_baselines)
+          AND id NOT IN (SELECT test_id FROM referenced_results)
+          AND test_timestamp < NOW() - INTERVAL '30 days';
+      `);
+      results.regression_test_results_deleted = deleteResultsResult.rowCount || 0;
+      
+      if (results.regression_test_runs_deleted > 0 || results.regression_test_results_deleted > 0) {
+        console.log(`[db-maintenance] Deleted ${results.regression_test_runs_deleted} regression_test_runs and ${results.regression_test_results_deleted} regression_test_results rows`);
+      } else {
+        console.log('[db-maintenance] No old regression test data to purge');
+      }
+    } catch (e) {
+      const errorMsg = `Error purging regression test data: ${e.message}`;
+      console.error(`[db-maintenance] ${errorMsg}`);
+      results.errors.push(errorMsg);
+    }
+
+    // 5. Drop backup tables
     console.log('[db-maintenance] Dropping backup tables (page_entities_backup_*)...');
     try {
       // First, get list of backup tables
@@ -110,7 +176,7 @@ async function runMaintenance() {
 
     // Summary
     console.log('[db-maintenance] Database maintenance completed');
-    console.log(`[db-maintenance] Summary: ${results.chat_sessions_deleted} chat_sessions, ${results.chat_interactions_deleted} chat_interactions, ${results.page_html_deleted} page_html deleted`);
+    console.log(`[db-maintenance] Summary: ${results.chat_sessions_deleted} chat_sessions, ${results.chat_interactions_deleted} chat_interactions, ${results.page_html_deleted} page_html, ${results.regression_test_runs_deleted} regression_test_runs, ${results.regression_test_results_deleted} regression_test_results deleted`);
     
     if (results.errors.length > 0) {
       console.error(`[db-maintenance] Errors encountered: ${results.errors.length}`);
@@ -172,6 +238,8 @@ export default async function handler(req, res) {
         chat_sessions_deleted: results.chat_sessions_deleted,
         chat_interactions_deleted: results.chat_interactions_deleted,
         page_html_deleted: results.page_html_deleted,
+        regression_test_runs_deleted: results.regression_test_runs_deleted,
+        regression_test_results_deleted: results.regression_test_results_deleted,
         backup_tables_dropped: results.backup_tables_dropped,
         errors: results.errors,
         error_count: results.errors.length
