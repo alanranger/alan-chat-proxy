@@ -2063,7 +2063,18 @@
         });
 
         // Load database health data before rendering (needed for Job 39 health status)
+        // This must be done before renderJobs() so that globalDatabaseHealthData is available
         await loadDatabaseHealth();
+        
+        // Debug: Log database health data availability
+        if (globalDatabaseHealthData) {
+          const actualData = globalDatabaseHealthData.db_health_extended || globalDatabaseHealthData;
+          const riskScores = actualData.risk_scores || {};
+          const totalRisk = riskScores.total_risk || 0;
+          addDebugLog(`Database health loaded: Total Risk = ${totalRisk}`, 'info');
+        } else {
+          addDebugLog('Warning: Database health data not available', 'warning');
+        }
         
         await renderJobs(jobs);
         addDebugLog('Jobs rendered successfully', 'success');
@@ -3319,7 +3330,8 @@
       const scheduleText = job.schedule_description || job.schedule_label || parseCronFrequency(job.schedule) || '';
       const freqMinutes = getIntervalMinutesFromSchedule(scheduleText);
 
-      // Special handling for Job 39 (db-health-monitor): Check database health risk score
+      // Special handling for Job 39 (db-health-monitor): Check database health risk score FIRST
+      // Database health takes precedence over other job health checks
       if (job.jobid === 39 && globalDatabaseHealthData) {
         const actualData = globalDatabaseHealthData.db_health_extended || globalDatabaseHealthData;
         const riskScores = actualData.risk_scores || {};
@@ -3331,8 +3343,10 @@
           return { level: 'error', label: 'Error', reason: 'Database health critical - Total Risk: ' + totalRisk };
         } else if (totalRisk > 25) {
           return { level: 'warning', label: 'Warning', reason: 'Database health warning - Total Risk: ' + totalRisk };
+        } else {
+          // Risk <= 25: Database is healthy, job is healthy regardless of other minor issues
+          return { level: 'ok', label: 'OK', reason: 'Database health healthy - Total Risk: ' + totalRisk + ' (Healthy)' };
         }
-        // If risk <= 25, continue with normal job health checks below
       }
 
       // Error conditions
