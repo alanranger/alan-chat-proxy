@@ -157,7 +157,8 @@ export default async function handler(req, res) {
           try {
             const { data: csvMetadata, error: csvError } = await supa
               .from('csv_metadata')
-              .select('csv_type');
+              .select('csv_type')
+              .range(0, 9999); // Ensure we get all rows (Supabase default limit is 1000)
             
             if (!csvError && csvMetadata) {
               const csvCounts = {};
@@ -165,6 +166,8 @@ export default async function handler(req, res) {
                 csvCounts[row.csv_type] = (csvCounts[row.csv_type] || 0) + 1;
               });
               counts.csv_metadata = csvCounts;
+            } else if (csvError) {
+              console.warn('Failed to get CSV metadata counts:', csvError.message);
             }
           } catch (e) {
             console.warn('Failed to get CSV metadata counts:', e.message);
