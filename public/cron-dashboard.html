@@ -1931,8 +1931,14 @@
         html += '<tbody>';
         tablesToShow.forEach(table => {
           const deadRowPct = table.dead_row_pct || 0;
-          const bloatClass = deadRowPct > 20 ? 'bloat-warning' : '';
-          const tableRisk = deadRowPct > 20 ? 90 : (deadRowPct > 10 ? 60 : (deadRowPct > 3 ? 30 : 10));
+          const tableSizeBytes = table.total_bytes || 0;
+          const isSignificantTable = tableSizeBytes >= 1048576; // >= 1 MB
+          // Only mark as Critical if table is >= 1 MB AND has high bloat
+          // Small tables with high bloat are not a real concern
+          const bloatClass = (deadRowPct > 20 && isSignificantTable) ? 'bloat-warning' : '';
+          const tableRisk = (deadRowPct > 20 && isSignificantTable) ? 90 : 
+                           (deadRowPct > 10 && isSignificantTable) ? 60 : 
+                           (deadRowPct > 3 && isSignificantTable) ? 30 : 10;
           const riskBadge = hasExtended ? `<td><span class="risk-badge ${getRiskColor(tableRisk)}">${getRiskLabel(tableRisk).replace(/[🟢🟠🔴]/g, '').trim()}</span></td>` : '';
           
           // Heatmap color based on bloat percentage

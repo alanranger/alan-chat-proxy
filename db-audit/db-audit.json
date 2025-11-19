@@ -1,0 +1,2131 @@
+{
+  "audit_date": "2025-11-19T19:33:28.842Z",
+  "total_tables": 63,
+  "summary": {
+    "by_classification": {
+      "CRITICAL": 9,
+      "ACTIVE": 34,
+      "LEGACY": 1,
+      "CACHE": 2,
+      "EMPTY": 17
+    },
+    "by_risk": {
+      "HIGH": 9,
+      "MEDIUM": 34,
+      "LOW": 20
+    },
+    "total_size_bytes": 1167507456,
+    "largest_tables": [
+      {
+        "name": "page_html",
+        "size": "1084 MB",
+        "bytes": 1137090560,
+        "rows": 12716
+      },
+      {
+        "name": "job_run_details",
+        "size": "13 MB",
+        "bytes": 13131776,
+        "rows": 51444
+      },
+      {
+        "name": "page_entities",
+        "size": "3672 kB",
+        "bytes": 3760128,
+        "rows": 673
+      },
+      {
+        "name": "page_text",
+        "size": "3464 kB",
+        "bytes": 3547136,
+        "rows": 427
+      },
+      {
+        "name": "database_maintenance_run_table",
+        "size": "3008 kB",
+        "bytes": 3080192,
+        "rows": 18110
+      },
+      {
+        "name": "light_refresh_runs",
+        "size": "1104 kB",
+        "bytes": 1130496,
+        "rows": 564
+      },
+      {
+        "name": "csv_metadata",
+        "size": "992 kB",
+        "bytes": 1015808,
+        "rows": 990
+      },
+      {
+        "name": "schema_audit_logs",
+        "size": "576 kB",
+        "bytes": 589824,
+        "rows": 84
+      },
+      {
+        "name": "csv_metadata_backup_2025_10_19",
+        "size": "456 kB",
+        "bytes": 466944,
+        "rows": 871
+      },
+      {
+        "name": "db_health_snapshots",
+        "size": "384 kB",
+        "bytes": 393216,
+        "rows": 2724
+      }
+    ]
+  },
+  "tables": [
+    {
+      "name": "page_html",
+      "size": {
+        "total_bytes": 1137090560,
+        "total_pretty": "1084 MB",
+        "table_bytes": 2605056,
+        "index_bytes": 3792896
+      },
+      "rows": {
+        "live": 12716,
+        "dead": 0
+      },
+      "indexes": {
+        "count": 5
+      },
+      "usage": {
+        "sequential_scans": 64,
+        "index_scans": 9,
+        "total_scans": 73
+      },
+      "maintenance": {
+        "last_vacuum": "2025-11-19 19:04:32.292607+00",
+        "last_autovacuum": "2025-11-18 22:10:18.651636+00",
+        "last_analyze": "2025-11-19 19:04:53.19513+00",
+        "last_autoanalyze": "2025-11-18 22:11:18.745363+00"
+      },
+      "classification": "CRITICAL",
+      "risk": "HIGH",
+      "notes": "Core chatbot table - DO NOT DELETE",
+      "referenced_in_code": true,
+      "code_references": [
+        "api/jobs/db-maintenance.js"
+      ]
+    },
+    {
+      "name": "job_run_details",
+      "size": {
+        "total_bytes": 13131776,
+        "total_pretty": "13 MB",
+        "table_bytes": 11911168,
+        "index_bytes": 1171456
+      },
+      "rows": {
+        "live": 51444,
+        "dead": 0
+      },
+      "indexes": {
+        "count": 1
+      },
+      "usage": {
+        "sequential_scans": 2912,
+        "index_scans": 2,
+        "total_scans": 2914
+      },
+      "maintenance": {
+        "last_vacuum": "2025-11-19 19:04:31.727492+00",
+        "last_autovacuum": "2025-11-19 17:17:42.568213+00",
+        "last_analyze": "2025-11-19 19:04:31.865483+00",
+        "last_autoanalyze": "2025-11-19 17:17:42.725486+00"
+      },
+      "classification": "ACTIVE",
+      "risk": "MEDIUM",
+      "notes": "Referenced in application code",
+      "referenced_in_code": true,
+      "code_references": [
+        "api/admin.js"
+      ]
+    },
+    {
+      "name": "page_entities",
+      "size": {
+        "total_bytes": 3760128,
+        "total_pretty": "3672 kB",
+        "table_bytes": 1220608,
+        "index_bytes": 1130496
+      },
+      "rows": {
+        "live": 673,
+        "dead": 0
+      },
+      "indexes": {
+        "count": 23
+      },
+      "usage": {
+        "sequential_scans": 1947804,
+        "index_scans": 560084645,
+        "total_scans": 562032449
+      },
+      "maintenance": {
+        "last_vacuum": "2025-11-19 19:04:29.845101+00",
+        "last_autovacuum": "2025-11-17 16:05:38.510496+00",
+        "last_analyze": "2025-11-19 19:04:30.092561+00",
+        "last_autoanalyze": "2025-11-17 16:05:38.671256+00"
+      },
+      "classification": "CRITICAL",
+      "risk": "HIGH",
+      "notes": "Core chatbot table - DO NOT DELETE",
+      "referenced_in_code": true,
+      "code_references": [
+        "api/chat.js",
+        "api/csv-import.js",
+        "api/tools.js"
+      ]
+    },
+    {
+      "name": "page_text",
+      "size": {
+        "total_bytes": 3547136,
+        "total_pretty": "3464 kB",
+        "table_bytes": 73728,
+        "index_bytes": 65536
+      },
+      "rows": {
+        "live": 427,
+        "dead": 0
+      },
+      "indexes": {
+        "count": 1
+      },
+      "usage": {
+        "sequential_scans": 132,
+        "index_scans": 21195,
+        "total_scans": 21327
+      },
+      "maintenance": {
+        "last_vacuum": "2025-11-19 19:04:28.516593+00",
+        "last_autovacuum": null,
+        "last_analyze": "2025-11-19 19:04:28.527094+00",
+        "last_autoanalyze": "2025-09-25 17:20:56.54398+00"
+      },
+      "classification": "ACTIVE",
+      "risk": "MEDIUM",
+      "notes": "",
+      "referenced_in_code": false,
+      "code_references": []
+    },
+    {
+      "name": "database_maintenance_run_table",
+      "size": {
+        "total_bytes": 3080192,
+        "total_pretty": "3008 kB",
+        "table_bytes": 2433024,
+        "index_bytes": 614400
+      },
+      "rows": {
+        "live": 18110,
+        "dead": 166
+      },
+      "indexes": {
+        "count": 2
+      },
+      "usage": {
+        "sequential_scans": 7,
+        "index_scans": 28103,
+        "total_scans": 28110
+      },
+      "maintenance": {
+        "last_vacuum": "2025-11-19 19:04:30.743711+00",
+        "last_autovacuum": "2025-11-19 16:39:42.157613+00",
+        "last_analyze": "2025-11-19 19:04:30.827388+00",
+        "last_autoanalyze": "2025-11-19 18:23:44.800725+00"
+      },
+      "classification": "ACTIVE",
+      "risk": "MEDIUM",
+      "notes": "",
+      "referenced_in_code": false,
+      "code_references": []
+    },
+    {
+      "name": "light_refresh_runs",
+      "size": {
+        "total_bytes": 1130496,
+        "total_pretty": "1104 kB",
+        "table_bytes": 753664,
+        "index_bytes": 98304
+      },
+      "rows": {
+        "live": 564,
+        "dead": 0
+      },
+      "indexes": {
+        "count": 3
+      },
+      "usage": {
+        "sequential_scans": 955,
+        "index_scans": 201,
+        "total_scans": 1156
+      },
+      "maintenance": {
+        "last_vacuum": "2025-11-19 19:04:28.406594+00",
+        "last_autovacuum": null,
+        "last_analyze": "2025-11-19 19:04:28.421533+00",
+        "last_autoanalyze": "2025-10-29 15:12:54.097354+00"
+      },
+      "classification": "ACTIVE",
+      "risk": "MEDIUM",
+      "notes": "Referenced in application code",
+      "referenced_in_code": true,
+      "code_references": [
+        "api/light-refresh.js"
+      ]
+    },
+    {
+      "name": "csv_metadata",
+      "size": {
+        "total_bytes": 1015808,
+        "total_pretty": "992 kB",
+        "table_bytes": 393216,
+        "index_bytes": 516096
+      },
+      "rows": {
+        "live": 990,
+        "dead": 0
+      },
+      "indexes": {
+        "count": 10
+      },
+      "usage": {
+        "sequential_scans": 10281,
+        "index_scans": 4206357,
+        "total_scans": 4216638
+      },
+      "maintenance": {
+        "last_vacuum": "2025-11-19 19:04:30.314975+00",
+        "last_autovacuum": "2025-11-15 16:40:50.126231+00",
+        "last_analyze": "2025-11-19 19:04:30.398926+00",
+        "last_autoanalyze": "2025-11-15 16:40:50.183605+00"
+      },
+      "classification": "CRITICAL",
+      "risk": "HIGH",
+      "notes": "Core chatbot table - DO NOT DELETE",
+      "referenced_in_code": true,
+      "code_references": [
+        "api/csv-import.js",
+        "api/light-refresh.js"
+      ]
+    },
+    {
+      "name": "schema_audit_logs",
+      "size": {
+        "total_bytes": 589824,
+        "total_pretty": "576 kB",
+        "table_bytes": 40960,
+        "index_bytes": 98304
+      },
+      "rows": {
+        "live": 84,
+        "dead": 0
+      },
+      "indexes": {
+        "count": 4
+      },
+      "usage": {
+        "sequential_scans": 50,
+        "index_scans": 362,
+        "total_scans": 412
+      },
+      "maintenance": {
+        "last_vacuum": "2025-11-19 19:04:31.879925+00",
+        "last_autovacuum": "2025-11-16 15:41:12.553509+00",
+        "last_analyze": "2025-11-19 19:04:31.899538+00",
+        "last_autoanalyze": "2025-11-16 15:41:12.58191+00"
+      },
+      "classification": "ACTIVE",
+      "risk": "MEDIUM",
+      "notes": "",
+      "referenced_in_code": false,
+      "code_references": []
+    },
+    {
+      "name": "csv_metadata_backup_2025_10_19",
+      "size": {
+        "total_bytes": 466944,
+        "total_pretty": "456 kB",
+        "table_bytes": 368640,
+        "index_bytes": 0
+      },
+      "rows": {
+        "live": 871,
+        "dead": 0
+      },
+      "indexes": {
+        "count": 0
+      },
+      "usage": {
+        "sequential_scans": 64,
+        "index_scans": 0,
+        "total_scans": 64
+      },
+      "maintenance": {
+        "last_vacuum": "2025-11-19 19:04:29.616716+00",
+        "last_autovacuum": null,
+        "last_analyze": "2025-11-19 19:04:29.632219+00",
+        "last_autoanalyze": "2025-10-19 11:36:02.563304+00"
+      },
+      "classification": "LEGACY",
+      "risk": "LOW",
+      "notes": "Backup/snapshot table - candidate for deletion",
+      "referenced_in_code": false,
+      "code_references": []
+    },
+    {
+      "name": "db_health_snapshots",
+      "size": {
+        "total_bytes": 393216,
+        "total_pretty": "384 kB",
+        "table_bytes": 303104,
+        "index_bytes": 81920
+      },
+      "rows": {
+        "live": 2724,
+        "dead": 0
+      },
+      "indexes": {
+        "count": 1
+      },
+      "usage": {
+        "sequential_scans": 1395,
+        "index_scans": 0,
+        "total_scans": 1395
+      },
+      "maintenance": {
+        "last_vacuum": "2025-11-19 19:04:30.404396+00",
+        "last_autovacuum": "2025-11-19 06:47:28.679797+00",
+        "last_analyze": "2025-11-19 19:04:30.412371+00",
+        "last_autoanalyze": "2025-11-19 17:46:43.249752+00"
+      },
+      "classification": "ACTIVE",
+      "risk": "MEDIUM",
+      "notes": "",
+      "referenced_in_code": false,
+      "code_references": []
+    },
+    {
+      "name": "db_health_alerts",
+      "size": {
+        "total_bytes": 368640,
+        "total_pretty": "360 kB",
+        "table_bytes": 278528,
+        "index_bytes": 81920
+      },
+      "rows": {
+        "live": 2748,
+        "dead": 0
+      },
+      "indexes": {
+        "count": 1
+      },
+      "usage": {
+        "sequential_scans": 1394,
+        "index_scans": 0,
+        "total_scans": 1394
+      },
+      "maintenance": {
+        "last_vacuum": "2025-11-19 19:04:31.979093+00",
+        "last_autovacuum": "2025-11-19 06:35:28.411857+00",
+        "last_analyze": "2025-11-19 19:04:31.983492+00",
+        "last_autoanalyze": "2025-11-19 17:49:43.19494+00"
+      },
+      "classification": "ACTIVE",
+      "risk": "MEDIUM",
+      "notes": "",
+      "referenced_in_code": false,
+      "code_references": []
+    },
+    {
+      "name": "url_last_processed",
+      "size": {
+        "total_bytes": 294912,
+        "total_pretty": "288 kB",
+        "table_bytes": 73728,
+        "index_bytes": 212992
+      },
+      "rows": {
+        "live": 464,
+        "dead": 0
+      },
+      "indexes": {
+        "count": 5
+      },
+      "usage": {
+        "sequential_scans": 1857,
+        "index_scans": 38817,
+        "total_scans": 40674
+      },
+      "maintenance": {
+        "last_vacuum": "2025-11-19 19:04:30.157669+00",
+        "last_autovacuum": "2025-11-17 16:01:38.972849+00",
+        "last_analyze": "2025-11-19 19:04:30.1613+00",
+        "last_autoanalyze": "2025-11-17 16:01:38.978196+00"
+      },
+      "classification": "ACTIVE",
+      "risk": "MEDIUM",
+      "notes": "Referenced in application code",
+      "referenced_in_code": true,
+      "code_references": [
+        "api/light-refresh.js"
+      ]
+    },
+    {
+      "name": "database_maintenance_run",
+      "size": {
+        "total_bytes": 229376,
+        "total_pretty": "224 kB",
+        "table_bytes": 172032,
+        "index_bytes": 57344
+      },
+      "rows": {
+        "live": 1811,
+        "dead": 26
+      },
+      "indexes": {
+        "count": 1
+      },
+      "usage": {
+        "sequential_scans": 1202,
+        "index_scans": 36834,
+        "total_scans": 38036
+      },
+      "maintenance": {
+        "last_vacuum": "2025-11-19 19:04:30.582546+00",
+        "last_autovacuum": "2025-11-19 10:38:34.082598+00",
+        "last_analyze": "2025-11-19 19:04:30.584899+00",
+        "last_autoanalyze": "2025-11-19 18:26:44.362062+00"
+      },
+      "classification": "ACTIVE",
+      "risk": "MEDIUM",
+      "notes": "",
+      "referenced_in_code": false,
+      "code_references": []
+    },
+    {
+      "name": "event",
+      "size": {
+        "total_bytes": 196608,
+        "total_pretty": "192 kB",
+        "table_bytes": 32768,
+        "index_bytes": 155648
+      },
+      "rows": {
+        "live": 131,
+        "dead": 0
+      },
+      "indexes": {
+        "count": 5
+      },
+      "usage": {
+        "sequential_scans": 837,
+        "index_scans": 772,
+        "total_scans": 1609
+      },
+      "maintenance": {
+        "last_vacuum": "2025-11-19 19:04:28.287435+00",
+        "last_autovacuum": "2025-09-22 21:44:28.649851+00",
+        "last_analyze": "2025-11-19 19:04:28.289473+00",
+        "last_autoanalyze": "2025-09-24 15:45:29.193202+00"
+      },
+      "classification": "CRITICAL",
+      "risk": "HIGH",
+      "notes": "Core chatbot table - DO NOT DELETE",
+      "referenced_in_code": false,
+      "code_references": []
+    },
+    {
+      "name": "event_product_links_auto",
+      "size": {
+        "total_bytes": 139264,
+        "total_pretty": "136 kB",
+        "table_bytes": 32768,
+        "index_bytes": 98304
+      },
+      "rows": {
+        "live": 132,
+        "dead": 0
+      },
+      "indexes": {
+        "count": 3
+      },
+      "usage": {
+        "sequential_scans": 18963,
+        "index_scans": 1832006,
+        "total_scans": 1850969
+      },
+      "maintenance": {
+        "last_vacuum": "2025-11-19 19:04:30.500108+00",
+        "last_autovacuum": "2025-11-15 16:58:47.677136+00",
+        "last_analyze": "2025-11-19 19:04:30.501842+00",
+        "last_autoanalyze": "2025-11-15 16:58:47.684001+00"
+      },
+      "classification": "ACTIVE",
+      "risk": "MEDIUM",
+      "notes": "Referenced in application code",
+      "referenced_in_code": true,
+      "code_references": [
+        "api/admin.js"
+      ]
+    },
+    {
+      "name": "page_chunks",
+      "size": {
+        "total_bytes": 106496,
+        "total_pretty": "104 kB",
+        "table_bytes": 0,
+        "index_bytes": 98304
+      },
+      "rows": {
+        "live": 0,
+        "dead": 0
+      },
+      "indexes": {
+        "count": 11
+      },
+      "usage": {
+        "sequential_scans": 66802,
+        "index_scans": 477964,
+        "total_scans": 544766
+      },
+      "maintenance": {
+        "last_vacuum": "2025-11-19 19:04:27.355169+00",
+        "last_autovacuum": "2025-11-17 18:13:42.521649+00",
+        "last_analyze": "2025-11-19 19:04:27.369966+00",
+        "last_autoanalyze": "2025-11-17 18:13:42.535175+00"
+      },
+      "classification": "CRITICAL",
+      "risk": "HIGH",
+      "notes": "Core chatbot table - DO NOT DELETE",
+      "referenced_in_code": true,
+      "code_references": [
+        "api/chat.js",
+        "api/csv-import.js",
+        "api/tools.js",
+        "api/db-health.js"
+      ]
+    },
+    {
+      "name": "series",
+      "size": {
+        "total_bytes": 98304,
+        "total_pretty": "96 kB",
+        "table_bytes": 8192,
+        "index_bytes": 81920
+      },
+      "rows": {
+        "live": 8,
+        "dead": 0
+      },
+      "indexes": {
+        "count": 5
+      },
+      "usage": {
+        "sequential_scans": 778,
+        "index_scans": 1152,
+        "total_scans": 1930
+      },
+      "maintenance": {
+        "last_vacuum": "2025-11-19 19:04:30.421836+00",
+        "last_autovacuum": "2025-09-22 20:41:27.657692+00",
+        "last_analyze": "2025-11-19 19:04:30.423464+00",
+        "last_autoanalyze": null
+      },
+      "classification": "CRITICAL",
+      "risk": "HIGH",
+      "notes": "Core chatbot table - DO NOT DELETE",
+      "referenced_in_code": false,
+      "code_references": []
+    },
+    {
+      "name": "chat_events",
+      "size": {
+        "total_bytes": 90112,
+        "total_pretty": "88 kB",
+        "table_bytes": 16384,
+        "index_bytes": 65536
+      },
+      "rows": {
+        "live": 32,
+        "dead": 0
+      },
+      "indexes": {
+        "count": 4
+      },
+      "usage": {
+        "sequential_scans": 120119,
+        "index_scans": 5824352,
+        "total_scans": 5944471
+      },
+      "maintenance": {
+        "last_vacuum": "2025-11-19 19:04:30.106003+00",
+        "last_autovacuum": null,
+        "last_analyze": "2025-11-19 19:04:30.107892+00",
+        "last_autoanalyze": null
+      },
+      "classification": "ACTIVE",
+      "risk": "MEDIUM",
+      "notes": "Referenced in application code",
+      "referenced_in_code": true,
+      "code_references": [
+        "api/chat.js"
+      ]
+    },
+    {
+      "name": "product_display_price",
+      "size": {
+        "total_bytes": 81920,
+        "total_pretty": "80 kB",
+        "table_bytes": 24576,
+        "index_bytes": 49152
+      },
+      "rows": {
+        "live": 139,
+        "dead": 0
+      },
+      "indexes": {
+        "count": 2
+      },
+      "usage": {
+        "sequential_scans": 3837,
+        "index_scans": 10424638,
+        "total_scans": 10428475
+      },
+      "maintenance": {
+        "last_vacuum": "2025-11-19 19:04:28.679819+00",
+        "last_autovacuum": "2025-11-19 18:58:45.012529+00",
+        "last_analyze": "2025-11-19 19:04:28.682455+00",
+        "last_autoanalyze": "2025-11-19 18:58:45.022499+00"
+      },
+      "classification": "ACTIVE",
+      "risk": "MEDIUM",
+      "notes": "",
+      "referenced_in_code": false,
+      "code_references": []
+    },
+    {
+      "name": "chat_feedback",
+      "size": {
+        "total_bytes": 81920,
+        "total_pretty": "80 kB",
+        "table_bytes": 8192,
+        "index_bytes": 65536
+      },
+      "rows": {
+        "live": 1,
+        "dead": 0
+      },
+      "indexes": {
+        "count": 4
+      },
+      "usage": {
+        "sequential_scans": 92,
+        "index_scans": 251,
+        "total_scans": 343
+      },
+      "maintenance": {
+        "last_vacuum": "2025-11-19 19:04:30.171716+00",
+        "last_autovacuum": null,
+        "last_analyze": "2025-11-19 19:04:30.17289+00",
+        "last_autoanalyze": null
+      },
+      "classification": "ACTIVE",
+      "risk": "MEDIUM",
+      "notes": "",
+      "referenced_in_code": false,
+      "code_references": []
+    },
+    {
+      "name": "url_http_status",
+      "size": {
+        "total_bytes": 73728,
+        "total_pretty": "72 kB",
+        "table_bytes": 24576,
+        "index_bytes": 40960
+      },
+      "rows": {
+        "live": 147,
+        "dead": 0
+      },
+      "indexes": {
+        "count": 1
+      },
+      "usage": {
+        "sequential_scans": 129,
+        "index_scans": 428,
+        "total_scans": 557
+      },
+      "maintenance": {
+        "last_vacuum": "2025-11-19 19:04:28.438873+00",
+        "last_autovacuum": null,
+        "last_analyze": "2025-11-19 19:04:28.440817+00",
+        "last_autoanalyze": "2025-09-24 15:52:29.270875+00"
+      },
+      "classification": "ACTIVE",
+      "risk": "MEDIUM",
+      "notes": "",
+      "referenced_in_code": false,
+      "code_references": []
+    },
+    {
+      "name": "content_improvement_tracking",
+      "size": {
+        "total_bytes": 65536,
+        "total_pretty": "64 kB",
+        "table_bytes": 8192,
+        "index_bytes": 49152
+      },
+      "rows": {
+        "live": 19,
+        "dead": 0
+      },
+      "indexes": {
+        "count": 3
+      },
+      "usage": {
+        "sequential_scans": 13373,
+        "index_scans": 185,
+        "total_scans": 13558
+      },
+      "maintenance": {
+        "last_vacuum": "2025-11-19 19:04:28.428865+00",
+        "last_autovacuum": null,
+        "last_analyze": "2025-11-19 19:04:28.43063+00",
+        "last_autoanalyze": null
+      },
+      "classification": "ACTIVE",
+      "risk": "MEDIUM",
+      "notes": "",
+      "referenced_in_code": false,
+      "code_references": []
+    },
+    {
+      "name": "content_events",
+      "size": {
+        "total_bytes": 65536,
+        "total_pretty": "64 kB",
+        "table_bytes": 8192,
+        "index_bytes": 49152
+      },
+      "rows": {
+        "live": 5,
+        "dead": 0
+      },
+      "indexes": {
+        "count": 3
+      },
+      "usage": {
+        "sequential_scans": 948,
+        "index_scans": 165,
+        "total_scans": 1113
+      },
+      "maintenance": {
+        "last_vacuum": "2025-11-19 19:04:29.592784+00",
+        "last_autovacuum": null,
+        "last_analyze": "2025-11-19 19:04:29.594825+00",
+        "last_autoanalyze": null
+      },
+      "classification": "ACTIVE",
+      "risk": "MEDIUM",
+      "notes": "",
+      "referenced_in_code": false,
+      "code_references": []
+    },
+    {
+      "name": "chat_interactions",
+      "size": {
+        "total_bytes": 65536,
+        "total_pretty": "64 kB",
+        "table_bytes": 0,
+        "index_bytes": 57344
+      },
+      "rows": {
+        "live": 0,
+        "dead": 0
+      },
+      "indexes": {
+        "count": 6
+      },
+      "usage": {
+        "sequential_scans": 288088,
+        "index_scans": 5888964,
+        "total_scans": 6177052
+      },
+      "maintenance": {
+        "last_vacuum": "2025-11-19 19:04:30.110638+00",
+        "last_autovacuum": "2025-11-16 17:46:14.944857+00",
+        "last_analyze": "2025-11-19 19:04:30.11223+00",
+        "last_autoanalyze": "2025-11-16 17:46:14.948006+00"
+      },
+      "classification": "CRITICAL",
+      "risk": "HIGH",
+      "notes": "Core chatbot table - DO NOT DELETE",
+      "referenced_in_code": true,
+      "code_references": [
+        "api/chat.js",
+        "api/jobs/db-maintenance.js"
+      ]
+    },
+    {
+      "name": "chat_sessions",
+      "size": {
+        "total_bytes": 65536,
+        "total_pretty": "64 kB",
+        "table_bytes": 8192,
+        "index_bytes": 49152
+      },
+      "rows": {
+        "live": 8,
+        "dead": 2
+      },
+      "indexes": {
+        "count": 3
+      },
+      "usage": {
+        "sequential_scans": 112822,
+        "index_scans": 73681,
+        "total_scans": 186503
+      },
+      "maintenance": {
+        "last_vacuum": "2025-11-19 19:04:30.117905+00",
+        "last_autovacuum": "2025-11-19 18:36:44.539722+00",
+        "last_analyze": "2025-11-19 19:04:30.119968+00",
+        "last_autoanalyze": "2025-11-19 19:30:45.847451+00"
+      },
+      "classification": "CRITICAL",
+      "risk": "HIGH",
+      "notes": "Core chatbot table - DO NOT DELETE",
+      "referenced_in_code": true,
+      "code_references": [
+        "api/chat.js",
+        "api/jobs/db-maintenance.js"
+      ]
+    },
+    {
+      "name": "product",
+      "size": {
+        "total_bytes": 65536,
+        "total_pretty": "64 kB",
+        "table_bytes": 8192,
+        "index_bytes": 49152
+      },
+      "rows": {
+        "live": 17,
+        "dead": 0
+      },
+      "indexes": {
+        "count": 3
+      },
+      "usage": {
+        "sequential_scans": 150,
+        "index_scans": 1753,
+        "total_scans": 1903
+      },
+      "maintenance": {
+        "last_vacuum": "2025-11-19 19:04:30.468127+00",
+        "last_autovacuum": null,
+        "last_analyze": "2025-11-19 19:04:30.469089+00",
+        "last_autoanalyze": null
+      },
+      "classification": "CRITICAL",
+      "risk": "HIGH",
+      "notes": "Core chatbot table - DO NOT DELETE",
+      "referenced_in_code": false,
+      "code_references": []
+    },
+    {
+      "name": "tmp_priced_w",
+      "size": {
+        "total_bytes": 65536,
+        "total_pretty": "64 kB",
+        "table_bytes": 8192,
+        "index_bytes": 49152
+      },
+      "rows": {
+        "live": 9,
+        "dead": 0
+      },
+      "indexes": {
+        "count": 3
+      },
+      "usage": {
+        "sequential_scans": 120,
+        "index_scans": 9,
+        "total_scans": 129
+      },
+      "maintenance": {
+        "last_vacuum": "2025-11-19 19:04:30.513645+00",
+        "last_autovacuum": null,
+        "last_analyze": "2025-11-19 19:04:30.51573+00",
+        "last_autoanalyze": null
+      },
+      "classification": "CACHE",
+      "risk": "LOW",
+      "notes": "Temporary/cache table - can be rebuilt",
+      "referenced_in_code": false,
+      "code_references": []
+    },
+    {
+      "name": "chat_analytics_daily",
+      "size": {
+        "total_bytes": 49152,
+        "total_pretty": "48 kB",
+        "table_bytes": 8192,
+        "index_bytes": 32768
+      },
+      "rows": {
+        "live": 45,
+        "dead": 52
+      },
+      "indexes": {
+        "count": 2
+      },
+      "usage": {
+        "sequential_scans": 705,
+        "index_scans": 67556,
+        "total_scans": 68261
+      },
+      "maintenance": {
+        "last_vacuum": "2025-11-19 19:04:30.129461+00",
+        "last_autovacuum": "2025-11-19 18:46:44.78658+00",
+        "last_analyze": "2025-11-19 19:04:30.13126+00",
+        "last_autoanalyze": "2025-11-19 18:51:44.875134+00"
+      },
+      "classification": "ACTIVE",
+      "risk": "MEDIUM",
+      "notes": "",
+      "referenced_in_code": false,
+      "code_references": []
+    },
+    {
+      "name": "event_product_links_manual",
+      "size": {
+        "total_bytes": 49152,
+        "total_pretty": "48 kB",
+        "table_bytes": 0,
+        "index_bytes": 40960
+      },
+      "rows": {
+        "live": 0,
+        "dead": 0
+      },
+      "indexes": {
+        "count": 5
+      },
+      "usage": {
+        "sequential_scans": 347,
+        "index_scans": 41790,
+        "total_scans": 42137
+      },
+      "maintenance": {
+        "last_vacuum": "2025-11-19 19:04:28.66489+00",
+        "last_autovacuum": null,
+        "last_analyze": "2025-11-19 19:04:28.666753+00",
+        "last_autoanalyze": null
+      },
+      "classification": "EMPTY",
+      "risk": "LOW",
+      "notes": "No rows - safe to delete if unused",
+      "referenced_in_code": false,
+      "code_references": []
+    },
+    {
+      "name": "product_price_overrides",
+      "size": {
+        "total_bytes": 49152,
+        "total_pretty": "48 kB",
+        "table_bytes": 8192,
+        "index_bytes": 32768
+      },
+      "rows": {
+        "live": 1,
+        "dead": 0
+      },
+      "indexes": {
+        "count": 2
+      },
+      "usage": {
+        "sequential_scans": 777,
+        "index_scans": 3,
+        "total_scans": 780
+      },
+      "maintenance": {
+        "last_vacuum": "2025-11-19 19:04:28.268843+00",
+        "last_autovacuum": null,
+        "last_analyze": "2025-11-19 19:04:28.269719+00",
+        "last_autoanalyze": null
+      },
+      "classification": "ACTIVE",
+      "risk": "MEDIUM",
+      "notes": "",
+      "referenced_in_code": false,
+      "code_references": []
+    },
+    {
+      "name": "event_product_overrides",
+      "size": {
+        "total_bytes": 49152,
+        "total_pretty": "48 kB",
+        "table_bytes": 8192,
+        "index_bytes": 32768
+      },
+      "rows": {
+        "live": 1,
+        "dead": 0
+      },
+      "indexes": {
+        "count": 2
+      },
+      "usage": {
+        "sequential_scans": 331,
+        "index_scans": 583,
+        "total_scans": 914
+      },
+      "maintenance": {
+        "last_vacuum": "2025-11-19 19:04:30.54452+00",
+        "last_autovacuum": null,
+        "last_analyze": "2025-11-19 19:04:30.546198+00",
+        "last_autoanalyze": "2025-09-29 14:09:44.390812+00"
+      },
+      "classification": "ACTIVE",
+      "risk": "MEDIUM",
+      "notes": "",
+      "referenced_in_code": false,
+      "code_references": []
+    },
+    {
+      "name": "event_product",
+      "size": {
+        "total_bytes": 49152,
+        "total_pretty": "48 kB",
+        "table_bytes": 8192,
+        "index_bytes": 32768
+      },
+      "rows": {
+        "live": 58,
+        "dead": 0
+      },
+      "indexes": {
+        "count": 2
+      },
+      "usage": {
+        "sequential_scans": 178,
+        "index_scans": 666,
+        "total_scans": 844
+      },
+      "maintenance": {
+        "last_vacuum": "2025-11-19 19:04:30.477574+00",
+        "last_autovacuum": "2025-09-24 12:42:25.031933+00",
+        "last_analyze": "2025-11-19 19:04:30.479551+00",
+        "last_autoanalyze": "2025-09-24 15:45:29.197986+00"
+      },
+      "classification": "ACTIVE",
+      "risk": "MEDIUM",
+      "notes": "",
+      "referenced_in_code": false,
+      "code_references": []
+    },
+    {
+      "name": "blog_articles",
+      "size": {
+        "total_bytes": 40960,
+        "total_pretty": "40 kB",
+        "table_bytes": 0,
+        "index_bytes": 32768
+      },
+      "rows": {
+        "live": 0,
+        "dead": 0
+      },
+      "indexes": {
+        "count": 4
+      },
+      "usage": {
+        "sequential_scans": 93,
+        "index_scans": 2,
+        "total_scans": 95
+      },
+      "maintenance": {
+        "last_vacuum": "2025-11-19 19:04:30.126621+00",
+        "last_autovacuum": null,
+        "last_analyze": "2025-11-19 19:04:30.128109+00",
+        "last_autoanalyze": null
+      },
+      "classification": "EMPTY",
+      "risk": "LOW",
+      "notes": "No rows - safe to delete if unused",
+      "referenced_in_code": false,
+      "code_references": []
+    },
+    {
+      "name": "chat_performance_metrics",
+      "size": {
+        "total_bytes": 40960,
+        "total_pretty": "40 kB",
+        "table_bytes": 0,
+        "index_bytes": 32768
+      },
+      "rows": {
+        "live": 0,
+        "dead": 0
+      },
+      "indexes": {
+        "count": 4
+      },
+      "usage": {
+        "sequential_scans": 97,
+        "index_scans": 0,
+        "total_scans": 97
+      },
+      "maintenance": {
+        "last_vacuum": "2025-11-19 19:04:30.147893+00",
+        "last_autovacuum": null,
+        "last_analyze": "2025-11-19 19:04:30.148735+00",
+        "last_autoanalyze": null
+      },
+      "classification": "EMPTY",
+      "risk": "LOW",
+      "notes": "No rows - safe to delete if unused",
+      "referenced_in_code": false,
+      "code_references": []
+    },
+    {
+      "name": "chat_question_frequency",
+      "size": {
+        "total_bytes": 40960,
+        "total_pretty": "40 kB",
+        "table_bytes": 0,
+        "index_bytes": 32768
+      },
+      "rows": {
+        "live": 0,
+        "dead": 0
+      },
+      "indexes": {
+        "count": 4
+      },
+      "usage": {
+        "sequential_scans": 317,
+        "index_scans": 2706255,
+        "total_scans": 2706572
+      },
+      "maintenance": {
+        "last_vacuum": "2025-11-19 19:04:30.138248+00",
+        "last_autovacuum": "2025-11-16 16:49:13.674353+00",
+        "last_analyze": "2025-11-19 19:04:30.144711+00",
+        "last_autoanalyze": "2025-11-16 16:48:14.003073+00"
+      },
+      "classification": "EMPTY",
+      "risk": "LOW",
+      "notes": "No rows - safe to delete if unused",
+      "referenced_in_code": false,
+      "code_references": []
+    },
+    {
+      "name": "event_dates",
+      "size": {
+        "total_bytes": 40960,
+        "total_pretty": "40 kB",
+        "table_bytes": 0,
+        "index_bytes": 32768
+      },
+      "rows": {
+        "live": 0,
+        "dead": 0
+      },
+      "indexes": {
+        "count": 4
+      },
+      "usage": {
+        "sequential_scans": 6677,
+        "index_scans": 6087,
+        "total_scans": 12764
+      },
+      "maintenance": {
+        "last_vacuum": "2025-11-19 19:04:30.536473+00",
+        "last_autovacuum": "2025-10-02 22:20:22.4006+00",
+        "last_analyze": "2025-11-19 19:04:30.538495+00",
+        "last_autoanalyze": "2025-10-02 22:20:22.404431+00"
+      },
+      "classification": "EMPTY",
+      "risk": "LOW",
+      "notes": "No rows - safe to delete if unused",
+      "referenced_in_code": false,
+      "code_references": []
+    },
+    {
+      "name": "course_family_product_map",
+      "size": {
+        "total_bytes": 32768,
+        "total_pretty": "32 kB",
+        "table_bytes": 8192,
+        "index_bytes": 16384
+      },
+      "rows": {
+        "live": 3,
+        "dead": 0
+      },
+      "indexes": {
+        "count": 1
+      },
+      "usage": {
+        "sequential_scans": 119,
+        "index_scans": 2112,
+        "total_scans": 2231
+      },
+      "maintenance": {
+        "last_vacuum": "2025-11-19 19:04:30.440713+00",
+        "last_autovacuum": null,
+        "last_analyze": "2025-11-19 19:04:30.441566+00",
+        "last_autoanalyze": null
+      },
+      "classification": "ACTIVE",
+      "risk": "MEDIUM",
+      "notes": "",
+      "referenced_in_code": false,
+      "code_references": []
+    },
+    {
+      "name": "site_urls",
+      "size": {
+        "total_bytes": 32768,
+        "total_pretty": "32 kB",
+        "table_bytes": 0,
+        "index_bytes": 24576
+      },
+      "rows": {
+        "live": 0,
+        "dead": 0
+      },
+      "indexes": {
+        "count": 3
+      },
+      "usage": {
+        "sequential_scans": 85,
+        "index_scans": 0,
+        "total_scans": 85
+      },
+      "maintenance": {
+        "last_vacuum": "2025-11-19 19:04:30.251674+00",
+        "last_autovacuum": null,
+        "last_analyze": "2025-11-19 19:04:30.25248+00",
+        "last_autoanalyze": null
+      },
+      "classification": "EMPTY",
+      "risk": "LOW",
+      "notes": "No rows - safe to delete if unused",
+      "referenced_in_code": false,
+      "code_references": []
+    },
+    {
+      "name": "job_progress",
+      "size": {
+        "total_bytes": 32768,
+        "total_pretty": "32 kB",
+        "table_bytes": 8192,
+        "index_bytes": 16384
+      },
+      "rows": {
+        "live": 3,
+        "dead": 26
+      },
+      "indexes": {
+        "count": 1
+      },
+      "usage": {
+        "sequential_scans": 12,
+        "index_scans": 5335,
+        "total_scans": 5347
+      },
+      "maintenance": {
+        "last_vacuum": "2025-11-19 19:04:28.677056+00",
+        "last_autovacuum": "2025-11-19 18:36:44.5159+00",
+        "last_analyze": "2025-11-19 19:04:28.677883+00",
+        "last_autoanalyze": "2025-11-19 18:16:43.949292+00"
+      },
+      "classification": "ACTIVE",
+      "risk": "MEDIUM",
+      "notes": "Referenced in application code",
+      "referenced_in_code": true,
+      "code_references": [
+        "api/admin.js"
+      ]
+    },
+    {
+      "name": "category_synonym",
+      "size": {
+        "total_bytes": 32768,
+        "total_pretty": "32 kB",
+        "table_bytes": 8192,
+        "index_bytes": 16384
+      },
+      "rows": {
+        "live": 4,
+        "dead": 0
+      },
+      "indexes": {
+        "count": 1
+      },
+      "usage": {
+        "sequential_scans": 119,
+        "index_scans": 4,
+        "total_scans": 123
+      },
+      "maintenance": {
+        "last_vacuum": "2025-11-19 19:04:30.484243+00",
+        "last_autovacuum": null,
+        "last_analyze": "2025-11-19 19:04:30.485796+00",
+        "last_autoanalyze": null
+      },
+      "classification": "ACTIVE",
+      "risk": "MEDIUM",
+      "notes": "",
+      "referenced_in_code": false,
+      "code_references": []
+    },
+    {
+      "name": "event_product_links",
+      "size": {
+        "total_bytes": 32768,
+        "total_pretty": "32 kB",
+        "table_bytes": 8192,
+        "index_bytes": 16384
+      },
+      "rows": {
+        "live": 1,
+        "dead": 0
+      },
+      "indexes": {
+        "count": 1
+      },
+      "usage": {
+        "sequential_scans": 394,
+        "index_scans": 68,
+        "total_scans": 462
+      },
+      "maintenance": {
+        "last_vacuum": "2025-11-19 19:04:30.434858+00",
+        "last_autovacuum": null,
+        "last_analyze": "2025-11-19 19:04:30.436909+00",
+        "last_autoanalyze": null
+      },
+      "classification": "ACTIVE",
+      "risk": "MEDIUM",
+      "notes": "",
+      "referenced_in_code": false,
+      "code_references": []
+    },
+    {
+      "name": "event_product_map",
+      "size": {
+        "total_bytes": 32768,
+        "total_pretty": "32 kB",
+        "table_bytes": 8192,
+        "index_bytes": 16384
+      },
+      "rows": {
+        "live": 2,
+        "dead": 0
+      },
+      "indexes": {
+        "count": 1
+      },
+      "usage": {
+        "sequential_scans": 120,
+        "index_scans": 5,
+        "total_scans": 125
+      },
+      "maintenance": {
+        "last_vacuum": "2025-11-19 19:04:30.462133+00",
+        "last_autovacuum": null,
+        "last_analyze": "2025-11-19 19:04:30.462964+00",
+        "last_autoanalyze": null
+      },
+      "classification": "ACTIVE",
+      "risk": "MEDIUM",
+      "notes": "",
+      "referenced_in_code": false,
+      "code_references": []
+    },
+    {
+      "name": "tmp_priced_c",
+      "size": {
+        "total_bytes": 32768,
+        "total_pretty": "32 kB",
+        "table_bytes": 0,
+        "index_bytes": 24576
+      },
+      "rows": {
+        "live": 0,
+        "dead": 0
+      },
+      "indexes": {
+        "count": 3
+      },
+      "usage": {
+        "sequential_scans": 119,
+        "index_scans": 0,
+        "total_scans": 119
+      },
+      "maintenance": {
+        "last_vacuum": "2025-11-19 19:04:30.506244+00",
+        "last_autovacuum": null,
+        "last_analyze": "2025-11-19 19:04:30.507061+00",
+        "last_autoanalyze": null
+      },
+      "classification": "CACHE",
+      "risk": "LOW",
+      "notes": "Temporary/cache table - can be rebuilt",
+      "referenced_in_code": false,
+      "code_references": []
+    },
+    {
+      "name": "series_product_map",
+      "size": {
+        "total_bytes": 32768,
+        "total_pretty": "32 kB",
+        "table_bytes": 8192,
+        "index_bytes": 16384
+      },
+      "rows": {
+        "live": 1,
+        "dead": 0
+      },
+      "indexes": {
+        "count": 1
+      },
+      "usage": {
+        "sequential_scans": 120,
+        "index_scans": 100,
+        "total_scans": 220
+      },
+      "maintenance": {
+        "last_vacuum": "2025-11-19 19:04:28.21058+00",
+        "last_autovacuum": null,
+        "last_analyze": "2025-11-19 19:04:28.211444+00",
+        "last_autoanalyze": null
+      },
+      "classification": "ACTIVE",
+      "risk": "MEDIUM",
+      "notes": "",
+      "referenced_in_code": false,
+      "code_references": []
+    },
+    {
+      "name": "event_product_mapping_rules",
+      "size": {
+        "total_bytes": 32768,
+        "total_pretty": "32 kB",
+        "table_bytes": 8192,
+        "index_bytes": 16384
+      },
+      "rows": {
+        "live": 34,
+        "dead": 0
+      },
+      "indexes": {
+        "count": 1
+      },
+      "usage": {
+        "sequential_scans": 114,
+        "index_scans": 0,
+        "total_scans": 114
+      },
+      "maintenance": {
+        "last_vacuum": "2025-11-19 19:04:28.655397+00",
+        "last_autovacuum": null,
+        "last_analyze": "2025-11-19 19:04:28.657832+00",
+        "last_autoanalyze": null
+      },
+      "classification": "ACTIVE",
+      "risk": "MEDIUM",
+      "notes": "",
+      "referenced_in_code": false,
+      "code_references": []
+    },
+    {
+      "name": "event_blacklist",
+      "size": {
+        "total_bytes": 32768,
+        "total_pretty": "32 kB",
+        "table_bytes": 8192,
+        "index_bytes": 16384
+      },
+      "rows": {
+        "live": 2,
+        "dead": 0
+      },
+      "indexes": {
+        "count": 1
+      },
+      "usage": {
+        "sequential_scans": 104,
+        "index_scans": 260,
+        "total_scans": 364
+      },
+      "maintenance": {
+        "last_vacuum": "2025-11-19 19:04:28.534072+00",
+        "last_autovacuum": null,
+        "last_analyze": "2025-11-19 19:04:28.534959+00",
+        "last_autoanalyze": null
+      },
+      "classification": "ACTIVE",
+      "risk": "MEDIUM",
+      "notes": "",
+      "referenced_in_code": false,
+      "code_references": []
+    },
+    {
+      "name": "series_product_url",
+      "size": {
+        "total_bytes": 32768,
+        "total_pretty": "32 kB",
+        "table_bytes": 8192,
+        "index_bytes": 16384
+      },
+      "rows": {
+        "live": 7,
+        "dead": 0
+      },
+      "indexes": {
+        "count": 1
+      },
+      "usage": {
+        "sequential_scans": 134,
+        "index_scans": 116,
+        "total_scans": 250
+      },
+      "maintenance": {
+        "last_vacuum": "2025-11-19 19:04:28.448274+00",
+        "last_autovacuum": null,
+        "last_analyze": "2025-11-19 19:04:28.451043+00",
+        "last_autoanalyze": null
+      },
+      "classification": "ACTIVE",
+      "risk": "MEDIUM",
+      "notes": "",
+      "referenced_in_code": false,
+      "code_references": []
+    },
+    {
+      "name": "location_synonym",
+      "size": {
+        "total_bytes": 32768,
+        "total_pretty": "32 kB",
+        "table_bytes": 8192,
+        "index_bytes": 16384
+      },
+      "rows": {
+        "live": 4,
+        "dead": 0
+      },
+      "indexes": {
+        "count": 1
+      },
+      "usage": {
+        "sequential_scans": 119,
+        "index_scans": 4,
+        "total_scans": 123
+      },
+      "maintenance": {
+        "last_vacuum": "2025-11-19 19:04:28.36786+00",
+        "last_autovacuum": null,
+        "last_analyze": "2025-11-19 19:04:28.369369+00",
+        "last_autoanalyze": null
+      },
+      "classification": "ACTIVE",
+      "risk": "MEDIUM",
+      "notes": "",
+      "referenced_in_code": false,
+      "code_references": []
+    },
+    {
+      "name": "event_product_links_courses",
+      "size": {
+        "total_bytes": 32768,
+        "total_pretty": "32 kB",
+        "table_bytes": 8192,
+        "index_bytes": 16384
+      },
+      "rows": {
+        "live": 1,
+        "dead": 0
+      },
+      "indexes": {
+        "count": 1
+      },
+      "usage": {
+        "sequential_scans": 172,
+        "index_scans": 75,
+        "total_scans": 247
+      },
+      "maintenance": {
+        "last_vacuum": "2025-11-19 19:04:28.236459+00",
+        "last_autovacuum": null,
+        "last_analyze": "2025-11-19 19:04:28.237298+00",
+        "last_autoanalyze": null
+      },
+      "classification": "ACTIVE",
+      "risk": "MEDIUM",
+      "notes": "",
+      "referenced_in_code": false,
+      "code_references": []
+    },
+    {
+      "name": "course_products",
+      "size": {
+        "total_bytes": 32768,
+        "total_pretty": "32 kB",
+        "table_bytes": 0,
+        "index_bytes": 24576
+      },
+      "rows": {
+        "live": 0,
+        "dead": 0
+      },
+      "indexes": {
+        "count": 3
+      },
+      "usage": {
+        "sequential_scans": 86,
+        "index_scans": 0,
+        "total_scans": 86
+      },
+      "maintenance": {
+        "last_vacuum": "2025-11-19 19:04:30.177049+00",
+        "last_autovacuum": null,
+        "last_analyze": "2025-11-19 19:04:30.177874+00",
+        "last_autoanalyze": null
+      },
+      "classification": "EMPTY",
+      "risk": "LOW",
+      "notes": "No rows - safe to delete if unused",
+      "referenced_in_code": false,
+      "code_references": []
+    },
+    {
+      "name": "workshop_products",
+      "size": {
+        "total_bytes": 32768,
+        "total_pretty": "32 kB",
+        "table_bytes": 0,
+        "index_bytes": 24576
+      },
+      "rows": {
+        "live": 0,
+        "dead": 0
+      },
+      "indexes": {
+        "count": 3
+      },
+      "usage": {
+        "sequential_scans": 86,
+        "index_scans": 0,
+        "total_scans": 86
+      },
+      "maintenance": {
+        "last_vacuum": "2025-11-19 19:04:30.180683+00",
+        "last_autovacuum": null,
+        "last_analyze": "2025-11-19 19:04:30.181515+00",
+        "last_autoanalyze": null
+      },
+      "classification": "EMPTY",
+      "risk": "LOW",
+      "notes": "No rows - safe to delete if unused",
+      "referenced_in_code": false,
+      "code_references": []
+    },
+    {
+      "name": "course_events_override",
+      "size": {
+        "total_bytes": 32768,
+        "total_pretty": "32 kB",
+        "table_bytes": 8192,
+        "index_bytes": 16384
+      },
+      "rows": {
+        "live": 1,
+        "dead": 0
+      },
+      "indexes": {
+        "count": 1
+      },
+      "usage": {
+        "sequential_scans": 124,
+        "index_scans": 135,
+        "total_scans": 259
+      },
+      "maintenance": {
+        "last_vacuum": "2025-11-19 19:04:30.45179+00",
+        "last_autovacuum": null,
+        "last_analyze": "2025-11-19 19:04:30.453363+00",
+        "last_autoanalyze": null
+      },
+      "classification": "ACTIVE",
+      "risk": "MEDIUM",
+      "notes": "",
+      "referenced_in_code": false,
+      "code_references": []
+    },
+    {
+      "name": "course_family_series_map",
+      "size": {
+        "total_bytes": 32768,
+        "total_pretty": "32 kB",
+        "table_bytes": 8192,
+        "index_bytes": 16384
+      },
+      "rows": {
+        "live": 3,
+        "dead": 0
+      },
+      "indexes": {
+        "count": 1
+      },
+      "usage": {
+        "sequential_scans": 119,
+        "index_scans": 440,
+        "total_scans": 559
+      },
+      "maintenance": {
+        "last_vacuum": "2025-11-19 19:04:30.456707+00",
+        "last_autovacuum": null,
+        "last_analyze": "2025-11-19 19:04:30.457494+00",
+        "last_autoanalyze": null
+      },
+      "classification": "ACTIVE",
+      "risk": "MEDIUM",
+      "notes": "",
+      "referenced_in_code": false,
+      "code_references": []
+    },
+    {
+      "name": "category",
+      "size": {
+        "total_bytes": 24576,
+        "total_pretty": "24 kB",
+        "table_bytes": 0,
+        "index_bytes": 16384
+      },
+      "rows": {
+        "live": 0,
+        "dead": 0
+      },
+      "indexes": {
+        "count": 2
+      },
+      "usage": {
+        "sequential_scans": 123,
+        "index_scans": 0,
+        "total_scans": 123
+      },
+      "maintenance": {
+        "last_vacuum": "2025-11-19 19:04:30.448646+00",
+        "last_autovacuum": null,
+        "last_analyze": "2025-11-19 19:04:30.449478+00",
+        "last_autoanalyze": null
+      },
+      "classification": "EMPTY",
+      "risk": "LOW",
+      "notes": "No rows - safe to delete if unused",
+      "referenced_in_code": false,
+      "code_references": []
+    },
+    {
+      "name": "product_schema",
+      "size": {
+        "total_bytes": 24576,
+        "total_pretty": "24 kB",
+        "table_bytes": 0,
+        "index_bytes": 16384
+      },
+      "rows": {
+        "live": 0,
+        "dead": 0
+      },
+      "indexes": {
+        "count": 2
+      },
+      "usage": {
+        "sequential_scans": 83,
+        "index_scans": 0,
+        "total_scans": 83
+      },
+      "maintenance": {
+        "last_vacuum": "2025-11-19 19:04:30.183462+00",
+        "last_autovacuum": null,
+        "last_analyze": "2025-11-19 19:04:30.184891+00",
+        "last_autoanalyze": null
+      },
+      "classification": "EMPTY",
+      "risk": "LOW",
+      "notes": "No rows - safe to delete if unused",
+      "referenced_in_code": false,
+      "code_references": []
+    },
+    {
+      "name": "debug_logs",
+      "size": {
+        "total_bytes": 24576,
+        "total_pretty": "24 kB",
+        "table_bytes": 0,
+        "index_bytes": 16384
+      },
+      "rows": {
+        "live": 0,
+        "dead": 0
+      },
+      "indexes": {
+        "count": 2
+      },
+      "usage": {
+        "sequential_scans": 4097,
+        "index_scans": 255608,
+        "total_scans": 259705
+      },
+      "maintenance": {
+        "last_vacuum": "2025-11-19 19:04:31.960356+00",
+        "last_autovacuum": "2025-11-18 21:51:18.19405+00",
+        "last_analyze": "2025-11-19 19:04:31.973242+00",
+        "last_autoanalyze": "2025-11-18 21:31:21.451356+00"
+      },
+      "classification": "EMPTY",
+      "risk": "LOW",
+      "notes": "No rows - safe to delete if unused",
+      "referenced_in_code": false,
+      "code_references": []
+    },
+    {
+      "name": "location",
+      "size": {
+        "total_bytes": 24576,
+        "total_pretty": "24 kB",
+        "table_bytes": 0,
+        "index_bytes": 16384
+      },
+      "rows": {
+        "live": 0,
+        "dead": 0
+      },
+      "indexes": {
+        "count": 2
+      },
+      "usage": {
+        "sequential_scans": 123,
+        "index_scans": 0,
+        "total_scans": 123
+      },
+      "maintenance": {
+        "last_vacuum": "2025-11-19 19:04:30.44466+00",
+        "last_autovacuum": null,
+        "last_analyze": "2025-11-19 19:04:30.445436+00",
+        "last_autoanalyze": null
+      },
+      "classification": "EMPTY",
+      "risk": "LOW",
+      "notes": "No rows - safe to delete if unused",
+      "referenced_in_code": false,
+      "code_references": []
+    },
+    {
+      "name": "event_product_links_overrides",
+      "size": {
+        "total_bytes": 16384,
+        "total_pretty": "16 kB",
+        "table_bytes": 0,
+        "index_bytes": 8192
+      },
+      "rows": {
+        "live": 0,
+        "dead": 0
+      },
+      "indexes": {
+        "count": 1
+      },
+      "usage": {
+        "sequential_scans": 121,
+        "index_scans": 610611,
+        "total_scans": 610732
+      },
+      "maintenance": {
+        "last_vacuum": "2025-11-19 19:04:30.857112+00",
+        "last_autovacuum": null,
+        "last_analyze": "2025-11-19 19:04:30.85877+00",
+        "last_autoanalyze": null
+      },
+      "classification": "EMPTY",
+      "risk": "LOW",
+      "notes": "No rows - safe to delete if unused",
+      "referenced_in_code": false,
+      "code_references": []
+    },
+    {
+      "name": "taxonomy_synonym",
+      "size": {
+        "total_bytes": 16384,
+        "total_pretty": "16 kB",
+        "table_bytes": 0,
+        "index_bytes": 8192
+      },
+      "rows": {
+        "live": 0,
+        "dead": 0
+      },
+      "indexes": {
+        "count": 1
+      },
+      "usage": {
+        "sequential_scans": 121,
+        "index_scans": 0,
+        "total_scans": 121
+      },
+      "maintenance": {
+        "last_vacuum": "2025-11-19 19:04:28.318292+00",
+        "last_autovacuum": null,
+        "last_analyze": "2025-11-19 19:04:28.320317+00",
+        "last_autoanalyze": null
+      },
+      "classification": "EMPTY",
+      "risk": "LOW",
+      "notes": "No rows - safe to delete if unused",
+      "referenced_in_code": false,
+      "code_references": []
+    },
+    {
+      "name": "_audit_baseline_counts",
+      "size": {
+        "total_bytes": 16384,
+        "total_pretty": "16 kB",
+        "table_bytes": 8192,
+        "index_bytes": 0
+      },
+      "rows": {
+        "live": 48,
+        "dead": 0
+      },
+      "indexes": {
+        "count": 0
+      },
+      "usage": {
+        "sequential_scans": 105,
+        "index_scans": 0,
+        "total_scans": 105
+      },
+      "maintenance": {
+        "last_vacuum": "2025-11-19 19:04:30.427216+00",
+        "last_autovacuum": null,
+        "last_analyze": "2025-11-19 19:04:30.429382+00",
+        "last_autoanalyze": null
+      },
+      "classification": "ACTIVE",
+      "risk": "MEDIUM",
+      "notes": "",
+      "referenced_in_code": false,
+      "code_references": []
+    },
+    {
+      "name": "mapping_audit_log",
+      "size": {
+        "total_bytes": 16384,
+        "total_pretty": "16 kB",
+        "table_bytes": 0,
+        "index_bytes": 8192
+      },
+      "rows": {
+        "live": 0,
+        "dead": 0
+      },
+      "indexes": {
+        "count": 1
+      },
+      "usage": {
+        "sequential_scans": 103,
+        "index_scans": 0,
+        "total_scans": 103
+      },
+      "maintenance": {
+        "last_vacuum": "2025-11-19 19:04:28.660691+00",
+        "last_autovacuum": null,
+        "last_analyze": "2025-11-19 19:04:28.661869+00",
+        "last_autoanalyze": null
+      },
+      "classification": "EMPTY",
+      "risk": "LOW",
+      "notes": "No rows - safe to delete if unused",
+      "referenced_in_code": false,
+      "code_references": []
+    },
+    {
+      "name": "series_category",
+      "size": {
+        "total_bytes": 8192,
+        "total_pretty": "8192 bytes",
+        "table_bytes": 0,
+        "index_bytes": 8192
+      },
+      "rows": {
+        "live": 0,
+        "dead": 0
+      },
+      "indexes": {
+        "count": 1
+      },
+      "usage": {
+        "sequential_scans": 121,
+        "index_scans": 0,
+        "total_scans": 121
+      },
+      "maintenance": {
+        "last_vacuum": "2025-11-19 19:04:30.446376+00",
+        "last_autovacuum": null,
+        "last_analyze": "2025-11-19 19:04:30.446454+00",
+        "last_autoanalyze": null
+      },
+      "classification": "EMPTY",
+      "risk": "LOW",
+      "notes": "No rows - safe to delete if unused",
+      "referenced_in_code": false,
+      "code_references": []
+    },
+    {
+      "name": "series_product",
+      "size": {
+        "total_bytes": 8192,
+        "total_pretty": "8192 bytes",
+        "table_bytes": 0,
+        "index_bytes": 8192
+      },
+      "rows": {
+        "live": 0,
+        "dead": 0
+      },
+      "indexes": {
+        "count": 1
+      },
+      "usage": {
+        "sequential_scans": 120,
+        "index_scans": 3,
+        "total_scans": 123
+      },
+      "maintenance": {
+        "last_vacuum": "2025-11-19 19:04:28.366329+00",
+        "last_autovacuum": null,
+        "last_analyze": "2025-11-19 19:04:28.366422+00",
+        "last_autoanalyze": null
+      },
+      "classification": "EMPTY",
+      "risk": "LOW",
+      "notes": "No rows - safe to delete if unused",
+      "referenced_in_code": false,
+      "code_references": []
+    }
+  ]
+}

@@ -1,5 +1,6 @@
--- Extended database health monitoring function with risk scoring
--- Returns comprehensive metrics and risk scores for dashboard visualization
+-- Fix bloat risk calculation to only consider tables >= 1 MB
+-- Small tables with high dead row percentages don't represent significant storage waste
+-- This prevents tiny tables like job_progress (64 kB) from inflating the overall risk score
 
 DROP FUNCTION IF EXISTS db_health_extended();
 
@@ -61,7 +62,44 @@ BEGIN
   FROM pg_stat_user_tables
   WHERE relname = 'page_html';
 
-  -- 4. Table bloat alerts (top 20 tables by size)
+  -- 4. Table bloat - SORTED BY BLOAT FIRST, THEN BY SIZE
+  -- Include all tables with bloat > 2.5%, plus top 20 by size
+  -- BUT exclude very small tables (< 1 MB) from bloat risk calculation
+  WITH bloat_priority AS (
+    SELECT 
+      relname,
+      pg_total_relation_size(relid) AS total_bytes,
+      CASE
+        WHEN n_live_tup + n_dead_tup = 0 THEN 0
+        ELSE round(100.0 * n_dead_tup / (n_live_tup + n_dead_tup), 2)
+      END AS dead_row_pct,
+      COALESCE(n_live_tup, 0) AS n_live_tup,
+      COALESCE(n_dead_tup, 0) AS n_dead_tup,
+      COALESCE(idx_scan, 0) AS idx_scan,
+      COALESCE(seq_scan, 0) AS seq_scan
+    FROM pg_stat_user_tables
+  ),
+  worst_bloat AS (
+    -- Get all tables with bloat > 2.5%
+    SELECT * FROM bloat_priority
+    WHERE dead_row_pct > 2.5
+  ),
+  largest_tables AS (
+    -- Get top 20 by size
+    SELECT * FROM bloat_priority
+    ORDER BY total_bytes DESC
+    LIMIT 20
+  ),
+  combined_tables AS (
+    -- Combine worst bloat + largest tables, remove duplicates
+    SELECT DISTINCT ON (relname) *
+    FROM (
+      SELECT * FROM worst_bloat
+      UNION ALL
+      SELECT * FROM largest_tables
+    ) combined
+    ORDER BY relname, total_bytes DESC
+  )
   SELECT jsonb_agg(
     jsonb_build_object(
       'table_name', t.relname,
@@ -75,25 +113,18 @@ BEGIN
     )
   ) INTO table_bloat_data
   FROM (
-    SELECT 
-      relname,
-      pg_total_relation_size(relid) AS total_bytes,
-      CASE
-        WHEN n_live_tup + n_dead_tup = 0 THEN 0
-        ELSE round(100.0 * n_dead_tup / (n_live_tup + n_dead_tup), 2)
-      END AS dead_row_pct,
-      COALESCE(n_live_tup, 0) AS n_live_tup,
-      COALESCE(n_dead_tup, 0) AS n_dead_tup,
-      COALESCE(idx_scan, 0) AS idx_scan,
-      COALESCE(seq_scan, 0) AS seq_scan
-    FROM pg_stat_user_tables
-    ORDER BY pg_total_relation_size(relid) DESC
+    SELECT * FROM combined_tables
+    ORDER BY 
+      -- Sort by bloat % first (worst offenders first)
+      dead_row_pct DESC NULLS LAST,
+      -- Then by size (largest first)
+      total_bytes DESC
     LIMIT 20
   ) t;
 
   -- Find max dead_row_pct for risk calculation
-  -- ONLY consider tables >= 1 MB (1048576 bytes) to avoid small tables inflating risk
-  -- Small tables with high bloat percentages don't represent significant storage waste
+  -- BUT ONLY FOR TABLES >= 1 MB (1048576 bytes)
+  -- Small tables with high bloat percentages are not a real concern
   SELECT COALESCE(MAX(
     CASE
       WHEN n_live_tup + n_dead_tup = 0 THEN 0
@@ -117,21 +148,22 @@ BEGIN
   SELECT (chunk_data->>'chunk_count')::bigint INTO chunk_count;
 
   -- 6. Risk scoring
-  -- NEW DEBUG LOGS RISK: < 5k = Low, 5k–20k = Medium, >20k = High
+  -- DEBUG LOGS RISK: < 5k = Low, 5k–20k = Medium, >20k = High
   debug_log_risk := CASE
     WHEN log_count > 20000 THEN 40
     WHEN log_count > 5000 THEN 15
     ELSE 5
   END;
 
-  -- NEW PAGE_HTML BLOAT RISK: Bloat % considered high when > 2.5%
+  -- BLOAT RISK: Only considers tables >= 1 MB
+  -- Bloat % considered high when > 2.5% on significant tables
   bloat_risk := CASE
     WHEN max_dead_row_pct > 4 THEN 50
     WHEN max_dead_row_pct > 2.5 THEN 25
     ELSE 10
   END;
 
-  -- NEW CHUNKING RISK: no chunk rows = broken ingestion
+  -- CHUNKING RISK: no chunk rows = broken ingestion
   chunk_risk := CASE
     WHEN chunk_count = 0 THEN 80
     WHEN (chunk_data->>'max_chunk_size')::bigint > 50000000 THEN 30  -- 50MB in bytes
