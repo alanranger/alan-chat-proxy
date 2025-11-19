@@ -259,19 +259,23 @@ async function importBlogMetadata(rows, supa) {
   }).filter(item => item.url);
 
   if (metadata.length > 0) {
-    // For non-events (start_date is NULL), manually handle upsert since PostgREST doesn't support partial indexes in onConflict
-    // Delete existing rows first, then insert new ones
-    const urls = metadata.map(m => m.url).filter(Boolean);
-    if (urls.length > 0) {
-      const { error: deleteError } = await supa
-        .from('csv_metadata')
-        .delete()
-        .eq('csv_type', 'blog')
-        .in('url', urls)
-        .is('start_date', null);
-      if (deleteError) throw deleteError;
+    // Complete refresh: Delete ALL existing blog entries first (not just matching URLs)
+    // This ensures a clean refresh with no duplicates or stale data
+    const { data: existingBlogs, error: selectError } = await supa
+      .from('csv_metadata')
+      .select('url')
+      .eq('csv_type', 'blog')
+      .is('start_date', null);
+    
+    if (selectError) throw selectError;
+    
+    // Use batchDeleteMetadata to properly handle foreign key references
+    if (existingBlogs && existingBlogs.length > 0) {
+      const existingUrls = existingBlogs.map(b => b.url).filter(Boolean);
+      await batchDeleteMetadata(supa, 'blog', existingUrls);
     }
     
+    // Insert all new entries
     const { error } = await supa.from('csv_metadata').insert(metadata);
     if (error) throw error;
     
