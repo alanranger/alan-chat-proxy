@@ -148,10 +148,11 @@ async function runVacuumDirectly(tables) {
   
   // Check if SUPABASE_DB_URL contains placeholder or is not set
   if (!dbUrl || dbUrl.includes('[YOUR_PASSWORD]')) {
-    const dbPassword = process.env.SUPABASE_DB_PASSWORD || process.env.PGPASSWORD;
+    // Trim password to handle any whitespace issues in Vercel env vars
+    const dbPassword = (process.env.SUPABASE_DB_PASSWORD || process.env.PGPASSWORD || '').trim();
     
     // Get project ref - try SUPABASE_PROJECT first, then extract from URL, then use hardcoded fallback
-    let projectRef = process.env.SUPABASE_PROJECT;
+    let projectRef = (process.env.SUPABASE_PROJECT || '').trim();
     if (!projectRef) {
       const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
       if (supabaseUrl) {
@@ -170,9 +171,9 @@ async function runVacuumDirectly(tables) {
       // URL encode the password to handle special characters like #, @, etc. (same as working scripts)
       const encodedPassword = encodeURIComponent(dbPassword);
       dbUrl = `postgresql://postgres:${encodedPassword}@db.${projectRef}.supabase.co:5432/postgres`;
-      console.log(`[vacuum] Constructed database URL from SUPABASE_DB_PASSWORD (project: ${projectRef}, password length: ${dbPassword.length}, encoded: ${encodedPassword !== dbPassword})`);
+      console.log(`[vacuum] Constructed database URL from SUPABASE_DB_PASSWORD (project: ${projectRef}, password length: ${dbPassword.length}, password starts with: ${dbPassword.substring(0, 3)}..., encoded: ${encodedPassword !== dbPassword}, encoded starts with: ${encodedPassword.substring(0, 10)}...)`);
     } else {
-      console.error(`[vacuum] Missing SUPABASE_DB_PASSWORD environment variable`);
+      console.error(`[vacuum] Missing SUPABASE_DB_PASSWORD environment variable. SUPABASE_DB_PASSWORD=${process.env.SUPABASE_DB_PASSWORD ? 'SET' : 'NOT SET'}, PGPASSWORD=${process.env.PGPASSWORD ? 'SET' : 'NOT SET'}`);
       throw new Error('SUPABASE_DB_PASSWORD environment variable is required for VACUUM. Please set it in Vercel environment variables.');
     }
   } else {
@@ -676,6 +677,47 @@ export default async function handler(req, res) {
         return res.status(500).json({ error: 'Internal server error', detail: error.message });
       }
       return res.status(200).json({ ok: true, jobs: data || [] });
+    }
+
+    // Diagnostic endpoint to check environment variables (for debugging VACUUM connection issues)
+    if (action === "check_env") {
+      const dbPassword = process.env.SUPABASE_DB_PASSWORD || process.env.PGPASSWORD;
+      const projectRef = process.env.SUPABASE_PROJECT;
+      const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+      const dbUrl = process.env.SUPABASE_DB_URL;
+      
+      // Extract project ref from URL if not set
+      let extractedProjectRef = null;
+      if (supabaseUrl) {
+        const urlMatch = supabaseUrl.match(/https?:\/\/([^.]+)\.supabase\.co/);
+        if (urlMatch) {
+          extractedProjectRef = urlMatch[1];
+        }
+      }
+      
+      // Construct connection string (without exposing password)
+      let constructedUrl = null;
+      if (dbPassword) {
+        const trimmedPassword = dbPassword.trim();
+        const encodedPassword = encodeURIComponent(trimmedPassword);
+        const finalProjectRef = projectRef || extractedProjectRef || 'igzvwbvgvmzvvzoclufx';
+        constructedUrl = `postgresql://postgres:${encodedPassword.substring(0, 10)}...@db.${finalProjectRef}.supabase.co:5432/postgres`;
+      }
+      
+      return res.status(200).json({
+        ok: true,
+        env: {
+          SUPABASE_DB_PASSWORD: dbPassword ? `SET (length: ${dbPassword.length}, trimmed length: ${dbPassword.trim().length}, starts with: ${dbPassword.trim().substring(0, 3)}...)` : 'NOT SET',
+          PGPASSWORD: process.env.PGPASSWORD ? `SET (length: ${process.env.PGPASSWORD.length})` : 'NOT SET',
+          SUPABASE_PROJECT: projectRef || 'NOT SET',
+          SUPABASE_URL: supabaseUrl ? `SET (${supabaseUrl.substring(0, 30)}...)` : 'NOT SET',
+          NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL ? `SET` : 'NOT SET',
+          SUPABASE_DB_URL: dbUrl ? (dbUrl.includes('[YOUR_PASSWORD]') ? 'SET (contains placeholder)' : `SET (${dbUrl.replace(/:[^:@]+@/, ':****@').substring(0, 50)}...)`) : 'NOT SET',
+          extractedProjectRef: extractedProjectRef || 'NOT EXTRACTED',
+          finalProjectRef: projectRef || extractedProjectRef || 'igzvwbvgvmzvvzoclufx',
+          constructedUrl: constructedUrl || 'NOT CONSTRUCTED (password missing)'
+        }
+      });
     }
 
     // Stop job endpoint - terminates a running job by finding its PID and killing it
