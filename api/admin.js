@@ -17,7 +17,25 @@ const SUPABASE_URL =
 const SUPABASE_SERVICE_ROLE_KEY =
   process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-const SUPABASE_DB_URL = process.env.SUPABASE_DB_URL;
+// Construct database URL if not provided
+let SUPABASE_DB_URL = process.env.SUPABASE_DB_URL;
+
+if (!SUPABASE_DB_URL) {
+  // Try to construct from other environment variables
+  const dbPassword = process.env.SUPABASE_DB_PASSWORD;
+  const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+  
+  if (dbPassword && supabaseUrl) {
+    // Extract project ref from Supabase URL (e.g., https://xxxxx.supabase.co -> xxxxx)
+    const urlMatch = supabaseUrl.match(/https?:\/\/([^.]+)\.supabase\.co/);
+    if (urlMatch) {
+      const projectRef = urlMatch[1];
+      const encodedPassword = encodeURIComponent(dbPassword);
+      SUPABASE_DB_URL = `postgresql://postgres:${encodedPassword}@db.${projectRef}.supabase.co:5432/postgres`;
+      console.log(`[admin] Constructed SUPABASE_DB_URL from environment variables`);
+    }
+  }
+}
 
 if (!SUPABASE_URL) {
   console.error("ADMIN API ERROR: Missing SUPABASE_URL", {
