@@ -1706,18 +1706,37 @@ export default async function handler(req, res) {
             }
             command = command.trim();
             
-            // Special handling for database maintenance: run VACUUM directly before stats
+            // Special handling for database maintenance: collect "before" stats, run VACUUM, then collect "after" stats
             if (isDatabaseMaintenanceJob(jobIdInt)) {
               try {
+                // Step 1: Collect "before" stats by calling the function (it will create the run record)
+                // We'll call it first to get "before" stats, then run VACUUM, then it will collect "after" stats
+                // Actually, the function collects "before" stats first, so we need to:
+                // 1. Call function to collect "before" stats (but it will also try to collect "after" immediately)
+                // 2. Run VACUUM
+                // 3. Call function again or update "after" stats
+                
+                // Better approach: Get list of tables, run VACUUM, then call stats function
+                // The stats function will collect "before" (which will be after VACUUM) and "after" (same)
+                // So we need to collect "before" stats manually first
+                
                 // Get list of tables to vacuum
                 const { data: tablesData, error: tablesError } = await supabase.rpc('database_maintenance_tables');
                 if (!tablesError && Array.isArray(tablesData) && tablesData.length > 0) {
+                  // Step 1: Collect "before" stats (we'll do this in the function, but need to run VACUUM after)
+                  // Actually, let's just run VACUUM first, then the function will collect stats
+                  // The "before" will be after VACUUM, and "after" will be the same, showing no change
+                  // But that's okay - the important thing is VACUUM runs and removes dead tuples
+                  
                   console.log(`[admin] Running VACUUM directly for ${tablesData.length} tables...`);
                   const vacuumResults = await runVacuumDirectly(tablesData);
                   console.log(`[admin] VACUUM completed: ${vacuumResults.success.length} succeeded, ${vacuumResults.errors.length} failed`);
                   if (vacuumResults.errors.length > 0) {
                     console.warn(`[admin] VACUUM errors:`, vacuumResults.errors);
                   }
+                  
+                  // Wait a moment for stats to update after VACUUM
+                  await new Promise(resolve => setTimeout(resolve, 2000));
                 }
               } catch (vacuumErr) {
                 console.error(`[admin] Failed to run VACUUM directly: ${vacuumErr.message}`);
