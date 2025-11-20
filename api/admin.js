@@ -2,6 +2,7 @@
 // Consolidated admin utilities
 // Handles QA spot checks and data refresh operations
 // Replaces: qa-spot-checks.js, refresh-mappings.js
+// Last updated: 2025-11-20 - Fixed scheduler_tick and reset_all_job_stats
 
 import { createClient } from '@supabase/supabase-js';
 import { logJobRun } from '../helpers/logJobRun.js';
