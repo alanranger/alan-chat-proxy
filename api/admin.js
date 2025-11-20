@@ -226,7 +226,7 @@ function serializeExecutionResult(jobId, executionResult) {
 }
 
 // Match the hardcoded UI token as a fallback so the button works
-const EXPECTED_TOKEN = (process.env.INGEST_TOKEN || '').trim() || 'b6c3f0c9e6f44cce9e1a4f3f2d3a5c76';
+const EXPECTED_TOKEN = (process.env.INGEST_TOKEN || '').trim() || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlnenZ3YnZndm16dnZ6b2NsdWZ4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NzY3NzkyOCwiZXhwIjoyMDczMjUzOTI4fQ.W9tkTSYu6Wml0mUr-gJD6hcLMZDcbaYYaOsyDXuwd8M';
 
 // Helper function to execute a job
 async function runJob(supabase, job) {
