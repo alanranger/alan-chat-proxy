@@ -1542,6 +1542,16 @@
       28: [26, 27]   // Job 28 is linked to Jobs 26 and 27
     };
 
+    // Regression tests for Jobs 27/28 mirror Job 26 results
+    const regressionMirrorMap = {
+      27: 26,
+      28: 26
+    };
+
+    function getRegressionSourceJobId(jobId) {
+      return regressionMirrorMap[jobId] || jobId;
+    }
+
     // Custom display names for jobs
     const jobDisplayNames = {
       26: 'Website Pages Refresh Batch 0',
@@ -2053,9 +2063,14 @@
           });
         });
         
-        const regressionPromises = jobs
-          .filter(job => riskyJobs.includes(job.jobid))
-          .map(job => loadRegressionTestData(job.jobid).then(data => ({ jobid: job.jobid, data })));
+        const regressionJobIds = Array.from(new Set(
+          jobs
+            .filter(job => riskyJobs.includes(job.jobid))
+            .map(job => getRegressionSourceJobId(job.jobid))
+        ));
+
+        const regressionPromises = regressionJobIds
+          .map(jobid => loadRegressionTestData(jobid).then(data => ({ jobid, data })));
         
         const regressionResults = await Promise.all(regressionPromises);
         regressionResults.forEach(({ jobid, data }) => {
@@ -2743,9 +2758,14 @@
       return null;
     }
 
-    function renderRegressionTestSummary(regressionData, jobId = null) {
+    function renderRegressionTestSummary(regressionData, jobId = null, mirroredFromJobId = null) {
+      const isMirrored = mirroredFromJobId && mirroredFromJobId !== jobId;
+      const mirrorLabel = isMirrored
+        ? `<div class="regression-mirror-note" style="margin-bottom:6px;font-size:11px;color:#7f8c8d;">Mirrors Job ${mirroredFromJobId} regression results</div>`
+        : '';
+
       if (!regressionData || !regressionData.has_results) {
-        return '<div class="regression-test-section"><em>No regression test results yet</em></div>';
+        return `<div class="regression-test-section"><em>No regression test results yet</em>${mirrorLabel}</div>`;
       }
 
       const { baseline, after, comparison, test_run } = regressionData;
@@ -2771,6 +2791,7 @@
       if (baseline && !after) {
         return `
           <div class="regression-test-section no-regression">
+            ${mirrorLabel}
             <div style="font-weight: bold; margin-bottom: 8px;">
               📊 Baseline Test Complete
             </div>
@@ -2815,9 +2836,11 @@
         // Use passed jobId parameter
         const displayJobId = jobId || (regressionData && regressionData.test_run ? regressionData.test_run.job_id : 
                      (regressionData && regressionData.baseline ? regressionData.baseline.job_id : null));
+        const detailsJobId = mirroredFromJobId || displayJobId;
         
         return `
           <div class="regression-test-section ${severityClass}">
+            ${mirrorLabel}
             <div style="font-weight: bold; margin-bottom: 8px;">
               ${comparison ? `${severityIcon} Regression Test: ${detected ? severity.toUpperCase() + ' REGRESSION DETECTED' : 'No Regression'}` : '📊 Baseline vs Latest Run'}
             </div>
@@ -2860,7 +2883,7 @@
             </div>
             ${comparison && detected ? `<div style="margin-top: 8px; font-size: 11px; color: #721c24;"><strong>Action:</strong> ${severity === 'severe' || severity === 'moderate' ? 'ROLLBACK RECOMMENDED' : 'Review recommended'}</div>` : ''}
             ${!comparison ? `<div style="margin-top: 8px; font-size: 11px; color: #155724;">Comparison analysis pending...</div>` : ''}
-            ${comparison && displayJobId ? `<div style="margin-top: 10px;"><button class="btn btn-primary btn-small" onclick="showRegressionDetails(${displayJobId})">View Details</button></div>` : ''}
+            ${comparison && detailsJobId ? `<div style="margin-top: 10px;"><button class="btn btn-primary btn-small" onclick="showRegressionDetails(${detailsJobId})">View Details</button></div>` : ''}
           </div>
         `;
       }
@@ -3025,16 +3048,23 @@
 
     async function runJobNow(jobId, jobName) {
       addDebugLog(`Run job now requested: ${jobName} (ID: ${jobId})`, 'info', { jobId, jobName });
+      const jobIdInt = parseInt(jobId);
       
-      // Reset progress for jobs 26, 27, 28 (polling will start after job execution)
-      if ([26, 27, 28].includes(jobId)) {
-        try {
-          await fetch(`${API_BASE}/api/admin?action=reset_job_progress&jobid=${jobId}`, {
-            method: 'GET',
-            headers: buildAuthHeaders()
-          });
-        } catch (err) {
-          console.warn('Failed to reset progress:', err);
+      // Reset progress for master/linked jobs so polling has a clean slate
+      if ([26, 27, 28].includes(jobIdInt)) {
+        const resetTargets = new Set([jobIdInt]);
+        if (jobIdInt === 26 && Array.isArray(linkedJobs[26])) {
+          linkedJobs[26].forEach(id => resetTargets.add(id));
+        }
+        for (const targetId of resetTargets) {
+          try {
+            await fetch(`${API_BASE}/api/admin?action=reset_job_progress&jobid=${targetId}`, {
+              method: 'GET',
+              headers: buildAuthHeaders()
+            });
+          } catch (err) {
+            console.warn(`Failed to reset progress for job ${targetId}:`, err);
+          }
         }
       }
       
@@ -3087,22 +3117,29 @@
         
         // Start progress polling for jobs 26, 27, 28 after successful execution
         // For fire-and-forget jobs, start polling immediately to track background progress
-        if ([26, 27, 28].includes(parseInt(jobId)) && execution.success) {
-          addDebugLog(`Starting progress polling for job ${jobId}`, 'info');
-          // Small delay to allow PostgreSQL function to start and create progress entry
-          setTimeout(() => {
-            addDebugLog(`Polling progress for job ${jobId}`, 'info');
-            pollJobProgress(parseInt(jobId));
-          }, 500);
+        if ([26, 27, 28].includes(jobIdInt) && execution.success) {
+          const pollTargets = new Set([jobIdInt]);
+          if (jobIdInt === 26 && Array.isArray(linkedJobs[26])) {
+            linkedJobs[26].forEach(id => pollTargets.add(id));
+          }
+          let index = 0;
+          pollTargets.forEach(targetId => {
+            addDebugLog(`Starting progress polling for job ${targetId}`, 'info');
+            setTimeout(() => {
+              addDebugLog(`Polling progress for job ${targetId}`, 'info');
+              pollJobProgress(targetId);
+            }, 500 + (index * 250));
+            index += 1;
+          });
         }
         
-        const isRiskyJob = [21, 26, 27, 28, 31].includes(parseInt(jobId));
+        const isRiskyJob = [21, 26, 27, 28, 31].includes(jobIdInt);
         
         // Override command display for jobs 26, 27, 28 to show wrapper function
         const displayCommand = (
-          parseInt(jobId) === 26 ? "SELECT trigger_refresh_master_job();" :
-          parseInt(jobId) === 27 ? "SELECT trigger_refresh_batch1_job();" :
-          parseInt(jobId) === 28 ? "SELECT trigger_refresh_batch2_job();" :
+          jobIdInt === 26 ? "SELECT trigger_refresh_master_job();" :
+          jobIdInt === 27 ? "SELECT trigger_refresh_batch1_job();" :
+          jobIdInt === 28 ? "SELECT trigger_refresh_batch2_job();" :
           job.command
         );
         
@@ -3606,8 +3643,10 @@
       // Load regression test data for risky jobs (use pre-loaded data)
       let regressionSummary = '';
       if (riskyJobs.includes(job.jobid)) {
-        const regressionData = regressionTestData[job.jobid] || null;
-        regressionSummary = renderRegressionTestSummary(regressionData, job.jobid);
+        const regressionSourceId = getRegressionSourceJobId(job.jobid);
+        const regressionData = regressionTestData[regressionSourceId] || null;
+        const mirroredFrom = regressionSourceId !== job.jobid ? regressionSourceId : null;
+        regressionSummary = renderRegressionTestSummary(regressionData, job.jobid, mirroredFrom);
       }
       
       const borderColor = 

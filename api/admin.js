@@ -191,6 +191,49 @@ function inferSuccess(result, jobName) {
   return false;
 }
 
+const MASTER_REFRESH_JOB_ID = 26;
+const CHAINED_REFRESH_JOBS = {
+  [MASTER_REFRESH_JOB_ID]: [27, 28],
+};
+
+const JOB_PROGRESS_DEFAULTS = {
+  26: { totalSteps: 5, message: 'Queued - starting master batch' },
+  27: { totalSteps: 1, message: 'Queued - waiting for Batch 1' },
+  28: { totalSteps: 1, message: 'Queued - waiting for Batch 2' },
+};
+
+async function seedJobProgressRows(jobIds = []) {
+  if (!Array.isArray(jobIds) || jobIds.length === 0) return;
+  const rows = [];
+  const seen = new Set();
+  const nowIso = new Date().toISOString();
+
+  for (const rawId of jobIds) {
+    const jobId = parseInt(rawId, 10);
+    if (Number.isNaN(jobId) || seen.has(jobId)) continue;
+    seen.add(jobId);
+    const meta = JOB_PROGRESS_DEFAULTS[jobId] || { totalSteps: 1, message: 'Queued - waiting to start' };
+    rows.push({
+      jobid: jobId,
+      step: 0,
+      total_steps: meta.totalSteps ?? 1,
+      progress: 0,
+      message: meta.message,
+      updated_at: nowIso
+    });
+  }
+
+  if (!rows.length) return;
+
+  const { error } = await supabase
+    .from('job_progress')
+    .upsert(rows, { onConflict: 'jobid' });
+
+  if (error) {
+    console.warn('Failed to seed job_progress rows', { rows, error });
+  }
+}
+
 function parseReturnMessage(raw) {
   if (!raw) return null;
   if (typeof raw === 'object') return raw;
@@ -1502,17 +1545,18 @@ export default async function handler(req, res) {
     if (req.method === 'POST' && action === 'run_cron_job') {
       try {
         const { jobid } = req.body;
+        const jobIdInt = parseInt(jobid, 10);
 
-        if (!jobid) {
+        if (!jobid || Number.isNaN(jobIdInt)) {
           return res.status(400).json({ error: 'jobid parameter required' });
         }
 
         // Check if job is already running (for jobs 26, 27, 28 that use progress tracking)
-        if ([26, 27, 28].includes(parseInt(jobid))) {
+        if ([26, 27, 28].includes(jobIdInt)) {
           const { data: progressData } = await supabase
             .from('job_progress')
             .select('progress, updated_at')
-            .eq('jobid', jobid)
+            .eq('jobid', jobIdInt)
             .single();
           
           if (progressData && progressData.progress < 100) {
@@ -1533,7 +1577,7 @@ export default async function handler(req, res) {
 
         // Get job details
         const { data: jobData, error: jobError } = await supabase.rpc('get_cron_job_details', {
-          p_jobid: jobid
+          p_jobid: jobIdInt
         });
 
         if (jobError || !jobData || jobData.length === 0) {
@@ -1541,6 +1585,19 @@ export default async function handler(req, res) {
         }
 
         const job = jobData[0];
+
+        if ([26, 27, 28].includes(jobIdInt)) {
+          const jobsToSeed = new Set([jobIdInt]);
+          if (jobIdInt === MASTER_REFRESH_JOB_ID && Array.isArray(CHAINED_REFRESH_JOBS[MASTER_REFRESH_JOB_ID])) {
+            CHAINED_REFRESH_JOBS[MASTER_REFRESH_JOB_ID].forEach(id => jobsToSeed.add(id));
+          }
+          try {
+            await seedJobProgressRows([...jobsToSeed]);
+          } catch (seedErr) {
+            console.warn('Unable to seed job progress rows', seedErr);
+          }
+        }
+
         const startTime = new Date();
         
         let executionResult = null;
@@ -1554,14 +1611,14 @@ export default async function handler(req, res) {
           // For risky jobs, they use wrapper functions that return results
           // For other jobs, we execute the command directly
           
-          const isRiskyJob = [21, 26, 27, 28, 31].includes(parseInt(jobid));
+          const isRiskyJob = [21, 26, 27, 28, 31].includes(jobIdInt);
           
           if (isRiskyJob) {
             // Risky jobs use wrapper functions that handle regression testing
             let result;
-            if (jobid == 21) {
+            if (jobIdInt === 21) {
               result = await supabase.rpc('refresh_v_products_unified_with_regression_test');
-            } else if (jobid == 26) {
+            } else if (jobIdInt === 26) {
               // Map long jobs to PostgreSQL wrapper functions
               // Fire-and-forget: trigger the job and return immediately
               // Wrap in Promise to handle errors properly
@@ -1572,7 +1629,7 @@ export default async function handler(req, res) {
                 data: 'Job triggered successfully. Running in background.', 
                 fireAndForget: true 
               };
-            } else if (jobid == 27) {
+            } else if (jobIdInt === 27) {
               Promise.resolve(supabase.rpc('trigger_refresh_batch1_job')).catch(err => {
                 console.error('Error triggering batch1 job (fire-and-forget):', err);
               });
@@ -1580,7 +1637,7 @@ export default async function handler(req, res) {
                 data: 'Job triggered successfully. Running in background.', 
                 fireAndForget: true 
               };
-            } else if (jobid == 28) {
+            } else if (jobIdInt === 28) {
               Promise.resolve(supabase.rpc('trigger_refresh_batch2_job')).catch(err => {
                 console.error('Error triggering batch2 job (fire-and-forget):', err);
               });
@@ -1621,13 +1678,13 @@ export default async function handler(req, res) {
             // For non-risky jobs, parse and execute the command
             // Override command for jobs 26, 27, 28 to use wrapper functions (shouldn't reach here, but safety check)
             let command = job.command;
-            if (parseInt(jobid) === 26) {
+            if (jobIdInt === 26) {
               command = "SELECT trigger_refresh_master_job();";
-            } else if (parseInt(jobid) === 27) {
+            } else if (jobIdInt === 27) {
               command = "SELECT trigger_refresh_batch1_job();";
-            } else if (parseInt(jobid) === 28) {
+            } else if (jobIdInt === 28) {
               command = "SELECT trigger_refresh_batch2_job();";
-            } else if (isDatabaseMaintenanceJob(jobid) && command?.includes('run_database_maintenance')) {
+            } else if (isDatabaseMaintenanceJob(jobIdInt) && command?.includes('run_database_maintenance')) {
               command = "SELECT run_database_maintenance_with_stats();";
             }
             command = command.trim();
@@ -1817,7 +1874,7 @@ export default async function handler(req, res) {
           const runtimeMs = endTime - startTime;
 
           // Try to get records affected for specific job types
-          if (jobid == 31) {
+          if (jobIdInt === 31) {
             // Cleanup job returns orphaned_chunks and orphaned_entities
             if (executionResult && Array.isArray(executionResult) && executionResult.length > 0) {
               recordsAffected = executionResult[0];
@@ -1835,19 +1892,19 @@ export default async function handler(req, res) {
           
           // Override command for jobs 26, 27, 28 to use wrapper functions
           const displayCommand = (
-            parseInt(jobid) === 26 ? "SELECT trigger_refresh_master_job();" :
-            parseInt(jobid) === 27 ? "SELECT trigger_refresh_batch1_job();" :
-            parseInt(jobid) === 28 ? "SELECT trigger_refresh_batch2_job();" :
-            isDatabaseMaintenanceJob(jobid) ? "SELECT run_database_maintenance_with_stats();" :
+            jobIdInt === 26 ? "SELECT trigger_refresh_master_job();" :
+            jobIdInt === 27 ? "SELECT trigger_refresh_batch1_job();" :
+            jobIdInt === 28 ? "SELECT trigger_refresh_batch2_job();" :
+            isDatabaseMaintenanceJob(jobIdInt) ? "SELECT run_database_maintenance_with_stats();" :
             job.command
           );
-          const serializedResult = serializeExecutionResult(parseInt(jobid, 10), executionResult);
+          const serializedResult = serializeExecutionResult(jobIdInt, executionResult);
           const successReturnMessage = serializedResult || 'Job completed successfully';
           const failureReturnMessage = error || recordError || 'Job execution failed';
           
           try {
             const { data: logData, error: logError } = await supabase.rpc('log_job_run', {
-              jobid: parseInt(jobid),
+              jobid: jobIdInt,
               command: displayCommand,
               status: executionSuccess ? 'succeeded' : 'failed',
               return_message: executionSuccess 
@@ -1871,7 +1928,7 @@ export default async function handler(req, res) {
           }
 
           await logJobRun(
-            parseInt(jobid, 10),
+            jobIdInt,
             displayCommand,
             executionSuccess ? "succeeded" : "failed",
             executionSuccess ? successReturnMessage : failureReturnMessage,
@@ -1915,20 +1972,20 @@ export default async function handler(req, res) {
           
           // Override command for jobs 26, 27, 28 to use wrapper functions
           const displayCommand = (
-            parseInt(jobid) === 26 ? "SELECT trigger_refresh_master_job();" :
-            parseInt(jobid) === 27 ? "SELECT trigger_refresh_batch1_job();" :
-            parseInt(jobid) === 28 ? "SELECT trigger_refresh_batch2_job();" :
-            isDatabaseMaintenanceJob(jobid) ? "SELECT run_database_maintenance_with_stats();" :
+            jobIdInt === 26 ? "SELECT trigger_refresh_master_job();" :
+            jobIdInt === 27 ? "SELECT trigger_refresh_batch1_job();" :
+            jobIdInt === 28 ? "SELECT trigger_refresh_batch2_job();" :
+            isDatabaseMaintenanceJob(jobIdInt) ? "SELECT run_database_maintenance_with_stats();" :
             job.command
           );
           
-          const serializedResult = serializeExecutionResult(parseInt(jobid, 10), executionResult);
+          const serializedResult = serializeExecutionResult(jobIdInt, executionResult);
           const failedReturnMessage = serializedResult || execError.message || 'Job execution failed';
 
           // Record the failed job execution via public.log_job_run
           try {
             const { error: logError } = await supabase.rpc('log_job_run', {
-              jobid: parseInt(jobid),
+              jobid: jobIdInt,
               command: displayCommand,
               status: 'failed',
               return_message: failedReturnMessage,
@@ -1944,7 +2001,7 @@ export default async function handler(req, res) {
           }
 
           await logJobRun(
-            parseInt(jobid, 10),
+            jobIdInt,
             displayCommand,
             "failed",
             failedReturnMessage,
