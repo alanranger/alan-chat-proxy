@@ -1896,14 +1896,15 @@ export default async function handler(req, res) {
             console.error('Unexpected error logging job run:', catchError);
           }
 
-          await logJobRun(
-            jobIdInt,
-            displayCommand,
-            executionSuccess ? "succeeded" : "failed",
-            executionSuccess ? successReturnMessage : failureReturnMessage,
-            startTime.toISOString(),
-            endTime.toISOString()
-          );
+          // Note: Job run is already logged via log_job_run RPC above, so we don't need to call logJobRun again
+          // await logJobRun(
+          //   jobIdInt,
+          //   displayCommand,
+          //   executionSuccess ? "succeeded" : "failed",
+          //   executionSuccess ? successReturnMessage : failureReturnMessage,
+          //   startTime.toISOString(),
+          //   endTime.toISOString()
+          // );
 
           const responseError = serializeError(error);
 
@@ -1969,14 +1970,15 @@ export default async function handler(req, res) {
             console.error('Unexpected error logging failed job run:', recordError);
           }
 
-          await logJobRun(
-            jobIdInt,
-            displayCommand,
-            "failed",
-            failedReturnMessage,
-            startTime.toISOString(),
-            endTime.toISOString()
-          );
+          // Note: Job run is already logged via log_job_run RPC above, so we don't need to call logJobRun again
+          // await logJobRun(
+          //   jobIdInt,
+          //   displayCommand,
+          //   "failed",
+          //   failedReturnMessage,
+          //   startTime.toISOString(),
+          //   endTime.toISOString()
+          // );
           
           return res.status(200).json({
             ok: true,
