@@ -5,6 +5,7 @@
       "schedule": "0 0 * * *"
     }
   ],
+  "version": 2,
   "functions": {
     "api/ingest.js": {
       "maxDuration": 60
