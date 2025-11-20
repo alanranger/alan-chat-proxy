@@ -1843,63 +1843,42 @@ export default async function handler(req, res) {
             }
             command = command.trim();
             
-            // Special handling for database maintenance: collect "before" stats, run VACUUM, then collect "after" stats
+            // Special handling for database maintenance: collect "before" stats, run VACUUM via Edge Function, then collect "after" stats
             if (isDatabaseMaintenanceJob(jobIdInt)) {
               try {
                 console.log(`[admin] Starting database maintenance VACUUM process for job ${jobIdInt}`);
-                console.log(`[admin] SUPABASE_DB_URL is ${SUPABASE_DB_URL ? 'SET' : 'NOT SET'}`);
                 
-                // Get list of tables to vacuum
-                const { data: tablesData, error: tablesError } = await supabase.rpc('database_maintenance_tables');
-                console.log(`[admin] database_maintenance_tables RPC result:`, JSON.stringify({ 
-                  tablesData, 
-                  tablesError: tablesError?.message, 
-                  type: typeof tablesData, 
-                  isArray: Array.isArray(tablesData),
-                  keys: tablesData ? Object.keys(tablesData) : null
-                }));
+                // Call Supabase Edge Function to run VACUUM (bypasses Vercel env var issues)
+                const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+                const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
                 
-                // Supabase RPC returns jsonb with { tables: [...] } structure
-                let tables = [];
-                if (tablesData) {
-                  if (Array.isArray(tablesData)) {
-                    tables = tablesData;
-                  } else if (tablesData.tables && Array.isArray(tablesData.tables)) {
-                    tables = tablesData.tables;
-                  } else if (typeof tablesData === 'object') {
-                    // Try to extract array from any property
-                    const values = Object.values(tablesData);
-                    if (values.length > 0 && Array.isArray(values[0])) {
-                      tables = values[0];
-                    }
-                  }
+                if (!supabaseUrl || !supabaseServiceKey) {
+                  throw new Error('SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required for VACUUM');
                 }
                 
-                console.log(`[admin] Extracted tables array:`, { tables, length: tables?.length });
+                console.log(`[admin] Calling Supabase Edge Function to run VACUUM...`);
+                const edgeFunctionUrl = `${supabaseUrl}/functions/v1/run-vacuum`;
                 
-                if (!SUPABASE_DB_URL) {
-                  console.error(`[admin] CRITICAL: SUPABASE_DB_URL environment variable is not set. Cannot run VACUUM.`);
-                  throw new Error('SUPABASE_DB_URL environment variable is required for VACUUM');
+                const vacuumResponse = await fetch(edgeFunctionUrl, {
+                  method: 'POST',
+                  headers: {
+                    'Authorization': `Bearer ${supabaseServiceKey}`,
+                    'Content-Type': 'application/json',
+                  },
+                });
+                
+                const vacuumResult = await vacuumResponse.json();
+                
+                if (!vacuumResponse.ok || !vacuumResult.ok) {
+                  throw new Error(vacuumResult.error || `VACUUM Edge Function failed with status ${vacuumResponse.status}`);
                 }
                 
-                if (tablesError) {
-                  console.error(`[admin] Error getting tables list:`, tablesError);
-                  throw new Error(`Failed to get tables list: ${tablesError.message}`);
+                console.log(`[admin] VACUUM completed via Edge Function: ${vacuumResult.message}`);
+                if (vacuumResult.results?.errors?.length > 0) {
+                  console.warn(`[admin] VACUUM errors:`, vacuumResult.results.errors);
                 }
-                
-                if (!Array.isArray(tables) || tables.length === 0) {
-                  console.warn(`[admin] No tables to vacuum. tablesData:`, tablesData);
-                  throw new Error(`No tables to vacuum. Got: ${JSON.stringify(tablesData)}`);
-                }
-                
-                console.log(`[admin] Running VACUUM directly for ${tables.length} tables:`, tables);
-                const vacuumResults = await runVacuumDirectly(tables);
-                console.log(`[admin] VACUUM completed: ${vacuumResults.success.length} succeeded, ${vacuumResults.errors.length} failed`);
-                if (vacuumResults.errors.length > 0) {
-                  console.warn(`[admin] VACUUM errors:`, vacuumResults.errors);
-                }
-                if (vacuumResults.success.length === 0) {
-                  console.error(`[admin] CRITICAL: VACUUM succeeded on 0 tables!`);
+                if (vacuumResult.results?.success?.length === 0) {
+                  throw new Error(`VACUUM failed on all tables: ${vacuumResult.results.errors?.join('; ') || 'Unknown error'}`);
                 }
                 
                 // Wait a moment for stats to update after VACUUM
@@ -1907,14 +1886,12 @@ export default async function handler(req, res) {
                 await new Promise(resolve => setTimeout(resolve, 2000));
                 console.log(`[admin] VACUUM process completed successfully`);
               } catch (vacuumErr) {
-                console.error(`[admin] Failed to run VACUUM directly:`, {
+                console.error(`[admin] Failed to run VACUUM via Edge Function:`, {
                   message: vacuumErr.message,
-                  stack: vacuumErr.stack,
-                  name: vacuumErr.name
+                  stack: vacuumErr.stack
                 });
-                // Continue with stats collection even if VACUUM fails
-                // But log this as a critical error
-                error = error ? `${error}; VACUUM failed: ${vacuumErr.message}` : `VACUUM failed: ${vacuumErr.message}`;
+                error = `VACUUM failed: ${vacuumErr.message}`;
+                // Continue to stats collection even if VACUUM fails, so we can see the current state
               }
             }
             
