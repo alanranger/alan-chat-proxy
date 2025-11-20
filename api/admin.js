@@ -142,16 +142,12 @@ function serializeError(err) {
 
 // Helper function to run VACUUM directly using PostgreSQL connection (outside transaction)
 async function runVacuumDirectly(tables) {
-  // Re-check and try to construct if still not set (in case env vars were loaded later)
-  let dbUrl = SUPABASE_DB_URL;
+  // Always construct from environment variables at runtime (don't rely on module-level variable)
+  // This ensures we get the latest values and handle placeholders correctly
+  let dbUrl = process.env.SUPABASE_DB_URL;
   
-  // Check if SUPABASE_DB_URL contains placeholder
-  if (dbUrl && dbUrl.includes('[YOUR_PASSWORD]')) {
-    console.warn(`[vacuum] SUPABASE_DB_URL contains placeholder, will construct from SUPABASE_DB_PASSWORD`);
-    dbUrl = null;
-  }
-  
-  if (!dbUrl) {
+  // Check if SUPABASE_DB_URL contains placeholder or is not set
+  if (!dbUrl || dbUrl.includes('[YOUR_PASSWORD]')) {
     const dbPassword = process.env.SUPABASE_DB_PASSWORD || process.env.PGPASSWORD;
     
     // Get project ref - try SUPABASE_PROJECT first, then extract from URL, then use hardcoded fallback
@@ -174,10 +170,15 @@ async function runVacuumDirectly(tables) {
       // URL encode the password to handle special characters like #, @, etc. (same as working scripts)
       const encodedPassword = encodeURIComponent(dbPassword);
       dbUrl = `postgresql://postgres:${encodedPassword}@db.${projectRef}.supabase.co:5432/postgres`;
-      console.log(`[vacuum] Constructed database URL (project: ${projectRef}, password encoded: ${encodedPassword !== dbPassword})`);
+      console.log(`[vacuum] Constructed database URL from SUPABASE_DB_PASSWORD (project: ${projectRef}, password length: ${dbPassword.length}, encoded: ${encodedPassword !== dbPassword})`);
     } else {
       console.error(`[vacuum] Missing SUPABASE_DB_PASSWORD environment variable`);
+      throw new Error('SUPABASE_DB_PASSWORD environment variable is required for VACUUM. Please set it in Vercel environment variables.');
     }
+  } else {
+    // Log connection attempt (without exposing password)
+    const urlForLogging = dbUrl.replace(/:[^:@]+@/, ':****@');
+    console.log(`[vacuum] Using SUPABASE_DB_URL from environment: ${urlForLogging}`);
   }
   
   if (!dbUrl) {
