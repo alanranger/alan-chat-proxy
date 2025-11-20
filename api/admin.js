@@ -2178,10 +2178,43 @@ export default async function handler(req, res) {
       }
     }
 
+    // Reset All Job Statistics (POST /api/admin?action=reset_all_job_stats)
+    if (req.method === 'POST' && action === 'reset_all_job_stats') {
+      try {
+        // Use RPC function to delete all job run details from public.job_run_details
+        const { data: deleteResult, error: deleteError } = await supabase.rpc('delete_all_job_run_details');
+
+        if (deleteError) {
+          console.error('Error deleting all job run details:', deleteError);
+          return res.status(500).json({ 
+            error: 'Failed to reset all job statistics', 
+            detail: deleteError.message || 'RPC function delete_all_job_run_details may not exist.',
+            code: deleteError.code
+          });
+        }
+
+        const deletedCount = deleteResult?.deleted_count || 0;
+        const afterCount = deleteResult?.remaining_count || 0;
+        
+        console.log(`Reset all stats: Deleted ${deletedCount} records, ${afterCount || 0} remaining`);
+
+        return res.status(200).json({
+          ok: true,
+          message: `Successfully reset statistics for all jobs`,
+          deleted_count: deletedCount,
+          remaining_count: afterCount
+        });
+
+      } catch (error) {
+        console.error('Error resetting all job statistics:', error);
+        return res.status(500).json({ error: 'Internal server error', detail: error.message });
+      }
+    }
+
     // Default response
     return res.status(400).json({ 
       error: 'bad_request', 
-      detail: 'Use ?action=qa for spot checks, ?action=refresh for mapping refresh, ?action=aggregate_analytics for analytics aggregation, ?action=cron_jobs for cron job list, ?action=cron_logs for logs, ?action=update_cron_schedule to update schedule, ?action=toggle_cron_job to pause/resume jobs, ?action=reset_job_stats to reset job statistics, ?action=run_regression_test to run 40Q test, ?action=compare_regression_tests to compare results, or ?action=run_cron_job to run a job now' 
+      detail: 'Use ?action=qa for spot checks, ?action=refresh for mapping refresh, ?action=aggregate_analytics for analytics aggregation, ?action=cron_jobs for cron job list, ?action=cron_logs for logs, ?action=update_cron_schedule to update schedule, ?action=toggle_cron_job to pause/resume jobs, ?action=reset_job_stats to reset job statistics, ?action=reset_all_job_stats to reset all job statistics, ?action=run_regression_test to run 40Q test, ?action=compare_regression_tests to compare results, or ?action=run_cron_job to run a job now' 
     });
   } catch (error) {
     // Global error handler - ensure we always return JSON

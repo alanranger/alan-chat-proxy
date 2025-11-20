@@ -2357,7 +2357,10 @@
       ];
 
       let html = '<div class="summary-dashboard">';
-      html += '<h2>📊 Dashboard Overview</h2>';
+      html += '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">';
+      html += '<h2 style="margin: 0;">📊 Dashboard Overview</h2>';
+      html += '<button id="resetAllStatsBtn" class="btn btn-danger" onclick="resetAllJobStats()" style="padding: 8px 16px; font-size: 14px; border-radius: 6px; cursor: pointer; background: #dc3545; color: white; border: none;">🗑️ Reset All Stats</button>';
+      html += '</div>';
       html += '<div id="activeJobsBanner" class="active-jobs-banner"></div>';
       html += '<div class="summary-groups">';
 
@@ -4190,6 +4193,52 @@
       } catch (error) {
         addDebugLog(`Error stopping job: ${error.message}`, 'error', { error: error.message, stack: error.stack });
         showMessage(`Failed to stop job "${jobname}": ${error.message}`, 'error');
+      }
+    }
+
+    async function resetAllJobStats() {
+      addDebugLog('Reset all stats requested', 'info');
+      
+      if (!confirm(`Are you sure you want to reset statistics for ALL jobs?\n\nThis will delete all execution history from public.job_run_details for every job. This action cannot be undone.`)) {
+        addDebugLog('Reset all stats cancelled by user', 'warning');
+        return;
+      }
+
+      try {
+        addDebugLog('Sending reset all stats request', 'info');
+        const response = await fetch(`${API_BASE}/api/admin?action=reset_all_job_stats`, {
+          method: 'POST',
+          headers: buildAuthHeaders(),
+          body: JSON.stringify({})
+        });
+
+        addDebugLog(`Reset all stats API response: ${response.status} ${response.statusText}`, 'info');
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          let errorData;
+          try {
+            errorData = JSON.parse(errorText);
+          } catch (e) {
+            errorData = { error: errorText };
+          }
+          throw new Error(errorData.error || errorData.detail || `HTTP ${response.status}`);
+        }
+
+        const result = await response.json();
+        addDebugLog(`Reset all stats successful: ${result.deleted_count} records deleted`, 'success', result);
+        showMessage(`Successfully reset all job statistics. Deleted ${result.deleted_count || 0} records.`, 'success');
+        
+        // Reload jobs to refresh the display
+        setTimeout(() => {
+          loadJobs();
+        }, 500);
+
+      } catch (error) {
+        const errorMsg = `Failed to reset all job statistics: ${error.message}`;
+        addDebugLog(errorMsg, 'error', { error });
+        showMessage(errorMsg, 'error');
+        console.error('Error resetting all job stats:', error);
       }
     }
 
