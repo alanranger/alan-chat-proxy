@@ -2538,29 +2538,30 @@
           html += '<div class="job-section-header db-health">💾 Database Health</div>';
         }
         html += '<div class="job-section-content">';
+        html += '<div class="jobs-grid" style="grid-template-columns: 2fr 1fr; gap: 20px; align-items: start;">';
         
-        // Database Health Tile - full width (2 columns)
+        // Database Health Tile - spans 2 columns (left side)
         if (healthData) {
-          html += '<div style="margin-bottom: 20px;">';
+          html += '<div>';
           html += renderDatabaseHealthTile(healthData);
           html += '</div>';
         }
         
-        // db-health-monitor Job Card - full width on top
+        // Right column: Job 39 on top, Job 32 underneath
+        html += '<div style="display: flex; flex-direction: column; gap: 20px;">';
+        
+        // db-health-monitor Job Card (top right)
         if (dbHealthJob) {
-          html += '<div style="margin-bottom: 20px;">';
           html += renderJobCard(dbHealthJob, false, 'db-health');
-          html += '</div>';
         }
         
-        // db-maintenance Job Card - full width underneath
+        // db-maintenance Job Card (bottom right, underneath Job 39)
         if (dbMaintenanceJobObj) {
-          html += '<div>';
           html += renderJobCard(dbMaintenanceJobObj, false, 'db-health');
-          html += '</div>';
         }
         
-        html += '</div></div>';
+        html += '</div>'; // End right column
+        html += '</div></div></div>'; // End grid and section
       }
 
       // Render Analytics Jobs Section
