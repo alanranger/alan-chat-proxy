@@ -81,3 +81,5 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON regression_test_results TO service_role;
 GRANT USAGE, SELECT ON SEQUENCE regression_test_runs_id_seq TO service_role;
 GRANT USAGE, SELECT ON SEQUENCE regression_test_results_id_seq TO service_role;
 
+
+
