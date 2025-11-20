@@ -196,10 +196,14 @@ const CHAINED_REFRESH_JOBS = {
   [MASTER_REFRESH_JOB_ID]: [27, 28],
 };
 
+const JOBS_WITH_PROGRESS = new Set([21, MASTER_REFRESH_JOB_ID, 27, 28, 31]);
+
 const JOB_PROGRESS_DEFAULTS = {
+  21: { totalSteps: 3, message: 'Queued - refreshing product catalog' },
   26: { totalSteps: 5, message: 'Queued - starting master batch' },
   27: { totalSteps: 1, message: 'Queued - waiting for Batch 1' },
   28: { totalSteps: 1, message: 'Queued - waiting for Batch 2' },
+  31: { totalSteps: 3, message: 'Queued - cleaning orphaned records' },
 };
 
 async function seedJobProgressRows(jobIds = []) {
@@ -1551,8 +1555,8 @@ export default async function handler(req, res) {
           return res.status(400).json({ error: 'jobid parameter required' });
         }
 
-        // Check if job is already running (for jobs 26, 27, 28 that use progress tracking)
-        if ([26, 27, 28].includes(jobIdInt)) {
+        // Check if job is already running (for jobs that use progress tracking)
+        if (JOBS_WITH_PROGRESS.has(jobIdInt)) {
           const { data: progressData } = await supabase
             .from('job_progress')
             .select('progress, updated_at')
@@ -1586,7 +1590,7 @@ export default async function handler(req, res) {
 
         const job = jobData[0];
 
-        if ([26, 27, 28].includes(jobIdInt)) {
+        if (JOBS_WITH_PROGRESS.has(jobIdInt)) {
           const jobsToSeed = new Set([jobIdInt]);
           if (jobIdInt === MASTER_REFRESH_JOB_ID && Array.isArray(CHAINED_REFRESH_JOBS[MASTER_REFRESH_JOB_ID])) {
             CHAINED_REFRESH_JOBS[MASTER_REFRESH_JOB_ID].forEach(id => jobsToSeed.add(id));

@@ -1526,7 +1526,12 @@
       35: 'Analyzes content freshness across all URLs. Identifies content that hasn\'t been updated in 60+ days and calculates average content age. Helps identify stale content that may need refreshing or removal.',
       36: 'Backs up daily analytics data to ensure long-term retention. Verifies that yesterday\'s analytics data has been properly stored in chat_analytics_daily table for historical reporting and analysis.',
       37: 'Monitors the health of all active cron jobs. Identifies jobs with recent failures (more than 3 failures in 24 hours = critical, any failures = warning) or jobs that haven\'t succeeded in 48+ hours. Helps detect and alert on system issues early.',
-      39: 'Monitors database health metrics and creates snapshots every 6 hours. Collects database size, table counts, debug log counts, table bloat percentages, and chunk counts. Calculates risk scores for debug logs, table bloat, and chunking health. Creates alerts when thresholds are exceeded (e.g., debug logs >20k, bloat >4%, 0 chunks). Stores historical snapshots in db_health_snapshots and alerts in db_health_alerts tables for trend analysis and early warning detection.'
+      38: 'Purges stale database health snapshots and alerts so the db_health tables remain lightweight while preserving the most recent history for reporting.',
+      39: 'Monitors database health metrics and creates snapshots every 6 hours. Collects database size, table counts, debug log counts, table bloat percentages, and chunk counts. Calculates risk scores for debug logs, table bloat, and chunking health. Creates alerts when thresholds are exceeded (e.g., debug logs >20k, bloat >4%, 0 chunks). Stores historical snapshots in db_health_snapshots and alerts in db_health_alerts tables for trend analysis and early warning detection.',
+      40: 'Builds a weekly database summary combining health scores, maintenance activity, and storage trends so you can spot regressions at a glance.',
+      41: 'Cleans up expired rows in daily page_html tables (older rendered HTML snapshots) to keep storage lean and prevent duplicate content from accumulating.',
+      42: 'Analyzes the latest page_html captures to detect structure changes, extract metadata, and flag any pages that need a re-ingest or manual review.',
+      43: 'Drops temporary regression tables used for troubleshooting so each new regression run starts from a clean slate.'
     };
 
     // Define linked jobs (jobs that run together and are related)
@@ -1541,6 +1546,8 @@
       27: [26, 28],  // Job 27 is linked to Jobs 26 and 28
       28: [26, 27]   // Job 28 is linked to Jobs 26 and 27
     };
+
+    const jobsWithProgressTracking = [21, 26, 27, 28, 31];
 
     // Regression tests for Jobs 27/28 mirror Job 26 results
     const regressionMirrorMap = {
@@ -3050,8 +3057,8 @@
       addDebugLog(`Run job now requested: ${jobName} (ID: ${jobId})`, 'info', { jobId, jobName });
       const jobIdInt = parseInt(jobId);
       
-      // Reset progress for master/linked jobs so polling has a clean slate
-      if ([26, 27, 28].includes(jobIdInt)) {
+      // Reset progress for jobs that report detailed progress
+      if (jobsWithProgressTracking.includes(jobIdInt)) {
         const resetTargets = new Set([jobIdInt]);
         if (jobIdInt === 26 && Array.isArray(linkedJobs[26])) {
           linkedJobs[26].forEach(id => resetTargets.add(id));
@@ -3117,7 +3124,7 @@
         
         // Start progress polling for jobs 26, 27, 28 after successful execution
         // For fire-and-forget jobs, start polling immediately to track background progress
-        if ([26, 27, 28].includes(jobIdInt) && execution.success) {
+        if (jobsWithProgressTracking.includes(jobIdInt) && execution.success) {
           const pollTargets = new Set([jobIdInt]);
           if (jobIdInt === 26 && Array.isArray(linkedJobs[26])) {
             linkedJobs[26].forEach(id => pollTargets.add(id));
@@ -3701,7 +3708,7 @@
           </div>
           ${renderDatabaseMaintenanceSummary(job)}
           ${renderDatabaseMaintenanceTopTables(job)}
-          ${[26, 27, 28].includes(job.jobid) ? `
+          ${jobsWithProgressTracking.includes(job.jobid) ? `
           <div class="job-progress" id="progress-${job.jobid}" style="display:none;">
             <div class="progress-bar-container">
               <div class="progress-bar"></div>
