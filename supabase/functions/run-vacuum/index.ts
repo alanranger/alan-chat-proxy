@@ -24,16 +24,20 @@ serve(async (req) => {
                      Deno.env.get("DATABASE_PASSWORD") ||
                      Deno.env.get("POSTGRES_PASSWORD");
     
-    // If not found, try extracting from DATABASE_URL if it exists
+    // If not found, try extracting from SUPABASE_DB_URL or DATABASE_URL if they exist
     if (!dbPassword) {
-      const databaseUrl = Deno.env.get("DATABASE_URL");
+      const supabaseDbUrl = Deno.env.get("SUPABASE_DB_URL");
+      const databaseUrl = Deno.env.get("DATABASE_URL") || supabaseDbUrl;
       if (databaseUrl) {
-        const urlMatch = databaseUrl.match(/postgres:\/\/[^:]+:([^@]+)@/);
+        const urlMatch = databaseUrl.match(/postgres(?:ql)?:\/\/[^:]+:([^@]+)@/);
         if (urlMatch) {
           dbPassword = decodeURIComponent(urlMatch[1]);
+          console.log("Extracted password from DATABASE_URL/SUPABASE_DB_URL");
         }
       }
     }
+    
+    console.log(`Password found: ${dbPassword ? 'YES' : 'NO'}, length: ${dbPassword?.length || 0}`);
     
     const projectRef = Deno.env.get("SUPABASE_PROJECT_REF") || 
                        supabaseUrl.match(/https?:\/\/([^.]+)\.supabase\.co/)?.[1] || 
@@ -81,17 +85,29 @@ serve(async (req) => {
     // Let's use the Supabase REST API to execute SQL directly
     
     // Construct connection string
-    const encodedPassword = encodeURIComponent(dbPassword.trim());
+    const trimmedPassword = dbPassword.trim();
+    const encodedPassword = encodeURIComponent(trimmedPassword);
     const connectionString = `postgresql://postgres:${encodedPassword}@db.${projectRef}.supabase.co:5432/postgres`;
-
-    // Use Supabase's REST API to execute VACUUM commands
-    // Actually, we can't use REST API for VACUUM - it needs direct connection
-    // Let's use Deno's PostgreSQL client
     
+    console.log(`Connecting to database (project: ${projectRef}, password length: ${trimmedPassword.length}, encoded: ${encodedPassword !== trimmedPassword})`);
+
+    // Use Deno's PostgreSQL client
     const { Client } = await import("https://deno.land/x/postgres@v0.17.0/mod.ts");
     
     const client = new Client(connectionString);
-    await client.connect();
+    
+    try {
+      await client.connect();
+      console.log("Successfully connected to database");
+    } catch (connectErr: any) {
+      console.error("Connection error details:", {
+        message: connectErr.message,
+        code: connectErr.code,
+        detail: connectErr.detail,
+        hint: connectErr.hint
+      });
+      throw connectErr;
+    }
 
     const results = {
       success: [] as string[],
