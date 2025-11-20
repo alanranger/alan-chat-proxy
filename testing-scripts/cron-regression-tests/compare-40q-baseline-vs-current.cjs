@@ -10,8 +10,27 @@ const fs = require('fs');
 const path = require('path');
 
 // Get file paths from command line or use defaults
-const baselinePath = process.argv[2] || path.join(__dirname, '..', 'test results', 'deployed-analytics-test-2025-11-15T16-17-22-761Z.json');
-const currentPath = process.argv[3] || path.join(__dirname, '..', 'test results', 'deployed-analytics-test-2025-11-20T17-50-03-253Z.json');
+// FIXED BASELINE: This is the golden baseline representing a known good state
+// Only update this baseline when:
+//   1. All regressions have been fixed
+//   2. System is verified to be in a good state
+//   3. You explicitly want to establish a new baseline
+const FIXED_BASELINE = path.join(__dirname, '..', 'test results', 'baseline-40q-fixed.json');
+const baselinePath = process.argv[2] || FIXED_BASELINE;
+
+// Current test: Use latest deployed test result if not specified
+const currentPath = process.argv[3] || (() => {
+  const resultsDir = path.join(__dirname, '..', 'test results');
+  const files = fs.readdirSync(resultsDir)
+    .filter(f => f.startsWith('deployed-analytics-test-') && f.endsWith('.json'))
+    .map(f => ({
+      name: f,
+      path: path.join(resultsDir, f),
+      time: fs.statSync(path.join(resultsDir, f)).mtimeMs
+    }))
+    .sort((a, b) => b.time - a.time);
+  return files.length > 0 ? files[0].path : null;
+})();
 
 if (!fs.existsSync(baselinePath) || !fs.existsSync(currentPath)) {
   console.error('❌ Error: One or both test result files not found');
