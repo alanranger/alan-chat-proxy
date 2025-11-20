@@ -2063,7 +2063,7 @@ export default async function handler(req, res) {
           throw new Error(`Failed to count records: ${countError.message}`);
         }
         
-        // Delete all records from job_run_details
+        // Delete all records from public.job_run_details
         const { error: deleteError } = await supabase
           .from('job_run_details')
           .delete()
@@ -2071,6 +2071,18 @@ export default async function handler(req, res) {
         
         if (deleteError) {
           throw new Error(`Failed to delete records: ${deleteError.message}`);
+        }
+        
+        // Also clear cron.job_run_details (pg_cron system table)
+        // The dashboard reads from both tables, so we need to clear both
+        const { error: cronDeleteError } = await supabaseCron
+          .from('job_run_details')
+          .delete()
+          .gte('jobid', 0);
+        
+        if (cronDeleteError) {
+          console.warn('Failed to clear cron.job_run_details:', cronDeleteError);
+          // Don't fail the whole operation if cron table clear fails
         }
         
         // Also clear job_progress to reset progress tracking
