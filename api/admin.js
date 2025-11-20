@@ -508,6 +508,15 @@ export default async function handler(req, res) {
         progress: data || null
       });
     }
+
+    if (action === "active_jobs") {
+      const { data, error } = await supabase.rpc('get_active_jobs');
+      if (error) {
+        console.error('Error loading active jobs:', error);
+        return res.status(500).json({ error: 'Internal server error', detail: error.message });
+      }
+      return res.status(200).json({ ok: true, jobs: data || [] });
+    }
     
     // Reset job progress endpoint
     if (action === "reset_job_progress") {

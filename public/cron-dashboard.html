@@ -1181,6 +1181,7 @@
       background: #f7f7f7;
       padding: 6px;
       border-radius: 6px;
+      display: none;
     }
     
     .progress-bar-container {
@@ -1203,6 +1204,28 @@
       font-size: 0.85rem;
       color: #666;
       margin-top: 4px;
+    }
+
+    .active-jobs-banner {
+      margin: 12px 0;
+      padding: 10px 12px;
+      border-radius: 6px;
+      background: #fff7e6;
+      border: 1px solid #ffe0a3;
+      font-size: 13px;
+      color: #8a5400;
+      display: none;
+    }
+
+    .active-job-pill {
+      display: inline-block;
+      margin: 3px 6px 3px 0;
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: #ffbf69;
+      color: #7a3d00;
+      font-size: 12px;
+      font-weight: 600;
     }
 
     .db-maint-summary {
@@ -1548,6 +1571,7 @@
     };
 
     const jobsWithProgressTracking = [21, 26, 27, 28, 31];
+    let activeJobs = [];
 
     // Regression tests for Jobs 27/28 mirror Job 26 results
     const regressionMirrorMap = {
@@ -1566,6 +1590,49 @@
       28: 'Website Pages Refresh Batch 2'
     };
 
+    function formatDuration(seconds = 0) {
+      if (!seconds || seconds < 1) return '<1s';
+      if (seconds < 60) return `${Math.round(seconds)}s`;
+      const mins = Math.floor(seconds / 60);
+      const secs = Math.round(seconds % 60);
+      return `${mins}m ${secs}s`;
+    }
+
+    async function loadActiveJobs() {
+      try {
+        const response = await fetch(`${API_BASE}/api/admin?action=active_jobs`, {
+          headers: buildAuthHeaders()
+        });
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+        const data = await response.json();
+        activeJobs = data.ok ? (data.jobs || []) : [];
+        addDebugLog(`Active jobs loaded: ${activeJobs.length}`, 'info');
+      } catch (error) {
+        activeJobs = [];
+        addDebugLog(`Failed to load active jobs: ${error.message}`, 'warning');
+      }
+    }
+
+    function renderActiveJobsBanner() {
+      const banner = document.getElementById('activeJobsBanner');
+      if (!banner) return;
+      if (!activeJobs.length) {
+        banner.style.display = 'none';
+        banner.innerHTML = '';
+        return;
+      }
+      const pills = activeJobs.map(job => {
+        const label = job.job_hint || (job.query ? job.query.trim().replace(/\s+/g, ' ').slice(0, 80) + '…' : 'Active query');
+        const duration = job.duration_seconds ? formatDuration(job.duration_seconds) : '';
+        const wait = job.wait_event ? ` • waiting on ${job.wait_event}` : '';
+        return `<span class="active-job-pill">${label}${duration ? ` (${duration})` : ''}${wait}</span>`;
+      }).join('');
+      banner.innerHTML = `<strong>Active jobs:</strong> ${pills}`;
+      banner.style.display = 'block';
+    }
+
     function setAuthToken() {
       const tokenInput = document.getElementById('authToken');
       const token = tokenInput ? tokenInput.value : DEFAULT_TOKEN;
@@ -1579,7 +1646,26 @@
     }
     
     // Progress polling function (live updating every 2 seconds)
-    async function pollJobProgress(jobid) {
+    const MAX_PROGRESS_RETRIES = 10;
+    const progressRetryState = new Map(); // jobid -> { attempts, timer }
+
+    function getProgressContainer(jobid) {
+      return document.querySelector(`#progress-${jobid}`);
+    }
+
+    function showProgressContainer(jobid, initialMessage = 'Queued...') {
+      const container = getProgressContainer(jobid);
+      if (!container) return null;
+      container.style.display = 'block';
+      container.onclick = null;
+      const bar = container.querySelector('.progress-bar');
+      const msg = container.querySelector('.progress-message');
+      if (bar) bar.style.width = '0%';
+      if (msg) msg.textContent = initialMessage;
+      return container;
+    }
+
+    async function pollJobProgress(jobid, attempt = 0) {
       try {
         addDebugLog(`Polling progress for job ${jobid}`, 'info');
         const res = await fetch(`${API_BASE}/api/admin?action=job_progress&jobid=${jobid}`);
@@ -1588,7 +1674,7 @@
         
         addDebugLog(`Progress data for job ${jobid}:`, 'info', { progress: prog });
         
-        const container = document.querySelector(`#progress-${jobid}`);
+        const container = getProgressContainer(jobid);
         if (!container) {
           addDebugLog(`Progress container not found for job ${jobid}`, 'warning');
           console.warn(`Progress container not found for job ${jobid}`);
@@ -1600,23 +1686,29 @@
         
         // If no progress data yet, keep polling (job might be starting)
         if (!prog) {
-          // Show container with "Starting..." message
-          addDebugLog(`No progress data yet for job ${jobid}, showing 'Starting...'`, 'info');
-          container.style.display = "block";
-          if (bar) {
-            bar.style.width = "0%";
+          const nextAttempt = attempt + 1;
+          showProgressContainer(jobid, `Queued... (waiting ${nextAttempt}/${MAX_PROGRESS_RETRIES})`);
+          if (nextAttempt < MAX_PROGRESS_RETRIES) {
+            const delay = Math.min(2000 * Math.pow(1.5, nextAttempt), 15000);
+            progressRetryState.set(jobid, { attempts: nextAttempt });
+            setTimeout(() => pollJobProgress(jobid, nextAttempt), delay);
+          } else {
+            if (msg) {
+              msg.textContent = 'No progress yet. Click to retry.';
+              container.onclick = () => {
+                container.onclick = null;
+                progressRetryState.set(jobid, { attempts: 0 });
+                pollJobProgress(jobid, 0);
+              };
+            }
           }
-          if (msg) {
-            msg.textContent = "Starting job...";
-          }
-          // Continue polling - job might not have started yet
-          setTimeout(() => pollJobProgress(jobid), 2000);
           return;
         }
         
         // Show progress
         addDebugLog(`Updating progress for job ${jobid}: ${prog.progress}% - ${prog.message}`, 'info');
         container.style.display = "block";
+        container.onclick = null;
         if (bar) {
           bar.style.width = `${prog.progress}%`;
         }
@@ -1625,22 +1717,19 @@
         }
         
         // Continue polling if not complete
-        if (prog.progress < 100) {
-          setTimeout(() => pollJobProgress(jobid), 2000);
+        progressRetryState.set(jobid, { attempts: 0 });
+        if (prog.progress < 100 || (prog.message && prog.message.toLowerCase().includes('waiting'))) {
+          const delay = prog.message && prog.message.toLowerCase().includes('waiting') ? 5000 : 2000;
+          setTimeout(() => pollJobProgress(jobid), delay);
         } else {
           addDebugLog(`Job ${jobid} completed (100%)`, 'success');
-          // Job complete - hide progress bar after 5 seconds
-          setTimeout(() => {
-            if (container) {
-              container.style.display = "none";
-            }
-          }, 5000);
         }
       } catch (err) {
         addDebugLog(`Failed to poll progress for job ${jobid}: ${err.message}`, 'error', { error: err });
         console.warn(`Failed to poll progress for job ${jobid}:`, err);
-        // Retry polling even on error (might be temporary network issue)
-        setTimeout(() => pollJobProgress(jobid), 2000);
+        const nextAttempt = attempt + 1;
+        const delay = Math.min(2000 * Math.pow(1.5, nextAttempt), 15000);
+        setTimeout(() => pollJobProgress(jobid, nextAttempt), delay);
       }
     }
 
@@ -2084,9 +2173,9 @@
           regressionTestData[jobid] = data;
         });
 
-        // Load database health data before rendering (needed for Job 39 health status)
-        // This must be done before renderJobs() so that globalDatabaseHealthData is available
+        // Load database health data + active jobs before rendering
         await loadDatabaseHealth();
+        await loadActiveJobs();
         
         // Debug: Log database health data availability
         if (globalDatabaseHealthData) {
@@ -2099,6 +2188,7 @@
         }
         
         await renderJobs(jobs);
+        renderActiveJobsBanner();
         addDebugLog('Jobs rendered successfully', 'success');
       } catch (error) {
         addDebugLog(`Error loading jobs: ${error.message}`, 'error', { error: error.message, stack: error.stack });
@@ -2167,6 +2257,7 @@
 
       let html = '<div class="summary-dashboard">';
       html += '<h2>📊 Dashboard Overview</h2>';
+      html += '<div id="activeJobsBanner" class="active-jobs-banner"></div>';
       html += '<div class="summary-groups">';
 
       // Calculate group health and stats
@@ -3057,7 +3148,7 @@
       addDebugLog(`Run job now requested: ${jobName} (ID: ${jobId})`, 'info', { jobId, jobName });
       const jobIdInt = parseInt(jobId);
       
-      // Reset progress for jobs that report detailed progress
+      // Reset progress for jobs that report detailed updates and show queued state
       if (jobsWithProgressTracking.includes(jobIdInt)) {
         const resetTargets = new Set([jobIdInt]);
         if (jobIdInt === 26 && Array.isArray(linkedJobs[26])) {
@@ -3072,6 +3163,7 @@
           } catch (err) {
             console.warn(`Failed to reset progress for job ${targetId}:`, err);
           }
+          showProgressContainer(targetId, targetId === jobIdInt ? 'Queued...' : 'Auto-chained batch queued...');
         }
       }
       
@@ -3139,6 +3231,7 @@
             index += 1;
           });
         }
+        loadActiveJobs().then(renderActiveJobsBanner);
         
         const isRiskyJob = [21, 26, 27, 28, 31].includes(jobIdInt);
         
