@@ -1724,15 +1724,14 @@ export default async function handler(req, res) {
                 
                 // Get list of tables to vacuum
                 const { data: tablesData, error: tablesError } = await supabase.rpc('database_maintenance_tables');
-                // The function returns { tables: [...] }, so extract the array
-                const tables = tablesData?.tables || (Array.isArray(tablesData) ? tablesData : []);
+                console.log(`[admin] database_maintenance_tables RPC result:`, { tablesData, tablesError, type: typeof tablesData, isArray: Array.isArray(tablesData) });
+                
+                // Supabase RPC returns text[] as a direct array
+                const tables = Array.isArray(tablesData) ? tablesData : (tablesData?.tables || []);
+                console.log(`[admin] Extracted tables array:`, { tables, length: tables?.length });
+                
                 if (!tablesError && Array.isArray(tables) && tables.length > 0) {
-                  // Step 1: Collect "before" stats (we'll do this in the function, but need to run VACUUM after)
-                  // Actually, let's just run VACUUM first, then the function will collect stats
-                  // The "before" will be after VACUUM, and "after" will be the same, showing no change
-                  // But that's okay - the important thing is VACUUM runs and removes dead tuples
-                  
-                  console.log(`[admin] Running VACUUM directly for ${tables.length} tables...`);
+                  console.log(`[admin] Running VACUUM directly for ${tables.length} tables:`, tables);
                   const vacuumResults = await runVacuumDirectly(tables);
                   console.log(`[admin] VACUUM completed: ${vacuumResults.success.length} succeeded, ${vacuumResults.errors.length} failed`);
                   if (vacuumResults.errors.length > 0) {
@@ -1741,6 +1740,8 @@ export default async function handler(req, res) {
                   
                   // Wait a moment for stats to update after VACUUM
                   await new Promise(resolve => setTimeout(resolve, 2000));
+                } else {
+                  console.warn(`[admin] Skipping VACUUM: tablesError=${tablesError}, tables length=${tables?.length}, isArray=${Array.isArray(tables)}`);
                 }
               } catch (vacuumErr) {
                 console.error(`[admin] Failed to run VACUUM directly: ${vacuumErr.message}`);
