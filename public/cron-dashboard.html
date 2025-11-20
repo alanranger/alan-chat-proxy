@@ -2309,7 +2309,7 @@
           id: 'db-health',
           name: 'Database Health',
           icon: '💾',
-          jobIds: [39],
+          jobIds: [39, 32],
           color: '#667eea'
         },
         {
@@ -2332,13 +2332,6 @@
           icon: '🧹',
           jobIds: [29, 30, 31],
           color: '#f5576c'
-        },
-        {
-          id: 'performance',
-          name: 'Database Performance',
-          icon: '⚡',
-          jobIds: [32],
-          color: '#4facfe'
         },
         {
           id: 'health',
@@ -2510,34 +2503,34 @@
       const analyticsJobs = [13, 19, 20, 22];
       const refreshBatches = [26, 27, 28];
       const dataMaintenanceJobs = [29, 30, 31];
-      const databasePerformanceJobs = [32];
       const contentHealthJobs = [33, 34, 35];
       const systemHealthJobs = [36, 37];
       const dbHealthMonitorJob = 39;
+      const dbMaintenanceJob = 32; // Database maintenance/vacuum job
       
       // Separate jobs into groups
       const analyticsGroup = jobs.filter(j => analyticsJobs.includes(j.jobid)).sort((a, b) => a.jobid - b.jobid);
       const refreshGroup = jobs.filter(j => refreshBatches.includes(j.jobid)).sort((a, b) => a.jobid - b.jobid);
       const dataMaintenanceGroup = jobs.filter(j => dataMaintenanceJobs.includes(j.jobid)).sort((a, b) => a.jobid - b.jobid);
-      const databasePerformanceGroup = jobs.filter(j => databasePerformanceJobs.includes(j.jobid)).sort((a, b) => a.jobid - b.jobid);
       const contentHealthGroup = jobs.filter(j => contentHealthJobs.includes(j.jobid)).sort((a, b) => a.jobid - b.jobid);
       const systemHealthGroup = jobs.filter(j => systemHealthJobs.includes(j.jobid)).sort((a, b) => a.jobid - b.jobid);
       const otherJobs = jobs.filter(j => 
         !analyticsJobs.includes(j.jobid) && 
         !refreshBatches.includes(j.jobid) &&
         !dataMaintenanceJobs.includes(j.jobid) &&
-        !databasePerformanceJobs.includes(j.jobid) &&
         !contentHealthJobs.includes(j.jobid) &&
         !systemHealthJobs.includes(j.jobid) &&
-        j.jobid !== dbHealthMonitorJob
+        j.jobid !== dbHealthMonitorJob &&
+        j.jobid !== dbMaintenanceJob
       ).sort((a, b) => a.jobid - b.jobid);
 
-      // Render Database Health Section with db-health-monitor job side by side
+      // Render Database Health Section with db-health-monitor job and db-maintenance job
       // Use global database health data if available, otherwise load it
       const healthData = globalDatabaseHealthData || await loadDatabaseHealth();
       const dbHealthJob = jobs.find(j => j.jobid === dbHealthMonitorJob);
+      const dbMaintenanceJobObj = jobs.find(j => j.jobid === dbMaintenanceJob);
       
-      if (healthData || dbHealthJob) {
+      if (healthData || dbHealthJob || dbMaintenanceJobObj) {
         html += '<div class="job-section">';
         // Check if extended data is available (header is rendered inside tile if extended)
         const actualData = healthData?.db_health_extended || healthData;
@@ -2545,7 +2538,7 @@
           html += '<div class="job-section-header db-health">💾 Database Health</div>';
         }
         html += '<div class="job-section-content">';
-        html += '<div class="jobs-grid" style="grid-template-columns: 2fr 1fr; gap: 20px;">';
+        html += '<div class="jobs-grid" style="grid-template-columns: 2fr 1fr 1fr; gap: 20px;">';
         
         // Database Health Tile (left, larger)
         if (healthData) {
@@ -2554,10 +2547,17 @@
           html += '</div>';
         }
         
-        // db-health-monitor Job Card (right, smaller)
+        // db-health-monitor Job Card (middle)
         if (dbHealthJob) {
           html += '<div>';
           html += renderJobCard(dbHealthJob, false, 'db-health');
+          html += '</div>';
+        }
+        
+        // db-maintenance Job Card (right) - vacuum and cleanup
+        if (dbMaintenanceJobObj) {
+          html += '<div>';
+          html += renderJobCard(dbMaintenanceJobObj, false, 'db-health');
           html += '</div>';
         }
         
@@ -2606,19 +2606,6 @@
         html += '</div></div></div>';
       }
 
-      // Render Database Performance Section
-      if (databasePerformanceGroup.length > 0) {
-        html += '<div class="job-section">';
-        html += '<div class="job-section-header performance">⚡ Database Performance Jobs</div>';
-        html += '<div class="job-section-content">';
-        html += '<div class="jobs-grid" style="grid-template-columns: repeat(1, 1fr);">';
-        
-        databasePerformanceGroup.forEach((job) => {
-          html += renderJobCard(job, false, 'performance');
-        });
-        
-        html += '</div></div></div>';
-      }
 
       // Render Content Health & Monitoring Section
       if (contentHealthGroup.length > 0) {
