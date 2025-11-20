@@ -2,11 +2,12 @@
 // Consolidated admin utilities
 // Handles QA spot checks and data refresh operations
 // Replaces: qa-spot-checks.js, refresh-mappings.js
-// Last updated: 2025-11-20 17:25 - Fixed scheduler_tick and reset_all_job_stats
+// Last updated: 2025-11-20 18:35 - Fixed VACUUM transaction issue for database maintenance
 
 import { createClient } from '@supabase/supabase-js';
 import { logJobRun } from '../helpers/logJobRun.js';
 import { disablePgCronJobs } from '../helpers/disablePgCron.js';
+import pg from 'pg';
 
 // Reliable Vercel environment loading
 const SUPABASE_URL =
@@ -15,6 +16,8 @@ const SUPABASE_URL =
 
 const SUPABASE_SERVICE_ROLE_KEY =
   process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+const SUPABASE_DB_URL = process.env.SUPABASE_DB_URL;
 
 if (!SUPABASE_URL) {
   console.error("ADMIN API ERROR: Missing SUPABASE_URL", {
@@ -101,6 +104,49 @@ function serializeError(err) {
   } catch (jsonErr) {
     return String(err);
   }
+}
+
+// Helper function to run VACUUM directly using PostgreSQL connection (outside transaction)
+async function runVacuumDirectly(tables) {
+  if (!SUPABASE_DB_URL) {
+    throw new Error('SUPABASE_DB_URL environment variable is required for VACUUM');
+  }
+
+  const pgClient = new pg.Client({
+    connectionString: SUPABASE_DB_URL
+  });
+
+  const results = {
+    success: [],
+    errors: []
+  };
+
+  try {
+    await pgClient.connect();
+    
+    for (const table of tables) {
+      try {
+        // VACUUM ANALYZE runs outside transaction when using direct connection
+        await pgClient.query(`VACUUM ANALYZE ${pgClient.escapeIdentifier(table)}`);
+        results.success.push(table);
+        console.log(`[vacuum] Successfully vacuumed ${table}`);
+      } catch (err) {
+        const errorMsg = `Failed to vacuum ${table}: ${err.message}`;
+        results.errors.push(errorMsg);
+        console.error(`[vacuum] ${errorMsg}`);
+      }
+    }
+  } catch (error) {
+    throw new Error(`Failed to connect for VACUUM: ${error.message}`);
+  } finally {
+    try {
+      await pgClient.end();
+    } catch (e) {
+      console.warn(`[vacuum] Error closing connection: ${e.message}`);
+    }
+  }
+
+  return results;
 }
 
 function buildDatabaseMaintenancePayload(rows = []) {
@@ -1654,9 +1700,30 @@ export default async function handler(req, res) {
             } else if (jobIdInt === 28) {
               command = "SELECT trigger_refresh_batch2_job();";
             } else if (isDatabaseMaintenanceJob(jobIdInt) && command?.includes('run_database_maintenance')) {
+              // For database maintenance, we need to run VACUUM outside transaction
+              // So we'll handle it specially below
               command = "SELECT run_database_maintenance_with_stats();";
             }
             command = command.trim();
+            
+            // Special handling for database maintenance: run VACUUM directly before stats
+            if (isDatabaseMaintenanceJob(jobIdInt)) {
+              try {
+                // Get list of tables to vacuum
+                const { data: tablesData, error: tablesError } = await supabase.rpc('database_maintenance_tables');
+                if (!tablesError && Array.isArray(tablesData) && tablesData.length > 0) {
+                  console.log(`[admin] Running VACUUM directly for ${tablesData.length} tables...`);
+                  const vacuumResults = await runVacuumDirectly(tablesData);
+                  console.log(`[admin] VACUUM completed: ${vacuumResults.success.length} succeeded, ${vacuumResults.errors.length} failed`);
+                  if (vacuumResults.errors.length > 0) {
+                    console.warn(`[admin] VACUUM errors:`, vacuumResults.errors);
+                  }
+                }
+              } catch (vacuumErr) {
+                console.error(`[admin] Failed to run VACUUM directly: ${vacuumErr.message}`);
+                // Continue with stats collection even if VACUUM fails
+              }
+            }
             
             // Handle multiple statements (e.g., Job 20 has two SELECT statements)
             const statements = command.split(/;\s*(?=SELECT)/i).filter(s => s.trim().length > 0);
