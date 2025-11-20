@@ -1843,29 +1843,75 @@ export default async function handler(req, res) {
             }
             command = command.trim();
             
-            // Special handling for database maintenance: collect "before" stats, run VACUUM directly via RPC, then collect "after" stats
+            // Special handling for database maintenance: collect "before" stats, run VACUUM directly, then collect "after" stats
             if (isDatabaseMaintenanceJob(jobIdInt)) {
               try {
                 console.log(`[admin] Starting database maintenance VACUUM process for job ${jobIdInt}`);
                 
-                // Run VACUUM directly via PostgreSQL function (works via Supabase RPC)
-                console.log(`[admin] Running VACUUM directly via PostgreSQL function...`);
-                const { data: vacuumResult, error: vacuumError } = await supabase.rpc('run_vacuum_maintenance');
+                // Run VACUUM directly using PostgreSQL connection (bypasses transaction restrictions)
+                const pg = require('pg');
                 
-                if (vacuumError) {
-                  throw new Error(`VACUUM RPC failed: ${vacuumError.message}`);
+                // Get database password and project ref
+                const dbPassword = (process.env.SUPABASE_DB_PASSWORD || process.env.PGPASSWORD || '').trim();
+                let projectRef = process.env.SUPABASE_PROJECT;
+                if (!projectRef) {
+                  const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+                  if (supabaseUrl) {
+                    const urlMatch = supabaseUrl.match(/https?:\/\/([^.]+)\.supabase\.co/);
+                    if (urlMatch) projectRef = urlMatch[1];
+                  }
+                }
+                if (!projectRef) projectRef = 'igzvwbvgvmzvvzoclufx';
+                
+                if (!dbPassword) {
+                  throw new Error('SUPABASE_DB_PASSWORD or PGPASSWORD environment variable is required for VACUUM');
                 }
                 
-                if (!vacuumResult?.ok) {
-                  throw new Error(vacuumResult?.error || `VACUUM failed: ${JSON.stringify(vacuumResult)}`);
+                // Get list of tables
+                const { data: tablesData, error: tablesError } = await supabase.rpc('database_maintenance_tables');
+                if (tablesError) throw new Error(`Failed to get tables: ${tablesError.message}`);
+                
+                const tables = Array.isArray(tablesData) ? tablesData : (tablesData?.tables || []);
+                if (tables.length === 0) throw new Error('No tables to vacuum');
+                
+                // Construct connection string
+                const encodedPassword = encodeURIComponent(dbPassword);
+                const connectionString = `postgresql://postgres:${encodedPassword}@db.${projectRef}.supabase.co:5432/postgres`;
+                
+                console.log(`[admin] Connecting to database for VACUUM (project: ${projectRef}, ${tables.length} tables)...`);
+                
+                const pgClient = new pg.Client({
+                  connectionString,
+                  ssl: { rejectUnauthorized: false }
+                });
+                
+                await pgClient.connect();
+                console.log(`[admin] Connected successfully, running VACUUM on ${tables.length} tables...`);
+                
+                const results = { success: [], errors: [] };
+                
+                for (const table of tables) {
+                  try {
+                    const escapedTable = `"${table.replace(/"/g, '""')}"`;
+                    await pgClient.query(`VACUUM ANALYZE ${escapedTable}`);
+                    results.success.push(table);
+                    console.log(`[admin] ✓ VACUUM completed for ${table}`);
+                  } catch (err) {
+                    const errorMsg = `Failed to vacuum ${table}: ${err.message}`;
+                    results.errors.push(errorMsg);
+                    console.error(`[admin] ✗ ${errorMsg}`);
+                  }
                 }
                 
-                console.log(`[admin] VACUUM completed: ${vacuumResult.message}`);
-                if (vacuumResult.results?.errors?.length > 0) {
-                  console.warn(`[admin] VACUUM errors:`, vacuumResult.results.errors);
+                await pgClient.end();
+                
+                if (results.success.length === 0) {
+                  throw new Error(`VACUUM failed on all tables: ${results.errors.join('; ')}`);
                 }
-                if (vacuumResult.results?.success?.length === 0) {
-                  throw new Error(`VACUUM failed on all tables: ${vacuumResult.results.errors?.map(e => e.error || e).join('; ') || 'Unknown error'}`);
+                
+                console.log(`[admin] VACUUM completed: ${results.success.length} succeeded, ${results.errors.length} failed`);
+                if (results.errors.length > 0) {
+                  console.warn(`[admin] VACUUM errors:`, results.errors);
                 }
                 
                 // Wait a moment for stats to update after VACUUM
