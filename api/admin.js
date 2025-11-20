@@ -2063,8 +2063,7 @@ export default async function handler(req, res) {
           throw new Error(`Failed to count records: ${countError.message}`);
         }
         
-        // Delete all records using a condition that matches all rows
-        // Since id is always >= 0, this will delete all records
+        // Delete all records from job_run_details
         const { error: deleteError } = await supabase
           .from('job_run_details')
           .delete()
@@ -2072,6 +2071,16 @@ export default async function handler(req, res) {
         
         if (deleteError) {
           throw new Error(`Failed to delete records: ${deleteError.message}`);
+        }
+        
+        // Also clear job_progress to reset progress tracking
+        const { error: progressError } = await supabase
+          .from('job_progress')
+          .delete()
+          .gte('jobid', 0);
+        
+        if (progressError) {
+          console.warn('Failed to clear job_progress:', progressError);
         }
         
         // Verify deletion
@@ -2089,7 +2098,7 @@ export default async function handler(req, res) {
 
         return res.status(200).json({
           ok: true,
-          message: `Successfully reset statistics for all jobs`,
+          message: `Successfully reset statistics for all jobs. Note: This does not stop currently running queries - use the Stop button on individual job tiles if needed.`,
           deleted_count: deletedCount,
           remaining_count: afterCount || 0,
           before_count: beforeCount || 0
