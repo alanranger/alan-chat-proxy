@@ -1603,9 +1603,23 @@ export default async function handler(req, res) {
         let afterResult = null;
         let comparison = null;
 
-        // If we have a test run, use its baseline/after IDs
+        // If we have a test run, check if it uses a fixed baseline
+        // If not, prefer the fixed baseline over the test run's baseline
         if (testRun) {
-          if (testRun.baseline_test_id) {
+          // First, check if there's a fixed baseline for this job
+          const { data: fixedBaselineTests, error: fixedBaselineError } = await supabase
+            .from('regression_test_results')
+            .select('*')
+            .eq('job_id', jobid)
+            .eq('test_phase', 'before')
+            .eq('is_fixed_baseline', true)
+            .limit(1);
+          
+          if (!fixedBaselineError && fixedBaselineTests && fixedBaselineTests.length > 0) {
+            // Use fixed baseline instead of test run's baseline
+            baselineResult = fixedBaselineTests[0];
+          } else if (testRun.baseline_test_id) {
+            // Fallback to test run's baseline if no fixed baseline exists
             const { data, error } = await supabase
               .from('regression_test_results')
               .select('*')
@@ -1634,17 +1648,31 @@ export default async function handler(req, res) {
             }
           }
         } else {
-          // No test run yet - check for standalone baseline and after test results
-          const { data: baselineTests, error: baselineError } = await supabase
+          // No test run yet - check for fixed baseline first, then fallback to latest
+          // FIXED BASELINE: Always use the fixed baseline if it exists to prevent regression creep
+          const { data: fixedBaselineTests, error: fixedBaselineError } = await supabase
             .from('regression_test_results')
             .select('*')
             .eq('job_id', jobid)
             .eq('test_phase', 'before')
-            .order('test_timestamp', { ascending: false })
+            .eq('is_fixed_baseline', true)
             .limit(1);
           
-          if (!baselineError && baselineTests && baselineTests.length > 0) {
-            baselineResult = baselineTests[0];
+          if (!fixedBaselineError && fixedBaselineTests && fixedBaselineTests.length > 0) {
+            baselineResult = fixedBaselineTests[0];
+          } else {
+            // Fallback to latest baseline if no fixed baseline exists
+            const { data: baselineTests, error: baselineError } = await supabase
+              .from('regression_test_results')
+              .select('*')
+              .eq('job_id', jobid)
+              .eq('test_phase', 'before')
+              .order('test_timestamp', { ascending: false })
+              .limit(1);
+            
+            if (!baselineError && baselineTests && baselineTests.length > 0) {
+              baselineResult = baselineTests[0];
+            }
           }
           
           // Also get latest after test if exists
@@ -1849,7 +1877,7 @@ export default async function handler(req, res) {
                 console.log(`[admin] Starting database maintenance VACUUM process for job ${jobIdInt}`);
                 
                 // Run VACUUM directly using PostgreSQL connection (bypasses transaction restrictions)
-                const pg = require('pg');
+                // pg is already imported at the top of the file
                 
                 // Get database password and project ref
                 const dbPassword = (process.env.SUPABASE_DB_PASSWORD || process.env.PGPASSWORD || '').trim();
