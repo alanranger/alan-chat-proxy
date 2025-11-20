@@ -664,145 +664,15 @@ export default async function handler(req, res) {
     }
 
     if (action === "scheduler_tick") {
-      // Disable pg_cron jobs silently
-      await disablePgCronJobs(supabase);
-
-      // Get all jobs - try public.jobs first, fall back to get_cron_jobs RPC
-      let cronJobs = [];
-      try {
-        const { data: jobsData, error: jobsError } = await supabase.from("public.jobs").select("*");
-        if (!jobsError && jobsData) {
-          cronJobs = jobsData;
-        } else {
-          // Fall back to RPC
-          const { data: rpcJobs, error: rpcError } = await supabase.rpc('get_cron_jobs');
-          if (!rpcError && rpcJobs) {
-            cronJobs = rpcJobs;
-          }
-        }
-      } catch (err) {
-        // Try RPC as fallback
-        const { data: rpcJobs, error: rpcError } = await supabase.rpc('get_cron_jobs');
-        if (!rpcError && rpcJobs) {
-          cronJobs = rpcJobs;
-        }
-      }
-
-      const now = new Date();
-
-      for (const job of cronJobs) {
-        if (!job.active) continue;
-
-        // Derive frequency from schedule text (human-readable description)
-        // First try to get the schedule description, fall back to parsing cron expression
-        let scheduleText = job.schedule_description || job.schedule_label || '';
-        
-        // If no description, parse the cron schedule to get a description
-        if (!scheduleText && job.schedule) {
-          const parts = job.schedule.trim().split(/\s+/);
-          if (parts.length === 5) {
-            const [minute, hour, dayOfMonth, month, dayOfWeek] = parts;
-            
-            // Every hour
-            if (minute !== '*' && hour === '*' && dayOfMonth === '*' && month === '*' && dayOfWeek === '*') {
-              if (minute === '0') {
-                scheduleText = 'Every hour';
-              } else {
-                scheduleText = `Every hour (at :${minute.padStart(2, '0')})`;
-              }
-            }
-            // Every N hours
-            else if (hour.startsWith('*/') && dayOfMonth === '*' && month === '*' && dayOfWeek === '*') {
-              const hours = hour.substring(2);
-              const minText = minute !== '0' ? ` at :${minute.padStart(2, '0')}` : '';
-              scheduleText = `Every ${hours} hour${hours !== '1' ? 's' : ''}${minText}`;
-            }
-            // Daily at specific time
-            else if (minute !== '*' && hour !== '*' && dayOfMonth === '*' && month === '*' && dayOfWeek === '*') {
-              const h = parseInt(hour);
-              const m = minute.padStart(2, '0');
-              const ampm = h >= 12 ? 'PM' : 'AM';
-              const h12 = h > 12 ? h - 12 : (h === 0 ? 12 : h);
-              scheduleText = `Daily at ${h12}:${m} ${ampm}`;
-            }
-            // Weekly
-            else if (dayOfWeek !== '*' && dayOfWeek !== '0' && dayOfWeek !== '7' && dayOfMonth === '*' && month === '*') {
-              const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-              const day = parseInt(dayOfWeek);
-              const dayName = days[day] || dayOfWeek;
-              if (hour !== '*' && minute !== '*') {
-                const h = parseInt(hour);
-                const m = minute.padStart(2, '0');
-                const ampm = h >= 12 ? 'PM' : 'AM';
-                const h12 = h > 12 ? h - 12 : (h === 0 ? 12 : h);
-                scheduleText = `Every ${dayName} at ${h12}:${m} ${ampm}`;
-              } else {
-                scheduleText = `Every ${dayName}`;
-              }
-            }
-          }
-        }
-        
-        // Get frequency from schedule text
-        const freqMinutes = getIntervalMinutesFromSchedule(scheduleText);
-        if (!freqMinutes) continue;
-
-        const lastRun = job.last_run ? new Date(job.last_run) : null;
-        const shouldRun = !lastRun || (now - lastRun >= freqMinutes * 60 * 1000);
-
-        if (!shouldRun) continue;
-
-        // Get full job details if needed
-        let fullJob = job;
-        if (!job.command && job.jobid) {
-          const { data: jobData } = await supabase.rpc('get_cron_job_details', {
-            p_jobid: job.jobid || job.id
-          });
-          if (jobData && jobData.length > 0) {
-            fullJob = jobData[0];
-          }
-        }
-
-        // Run the job
-        const result = await runJob(supabase, fullJob);
-
-        // Log the run
-        const schedulerJobId = parseInt(fullJob.jobid || fullJob.id, 10);
-        const schedulerDisplayCommand = (
-          schedulerJobId === 26 ? "SELECT trigger_refresh_master_job();" :
-          schedulerJobId === 27 ? "SELECT trigger_refresh_batch1_job();" :
-          schedulerJobId === 28 ? "SELECT trigger_refresh_batch2_job();" :
-          isDatabaseMaintenanceJob(schedulerJobId) ? "SELECT run_database_maintenance_with_stats();" :
-          (fullJob.command || '')
-        );
-        const schedulerSerializedResult = serializeExecutionResult(schedulerJobId, result.executionResult);
-        const schedulerReturnMessage = result.success
-          ? (schedulerSerializedResult || 'ok')
-          : (result.error || 'Job execution failed');
-
-        await logJobRun(
-          schedulerJobId,
-          schedulerDisplayCommand,
-          result.success ? "succeeded" : "failed",
-          schedulerReturnMessage,
-          result.start_time.toISOString(),
-          result.end_time.toISOString()
-        );
-
-        // Update last_run - try public.jobs first, then use RPC
-        const jobId = fullJob.jobid || fullJob.id;
-        try {
-          await supabase
-            .from("public.jobs")
-            .update({ last_run: result.end_time.toISOString() })
-            .eq("id", jobId);
-        } catch (err) {
-          // If public.jobs doesn't exist, the update will fail silently
-          // The last_run is tracked in job_run_details anyway
-        }
-      }
-
-      return res.status(200).json({ ok: true, tick: true });
+      // DISABLED: scheduler_tick is no longer used - pg_cron handles all scheduling
+      // This endpoint is kept for backwards compatibility but does nothing
+      console.warn('[scheduler_tick] DISABLED - scheduler_tick endpoint called but is no longer active. Jobs are scheduled via pg_cron only.');
+      return res.status(200).json({ 
+        ok: true, 
+        tick: false,
+        message: 'scheduler_tick is disabled - jobs are scheduled via pg_cron only',
+        disabled: true
+      });
     }
 
     // Check if Supabase client is initialized
