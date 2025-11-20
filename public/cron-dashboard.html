@@ -1609,6 +1609,10 @@
         const data = await response.json();
         activeJobs = data.ok ? (data.jobs || []) : [];
         addDebugLog(`Active jobs loaded: ${activeJobs.length}`, 'info');
+        // If jobs are already rendered, start polling for active ones
+        if (document.getElementById('jobsContainer')) {
+          startPollingForActiveJobs();
+        }
       } catch (error) {
         activeJobs = [];
         addDebugLog(`Failed to load active jobs: ${error.message}`, 'warning');
@@ -1665,11 +1669,18 @@
       return container;
     }
 
+    function extractJobIdFromHint(job_hint) {
+      if (!job_hint) return null;
+      const match = job_hint.match(/Job\s+(\d+)/i);
+      return match ? parseInt(match[1], 10) : null;
+    }
+
     function mergeProgressWithActiveJob(jobid, prog) {
       if (prog) return prog;
       const active = activeJobs.find(job => {
         if (!job.job_hint) return false;
-        return job.job_hint.includes(`Job ${jobid}`);
+        const hintJobId = extractJobIdFromHint(job.job_hint);
+        return hintJobId === jobid;
       });
       if (!active) return null;
       return {
@@ -1679,6 +1690,26 @@
           : `Running (${formatDuration(active.duration_seconds)})`,
         activeFallback: true
       };
+    }
+
+    function startPollingForActiveJobs() {
+      // Extract job IDs from active jobs and start polling for those in jobsWithProgressTracking
+      activeJobs.forEach(activeJob => {
+        if (!activeJob.job_hint) return;
+        const jobId = extractJobIdFromHint(activeJob.job_hint);
+        if (!jobId || !jobsWithProgressTracking.includes(jobId)) return;
+        
+        // Check if we're already polling this job
+        if (progressRetryState.has(jobId)) return;
+        
+        // Show progress container immediately and start polling
+        const container = getProgressContainer(jobId);
+        if (container) {
+          showProgressContainer(jobId, 'Checking status...');
+          addDebugLog(`Starting progress polling for active job ${jobId}`, 'info');
+          pollJobProgress(jobId);
+        }
+      });
     }
 
     async function pollJobProgress(jobid, attempt = 0) {
@@ -2205,6 +2236,8 @@
         
         await renderJobs(jobs);
         renderActiveJobsBanner();
+        // Start polling progress for any active jobs that support progress tracking
+        startPollingForActiveJobs();
         addDebugLog('Jobs rendered successfully', 'success');
       } catch (error) {
         addDebugLog(`Error loading jobs: ${error.message}`, 'error', { error: error.message, stack: error.stack });
@@ -3247,7 +3280,10 @@
             index += 1;
           });
         }
-        loadActiveJobs().then(renderActiveJobsBanner);
+        loadActiveJobs().then(() => {
+          renderActiveJobsBanner();
+          startPollingForActiveJobs();
+        });
         
         const isRiskyJob = [21, 26, 27, 28, 31].includes(jobIdInt);
         
