@@ -22,8 +22,14 @@ let SUPABASE_DB_URL = process.env.SUPABASE_DB_URL;
 
 if (!SUPABASE_DB_URL) {
   // Try to construct from other environment variables
-  const dbPassword = process.env.SUPABASE_DB_PASSWORD;
+  const dbPassword = process.env.SUPABASE_DB_PASSWORD || process.env.PGPASSWORD;
   const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+  
+  console.log(`[admin] SUPABASE_DB_URL not set, attempting to construct from:`, {
+    hasPassword: !!dbPassword,
+    hasUrl: !!supabaseUrl,
+    url: supabaseUrl ? supabaseUrl.substring(0, 30) + '...' : null
+  });
   
   if (dbPassword && supabaseUrl) {
     // Extract project ref from Supabase URL (e.g., https://xxxxx.supabase.co -> xxxxx)
@@ -32,8 +38,12 @@ if (!SUPABASE_DB_URL) {
       const projectRef = urlMatch[1];
       const encodedPassword = encodeURIComponent(dbPassword);
       SUPABASE_DB_URL = `postgresql://postgres:${encodedPassword}@db.${projectRef}.supabase.co:5432/postgres`;
-      console.log(`[admin] Constructed SUPABASE_DB_URL from environment variables`);
+      console.log(`[admin] Successfully constructed SUPABASE_DB_URL from environment variables (project: ${projectRef})`);
+    } else {
+      console.error(`[admin] Failed to extract project ref from SUPABASE_URL: ${supabaseUrl}`);
     }
+  } else {
+    console.error(`[admin] Cannot construct SUPABASE_DB_URL: missing ${!dbPassword ? 'SUPABASE_DB_PASSWORD' : ''} ${!supabaseUrl ? 'SUPABASE_URL' : ''}`);
   }
 }
 
@@ -126,12 +136,29 @@ function serializeError(err) {
 
 // Helper function to run VACUUM directly using PostgreSQL connection (outside transaction)
 async function runVacuumDirectly(tables) {
-  if (!SUPABASE_DB_URL) {
-    throw new Error('SUPABASE_DB_URL environment variable is required for VACUUM');
+  // Re-check and try to construct if still not set (in case env vars were loaded later)
+  let dbUrl = SUPABASE_DB_URL;
+  if (!dbUrl) {
+    const dbPassword = process.env.SUPABASE_DB_PASSWORD || process.env.PGPASSWORD;
+    const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+    if (dbPassword && supabaseUrl) {
+      const urlMatch = supabaseUrl.match(/https?:\/\/([^.]+)\.supabase\.co/);
+      if (urlMatch) {
+        const projectRef = urlMatch[1];
+        const encodedPassword = encodeURIComponent(dbPassword);
+        dbUrl = `postgresql://postgres:${encodedPassword}@db.${projectRef}.supabase.co:5432/postgres`;
+        console.log(`[vacuum] Constructed database URL at runtime`);
+      }
+    }
+  }
+  
+  if (!dbUrl) {
+    throw new Error('SUPABASE_DB_URL environment variable is required for VACUUM. Please set SUPABASE_DB_URL or SUPABASE_DB_PASSWORD in Vercel environment variables.');
   }
 
   const pgClient = new pg.Client({
-    connectionString: SUPABASE_DB_URL
+    connectionString: dbUrl,
+    ssl: { rejectUnauthorized: false }
   });
 
   const results = {
