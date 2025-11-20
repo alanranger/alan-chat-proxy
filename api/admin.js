@@ -666,12 +666,14 @@ export default async function handler(req, res) {
     if (action === "scheduler_tick") {
       // DISABLED: scheduler_tick is no longer used - pg_cron handles all scheduling
       // This endpoint is kept for backwards compatibility but does nothing
+      // EMERGENCY FIX: Completely disabled to prevent jobs running every minute
       console.warn('[scheduler_tick] DISABLED - scheduler_tick endpoint called but is no longer active. Jobs are scheduled via pg_cron only.');
       return res.status(200).json({ 
         ok: true, 
         tick: false,
         message: 'scheduler_tick is disabled - jobs are scheduled via pg_cron only',
-        disabled: true
+        disabled: true,
+        timestamp: new Date().toISOString()
       });
     }
 
