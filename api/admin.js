@@ -153,29 +153,30 @@ async function runVacuumDirectly(tables) {
   
   if (!dbUrl) {
     const dbPassword = process.env.SUPABASE_DB_PASSWORD || process.env.PGPASSWORD;
-    const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
     
-    console.log(`[vacuum] Attempting to construct database URL:`, {
-      hasPassword: !!dbPassword,
-      passwordLength: dbPassword ? dbPassword.length : 0,
-      passwordHasSpecialChars: dbPassword ? /[#@%&]/.test(dbPassword) : false,
-      hasUrl: !!supabaseUrl,
-      urlPreview: supabaseUrl ? supabaseUrl.substring(0, 40) + '...' : null
-    });
-    
-    if (dbPassword && supabaseUrl) {
-      const urlMatch = supabaseUrl.match(/https?:\/\/([^.]+)\.supabase\.co/);
-      if (urlMatch) {
-        const projectRef = urlMatch[1];
-        // URL encode the password to handle special characters like #, @, etc.
-        const encodedPassword = encodeURIComponent(dbPassword);
-        dbUrl = `postgresql://postgres:${encodedPassword}@db.${projectRef}.supabase.co:5432/postgres`;
-        console.log(`[vacuum] Constructed database URL at runtime (project: ${projectRef}, password was encoded: ${encodedPassword !== dbPassword})`);
-      } else {
-        console.error(`[vacuum] Failed to extract project ref from URL: ${supabaseUrl}`);
+    // Get project ref - try SUPABASE_PROJECT first, then extract from URL, then use hardcoded fallback
+    let projectRef = process.env.SUPABASE_PROJECT;
+    if (!projectRef) {
+      const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+      if (supabaseUrl) {
+        const urlMatch = supabaseUrl.match(/https?:\/\/([^.]+)\.supabase\.co/);
+        if (urlMatch) {
+          projectRef = urlMatch[1];
+        }
       }
+    }
+    // Fallback to known project ref (matches working scripts)
+    if (!projectRef) {
+      projectRef = 'igzvwbvgvmzvvzoclufx';
+    }
+    
+    if (dbPassword) {
+      // URL encode the password to handle special characters like #, @, etc. (same as working scripts)
+      const encodedPassword = encodeURIComponent(dbPassword);
+      dbUrl = `postgresql://postgres:${encodedPassword}@db.${projectRef}.supabase.co:5432/postgres`;
+      console.log(`[vacuum] Constructed database URL (project: ${projectRef}, password encoded: ${encodedPassword !== dbPassword})`);
     } else {
-      console.error(`[vacuum] Missing required env vars: password=${!!dbPassword}, url=${!!supabaseUrl}`);
+      console.error(`[vacuum] Missing SUPABASE_DB_PASSWORD environment variable`);
     }
   }
   
