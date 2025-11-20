@@ -1654,6 +1654,7 @@
     // Progress polling function (live updating every 2 seconds)
     const MAX_PROGRESS_RETRIES = 10;
     const progressRetryState = new Map(); // jobid -> { attempts, timer }
+    const activeJobStartTimes = new Map(); // jobid -> timestamp when first detected as active
 
     function getProgressContainer(jobid) {
       return document.querySelector(`#progress-${jobid}`);
@@ -1684,12 +1685,45 @@
         const hintJobId = extractJobIdFromHint(job.job_hint);
         return hintJobId === jobid;
       });
-      if (!active) return null;
+      if (!active) {
+        // Job no longer in active list - check if we have a start time
+        const startTime = activeJobStartTimes.get(jobid);
+        if (startTime) {
+          const elapsed = (Date.now() - startTime) / 1000;
+          return {
+            progress: 5,
+            message: `Running (${formatDuration(elapsed)}) - may have completed`,
+            activeFallback: true
+          };
+        }
+        return null;
+      }
+      
+      // Use database duration if available, otherwise calculate from start time
+      let duration = active.duration_seconds;
+      if (!duration || duration < 0) {
+        const startTime = activeJobStartTimes.get(jobid);
+        if (startTime) {
+          duration = (Date.now() - startTime) / 1000;
+        } else {
+          // First time seeing this job, record start time
+          activeJobStartTimes.set(jobid, Date.now());
+          duration = active.duration_seconds || 0;
+        }
+      } else {
+        // Update start time based on current duration
+        activeJobStartTimes.set(jobid, Date.now() - (duration * 1000));
+      }
+      
+      // Warn if job has been running for more than 10 minutes
+      const isLongRunning = duration > 600;
+      const warningPrefix = isLongRunning ? '⚠️ ' : '';
+      
       return {
         progress: 5,
         message: active.wait_event
-          ? `Running (${formatDuration(active.duration_seconds)}), waiting on ${active.wait_event}`
-          : `Running (${formatDuration(active.duration_seconds)})`,
+          ? `${warningPrefix}Running (${formatDuration(duration)}), waiting on ${active.wait_event}`
+          : `${warningPrefix}Running (${formatDuration(duration)})`,
         activeFallback: true
       };
     }
@@ -1717,6 +1751,12 @@
     async function pollJobProgress(jobid, attempt = 0) {
       try {
         addDebugLog(`Polling progress for job ${jobid}`, 'info');
+        
+        // Refresh active jobs data every 5 polls (every ~10 seconds) to get fresh duration
+        if (attempt % 5 === 0) {
+          await loadActiveJobs();
+        }
+        
         const res = await fetch(`${API_BASE}/api/admin?action=job_progress&jobid=${jobid}`);
         const json = await res.json();
         const prog = mergeProgressWithActiveJob(jobid, json.progress);
@@ -1769,9 +1809,10 @@
         progressRetryState.set(jobid, { attempts: 0 });
         if (prog.progress < 100 || (prog.message && prog.message.toLowerCase().includes('waiting'))) {
           const delay = prog.message && prog.message.toLowerCase().includes('waiting') ? 5000 : 2000;
-          setTimeout(() => pollJobProgress(jobid), delay);
+          setTimeout(() => pollJobProgress(jobid, attempt + 1), delay);
         } else {
           addDebugLog(`Job ${jobid} completed (100%)`, 'success');
+          activeJobStartTimes.delete(jobid); // Clean up
         }
       } catch (err) {
         addDebugLog(`Failed to poll progress for job ${jobid}: ${err.message}`, 'error', { error: err });
