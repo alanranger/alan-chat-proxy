@@ -1724,6 +1724,103 @@ export default async function handler(req, res) {
       }
     }
 
+    // Set Fixed Baseline (POST /api/admin?action=set_fixed_baseline)
+    if (req.method === 'POST' && action === 'set_fixed_baseline') {
+      try {
+        const authHeader = req.headers.authorization || '';
+        const token = authHeader.replace('Bearer ', '').trim();
+        if (token !== process.env.INGEST_TOKEN) {
+          return res.status(401).json({ error: 'unauthorized' });
+        }
+
+        const { test_result_id, job_id } = req.body;
+        
+        if (!test_result_id || !job_id) {
+          return res.status(400).json({ error: 'test_result_id and job_id required' });
+        }
+
+        const { data, error } = await supabase.rpc('set_fixed_baseline', {
+          p_test_result_id: parseInt(test_result_id),
+          p_job_id: parseInt(job_id)
+        });
+
+        if (error) {
+          console.error('Error setting fixed baseline:', error);
+          return res.status(500).json({ error: 'Failed to set fixed baseline', detail: error.message });
+        }
+
+        return res.status(200).json(data);
+      } catch (error) {
+        console.error('Error in set_fixed_baseline:', error);
+        return res.status(500).json({ error: 'Internal server error', detail: error.message });
+      }
+    }
+
+    // Unset Fixed Baseline (POST /api/admin?action=unset_fixed_baseline)
+    if (req.method === 'POST' && action === 'unset_fixed_baseline') {
+      try {
+        const authHeader = req.headers.authorization || '';
+        const token = authHeader.replace('Bearer ', '').trim();
+        if (token !== process.env.INGEST_TOKEN) {
+          return res.status(401).json({ error: 'unauthorized' });
+        }
+
+        const { job_id } = req.body;
+        
+        if (!job_id) {
+          return res.status(400).json({ error: 'job_id required' });
+        }
+
+        const { data, error } = await supabase.rpc('unset_fixed_baseline', {
+          p_job_id: parseInt(job_id)
+        });
+
+        if (error) {
+          console.error('Error unsetting fixed baseline:', error);
+          return res.status(500).json({ error: 'Failed to unset fixed baseline', detail: error.message });
+        }
+
+        return res.status(200).json(data);
+      } catch (error) {
+        console.error('Error in unset_fixed_baseline:', error);
+        return res.status(500).json({ error: 'Internal server error', detail: error.message });
+      }
+    }
+
+    // Get Fixed Baseline Info (GET /api/admin?action=get_fixed_baseline&jobid=XX)
+    if (req.method === 'GET' && action === 'get_fixed_baseline') {
+      try {
+        const jobid = parseInt(req.query.jobid);
+        
+        if (!jobid) {
+          return res.status(400).json({ error: 'jobid parameter required' });
+        }
+
+        const { data, error } = await supabase
+          .from('regression_test_results')
+          .select('*')
+          .eq('job_id', jobid)
+          .eq('test_phase', 'before')
+          .eq('is_fixed_baseline', true)
+          .limit(1)
+          .single();
+
+        if (error && error.code !== 'PGRST116') {
+          console.error('Error getting fixed baseline:', error);
+          return res.status(500).json({ error: 'Failed to get fixed baseline', detail: error.message });
+        }
+
+        return res.status(200).json({
+          ok: true,
+          has_fixed_baseline: !!data,
+          fixed_baseline: data || null
+        });
+      } catch (error) {
+        console.error('Error in get_fixed_baseline:', error);
+        return res.status(500).json({ error: 'Internal server error', detail: error.message });
+      }
+    }
+
     // Run Cron Job Now (POST /api/admin?action=run_cron_job)
     if (req.method === 'POST' && action === 'run_cron_job') {
       try {

@@ -2978,11 +2978,16 @@
       
       // Show baseline only if no after test yet
       if (baseline && !after) {
+        const isFixed = baseline.is_fixed_baseline === true;
+        const fixedBadge = isFixed 
+          ? '<span style="background: #28a745; color: white; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: bold; margin-left: 8px;">🔒 FIXED BASELINE</span>'
+          : '<span style="background: #ffc107; color: #000; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: bold; margin-left: 8px;">⚠️ NOT FIXED</span>';
+        
         return `
           <div class="regression-test-section no-regression">
             ${mirrorLabel}
-            <div style="font-weight: bold; margin-bottom: 8px;">
-              📊 Baseline Test Complete
+            <div style="font-weight: bold; margin-bottom: 8px; display: flex; align-items: center;">
+              📊 Baseline Test Complete ${fixedBadge}
             </div>
             <div class="regression-summary">
               <div class="regression-stat">
@@ -3002,8 +3007,15 @@
                 <div class="regression-stat-value">Waiting for job run</div>
               </div>
             </div>
-            <div style="margin-top: 8px; font-size: 11px; color: #155724;">
-              Baseline established. Will compare against this when job runs.
+            <div style="margin-top: 8px; font-size: 11px; color: ${isFixed ? '#155724' : '#856404'};">
+              ${isFixed 
+                ? '🔒 This is the FIXED baseline. All future comparisons will use this baseline to prevent regression creep.'
+                : '⚠️ This baseline is NOT fixed. Each test may use a different baseline, allowing regressions to creep in. Click "Set as Fixed Baseline" to prevent this.'}
+            </div>
+            <div style="margin-top: 10px;">
+              ${isFixed 
+                ? `<button class="btn btn-warning btn-small" onclick="unsetFixedBaseline(${baseline.job_id}, ${baseline.id})" title="Unset this as the fixed baseline">🔓 Unset Fixed Baseline</button>`
+                : `<button class="btn btn-success btn-small" onclick="setFixedBaseline(${baseline.job_id}, ${baseline.id})" title="Set this as the fixed baseline to prevent regression creep">🔒 Set as Fixed Baseline</button>`}
             </div>
           </div>
         `;
@@ -3027,11 +3039,16 @@
                      (regressionData && regressionData.baseline ? regressionData.baseline.job_id : null));
         const detailsJobId = mirroredFromJobId || displayJobId;
         
+        const isFixed = baseline.is_fixed_baseline === true;
+        const fixedBadge = isFixed 
+          ? '<span style="background: #28a745; color: white; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: bold; margin-left: 8px;">🔒 FIXED</span>'
+          : '<span style="background: #ffc107; color: #000; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: bold; margin-left: 8px;">⚠️ NOT FIXED</span>';
+        
         return `
           <div class="regression-test-section ${severityClass}">
             ${mirrorLabel}
-            <div style="font-weight: bold; margin-bottom: 8px;">
-              ${comparison ? `${severityIcon} Regression Test: ${detected ? severity.toUpperCase() + ' REGRESSION DETECTED' : 'No Regression'}` : '📊 Baseline vs Latest Run'}
+            <div style="font-weight: bold; margin-bottom: 8px; display: flex; align-items: center;">
+              ${comparison ? `${severityIcon} Regression Test: ${detected ? severity.toUpperCase() + ' REGRESSION DETECTED' : 'No Regression'}` : '📊 Baseline vs Latest Run'} ${fixedBadge}
             </div>
             <div class="regression-summary">
               <div class="regression-stat">
@@ -3072,7 +3089,13 @@
             </div>
             ${comparison && detected ? `<div style="margin-top: 8px; font-size: 11px; color: #721c24;"><strong>Action:</strong> ${severity === 'severe' || severity === 'moderate' ? 'ROLLBACK RECOMMENDED' : 'Review recommended'}</div>` : ''}
             ${!comparison ? `<div style="margin-top: 8px; font-size: 11px; color: #155724;">Comparison analysis pending...</div>` : ''}
-            ${comparison && detailsJobId ? `<div style="margin-top: 10px;"><button class="btn btn-primary btn-small" onclick="showRegressionDetails(${detailsJobId})">View Details</button></div>` : ''}
+            <div style="margin-top: 10px; display: flex; gap: 8px; flex-wrap: wrap;">
+              ${comparison && detailsJobId ? `<button class="btn btn-primary btn-small" onclick="showRegressionDetails(${detailsJobId})">View Details</button>` : ''}
+              ${isFixed 
+                ? `<button class="btn btn-warning btn-small" onclick="unsetFixedBaseline(${baseline.job_id}, ${baseline.id})" title="Unset this as the fixed baseline">🔓 Unset Fixed Baseline</button>`
+                : `<button class="btn btn-success btn-small" onclick="setFixedBaseline(${baseline.job_id}, ${baseline.id})" title="Set this as the fixed baseline to prevent regression creep">🔒 Set as Fixed Baseline</button>`}
+            </div>
+            ${!isFixed ? `<div style="margin-top: 8px; font-size: 11px; color: #856404;">⚠️ This baseline is not fixed. Set it as fixed to prevent regression creep.</div>` : ''}
           </div>
         `;
       }
@@ -3232,6 +3255,73 @@
       const modal = document.getElementById('regressionDetailsModal');
       if (modal) {
         modal.style.display = 'none';
+      }
+    }
+
+    // Set Fixed Baseline
+    async function setFixedBaseline(jobId, testResultId) {
+      if (!confirm(`Set this baseline as the FIXED baseline for Job ${jobId}?\n\nThis will:\n- Unset any existing fixed baseline for this job\n- Make this baseline the permanent reference point\n- Prevent regression creep by always comparing against this baseline\n\nOnly do this when the system is in a verified good state.`)) {
+        return;
+      }
+
+      try {
+        const response = await fetch(`${API_BASE}/api/admin?action=set_fixed_baseline`, {
+          method: 'POST',
+          headers: buildAuthHeaders(),
+          body: JSON.stringify({
+            job_id: jobId,
+            test_result_id: testResultId
+          })
+        });
+
+        const data = await response.json();
+        
+        if (!response.ok || !data.ok) {
+          throw new Error(data.error || 'Failed to set fixed baseline');
+        }
+
+        showMessage(`✅ Fixed baseline set successfully for Job ${jobId}`, 'success');
+        
+        // Reload jobs to refresh the display
+        setTimeout(() => {
+          loadJobs();
+        }, 500);
+      } catch (error) {
+        showMessage(`❌ Failed to set fixed baseline: ${error.message}`, 'error');
+        console.error('Error setting fixed baseline:', error);
+      }
+    }
+
+    // Unset Fixed Baseline
+    async function unsetFixedBaseline(jobId, testResultId) {
+      if (!confirm(`Unset the fixed baseline for Job ${jobId}?\n\nThis will remove the fixed baseline marker. Future comparisons will use the latest baseline, which may allow regression creep.`)) {
+        return;
+      }
+
+      try {
+        const response = await fetch(`${API_BASE}/api/admin?action=unset_fixed_baseline`, {
+          method: 'POST',
+          headers: buildAuthHeaders(),
+          body: JSON.stringify({
+            job_id: jobId
+          })
+        });
+
+        const data = await response.json();
+        
+        if (!response.ok || !data.ok) {
+          throw new Error(data.error || 'Failed to unset fixed baseline');
+        }
+
+        showMessage(`✅ Fixed baseline unset for Job ${jobId}`, 'success');
+        
+        // Reload jobs to refresh the display
+        setTimeout(() => {
+          loadJobs();
+        }, 500);
+      } catch (error) {
+        showMessage(`❌ Failed to unset fixed baseline: ${error.message}`, 'error');
+        console.error('Error unsetting fixed baseline:', error);
       }
     }
 
