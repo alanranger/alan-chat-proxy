@@ -55,6 +55,28 @@ async function testQuery(queryObj, testName, questionIndex) {
         try {
           const response = JSON.parse(data);
           
+          // Extract detailed response structure metrics
+          const structured = response.structured || {};
+          const metrics = {
+            responseType: response.type || 'unknown',
+            articlesCount: Array.isArray(structured.articles) ? structured.articles.length : 0,
+            productsCount: Array.isArray(structured.products) ? structured.products.length : 0,
+            eventsCount: Array.isArray(structured.events) ? structured.events.length : 0,
+            servicesCount: Array.isArray(structured.services) ? structured.services.length : 0,
+            landingCount: Array.isArray(structured.landing) ? structured.landing.length : 0,
+            // Check for product categorization issues
+            productsInArticles: Array.isArray(structured.articles) 
+              ? structured.articles.filter(a => a.kind === 'product' || a.source_type === 'workshop_product').length 
+              : 0,
+            // Check sources structure (legacy)
+            sourcesEventsCount: (response.sources?.events && Array.isArray(response.sources.events)) 
+              ? response.sources.events.length 
+              : 0,
+            sourcesArticlesCount: (response.sources?.articles && Array.isArray(response.sources.articles)) 
+              ? response.sources.articles.length 
+              : 0
+          };
+          
           const result = {
             query: queryObj.question,
             category: queryObj.category,
@@ -68,8 +90,9 @@ async function testQuery(queryObj, testName, questionIndex) {
               answer: response.answer || '',
               confidence: response.confidence || 0,
               sources: response.sources || [],
-              structured: response.structured || {}
-            }
+              structured: structured
+            },
+            metrics: metrics
           };
           
           resolve(result);
@@ -110,7 +133,11 @@ async function runDeployedTest() {
       results.push(result);
       
       const statusIcon = result.status === 200 ? '✅' : '❌';
-      console.log(`  ${statusIcon} Status: ${result.status}, Confidence: ${(result.response.confidence * 100).toFixed(1)}%, Answer Length: ${result.response.answer.length}`);
+      const m = result.metrics || {};
+      const typeIcon = m.responseType === 'events' ? '📅' : m.responseType === 'advice' ? '💡' : '❓';
+      const productIssue = m.productsInArticles > 0 ? ' ⚠️ PRODUCTS IN ARTICLES!' : '';
+      console.log(`  ${statusIcon} ${typeIcon} Status: ${result.status}, Type: ${m.responseType}, Confidence: ${(result.response.confidence * 100).toFixed(1)}%`);
+      console.log(`     📊 Articles: ${m.articlesCount}, Products: ${m.productsCount}, Events: ${m.eventsCount}, Services: ${m.servicesCount}${productIssue}`);
       
       // Add delay to avoid overwhelming the server and allow analytics to process
       await new Promise(resolve => setTimeout(resolve, 500));
@@ -138,12 +165,33 @@ async function runDeployedTest() {
     .filter(r => r.response?.confidence !== undefined)
     .reduce((sum, r) => sum + r.response.confidence, 0) / successfulTests || 0;
   
+  // Calculate aggregate metrics
+  const totalArticles = results.reduce((sum, r) => sum + (r.metrics?.articlesCount || 0), 0);
+  const totalProducts = results.reduce((sum, r) => sum + (r.metrics?.productsCount || 0), 0);
+  const totalEvents = results.reduce((sum, r) => sum + (r.metrics?.eventsCount || 0), 0);
+  const totalServices = results.reduce((sum, r) => sum + (r.metrics?.servicesCount || 0), 0);
+  const productsInArticlesIssues = results.filter(r => (r.metrics?.productsInArticles || 0) > 0).length;
+  
+  // Response type distribution
+  const responseTypes = {};
+  results.forEach(r => {
+    const type = r.metrics?.responseType || 'unknown';
+    responseTypes[type] = (responseTypes[type] || 0) + 1;
+  });
+  
   console.log(`\n📊 DEPLOYED API TEST COMPLETE:`);
   console.log(`================================================================================`);
   console.log(`⏱️  Duration: ${duration}s`);
   console.log(`✅ Successful: ${successfulTests}/${testConfig.questions.length} (${(successfulTests / testConfig.questions.length * 100).toFixed(1)}%)`);
   console.log(`❌ Failed: ${failedTests}`);
   console.log(`📈 Average Confidence: ${(avgConfidence * 100).toFixed(1)}%`);
+  console.log(`\n📦 RESPONSE STRUCTURE METRICS:`);
+  console.log(`   Articles: ${totalArticles} total, Products: ${totalProducts} total`);
+  console.log(`   Events: ${totalEvents} total, Services: ${totalServices} total`);
+  console.log(`   Response Types: ${Object.entries(responseTypes).map(([k, v]) => `${k}:${v}`).join(', ')}`);
+  if (productsInArticlesIssues > 0) {
+    console.log(`   ⚠️  WARNING: ${productsInArticlesIssues} queries have products incorrectly in articles array!`);
+  }
   console.log(`\n💡 Now check analytics.html at ${DEPLOYED_API_URL}/analytics.html`);
   console.log(`   - Go to Overview tab to see total sessions and questions`);
   console.log(`   - Go to Questions tab to see the questions asked`);
@@ -163,6 +211,14 @@ async function runDeployedTest() {
     successfulTests,
     failedTests,
     avgConfidence: `${(avgConfidence * 100).toFixed(1)}%`,
+    aggregateMetrics: {
+      totalArticles,
+      totalProducts,
+      totalEvents,
+      totalServices,
+      productsInArticlesIssues,
+      responseTypes
+    },
     results
   }, null, 2));
   

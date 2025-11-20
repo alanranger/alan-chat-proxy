@@ -9001,9 +9001,13 @@ function buildRagResponse(context) {
   const success = hasConfidence || hasAnswer;
   
   // Extract articles and services from results, ensuring they're arrays of objects
-  const articles = Array.isArray(context.results?.articles) ? context.results.articles : [];
+  const allItems = Array.isArray(context.results?.articles) ? context.results.articles : [];
   const services = Array.isArray(context.results?.services) ? context.results.services : [];
   const events = Array.isArray(context.results?.events) ? context.results.events : [];
+  
+  // Separate products from articles based on kind field
+  const articles = allItems.filter(item => item.kind !== 'product');
+  const products = allItems.filter(item => item.kind === 'product');
   
   // Build structured response without sources array (sources is deprecated in structured)
   const structured = {
@@ -9011,7 +9015,7 @@ function buildRagResponse(context) {
     articles: articles,
     services: services,
     events: events,
-    products: []
+    products: products
   };
   
   return {
@@ -10498,10 +10502,20 @@ async function handleSourcesConversion(ragResult, client) {
   if (Array.isArray(ragResult.sources) && ragResult.sources.length > 0 && ragResult.structured.articles.length === 0) {
     try {
       console.log(`[ENRICH] Found ${ragResult.sources.length} source URLs, converting to article objects`);
-      const articles = await convertSourcesUrlsToArticles(client, ragResult.sources);
-      if (articles && articles.length > 0) {
-        ragResult.structured.articles = articles;
-        console.log(`[ENRICH] Added ${articles.length} articles from sources URLs`);
+      const items = await convertSourcesUrlsToArticles(client, ragResult.sources);
+      if (items && items.length > 0) {
+        // Separate products from articles based on kind field
+        const articles = items.filter(item => item.kind !== 'product');
+        const products = items.filter(item => item.kind === 'product');
+        
+        if (articles.length > 0) {
+          ragResult.structured.articles = articles;
+          console.log(`[ENRICH] Added ${articles.length} articles from sources URLs`);
+        }
+        if (products.length > 0) {
+          ragResult.structured.products = products;
+          console.log(`[ENRICH] Added ${products.length} products from sources URLs`);
+        }
       }
     } catch (e) {
       console.warn(`[ENRICH] Could not convert sources: ${e.message}`);
