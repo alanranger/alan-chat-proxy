@@ -2181,10 +2181,45 @@ export default async function handler(req, res) {
     // Reset All Job Statistics (POST /api/admin?action=reset_all_job_stats)
     if (req.method === 'POST' && action === 'reset_all_job_stats') {
       try {
-        // Use RPC function to delete all job run details from public.job_run_details
-        const { data: deleteResult, error: deleteError } = await supabase.rpc('delete_all_job_run_details');
+        // First try RPC function, fallback to direct SQL if RPC fails
+        let deleteResult;
+        let deleteError;
+        
+        try {
+          const rpcResult = await supabase.rpc('delete_all_job_run_details');
+          deleteResult = rpcResult.data;
+          deleteError = rpcResult.error;
+        } catch (rpcErr) {
+          // If RPC fails, use direct SQL query
+          console.warn('RPC call failed, using direct SQL:', rpcErr);
+          const { data: sqlResult, error: sqlError } = await supabase
+            .from('job_run_details')
+            .select('id', { count: 'exact', head: true });
+          
+          if (sqlError) {
+            throw new Error(`Failed to count records: ${sqlError.message}`);
+          }
+          
+          const beforeCount = sqlResult?.length || 0;
+          
+          // Delete all records
+          const { error: deleteSqlError } = await supabase
+            .from('job_run_details')
+            .delete()
+            .neq('id', 0); // Delete all (neq id 0 will match all rows)
+          
+          if (deleteSqlError) {
+            throw new Error(`Failed to delete records: ${deleteSqlError.message}`);
+          }
+          
+          deleteResult = {
+            before_count: beforeCount,
+            deleted_count: beforeCount,
+            remaining_count: 0
+          };
+        }
 
-        if (deleteError) {
+        if (deleteError && !deleteResult) {
           console.error('Error deleting all job run details:', deleteError);
           return res.status(500).json({ 
             error: 'Failed to reset all job statistics', 
@@ -2193,7 +2228,7 @@ export default async function handler(req, res) {
           });
         }
 
-        const deletedCount = deleteResult?.deleted_count || 0;
+        const deletedCount = deleteResult?.deleted_count || deleteResult?.before_count || 0;
         const afterCount = deleteResult?.remaining_count || 0;
         
         console.log(`Reset all stats: Deleted ${deletedCount} records, ${afterCount || 0} remaining`);
