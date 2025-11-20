@@ -144,23 +144,48 @@ function serializeError(err) {
 async function runVacuumDirectly(tables) {
   // Re-check and try to construct if still not set (in case env vars were loaded later)
   let dbUrl = SUPABASE_DB_URL;
+  
+  // Check if SUPABASE_DB_URL contains placeholder
+  if (dbUrl && dbUrl.includes('[YOUR_PASSWORD]')) {
+    console.warn(`[vacuum] SUPABASE_DB_URL contains placeholder, will construct from SUPABASE_DB_PASSWORD`);
+    dbUrl = null;
+  }
+  
   if (!dbUrl) {
     const dbPassword = process.env.SUPABASE_DB_PASSWORD || process.env.PGPASSWORD;
     const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+    
+    console.log(`[vacuum] Attempting to construct database URL:`, {
+      hasPassword: !!dbPassword,
+      passwordLength: dbPassword ? dbPassword.length : 0,
+      passwordHasSpecialChars: dbPassword ? /[#@%&]/.test(dbPassword) : false,
+      hasUrl: !!supabaseUrl,
+      urlPreview: supabaseUrl ? supabaseUrl.substring(0, 40) + '...' : null
+    });
+    
     if (dbPassword && supabaseUrl) {
       const urlMatch = supabaseUrl.match(/https?:\/\/([^.]+)\.supabase\.co/);
       if (urlMatch) {
         const projectRef = urlMatch[1];
+        // URL encode the password to handle special characters like #, @, etc.
         const encodedPassword = encodeURIComponent(dbPassword);
         dbUrl = `postgresql://postgres:${encodedPassword}@db.${projectRef}.supabase.co:5432/postgres`;
-        console.log(`[vacuum] Constructed database URL at runtime`);
+        console.log(`[vacuum] Constructed database URL at runtime (project: ${projectRef}, password was encoded: ${encodedPassword !== dbPassword})`);
+      } else {
+        console.error(`[vacuum] Failed to extract project ref from URL: ${supabaseUrl}`);
       }
+    } else {
+      console.error(`[vacuum] Missing required env vars: password=${!!dbPassword}, url=${!!supabaseUrl}`);
     }
   }
   
   if (!dbUrl) {
-    throw new Error('SUPABASE_DB_URL environment variable is required for VACUUM. Please set SUPABASE_DB_URL or SUPABASE_DB_PASSWORD in Vercel environment variables.');
+    throw new Error('SUPABASE_DB_URL environment variable is required for VACUUM. Please set SUPABASE_DB_PASSWORD or SUPABASE_DB_URL in Vercel environment variables.');
   }
+  
+  // Log connection attempt (without exposing password)
+  const urlForLogging = dbUrl.replace(/:[^:@]+@/, ':****@');
+  console.log(`[vacuum] Attempting database connection: ${urlForLogging}`);
 
   const pgClient = new pg.Client({
     connectionString: dbUrl,
