@@ -535,6 +535,74 @@ export default async function handler(req, res) {
       }
       return res.status(200).json({ ok: true, jobs: data || [] });
     }
+
+    // Stop job endpoint - terminates a running job by finding its PID and killing it
+    if (action === "stop_job") {
+      const jobid = parseInt(req.query.jobid, 10);
+      if (!jobid || Number.isNaN(jobid)) {
+        return res.status(400).json({ error: 'jobid parameter required' });
+      }
+
+      try {
+        // Get active jobs to find the PID for this job
+        const { data: activeJobs, error: activeError } = await supabase.rpc('get_active_jobs');
+        if (activeError) {
+          throw new Error(`Failed to get active jobs: ${activeError.message}`);
+        }
+
+        // Extract job ID from job_hint and find matching PID
+        let targetPid = null;
+        for (const job of (activeJobs || [])) {
+          if (!job.job_hint) continue;
+          const match = job.job_hint.match(/Job\s+(\d+)/i);
+          if (match && parseInt(match[1], 10) === jobid) {
+            targetPid = job.pid;
+            break;
+          }
+        }
+
+        if (!targetPid) {
+          return res.status(404).json({ 
+            ok: false, 
+            error: 'Job not found in active processes',
+            jobid 
+          });
+        }
+
+        // Terminate the process
+        const { data: terminateResult, error: terminateError } = await supabase.rpc('terminate_job_process', {
+          p_pid: targetPid
+        });
+
+        if (terminateError) {
+          throw new Error(`Failed to terminate process: ${terminateError.message}`);
+        }
+
+        // Update job progress to mark as cancelled
+        await supabase
+          .from('job_progress')
+          .update({
+            progress: 0,
+            message: 'Cancelled by user',
+            updated_at: new Date().toISOString()
+          })
+          .eq('jobid', jobid);
+
+        return res.status(200).json({
+          ok: true,
+          message: 'Job stopped successfully',
+          jobid,
+          pid: targetPid,
+          result: terminateResult
+        });
+      } catch (error) {
+        console.error('Error stopping job:', error);
+        return res.status(500).json({
+          ok: false,
+          error: error.message || 'Failed to stop job'
+        });
+      }
+    }
     
     // Reset job progress endpoint
     if (action === "reset_job_progress") {

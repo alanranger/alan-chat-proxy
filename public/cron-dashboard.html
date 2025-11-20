@@ -642,6 +642,15 @@
       background: #e67e22;
     }
 
+    .btn-danger {
+      background: #e74c3c;
+      color: white;
+    }
+
+    .btn-danger:hover {
+      background: #c0392b;
+    }
+
     .btn-success {
       background: #27ae60;
       color: white;
@@ -3926,6 +3935,7 @@
           <div id="log-drawer-${job.jobid}" class="log-drawer" style="display: ${isLogDrawerOpen ? 'block' : 'none'};"></div>
           <div class="job-actions">
             <button class="btn btn-primary btn-small" onclick="runJobNow(${job.jobid}, '${displayName}')">▶ Run Now</button>
+            ${isJobActive(job.jobid) ? `<button class="btn btn-danger btn-small" onclick="stopJob(${job.jobid}, '${displayName}')" title="Stop currently running job">⏹ Stop</button>` : ''}
             <button class="btn btn-secondary btn-small" onclick="editSchedule(${job.jobid}, '${job.schedule}', '${displayName}')">Edit Schedule</button>
             <button class="btn btn-secondary btn-small" onclick="resetJobStats(${job.jobid}, '${displayName}')" title="Reset success/fail counts">🔄 Reset Stats</button>
             <button class="btn ${job.status === 'active' ? 'btn-warning' : 'btn-success'} btn-small" onclick="toggleJob(${job.jobid}, ${job.status !== 'active'}, '${displayName}')">
@@ -4122,6 +4132,65 @@
 
     function closeScheduleModal() {
       document.getElementById('scheduleModal').classList.remove('active');
+    }
+
+    function isJobActive(jobid) {
+      // Check if job is in active jobs list
+      return activeJobs.some(job => {
+        if (!job.job_hint) return false;
+        const hintJobId = extractJobIdFromHint(job.job_hint);
+        return hintJobId === jobid;
+      });
+    }
+
+    async function stopJob(jobid, jobname) {
+      addDebugLog(`Stop job requested for job ${jobid} (${jobname})`, 'info', { jobid, jobname });
+      
+      if (!confirm(`Are you sure you want to stop the currently running job "${jobname}" (Job ${jobid})?\n\nThis will terminate the database process immediately.`)) {
+        addDebugLog('Stop job cancelled by user', 'warning');
+        return;
+      }
+
+      try {
+        const response = await fetch(`${API_BASE}/api/admin?action=stop_job&jobid=${jobid}`, {
+          method: 'GET',
+          headers: buildAuthHeaders()
+        });
+
+        addDebugLog(`Stop job API response: ${response.status} ${response.statusText}`, 'info');
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        addDebugLog('Stop job API response data', 'info', data);
+
+        if (data.ok) {
+          showMessage(`Successfully stopped job "${jobname}" (Job ${jobid})`, 'success');
+          
+          // Hide progress container
+          const container = getProgressContainer(jobid);
+          if (container) {
+            container.style.display = 'none';
+          }
+          
+          // Stop polling for this job
+          progressRetryState.delete(jobid);
+          activeJobStartTimes.delete(jobid);
+          
+          // Refresh active jobs and jobs list
+          await loadActiveJobs();
+          renderActiveJobsBanner();
+          await loadJobs();
+        } else {
+          throw new Error(data.error || 'Failed to stop job');
+        }
+      } catch (error) {
+        addDebugLog(`Error stopping job: ${error.message}`, 'error', { error: error.message, stack: error.stack });
+        showMessage(`Failed to stop job "${jobname}": ${error.message}`, 'error');
+      }
     }
 
     async function resetJobStats(jobid, jobname) {
