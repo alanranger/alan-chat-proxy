@@ -1665,16 +1665,32 @@
       return container;
     }
 
+    function mergeProgressWithActiveJob(jobid, prog) {
+      if (prog) return prog;
+      const active = activeJobs.find(job => {
+        if (!job.job_hint) return false;
+        return job.job_hint.includes(`Job ${jobid}`);
+      });
+      if (!active) return null;
+      return {
+        progress: 5,
+        message: active.wait_event
+          ? `Running (${formatDuration(active.duration_seconds)}), waiting on ${active.wait_event}`
+          : `Running (${formatDuration(active.duration_seconds)})`,
+        activeFallback: true
+      };
+    }
+
     async function pollJobProgress(jobid, attempt = 0) {
       try {
         addDebugLog(`Polling progress for job ${jobid}`, 'info');
         const res = await fetch(`${API_BASE}/api/admin?action=job_progress&jobid=${jobid}`);
         const json = await res.json();
-        const prog = json.progress;
+        const prog = mergeProgressWithActiveJob(jobid, json.progress);
         
         addDebugLog(`Progress data for job ${jobid}:`, 'info', { progress: prog });
         
-        const container = getProgressContainer(jobid);
+        const container = getProgressContainer(jobid) || showProgressContainer(jobid, 'Queued...');
         if (!container) {
           addDebugLog(`Progress container not found for job ${jobid}`, 'warning');
           console.warn(`Progress container not found for job ${jobid}`);
@@ -1685,7 +1701,7 @@
         const msg = container.querySelector('.progress-message');
         
         // If no progress data yet, keep polling (job might be starting)
-        if (!prog) {
+      if (!prog) {
           const nextAttempt = attempt + 1;
           showProgressContainer(jobid, `Queued... (waiting ${nextAttempt}/${MAX_PROGRESS_RETRIES})`);
           if (nextAttempt < MAX_PROGRESS_RETRIES) {

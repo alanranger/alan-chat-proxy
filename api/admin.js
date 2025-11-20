@@ -209,13 +209,11 @@ const JOB_PROGRESS_DEFAULTS = {
 async function seedJobProgressRows(jobIds = []) {
   if (!Array.isArray(jobIds) || jobIds.length === 0) return;
   const rows = [];
-  const seen = new Set();
   const nowIso = new Date().toISOString();
 
   for (const rawId of jobIds) {
     const jobId = parseInt(rawId, 10);
-    if (Number.isNaN(jobId) || seen.has(jobId)) continue;
-    seen.add(jobId);
+    if (Number.isNaN(jobId)) continue;
     const meta = JOB_PROGRESS_DEFAULTS[jobId] || { totalSteps: 1, message: 'Queued - waiting to start' };
     rows.push({
       jobid: jobId,
