@@ -7,7 +7,6 @@
   ],
   "version": 2,
   "functions": {
-    // API function timeout configurations
     "api/ingest.js": {
       "maxDuration": 60
     },
