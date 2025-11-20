@@ -18,8 +18,9 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     
     // Try multiple sources for database password
-    // Supabase might provide it automatically, or it might be in DATABASE_URL
-    let dbPassword = Deno.env.get("SUPABASE_DB_PASSWORD") || 
+    // Note: Supabase doesn't allow secrets starting with SUPABASE_ prefix
+    // So we use DB_PASSWORD instead
+    let dbPassword = Deno.env.get("DB_PASSWORD") || 
                      Deno.env.get("DATABASE_PASSWORD") ||
                      Deno.env.get("POSTGRES_PASSWORD");
     
@@ -44,7 +45,7 @@ serve(async (req) => {
         k.includes('SUPABASE') || k.includes('DATABASE') || k.includes('POSTGRES')
       );
       console.error("Available environment variables:", envKeys);
-      throw new Error("Database password not found. Please set SUPABASE_DB_PASSWORD in Edge Function settings, or ensure DATABASE_URL is available.");
+      throw new Error(`Database password not found. Available env vars: ${envKeys.join(', ')}. Please set DB_PASSWORD in Supabase Dashboard → Edge Functions → run-vacuum → Settings → Secrets.`);
     }
 
     // Create Supabase client with service role key
