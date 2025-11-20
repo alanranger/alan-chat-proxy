@@ -127,7 +127,9 @@ async function runVacuumDirectly(tables) {
     for (const table of tables) {
       try {
         // VACUUM ANALYZE runs outside transaction when using direct connection
-        await pgClient.query(`VACUUM ANALYZE ${pgClient.escapeIdentifier(table)}`);
+        // Escape table name properly (double quotes for identifiers)
+        const escapedTable = `"${table.replace(/"/g, '""')}"`;
+        await pgClient.query(`VACUUM ANALYZE ${escapedTable}`);
         results.success.push(table);
         console.log(`[vacuum] Successfully vacuumed ${table}`);
       } catch (err) {
@@ -1722,14 +1724,16 @@ export default async function handler(req, res) {
                 
                 // Get list of tables to vacuum
                 const { data: tablesData, error: tablesError } = await supabase.rpc('database_maintenance_tables');
-                if (!tablesError && Array.isArray(tablesData) && tablesData.length > 0) {
+                // The function returns { tables: [...] }, so extract the array
+                const tables = tablesData?.tables || (Array.isArray(tablesData) ? tablesData : []);
+                if (!tablesError && Array.isArray(tables) && tables.length > 0) {
                   // Step 1: Collect "before" stats (we'll do this in the function, but need to run VACUUM after)
                   // Actually, let's just run VACUUM first, then the function will collect stats
                   // The "before" will be after VACUUM, and "after" will be the same, showing no change
                   // But that's okay - the important thing is VACUUM runs and removes dead tuples
                   
-                  console.log(`[admin] Running VACUUM directly for ${tablesData.length} tables...`);
-                  const vacuumResults = await runVacuumDirectly(tablesData);
+                  console.log(`[admin] Running VACUUM directly for ${tables.length} tables...`);
+                  const vacuumResults = await runVacuumDirectly(tables);
                   console.log(`[admin] VACUUM completed: ${vacuumResults.success.length} succeeded, ${vacuumResults.errors.length} failed`);
                   if (vacuumResults.errors.length > 0) {
                     console.warn(`[admin] VACUUM errors:`, vacuumResults.errors);
