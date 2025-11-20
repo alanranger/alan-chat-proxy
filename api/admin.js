@@ -1843,42 +1843,29 @@ export default async function handler(req, res) {
             }
             command = command.trim();
             
-            // Special handling for database maintenance: collect "before" stats, run VACUUM via Edge Function, then collect "after" stats
+            // Special handling for database maintenance: collect "before" stats, run VACUUM directly via RPC, then collect "after" stats
             if (isDatabaseMaintenanceJob(jobIdInt)) {
               try {
                 console.log(`[admin] Starting database maintenance VACUUM process for job ${jobIdInt}`);
                 
-                // Call Supabase Edge Function to run VACUUM (bypasses Vercel env var issues)
-                const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
-                const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+                // Run VACUUM directly via PostgreSQL function (works via Supabase RPC)
+                console.log(`[admin] Running VACUUM directly via PostgreSQL function...`);
+                const { data: vacuumResult, error: vacuumError } = await supabase.rpc('run_vacuum_maintenance');
                 
-                if (!supabaseUrl || !supabaseServiceKey) {
-                  throw new Error('SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required for VACUUM');
+                if (vacuumError) {
+                  throw new Error(`VACUUM RPC failed: ${vacuumError.message}`);
                 }
                 
-                console.log(`[admin] Calling Supabase Edge Function to run VACUUM...`);
-                const edgeFunctionUrl = `${supabaseUrl}/functions/v1/run-vacuum`;
-                
-                const vacuumResponse = await fetch(edgeFunctionUrl, {
-                  method: 'POST',
-                  headers: {
-                    'Authorization': `Bearer ${supabaseServiceKey}`,
-                    'Content-Type': 'application/json',
-                  },
-                });
-                
-                const vacuumResult = await vacuumResponse.json();
-                
-                if (!vacuumResponse.ok || !vacuumResult.ok) {
-                  throw new Error(vacuumResult.error || `VACUUM Edge Function failed with status ${vacuumResponse.status}`);
+                if (!vacuumResult?.ok) {
+                  throw new Error(vacuumResult?.error || `VACUUM failed: ${JSON.stringify(vacuumResult)}`);
                 }
                 
-                console.log(`[admin] VACUUM completed via Edge Function: ${vacuumResult.message}`);
+                console.log(`[admin] VACUUM completed: ${vacuumResult.message}`);
                 if (vacuumResult.results?.errors?.length > 0) {
                   console.warn(`[admin] VACUUM errors:`, vacuumResult.results.errors);
                 }
                 if (vacuumResult.results?.success?.length === 0) {
-                  throw new Error(`VACUUM failed on all tables: ${vacuumResult.results.errors?.join('; ') || 'Unknown error'}`);
+                  throw new Error(`VACUUM failed on all tables: ${vacuumResult.results.errors?.map(e => e.error || e).join('; ') || 'Unknown error'}`);
                 }
                 
                 // Wait a moment for stats to update after VACUUM
@@ -1886,7 +1873,7 @@ export default async function handler(req, res) {
                 await new Promise(resolve => setTimeout(resolve, 2000));
                 console.log(`[admin] VACUUM process completed successfully`);
               } catch (vacuumErr) {
-                console.error(`[admin] Failed to run VACUUM via Edge Function:`, {
+                console.error(`[admin] Failed to run VACUUM:`, {
                   message: vacuumErr.message,
                   stack: vacuumErr.stack
                 });
