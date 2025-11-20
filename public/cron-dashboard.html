@@ -1570,7 +1570,9 @@
       28: [26, 27]   // Job 28 is linked to Jobs 26 and 27
     };
 
-    const jobsWithProgressTracking = [21, 26, 27, 28, 31, 39];
+    // All jobs now support progress tracking - this list is kept for backward compatibility
+    // but progress containers are rendered for all jobs
+    const jobsWithProgressTracking = [13, 19, 20, 21, 22, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43];
     let activeJobs = [];
 
     // Regression tests for Jobs 27/28 mirror Job 26 results
@@ -1693,16 +1695,16 @@
     }
 
     function startPollingForActiveJobs() {
-      // Extract job IDs from active jobs and start polling for those in jobsWithProgressTracking
+      // Extract job IDs from active jobs and start polling for any job with a progress container
       activeJobs.forEach(activeJob => {
         if (!activeJob.job_hint) return;
         const jobId = extractJobIdFromHint(activeJob.job_hint);
-        if (!jobId || !jobsWithProgressTracking.includes(jobId)) return;
+        if (!jobId) return;
         
         // Check if we're already polling this job
         if (progressRetryState.has(jobId)) return;
         
-        // Show progress container immediately and start polling
+        // Show progress container immediately and start polling (all jobs have progress containers now)
         const container = getProgressContainer(jobId);
         if (container) {
           showProgressContainer(jobId, 'Checking status...');
@@ -3197,21 +3199,22 @@
       addDebugLog(`Run job now requested: ${jobName} (ID: ${jobId})`, 'info', { jobId, jobName });
       const jobIdInt = parseInt(jobId);
       
-      // Reset progress for jobs that report detailed updates and show queued state
-      if (jobsWithProgressTracking.includes(jobIdInt)) {
-        const resetTargets = new Set([jobIdInt]);
-        if (jobIdInt === 26 && Array.isArray(linkedJobs[26])) {
-          linkedJobs[26].forEach(id => resetTargets.add(id));
+      // Reset progress and show queued state for all jobs (all jobs now have progress containers)
+      const resetTargets = new Set([jobIdInt]);
+      if (jobIdInt === 26 && Array.isArray(linkedJobs[26])) {
+        linkedJobs[26].forEach(id => resetTargets.add(id));
+      }
+      for (const targetId of resetTargets) {
+        try {
+          await fetch(`${API_BASE}/api/admin?action=reset_job_progress&jobid=${targetId}`, {
+            method: 'GET',
+            headers: buildAuthHeaders()
+          });
+        } catch (err) {
+          console.warn(`Failed to reset progress for job ${targetId}:`, err);
         }
-        for (const targetId of resetTargets) {
-          try {
-            await fetch(`${API_BASE}/api/admin?action=reset_job_progress&jobid=${targetId}`, {
-              method: 'GET',
-              headers: buildAuthHeaders()
-            });
-          } catch (err) {
-            console.warn(`Failed to reset progress for job ${targetId}:`, err);
-          }
+        const container = getProgressContainer(targetId);
+        if (container) {
           showProgressContainer(targetId, targetId === jobIdInt ? 'Queued...' : 'Auto-chained batch queued...');
         }
       }
@@ -3263,9 +3266,8 @@
         addDebugLog(`Job execution completed: success=${execution.success}, duration=${execution.duration}s`, 
           execution.success ? 'success' : 'error', { execution });
         
-        // Start progress polling for jobs 26, 27, 28 after successful execution
-        // For fire-and-forget jobs, start polling immediately to track background progress
-        if (jobsWithProgressTracking.includes(jobIdInt) && execution.success) {
+        // Start progress tracking for all jobs after successful execution
+        if (execution.success) {
           // For very quick jobs (< 2 seconds), show completion status immediately
           if (execution.duration && execution.duration < 2) {
             const container = getProgressContainer(jobIdInt);
@@ -3869,14 +3871,12 @@
           </div>
           ${renderDatabaseMaintenanceSummary(job)}
           ${renderDatabaseMaintenanceTopTables(job)}
-          ${jobsWithProgressTracking.includes(jobIdNumber) ? `
           <div class="job-progress" id="progress-${job.jobid}" style="display:none;">
             <div class="progress-bar-container">
               <div class="progress-bar"></div>
             </div>
             <span class="progress-message"></span>
           </div>
-          ` : ''}
           <div class="sparkline-section">
             <div style="font-size: 12px; font-weight: 600; margin-bottom: 5px; color: #666;">Last runs</div>
             <div class="sparkline-container" id="sparkline-${job.jobid}"></div>

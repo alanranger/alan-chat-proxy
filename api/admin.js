@@ -196,15 +196,34 @@ const CHAINED_REFRESH_JOBS = {
   [MASTER_REFRESH_JOB_ID]: [27, 28],
 };
 
-const JOBS_WITH_PROGRESS = new Set([21, MASTER_REFRESH_JOB_ID, 27, 28, 31, 39]);
+// All jobs now support progress tracking
+// This set is kept for jobs with detailed step-by-step progress, but all jobs get basic progress tracking
+const JOBS_WITH_PROGRESS = new Set([13, 19, 20, 21, 22, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43]);
 
 const JOB_PROGRESS_DEFAULTS = {
+  13: { totalSteps: 1, message: 'Queued - aggregating weekly analytics' },
+  19: { totalSteps: 1, message: 'Queued - updating question frequency' },
+  20: { totalSteps: 1, message: 'Queued - aggregating test analytics' },
   21: { totalSteps: 3, message: 'Queued - refreshing product catalog' },
+  22: { totalSteps: 1, message: 'Queued - analyzing chat improvements' },
   26: { totalSteps: 5, message: 'Queued - starting master batch' },
   27: { totalSteps: 1, message: 'Queued - waiting for Batch 1' },
   28: { totalSteps: 1, message: 'Queued - waiting for Batch 2' },
+  29: { totalSteps: 1, message: 'Queued - cleaning old chat data' },
+  30: { totalSteps: 1, message: 'Queued - cleaning old debug logs' },
   31: { totalSteps: 3, message: 'Queued - cleaning orphaned records' },
+  32: { totalSteps: 1, message: 'Queued - running database maintenance' },
+  33: { totalSteps: 1, message: 'Queued - checking URL health' },
+  34: { totalSteps: 1, message: 'Queued - validating embeddings' },
+  35: { totalSteps: 1, message: 'Queued - checking content freshness' },
+  36: { totalSteps: 1, message: 'Queued - backing up daily analytics' },
+  37: { totalSteps: 1, message: 'Queued - monitoring cron job health' },
+  38: { totalSteps: 1, message: 'Queued - purging db health data' },
   39: { totalSteps: 1, message: 'Queued - monitoring database health' },
+  40: { totalSteps: 1, message: 'Queued - generating weekly db summary' },
+  41: { totalSteps: 1, message: 'Queued - cleaning page HTML' },
+  42: { totalSteps: 1, message: 'Queued - analyzing page HTML' },
+  43: { totalSteps: 1, message: 'Queued - dropping regression table' },
 };
 
 async function seedJobProgressRows(jobIds = []) {
@@ -1563,27 +1582,25 @@ export default async function handler(req, res) {
           return res.status(400).json({ error: 'jobid parameter required' });
         }
 
-        // Check if job is already running (for jobs that use progress tracking)
-        if (JOBS_WITH_PROGRESS.has(jobIdInt)) {
-          const { data: progressData } = await supabase
-            .from('job_progress')
-            .select('progress, updated_at')
-            .eq('jobid', jobIdInt)
-            .single();
+        // Check if job is already running (all jobs now use progress tracking)
+        const { data: progressData } = await supabase
+          .from('job_progress')
+          .select('progress, updated_at')
+          .eq('jobid', jobIdInt)
+          .single();
+        
+        if (progressData && progressData.progress < 100) {
+          // Check if updated recently (within last 5 minutes) - job might still be running
+          const updatedAt = new Date(progressData.updated_at);
+          const now = new Date();
+          const minutesSinceUpdate = (now - updatedAt) / (1000 * 60);
           
-          if (progressData && progressData.progress < 100) {
-            // Check if updated recently (within last 5 minutes) - job might still be running
-            const updatedAt = new Date(progressData.updated_at);
-            const now = new Date();
-            const minutesSinceUpdate = (now - updatedAt) / (1000 * 60);
-            
-            if (minutesSinceUpdate < 5) {
-              return res.status(409).json({ 
-                error: 'Job is already running',
-                message: `Job ${jobid} is currently running (${progressData.progress}% complete). Please wait for it to finish.`,
-                progress: progressData.progress
-              });
-            }
+          if (minutesSinceUpdate < 5) {
+            return res.status(409).json({ 
+              error: 'Job is already running',
+              message: `Job ${jobid} is currently running (${progressData.progress}% complete). Please wait for it to finish.`,
+              progress: progressData.progress
+            });
           }
         }
 
@@ -1598,16 +1615,15 @@ export default async function handler(req, res) {
 
         const job = jobData[0];
 
-        if (JOBS_WITH_PROGRESS.has(jobIdInt)) {
-          const jobsToSeed = new Set([jobIdInt]);
-          if (jobIdInt === MASTER_REFRESH_JOB_ID && Array.isArray(CHAINED_REFRESH_JOBS[MASTER_REFRESH_JOB_ID])) {
-            CHAINED_REFRESH_JOBS[MASTER_REFRESH_JOB_ID].forEach(id => jobsToSeed.add(id));
-          }
-          try {
-            await seedJobProgressRows([...jobsToSeed]);
-          } catch (seedErr) {
-            console.warn('Unable to seed job progress rows', seedErr);
-          }
+        // Seed progress for all jobs (all jobs now have progress tracking)
+        const jobsToSeed = new Set([jobIdInt]);
+        if (jobIdInt === MASTER_REFRESH_JOB_ID && Array.isArray(CHAINED_REFRESH_JOBS[MASTER_REFRESH_JOB_ID])) {
+          CHAINED_REFRESH_JOBS[MASTER_REFRESH_JOB_ID].forEach(id => jobsToSeed.add(id));
+        }
+        try {
+          await seedJobProgressRows([...jobsToSeed]);
+        } catch (seedErr) {
+          console.warn('Unable to seed job progress rows', seedErr);
         }
 
         const startTime = new Date();
