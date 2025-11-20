@@ -196,7 +196,7 @@ const CHAINED_REFRESH_JOBS = {
   [MASTER_REFRESH_JOB_ID]: [27, 28],
 };
 
-const JOBS_WITH_PROGRESS = new Set([21, MASTER_REFRESH_JOB_ID, 27, 28, 31]);
+const JOBS_WITH_PROGRESS = new Set([21, MASTER_REFRESH_JOB_ID, 27, 28, 31, 39]);
 
 const JOB_PROGRESS_DEFAULTS = {
   21: { totalSteps: 3, message: 'Queued - refreshing product catalog' },
@@ -204,6 +204,7 @@ const JOB_PROGRESS_DEFAULTS = {
   27: { totalSteps: 1, message: 'Queued - waiting for Batch 1' },
   28: { totalSteps: 1, message: 'Queued - waiting for Batch 2' },
   31: { totalSteps: 3, message: 'Queued - cleaning orphaned records' },
+  39: { totalSteps: 1, message: 'Queued - monitoring database health' },
 };
 
 async function seedJobProgressRows(jobIds = []) {

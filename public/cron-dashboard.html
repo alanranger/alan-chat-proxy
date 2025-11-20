@@ -1570,7 +1570,7 @@
       28: [26, 27]   // Job 28 is linked to Jobs 26 and 27
     };
 
-    const jobsWithProgressTracking = [21, 26, 27, 28, 31];
+    const jobsWithProgressTracking = [21, 26, 27, 28, 31, 39];
     let activeJobs = [];
 
     // Regression tests for Jobs 27/28 mirror Job 26 results
@@ -3266,19 +3266,34 @@
         // Start progress polling for jobs 26, 27, 28 after successful execution
         // For fire-and-forget jobs, start polling immediately to track background progress
         if (jobsWithProgressTracking.includes(jobIdInt) && execution.success) {
-          const pollTargets = new Set([jobIdInt]);
-          if (jobIdInt === 26 && Array.isArray(linkedJobs[26])) {
-            linkedJobs[26].forEach(id => pollTargets.add(id));
+          // For very quick jobs (< 2 seconds), show completion status immediately
+          if (execution.duration && execution.duration < 2) {
+            const container = getProgressContainer(jobIdInt);
+            if (container) {
+              showProgressContainer(jobIdInt, `Completed in ${execution.duration.toFixed(2)}s`);
+              const bar = container.querySelector('.progress-bar');
+              if (bar) bar.style.width = '100%';
+              // Hide after 3 seconds
+              setTimeout(() => {
+                container.style.display = 'none';
+              }, 3000);
+            }
+          } else {
+            // For longer jobs, start polling
+            const pollTargets = new Set([jobIdInt]);
+            if (jobIdInt === 26 && Array.isArray(linkedJobs[26])) {
+              linkedJobs[26].forEach(id => pollTargets.add(id));
+            }
+            let index = 0;
+            pollTargets.forEach(targetId => {
+              addDebugLog(`Starting progress polling for job ${targetId}`, 'info');
+              setTimeout(() => {
+                addDebugLog(`Polling progress for job ${targetId}`, 'info');
+                pollJobProgress(targetId);
+              }, 500 + (index * 250));
+              index += 1;
+            });
           }
-          let index = 0;
-          pollTargets.forEach(targetId => {
-            addDebugLog(`Starting progress polling for job ${targetId}`, 'info');
-            setTimeout(() => {
-              addDebugLog(`Polling progress for job ${targetId}`, 'info');
-              pollJobProgress(targetId);
-            }, 500 + (index * 250));
-            index += 1;
-          });
         }
         loadActiveJobs().then(() => {
           renderActiveJobsBanner();
