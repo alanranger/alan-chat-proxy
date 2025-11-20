@@ -2085,9 +2085,15 @@ export default async function handler(req, res) {
           console.error('Failed to clear cron.job_run_details:', cronDeleteError);
           // Don't fail the whole operation, but log the error
         } else if (cronDeleteResult) {
-          cronDeletedCount = cronDeleteResult.deleted_count || 0;
-          cronBeforeCount = cronDeleteResult.before_count || 0;
-          console.log(`Cleared cron.job_run_details: ${cronDeletedCount} records (${cronBeforeCount} before)`);
+          // Handle both direct result and wrapped result formats
+          const result = Array.isArray(cronDeleteResult) ? cronDeleteResult[0] : cronDeleteResult;
+          // If result is wrapped in function name key, unwrap it
+          const unwrapped = result?.clear_cron_job_run_details || result;
+          cronDeletedCount = unwrapped?.deleted_count || result?.deleted_count || 0;
+          cronBeforeCount = unwrapped?.before_count || result?.before_count || 0;
+          console.log(`Cleared cron.job_run_details: ${cronDeletedCount} records (${cronBeforeCount} before)`, { cronDeleteResult, result, unwrapped });
+        } else {
+          console.warn('clear_cron_job_run_details returned no data');
         }
         
         // Also clear job_progress to reset progress tracking
