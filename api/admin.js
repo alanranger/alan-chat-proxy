@@ -2076,14 +2076,18 @@ export default async function handler(req, res) {
         // Also clear cron.job_run_details (pg_cron system table)
         // The dashboard reads from both tables, so we need to clear both
         // Use RPC function to delete from cron schema (permission issues with direct deletion)
+        let cronDeletedCount = 0;
+        let cronBeforeCount = 0;
         const { data: cronDeleteResult, error: cronDeleteError } = await supabase
           .rpc('clear_cron_job_run_details');
         
         if (cronDeleteError) {
-          console.warn('Failed to clear cron.job_run_details:', cronDeleteError);
-          // Don't fail the whole operation if cron table clear fails
-        } else {
-          console.log('Cleared cron.job_run_details:', cronDeleteResult);
+          console.error('Failed to clear cron.job_run_details:', cronDeleteError);
+          // Don't fail the whole operation, but log the error
+        } else if (cronDeleteResult) {
+          cronDeletedCount = cronDeleteResult.deleted_count || 0;
+          cronBeforeCount = cronDeleteResult.before_count || 0;
+          console.log(`Cleared cron.job_run_details: ${cronDeletedCount} records (${cronBeforeCount} before)`);
         }
         
         // Also clear job_progress to reset progress tracking
@@ -2106,15 +2110,19 @@ export default async function handler(req, res) {
         }
         
         const deletedCount = (beforeCount || 0) - (afterCount || 0);
+        const totalDeleted = deletedCount + cronDeletedCount;
         
-        console.log(`Reset all stats: Deleted ${deletedCount} records (${beforeCount || 0} before, ${afterCount || 0} remaining)`);
+        console.log(`Reset all stats: Deleted ${deletedCount} from public.job_run_details, ${cronDeletedCount} from cron.job_run_details (total: ${totalDeleted})`);
 
         return res.status(200).json({
           ok: true,
-          message: `Successfully reset statistics for all jobs. Note: This does not stop currently running queries - use the Stop button on individual job tiles if needed.`,
-          deleted_count: deletedCount,
+          message: `Successfully reset statistics for all jobs. Deleted ${totalDeleted} total records (${deletedCount} from public, ${cronDeletedCount} from cron). Note: This does not stop currently running queries - use the Stop button on individual job tiles if needed.`,
+          deleted_count: totalDeleted,
+          public_deleted: deletedCount,
+          cron_deleted: cronDeletedCount,
           remaining_count: afterCount || 0,
-          before_count: beforeCount || 0
+          before_count: beforeCount || 0,
+          cron_before_count: cronBeforeCount
         });
 
       } catch (error) {
