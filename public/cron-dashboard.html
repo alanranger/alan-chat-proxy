@@ -3624,6 +3624,7 @@
      * @returns {string}
      */
     function renderJobCard(job, isLinked, groupType) {
+      const jobIdNumber = Number(job.jobid);
       const successRate = job.total_runs > 0 
         ? ((job.success_count / job.total_runs) * 100).toFixed(1)
         : 0;
@@ -3649,11 +3650,11 @@
       
       // Load regression test data for risky jobs (use pre-loaded data)
       let regressionSummary = '';
-      if (riskyJobs.includes(job.jobid)) {
-        const regressionSourceId = getRegressionSourceJobId(job.jobid);
+      if (riskyJobs.includes(jobIdNumber)) {
+        const regressionSourceId = getRegressionSourceJobId(jobIdNumber);
         const regressionData = regressionTestData[regressionSourceId] || null;
-        const mirroredFrom = regressionSourceId !== job.jobid ? regressionSourceId : null;
-        regressionSummary = renderRegressionTestSummary(regressionData, job.jobid, mirroredFrom);
+        const mirroredFrom = regressionSourceId !== jobIdNumber ? regressionSourceId : null;
+        regressionSummary = renderRegressionTestSummary(regressionData, jobIdNumber, mirroredFrom);
       }
       
       const borderColor = 
@@ -3708,7 +3709,7 @@
           </div>
           ${renderDatabaseMaintenanceSummary(job)}
           ${renderDatabaseMaintenanceTopTables(job)}
-          ${jobsWithProgressTracking.includes(job.jobid) ? `
+          ${jobsWithProgressTracking.includes(jobIdNumber) ? `
           <div class="job-progress" id="progress-${job.jobid}" style="display:none;">
             <div class="progress-bar-container">
               <div class="progress-bar"></div>
