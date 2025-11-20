@@ -2075,14 +2075,15 @@ export default async function handler(req, res) {
         
         // Also clear cron.job_run_details (pg_cron system table)
         // The dashboard reads from both tables, so we need to clear both
-        const { error: cronDeleteError } = await supabaseCron
-          .from('job_run_details')
-          .delete()
-          .gte('jobid', 0);
+        // Use RPC function to delete from cron schema (permission issues with direct deletion)
+        const { data: cronDeleteResult, error: cronDeleteError } = await supabase
+          .rpc('clear_cron_job_run_details');
         
         if (cronDeleteError) {
           console.warn('Failed to clear cron.job_run_details:', cronDeleteError);
           // Don't fail the whole operation if cron table clear fails
+        } else {
+          console.log('Cleared cron.job_run_details:', cronDeleteResult);
         }
         
         // Also clear job_progress to reset progress tracking
