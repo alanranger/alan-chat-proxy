@@ -2538,30 +2538,29 @@
           html += '<div class="job-section-header db-health">💾 Database Health</div>';
         }
         html += '<div class="job-section-content">';
-        html += '<div class="jobs-grid" style="grid-template-columns: 2fr 1fr 1fr; gap: 20px;">';
         
-        // Database Health Tile (left, larger)
+        // Database Health Tile - full width (2 columns)
         if (healthData) {
-          html += '<div>';
+          html += '<div style="margin-bottom: 20px;">';
           html += renderDatabaseHealthTile(healthData);
           html += '</div>';
         }
         
-        // db-health-monitor Job Card (middle)
+        // db-health-monitor Job Card - full width on top
         if (dbHealthJob) {
-          html += '<div>';
+          html += '<div style="margin-bottom: 20px;">';
           html += renderJobCard(dbHealthJob, false, 'db-health');
           html += '</div>';
         }
         
-        // db-maintenance Job Card (right) - vacuum and cleanup
+        // db-maintenance Job Card - full width underneath
         if (dbMaintenanceJobObj) {
           html += '<div>';
           html += renderJobCard(dbMaintenanceJobObj, false, 'db-health');
           html += '</div>';
         }
         
-        html += '</div></div></div>';
+        html += '</div></div>';
       }
 
       // Render Analytics Jobs Section
@@ -4568,5 +4567,6 @@
   </script>
 </body>
 </html>
+
 
 
