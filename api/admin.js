@@ -2053,71 +2053,53 @@ export default async function handler(req, res) {
     // Reset All Job Statistics (POST /api/admin?action=reset_all_job_stats)
     if (req.method === 'POST' && action === 'reset_all_job_stats') {
       try {
-        // Use RPC function to delete all job run details
-        const { data: deleteResult, error: deleteError } = await supabase.rpc('delete_all_job_run_details');
-
-        if (deleteError) {
-          console.error('Error deleting all job run details:', deleteError);
-          
-          // If RPC fails, try direct SQL using raw query
-          try {
-            // Get count before deletion
-            const { count: beforeCount } = await supabase
-              .from('job_run_details')
-              .select('*', { count: 'exact', head: true });
-            
-            // Delete all records using a query that matches all rows
-            // We'll use a condition that's always true
-            const { error: deleteError2 } = await supabase
-              .from('job_run_details')
-              .delete()
-              .gte('id', 0); // This should match all rows since id is always >= 0
-            
-            if (deleteError2) {
-              throw new Error(`Direct delete also failed: ${deleteError2.message}`);
-            }
-            
-            // Verify deletion
-            const { count: afterCount } = await supabase
-              .from('job_run_details')
-              .select('*', { count: 'exact', head: true });
-            
-            return res.status(200).json({
-              ok: true,
-              message: `Successfully reset statistics for all jobs (using fallback method)`,
-              deleted_count: beforeCount || 0,
-              remaining_count: afterCount || 0
-            });
-          } catch (fallbackError) {
-            console.error('Fallback deletion also failed:', fallbackError);
-            return res.status(500).json({ 
-              error: 'Failed to reset all job statistics', 
-              detail: deleteError.message || fallbackError.message || 'Both RPC and direct delete failed',
-              code: deleteError.code,
-              rpcError: deleteError,
-              fallbackError: fallbackError.message
-            });
-          }
-        }
-
-        const deletedCount = deleteResult?.deleted_count || deleteResult?.before_count || 0;
-        const afterCount = deleteResult?.remaining_count || 0;
+        // Get count before deletion
+        const { count: beforeCount, error: countError } = await supabase
+          .from('job_run_details')
+          .select('*', { count: 'exact', head: true });
         
-        console.log(`Reset all stats: Deleted ${deletedCount} records, ${afterCount || 0} remaining`);
+        if (countError) {
+          throw new Error(`Failed to count records: ${countError.message}`);
+        }
+        
+        // Delete all records using a condition that matches all rows
+        // Since id is always >= 0, this will delete all records
+        const { error: deleteError } = await supabase
+          .from('job_run_details')
+          .delete()
+          .gte('id', 0);
+        
+        if (deleteError) {
+          throw new Error(`Failed to delete records: ${deleteError.message}`);
+        }
+        
+        // Verify deletion
+        const { count: afterCount, error: verifyError } = await supabase
+          .from('job_run_details')
+          .select('*', { count: 'exact', head: true });
+        
+        if (verifyError) {
+          console.warn('Failed to verify deletion count:', verifyError);
+        }
+        
+        const deletedCount = (beforeCount || 0) - (afterCount || 0);
+        
+        console.log(`Reset all stats: Deleted ${deletedCount} records (${beforeCount || 0} before, ${afterCount || 0} remaining)`);
 
         return res.status(200).json({
           ok: true,
           message: `Successfully reset statistics for all jobs`,
           deleted_count: deletedCount,
-          remaining_count: afterCount
+          remaining_count: afterCount || 0,
+          before_count: beforeCount || 0
         });
 
       } catch (error) {
         console.error('Error resetting all job statistics:', error);
         return res.status(500).json({ 
-          error: 'Internal server error', 
+          error: 'Failed to reset all job statistics', 
           detail: error.message,
-          stack: error.stack
+          stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
         });
       }
     }
