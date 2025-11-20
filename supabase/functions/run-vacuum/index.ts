@@ -16,11 +16,35 @@ serve(async (req) => {
     // Get service role key from environment
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const dbPassword = Deno.env.get("SUPABASE_DB_PASSWORD")!;
-    const projectRef = Deno.env.get("SUPABASE_PROJECT_REF") || supabaseUrl.match(/https?:\/\/([^.]+)\.supabase\.co/)?.[1] || 'igzvwbvgvmzvvzoclufx';
+    
+    // Try multiple sources for database password
+    // Supabase might provide it automatically, or it might be in DATABASE_URL
+    let dbPassword = Deno.env.get("SUPABASE_DB_PASSWORD") || 
+                     Deno.env.get("DATABASE_PASSWORD") ||
+                     Deno.env.get("POSTGRES_PASSWORD");
+    
+    // If not found, try extracting from DATABASE_URL if it exists
+    if (!dbPassword) {
+      const databaseUrl = Deno.env.get("DATABASE_URL");
+      if (databaseUrl) {
+        const urlMatch = databaseUrl.match(/postgres:\/\/[^:]+:([^@]+)@/);
+        if (urlMatch) {
+          dbPassword = decodeURIComponent(urlMatch[1]);
+        }
+      }
+    }
+    
+    const projectRef = Deno.env.get("SUPABASE_PROJECT_REF") || 
+                       supabaseUrl.match(/https?:\/\/([^.]+)\.supabase\.co/)?.[1] || 
+                       'igzvwbvgvmzvvzoclufx';
 
     if (!dbPassword) {
-      throw new Error("SUPABASE_DB_PASSWORD environment variable is required");
+      // Log all available env vars (without sensitive values) for debugging
+      const envKeys = Object.keys(Deno.env.toObject()).filter(k => 
+        k.includes('SUPABASE') || k.includes('DATABASE') || k.includes('POSTGRES')
+      );
+      console.error("Available environment variables:", envKeys);
+      throw new Error("Database password not found. Please set SUPABASE_DB_PASSWORD in Edge Function settings, or ensure DATABASE_URL is available.");
     }
 
     // Create Supabase client with service role key
