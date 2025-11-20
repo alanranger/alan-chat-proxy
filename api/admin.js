@@ -200,7 +200,9 @@ async function runVacuumDirectly(tables) {
   };
 
   try {
+    console.log(`[vacuum] Connecting to database...`);
     await pgClient.connect();
+    console.log(`[vacuum] Successfully connected to database`);
     
     for (const table of tables) {
       try {
@@ -213,10 +215,23 @@ async function runVacuumDirectly(tables) {
       } catch (err) {
         const errorMsg = `Failed to vacuum ${table}: ${err.message}`;
         results.errors.push(errorMsg);
-        console.error(`[vacuum] ${errorMsg}`);
+        console.error(`[vacuum] ${errorMsg}`, {
+          code: err.code,
+          detail: err.detail,
+          hint: err.hint,
+          position: err.position
+        });
       }
     }
   } catch (error) {
+    // Log detailed connection error
+    console.error(`[vacuum] Connection error:`, {
+      message: error.message,
+      code: error.code,
+      detail: error.detail,
+      hint: error.hint,
+      connectionString: dbUrl ? dbUrl.replace(/:[^:@]+@/, ':****@') : 'null'
+    });
     throw new Error(`Failed to connect for VACUUM: ${error.message}`);
   } finally {
     try {
