@@ -20,6 +20,12 @@ const SUPABASE_SERVICE_ROLE_KEY =
 // Construct database URL if not provided
 let SUPABASE_DB_URL = process.env.SUPABASE_DB_URL;
 
+// If SUPABASE_DB_URL contains placeholder, treat it as not set
+if (SUPABASE_DB_URL && SUPABASE_DB_URL.includes('[YOUR_PASSWORD]')) {
+  console.warn(`[admin] SUPABASE_DB_URL contains placeholder [YOUR_PASSWORD], will construct from SUPABASE_DB_PASSWORD instead`);
+  SUPABASE_DB_URL = null;
+}
+
 if (!SUPABASE_DB_URL) {
   // Try to construct from other environment variables
   const dbPassword = process.env.SUPABASE_DB_PASSWORD || process.env.PGPASSWORD;
