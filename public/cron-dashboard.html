@@ -2269,8 +2269,11 @@
       container.innerHTML = '<div class="loading">Loading cron jobs...</div>';
 
       try {
-        const response = await fetch(`${API_BASE}/api/admin?action=cron_jobs`, {
-          headers: buildAuthHeaders()
+        // Add cache-busting timestamp to ensure fresh data
+        const timestamp = new Date().getTime();
+        const response = await fetch(`${API_BASE}/api/admin?action=cron_jobs&t=${timestamp}`, {
+          headers: buildAuthHeaders(),
+          cache: 'no-store'
         });
         
         addDebugLog(`Jobs API response: ${response.status} ${response.statusText}`, 'info');
@@ -3891,6 +3894,13 @@
       if (job.failed_count > 0 && job.success_count === 0) {
         return { level: 'error', label: 'Error', reason: 'Always fails - no successful runs' };
       }
+      // Show error if the most recent run failed (check last_run_status if available)
+      // This catches cases where a recent cron job failure occurred, even if there are previous successes
+      if (job.last_run_status && (job.last_run_status.toLowerCase() === 'failed' || job.last_run_status.toLowerCase() === 'error')) {
+        const lastRunDate = new Date(job.last_run);
+        const minutesSinceLastRun = Math.floor((now - lastRunDate) / (1000 * 60));
+        return { level: 'error', label: 'Error', reason: 'Last run failed ' + minutesSinceLastRun + ' minutes ago - ' + job.failed_count + ' total failures, ' + job.success_count + ' successes' };
+      }
       if (nextRunInMinutes === 0 && lastRun && minutesSinceLastRun > freqMinutes * 3) {
         return { level: 'error', label: 'Error', reason: 'Severely overdue - last run was ' + Math.floor(minutesSinceLastRun / freqMinutes) + 'x scheduled interval ago' };
       }
@@ -3899,8 +3909,11 @@
       if (job.total_runs === 0 && job.status === 'active') {
         return { level: 'warning', label: 'Warning', reason: 'Never run - job is active but has no execution history' };
       }
-      if (job.failed_count > 0 && job.failed_count < job.success_count) {
-        return { level: 'warning', label: 'Warning', reason: 'Some failures detected - ' + job.failed_count + ' failed, ' + job.success_count + ' succeeded' };
+      // Show warning if there are ANY failures (even if less than successes)
+      // This ensures recent failures are always visible, not just when failures > successes
+      if (job.failed_count > 0) {
+        const failureRate = job.total_runs > 0 ? ((job.failed_count / job.total_runs) * 100).toFixed(1) : 0;
+        return { level: 'warning', label: 'Warning', reason: 'Some failures detected - ' + job.failed_count + ' failed, ' + job.success_count + ' succeeded (' + failureRate + '% failure rate)' };
       }
       if (nextRunInMinutes === 0 && lastRun && minutesSinceLastRun > freqMinutes * 2) {
         return { level: 'warning', label: 'Warning', reason: 'Possibly stuck - overdue by ' + Math.floor(minutesSinceLastRun / freqMinutes) + 'x scheduled interval' };

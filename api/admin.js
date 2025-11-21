@@ -1251,6 +1251,7 @@ export default async function handler(req, res) {
             success_count: stats.success_count,
             failed_count: stats.failed_count,
             last_run: aggregatedLastRun || job.last_run || null,
+            last_run_status: lastRunDetails?.status || null, // Include status of most recent run
             maintenanceSummary,
             maintenanceTopTables
           };
