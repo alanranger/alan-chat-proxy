@@ -1370,34 +1370,61 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'missing jobid' });
       }
 
-      // Get logs from both sources
-      const [publicResult, cronResult] = await Promise.all([
+      // Get logs from both sources - use RPC for cron since direct schema access may not work
+      const [publicResult, cronRpcResult] = await Promise.all([
         supabase
           .from('job_run_details')
           .select('id, jobid, status, command, return_message, start_time, end_time, created_at')
           .eq('jobid', jobid)
           .order('start_time', { ascending: false })
           .limit(50),
-        supabaseCron
+        // Use RPC function that already combines both sources, then filter for this job
+        supabase.rpc('get_job_last_runs', { p_job_ids: [jobid] })
+      ]);
+
+      const publicLogs = publicResult.data || [];
+      let cronLogs = [];
+      
+      // Get cron logs from RPC result
+      if (cronRpcResult.data && Array.isArray(cronRpcResult.data)) {
+        // Also try direct query as fallback
+        const cronDirectResult = await supabaseCron
           .from('job_run_details')
           .select('runid, jobid, status, command, return_message, start_time, end_time, created_at')
           .eq('jobid', jobid)
           .order('start_time', { ascending: false })
-          .limit(50)
-      ]);
-
-      const publicLogs = publicResult.data || [];
-      const cronLogs = cronResult.data || [];
+          .limit(50);
+        
+        if (!cronDirectResult.error && cronDirectResult.data) {
+          cronLogs = cronDirectResult.data;
+          console.log(`[DEBUG] Got ${cronLogs.length} cron logs via direct query for job ${jobid}`);
+        } else {
+          console.error(`[DEBUG] Direct cron query failed:`, cronDirectResult.error);
+          // Fallback: use RPC result and determine source by checking which table it's in
+          const allRuns = cronRpcResult.data;
+          // Check which runs are in cron by querying cron table directly
+          const cronStartTimes = new Set();
+          try {
+            const { data: cronCheck } = await supabaseCron
+              .from('job_run_details')
+              .select('start_time')
+              .eq('jobid', jobid);
+            if (cronCheck) {
+              cronCheck.forEach(r => cronStartTimes.add(r.start_time));
+            }
+          } catch (e) {
+            console.error(`[DEBUG] Could not check cron start times:`, e);
+          }
+          
+          // Mark runs from RPC as cron if they match cron start times
+          cronLogs = allRuns.filter(run => cronStartTimes.has(run.start_time));
+          console.log(`[DEBUG] Got ${cronLogs.length} cron logs via RPC+filter for job ${jobid}`);
+        }
+      }
 
       if (publicResult.error) {
         console.error(`[DEBUG] Error getting public logs for job ${jobid}:`, publicResult.error);
       }
-      if (cronResult.error) {
-        console.error(`[DEBUG] Error getting cron logs for job ${jobid}:`, cronResult.error);
-      }
-
-      // Create a set of cron run start_times for quick lookup
-      const cronStartTimes = new Set(cronLogs.map(log => log.start_time));
 
       // Mark source and normalize format
       const markedPublicLogs = publicLogs.map(log => ({
@@ -1410,7 +1437,7 @@ export default async function handler(req, res) {
 
       const markedCronLogs = cronLogs.map(log => ({
         ...log,
-        id: log.runid, // Map runid to id for consistency
+        id: log.runid || log.id, // Map runid to id for consistency
         run_source: 'cron',
         duration_ms: log.end_time && log.start_time 
           ? new Date(log.end_time) - new Date(log.start_time)
@@ -1428,9 +1455,6 @@ export default async function handler(req, res) {
       }).slice(0, 50);
 
       console.log(`[DEBUG] Combined logs for job ${jobid}: ${combinedLogs.length} total (${markedPublicLogs.length} manual, ${markedCronLogs.length} cron)`);
-      if (cronLogs.length === 0 && cronResult.error) {
-        console.error(`[DEBUG] Cron query failed for job ${jobid}:`, JSON.stringify(cronResult.error, null, 2));
-      }
       if (combinedLogs.length > 0) {
         console.log(`[DEBUG] Sample combined logs:`, combinedLogs.slice(0, 3).map(l => ({ 
           status: l.status, 

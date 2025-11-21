@@ -1,0 +1,23 @@
+[33mtag baseline-2025-11-21-working[m
+Tagger: alanranger <info@alanranger.com>
+Date:   Fri Nov 21 16:11:04 2025 +0000
+
+Working baseline: Analytics filtering, database health fixes, and regression test improvements - Stable baseline for chat analytics and database health monitoring
+
+[33mcommit a2850dbec5683b47c60ad9990895c2af1536cbf3[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;33mtag: [m[1;33mbaseline-2025-11-21-working[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m
+Author: alanranger <info@alanranger.com>
+Date:   Fri Nov 21 16:10:59 2025 +0000
+
+    Working baseline: Analytics filtering, database health fixes, and regression test improvements
+    
+    - Fixed analytics questions endpoint to calculate frequency on-demand (chat_question_frequency table was dropped)
+    - Added filtering to exclude regression test questions (test- and analytics-test- sessions)
+    - Fixed database health risk calculation to use 0 as baseline for perfect health
+    - Fixed db_health_extended to only consider tables >= 10MB for bloat risk
+    - Fixed Job 39 health status logic (based on job performance, not database health risk)
+    - Fixed database health refresh to clear cache and force fresh data
+    - All regression test questions now properly excluded from analytics
+    - Database health shows 0 risk when everything is healthy
+    - VACUUM FULL completed on regression_test_results, job_progress, and cron.job tables
+    
+    This is a stable working baseline for chat analytics and database health monitoring.
