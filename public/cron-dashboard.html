@@ -4263,6 +4263,11 @@
             </span>
           </div>
           <div class="health-status health-${health.level}" title="${health.reason}">${health.label}</div>
+          ${health.level === 'error' || health.level === 'warning' ? `
+            <div class="health-reason health-reason-${health.level}" style="margin-top: 8px; margin-bottom: 12px; padding: 8px; background: ${health.level === 'error' ? '#fee' : '#fff8e1'}; border-left: 3px solid ${health.level === 'error' ? '#d32f2f' : '#f57c00'}; border-radius: 4px; font-size: 12px; color: ${health.level === 'error' ? '#c62828' : '#e65100'};">
+              ${health.reason}
+            </div>
+          ` : ''}
           <div style="margin-bottom: 15px;">
             <div class="frequency-pill">⏰ ${frequency}</div>
             <div class="next-run-badge">${nextRunText}</div>
