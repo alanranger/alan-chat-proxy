@@ -2005,8 +2005,22 @@
     }
 
     async function refreshDatabaseHealth() {
-      // Reload database health data
-      await loadDatabaseHealth();
+      // Clear cached data to force fresh fetch
+      globalDatabaseHealthData = null;
+      // Reload database health data with cache busting
+      const timestamp = new Date().getTime();
+      try {
+        const response = await fetch(`${API_BASE}/api/db-health-extended?t=${timestamp}`, {
+          headers: buildAuthHeaders(),
+          cache: 'no-store'
+        });
+        if (response.ok) {
+          const data = await response.json();
+          globalDatabaseHealthData = data;
+        }
+      } catch (error) {
+        console.error('Error refreshing database health:', error);
+      }
       // Reload jobs to refresh the display
       await loadJobs();
     }
