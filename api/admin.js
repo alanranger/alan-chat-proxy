@@ -909,44 +909,29 @@ export default async function handler(req, res) {
           console.log('[DEBUG] Job 32 aggregated counts:', job32Aggregates);
         }
 
-        const { data: lastRunRowsData, error: lastRunError } = await supabase.rpc('get_job_last_runs', {
-          p_job_ids: cleanedIds
-        });
-
-        if (lastRunError) {
-          console.error('get_job_last_runs failed:', lastRunError);
-        }
-
-        const lastRunRows = Array.isArray(lastRunRowsData) ? lastRunRowsData : [];
-
-        // Get cron runs separately to determine source
-        // We'll match by jobid + start_time to determine if a run is from cron
-        const cronRunTimes = new Set();
-        try {
-          const { data: cronRuns } = await supabaseCron
-            .from('job_run_details')
-            .select('jobid, start_time')
-            .in('jobid', cleanedIds);
-          
-          if (cronRuns) {
-            cronRuns.forEach(run => {
-              const key = `${run.jobid}_${run.start_time}`;
-              cronRunTimes.add(key);
-            });
+        // Get last run for each job with run_source using the new function
+        const lastRunPromises = cleanedIds.map(async (jobId) => {
+          const { data: logs, error } = await supabase.rpc('get_job_logs_with_source', {
+            p_jobid: jobId
+          });
+          if (error || !logs || logs.length === 0) {
+            return null;
           }
-        } catch (cronCheckError) {
-          console.warn('Could not check cron runs for source detection:', cronCheckError);
-        }
-
-        // Mark source for each run
-        const lastRunRowsWithSource = lastRunRows.map((row) => {
-          const key = `${row.jobid}_${row.start_time}`;
-          const run_source = cronRunTimes.has(key) ? 'cron' : 'manual';
-          return {
-            ...row,
-            run_source
-          };
+          // Return the most recent log (first in the sorted list)
+          return logs[0];
         });
+
+        const lastRunResults = await Promise.all(lastRunPromises);
+        const lastRunRowsWithSource = lastRunResults
+          .filter(row => row !== null)
+          .map(row => ({
+            jobid: row.jobid,
+            status: row.status,
+            start_time: row.start_time,
+            end_time: row.end_time,
+            return_message: row.return_message,
+            run_source: row.run_source
+          }));
 
         console.log('[DEBUG] Raw run history rows sample:', lastRunRowsWithSource.slice(0, 5));
 
