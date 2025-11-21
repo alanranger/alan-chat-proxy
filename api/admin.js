@@ -1253,7 +1253,6 @@ export default async function handler(req, res) {
             last_run: aggregatedLastRun || job.last_run || null,
             last_run_status: lastRunDetails?.status || null, // Include status of most recent run
             last_run_error_message: lastRunDetails?.return_message || null, // Include error message if failed
-            last_run_manual: lastRunDetails?.manual || false, // Indicate if run was manual (from job_run_details) or cron
             maintenanceSummary,
             maintenanceTopTables
           };
