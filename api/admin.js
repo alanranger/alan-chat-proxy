@@ -1428,9 +1428,17 @@ export default async function handler(req, res) {
       }).slice(0, 50);
 
       console.log(`[DEBUG] Combined logs for job ${jobid}: ${combinedLogs.length} total (${markedPublicLogs.length} manual, ${markedCronLogs.length} cron)`);
-
-      console.log(`[DEBUG] Combined logs for job ${jobid}: ${combinedLogs.length} total (${markedPublicLogs.length} manual, ${markedCronLogs.length} cron)`);
-      console.log('[DEBUG] Sample logs:', combinedLogs.slice(0, 3).map(l => ({ status: l.status, start_time: l.start_time, run_source: l.run_source })));
+      if (cronLogs.length === 0 && cronResult.error) {
+        console.error(`[DEBUG] Cron query failed for job ${jobid}:`, JSON.stringify(cronResult.error, null, 2));
+      }
+      if (combinedLogs.length > 0) {
+        console.log(`[DEBUG] Sample combined logs:`, combinedLogs.slice(0, 3).map(l => ({ 
+          status: l.status, 
+          start_time: l.start_time, 
+          run_source: l.run_source,
+          has_id: !!l.id 
+        })));
+      }
 
       if (!Array.isArray(publicLogs) && cronLogs.length === 0) {
         return res.status(500).json({ error: 'db_error', detail: 'Unable to fetch job run history.' });
