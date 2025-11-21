@@ -106,3 +106,4 @@ Update the baseline when:
 4. **Document why you're updating** - Add a note about what was fixed
 5. **Keep baseline in git** - So it's tracked and shared
 
+

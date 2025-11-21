@@ -102,3 +102,4 @@ GRANT EXECUTE ON FUNCTION unset_fixed_baseline(INTEGER) TO service_role;
 COMMENT ON COLUMN regression_test_results.is_fixed_baseline IS 
     'Marks this baseline as the fixed reference point for regression tests. Only one fixed baseline per job. Prevents regression creep by always comparing against a known good state.';
 
+

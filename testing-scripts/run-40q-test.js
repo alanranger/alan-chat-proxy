@@ -23,17 +23,21 @@ const questionsData = JSON.parse(
   fs.readFileSync(path.join(__dirname, 'interactive-testing-data.json'), 'utf8')
 );
 
-// Extract all questions
+// Extract all questions - the structure has a "questions" array with category objects
 const allQuestions = [];
-questionsData.categories.forEach(category => {
-  category.questions.forEach(q => {
-    allQuestions.push({
-      question: q.question,
-      category: q.category,
-      focus: q.focus
-    });
+if (questionsData.questions && Array.isArray(questionsData.questions)) {
+  questionsData.questions.forEach(category => {
+    if (category.questions && Array.isArray(category.questions)) {
+      category.questions.forEach(q => {
+        allQuestions.push({
+          question: q.question,
+          category: q.category || category.category,
+          focus: q.focus
+        });
+      });
+    }
   });
-});
+}
 
 console.log(`Found ${allQuestions.length} questions to test\n`);
 
@@ -66,7 +70,7 @@ async function testQuestion(question, index) {
         'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
       },
       body: JSON.stringify({
-        message: question.question,
+        query: question.question,
         sessionId: `test-${Date.now()}-${index}`
       })
     });

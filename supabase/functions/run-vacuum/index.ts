@@ -6,6 +6,19 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+function sanitizeSecret(value?: string | null) {
+  if (!value) return value ?? undefined;
+  let sanitized = value.trim();
+  if (
+    sanitized.length >= 2 &&
+    ((sanitized.startsWith('"') && sanitized.endsWith('"')) ||
+      (sanitized.startsWith("'") && sanitized.endsWith("'")))
+  ) {
+    sanitized = sanitized.slice(1, -1);
+  }
+  return sanitized;
+}
+
 serve(async (req) => {
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
@@ -20,9 +33,11 @@ serve(async (req) => {
     // Try multiple sources for database password
     // Note: Supabase doesn't allow secrets starting with SUPABASE_ prefix
     // So we use DB_PASSWORD instead
-    let dbPassword = Deno.env.get("DB_PASSWORD") || 
-                     Deno.env.get("DATABASE_PASSWORD") ||
-                     Deno.env.get("POSTGRES_PASSWORD");
+    let dbPassword = sanitizeSecret(
+      Deno.env.get("DB_PASSWORD") ||
+      Deno.env.get("DATABASE_PASSWORD") ||
+      Deno.env.get("POSTGRES_PASSWORD")
+    );
     
     // If not found, try extracting from SUPABASE_DB_URL or DATABASE_URL if they exist
     if (!dbPassword) {
@@ -31,13 +46,22 @@ serve(async (req) => {
       if (databaseUrl) {
         const urlMatch = databaseUrl.match(/postgres(?:ql)?:\/\/[^:]+:([^@]+)@/);
         if (urlMatch) {
-          dbPassword = decodeURIComponent(urlMatch[1]);
+          dbPassword = sanitizeSecret(decodeURIComponent(urlMatch[1]));
           console.log("Extracted password from DATABASE_URL/SUPABASE_DB_URL");
         }
       }
     }
     
-    console.log(`Password found: ${dbPassword ? 'YES' : 'NO'}, length: ${dbPassword?.length || 0}`);
+    const passwordMeta = {
+      found: !!dbPassword,
+      length: dbPassword?.length ?? 0,
+      startsWith: dbPassword ? dbPassword.substring(0, 2) : null,
+      endsWith: dbPassword ? dbPassword.slice(-2) : null,
+    };
+    
+    console.log(
+      `Password found: ${passwordMeta.found ? "YES" : "NO"}, length: ${passwordMeta.length}, preview: ${passwordMeta.startsWith}...${passwordMeta.endsWith}`
+    );
     
     const projectRef = Deno.env.get("SUPABASE_PROJECT_REF") || 
                        supabaseUrl.match(/https?:\/\/([^.]+)\.supabase\.co/)?.[1] || 

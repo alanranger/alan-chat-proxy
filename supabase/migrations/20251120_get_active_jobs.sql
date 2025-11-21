@@ -35,6 +35,8 @@ AS $function$
     AND psa.query IS NOT NULL
     AND psa.state <> 'idle'
     AND psa.application_name NOT LIKE 'psql%'
-    AND psa.backend_type = 'client backend';
+    AND psa.backend_type = 'client backend'
+    -- Exclude queries that are just calling get_active_jobs itself (PostgREST wrapper queries)
+    AND psa.query NOT ILIKE '%get_active_jobs%';
 $function$;
 
