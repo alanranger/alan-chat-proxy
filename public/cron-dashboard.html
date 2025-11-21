@@ -2742,8 +2742,9 @@
           if (logs && logs.length > 0) {
             // Build recent_runs array for sparkline
             const recentRuns = logs.slice(0, 14).map(log => {
-              // Check for success - status can be 'succeeded', 'success', or 'failed'
-              const isSuccess = log.status === 'succeeded' || log.status === 'success' || (log.status !== 'failed' && log.status !== 'error');
+              // Check for success - explicitly check for failed/error status
+              const isFailed = log.status === 'failed' || log.status === 'error';
+              const isSuccess = !isFailed && (log.status === 'succeeded' || log.status === 'success');
               return {
                 date: log.start_time || log.end_time || new Date().toISOString(),
                 success: isSuccess,
