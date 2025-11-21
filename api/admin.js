@@ -1370,105 +1370,31 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'missing jobid' });
       }
 
-      // Get logs from both sources - use RPC for cron since direct schema access may not work
-      const [publicResult, cronRpcResult] = await Promise.all([
-        supabase
-          .from('job_run_details')
-          .select('id, jobid, status, command, return_message, start_time, end_time, created_at')
-          .eq('jobid', jobid)
-          .order('start_time', { ascending: false })
-          .limit(50),
-        // Use RPC function that already combines both sources, then filter for this job
-        supabase.rpc('get_job_last_runs', { p_job_ids: [jobid] })
-      ]);
+      // Use RPC function that combines both sources with run_source marked
+      const { data: logs, error: rpcError } = await supabase.rpc('get_job_logs_with_source', { 
+        p_jobid: jobid 
+      });
 
-      const publicLogs = publicResult.data || [];
-      let cronLogs = [];
-      
-      // Get cron logs from RPC result
-      if (cronRpcResult.data && Array.isArray(cronRpcResult.data)) {
-        // Also try direct query as fallback
-        const cronDirectResult = await supabaseCron
-          .from('job_run_details')
-          .select('runid, jobid, status, command, return_message, start_time, end_time, created_at')
-          .eq('jobid', jobid)
-          .order('start_time', { ascending: false })
-          .limit(50);
-        
-        if (!cronDirectResult.error && cronDirectResult.data) {
-          cronLogs = cronDirectResult.data;
-          console.log(`[DEBUG] Got ${cronLogs.length} cron logs via direct query for job ${jobid}`);
-        } else {
-          console.error(`[DEBUG] Direct cron query failed:`, cronDirectResult.error);
-          // Fallback: use RPC result and determine source by checking which table it's in
-          const allRuns = cronRpcResult.data;
-          // Check which runs are in cron by querying cron table directly
-          const cronStartTimes = new Set();
-          try {
-            const { data: cronCheck } = await supabaseCron
-              .from('job_run_details')
-              .select('start_time')
-              .eq('jobid', jobid);
-            if (cronCheck) {
-              cronCheck.forEach(r => cronStartTimes.add(r.start_time));
-            }
-          } catch (e) {
-            console.error(`[DEBUG] Could not check cron start times:`, e);
-          }
-          
-          // Mark runs from RPC as cron if they match cron start times
-          cronLogs = allRuns.filter(run => cronStartTimes.has(run.start_time));
-          console.log(`[DEBUG] Got ${cronLogs.length} cron logs via RPC+filter for job ${jobid}`);
-        }
+      if (rpcError) {
+        console.error(`[DEBUG] Error getting logs for job ${jobid}:`, rpcError);
+        return res.status(500).json({ error: 'Failed to fetch logs', details: rpcError.message });
       }
 
-      if (publicResult.error) {
-        console.error(`[DEBUG] Error getting public logs for job ${jobid}:`, publicResult.error);
+      if (!Array.isArray(logs) || logs.length === 0) {
+        return res.status(200).json({ logs: [] });
       }
 
-      // Mark source and normalize format
-      const markedPublicLogs = publicLogs.map(log => ({
+      // Add duration_ms for each log
+      const logsWithDuration = logs.map(log => ({
         ...log,
-        run_source: 'manual',
         duration_ms: log.end_time && log.start_time 
           ? new Date(log.end_time) - new Date(log.start_time)
           : null
       }));
 
-      const markedCronLogs = cronLogs.map(log => ({
-        ...log,
-        id: log.runid || log.id, // Map runid to id for consistency
-        run_source: 'cron',
-        duration_ms: log.end_time && log.start_time 
-          ? new Date(log.end_time) - new Date(log.start_time)
-          : null
-      }));
+      console.log(`[DEBUG] Got ${logsWithDuration.length} logs for job ${jobid} (${logsWithDuration.filter(l => l.run_source === 'cron').length} cron, ${logsWithDuration.filter(l => l.run_source === 'manual').length} manual)`);
       
-      // Combine and sort by time
-      const combinedLogs = [
-        ...markedPublicLogs,
-        ...markedCronLogs,
-      ].sort((a, b) => {
-        const timeA = new Date(a.start_time || a.end_time || 0).getTime();
-        const timeB = new Date(b.start_time || b.end_time || 0).getTime();
-        return timeB - timeA;
-      }).slice(0, 50);
-
-      console.log(`[DEBUG] Combined logs for job ${jobid}: ${combinedLogs.length} total (${markedPublicLogs.length} manual, ${markedCronLogs.length} cron)`);
-      if (combinedLogs.length > 0) {
-        console.log(`[DEBUG] Sample combined logs:`, combinedLogs.slice(0, 3).map(l => ({ 
-          status: l.status, 
-          start_time: l.start_time, 
-          run_source: l.run_source,
-          has_id: !!l.id 
-        })));
-      }
-
-      if (!Array.isArray(publicLogs) && cronLogs.length === 0) {
-        return res.status(500).json({ error: 'db_error', detail: 'Unable to fetch job run history.' });
-      }
-
-      return res.status(200).json({ logs: combinedLogs });
+      return res.status(200).json({ logs: logsWithDuration });
     }
 
     // Update Cron Job Schedule (POST /api/admin?action=update_cron_schedule)
