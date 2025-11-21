@@ -1950,6 +1950,7 @@
         jobid: apiJob.jobid,
         name: apiJob.jobname || apiJob.name || `Job ${apiJob.jobid}`,
         last_run: apiJob.last_run || null,
+        last_run_status: apiJob.last_run_status || null, // Preserve last_run_status from API
         total_runs: apiJob.total_runs || 0,
         success_count: apiJob.success_count || 0,
         failed_count: apiJob.failed_count || 0,
@@ -2306,6 +2307,12 @@
         // Normalize jobs to JobSummary shape
         const rawJobs = data.jobs || [];
         const jobs = rawJobs.map(normalizeJob);
+        
+        // Debug: Log job 26 details to verify last_run_status is present
+        const job26 = jobs.find(j => j.jobid === 26);
+        if (job26) {
+          addDebugLog(`Job 26 details: last_run=${job26.last_run}, last_run_status=${job26.last_run_status}, failed_count=${job26.failed_count}, success_count=${job26.success_count}`, 'info');
+        }
         
         addDebugLog(`Loaded ${jobs.length} jobs from API`, 'success', { jobCount: jobs.length, jobIds: jobs.map(j => j.jobid) });
         
@@ -3890,12 +3897,13 @@
         // If job has issues, fall through to standard health checks below
       }
 
-      // Error conditions
+      // Error conditions - check these FIRST before warnings
       if (job.failed_count > 0 && job.success_count === 0) {
         return { level: 'error', label: 'Error', reason: 'Always fails - no successful runs' };
       }
       // Show error if the most recent run failed (check last_run_status if available)
       // This catches cases where a recent cron job failure occurred, even if there are previous successes
+      // This MUST be checked before the generic "failed_count > 0" warning below
       if (job.last_run_status && (job.last_run_status.toLowerCase() === 'failed' || job.last_run_status.toLowerCase() === 'error')) {
         const lastRunDate = new Date(job.last_run);
         const minutesSinceLastRun = Math.floor((now - lastRunDate) / (1000 * 60));
@@ -3909,9 +3917,9 @@
       if (job.total_runs === 0 && job.status === 'active') {
         return { level: 'warning', label: 'Warning', reason: 'Never run - job is active but has no execution history' };
       }
-      // Show warning if there are ANY failures (even if less than successes)
-      // This ensures recent failures are always visible, not just when failures > successes
-      if (job.failed_count > 0) {
+      // Show warning if there are ANY failures (but only if last run didn't fail - that's already handled above)
+      // This ensures old failures are still visible, but recent failures show as errors
+      if (job.failed_count > 0 && (!job.last_run_status || (job.last_run_status.toLowerCase() !== 'failed' && job.last_run_status.toLowerCase() !== 'error'))) {
         const failureRate = job.total_runs > 0 ? ((job.failed_count / job.total_runs) * 100).toFixed(1) : 0;
         return { level: 'warning', label: 'Warning', reason: 'Some failures detected - ' + job.failed_count + ' failed, ' + job.success_count + ' succeeded (' + failureRate + '% failure rate)' };
       }
