@@ -355,7 +355,7 @@ const JOB_PROGRESS_DEFAULTS = {
   29: { totalSteps: 1, message: 'Queued - cleaning old chat data' },
   30: { totalSteps: 1, message: 'Queued - cleaning old debug logs' },
   31: { totalSteps: 3, message: 'Queued - cleaning orphaned records' },
-  32: { totalSteps: 1, message: 'Queued - running database maintenance' },
+  32: { totalSteps: 20, message: 'Queued - running database maintenance' },
   33: { totalSteps: 1, message: 'Queued - checking URL health' },
   34: { totalSteps: 1, message: 'Queued - validating embeddings' },
   35: { totalSteps: 1, message: 'Queued - checking content freshness' },
@@ -1626,6 +1626,19 @@ export default async function handler(req, res) {
               .eq('id', testRun.baseline_test_id)
               .single();
             if (!error) baselineResult = data;
+          } else {
+            // Test run exists but baseline_test_id is NULL - get latest baseline
+            const { data: baselineTests, error: baselineError } = await supabase
+              .from('regression_test_results')
+              .select('*')
+              .eq('job_id', jobid)
+              .eq('test_phase', 'before')
+              .order('test_timestamp', { ascending: false })
+              .limit(1);
+            
+            if (!baselineError && baselineTests && baselineTests.length > 0) {
+              baselineResult = baselineTests[0];
+            }
           }
 
           if (testRun.after_test_id) {
@@ -1635,13 +1648,28 @@ export default async function handler(req, res) {
               .eq('id', testRun.after_test_id)
               .single();
             if (!error) afterResult = data;
+          } else {
+            // Test run exists but after_test_id is NULL - get latest after test
+            const { data: afterTests, error: afterError } = await supabase
+              .from('regression_test_results')
+              .select('*')
+              .eq('job_id', jobid)
+              .eq('test_phase', 'after')
+              .order('test_timestamp', { ascending: false })
+              .limit(1);
+            
+            if (!afterError && afterTests && afterTests.length > 0) {
+              afterResult = afterTests[0];
+            }
           }
 
-          // Get comparison if both exist
-          if (testRun.baseline_test_id && testRun.after_test_id) {
+          // Get comparison if both exist (use actual IDs if available, otherwise use the results we found)
+          const baselineIdForCompare = testRun.baseline_test_id || baselineResult?.id;
+          const afterIdForCompare = testRun.after_test_id || afterResult?.id;
+          if (baselineIdForCompare && afterIdForCompare) {
             const { data, error } = await supabase.rpc('compare_regression_test_results_detailed', {
-              baseline_test_id: testRun.baseline_test_id,
-              current_test_id: testRun.after_test_id
+              baseline_test_id: baselineIdForCompare,
+              current_test_id: afterIdForCompare
             });
             if (!error && data && data.length > 0) {
               comparison = data[0];
@@ -2015,12 +2043,44 @@ export default async function handler(req, res) {
                 
                 const results = { success: [], errors: [] };
                 
-                for (const table of tables) {
+                // Update progress: starting VACUUM
+                try {
+                  await supabase.from('job_progress').update({
+                    step: 1,
+                    total_steps: tables.length + 2,
+                    progress: 0,
+                    message: `Starting VACUUM on ${tables.length} tables...`,
+                    updated_at: new Date().toISOString()
+                  }).eq('jobid', jobIdInt);
+                } catch (progressErr) {
+                  console.warn('[admin] Failed to update progress:', progressErr);
+                }
+                
+                for (let i = 0; i < tables.length; i++) {
+                  const table = tables[i];
                   try {
                     const escapedTable = `"${table.replace(/"/g, '""')}"`;
-                    await pgClient.query(`VACUUM ANALYZE ${escapedTable}`);
+                    
+                    // Use VACUUM with VERBOSE to get more info, and process_toast to clean up toast tables
+                    // VACUUM (VERBOSE, ANALYZE, PROCESS_TOAST) is more aggressive
+                    await pgClient.query(`VACUUM (VERBOSE, ANALYZE, PROCESS_TOAST) ${escapedTable}`);
                     results.success.push(table);
-                    console.log(`[admin] ✓ VACUUM completed for ${table}`);
+                    
+                    // Update progress
+                    const progressPct = Math.round(((i + 1) / tables.length) * 90); // Reserve 10% for stats
+                    try {
+                      await supabase.from('job_progress').update({
+                        step: i + 2,
+                        total_steps: tables.length + 2,
+                        progress: progressPct,
+                        message: `Vacuumed ${i + 1}/${tables.length} tables: ${table}`,
+                        updated_at: new Date().toISOString()
+                      }).eq('jobid', jobIdInt);
+                    } catch (progressErr) {
+                      // Ignore progress update errors
+                    }
+                    
+                    console.log(`[admin] ✓ VACUUM completed for ${table} (${i + 1}/${tables.length})`);
                   } catch (err) {
                     const errorMsg = `Failed to vacuum ${table}: ${err.message}`;
                     results.errors.push(errorMsg);
@@ -2039,9 +2099,22 @@ export default async function handler(req, res) {
                   console.warn(`[admin] VACUUM errors:`, results.errors);
                 }
                 
-                // Wait a moment for stats to update after VACUUM
-                console.log(`[admin] Waiting 2 seconds for stats to update after VACUUM...`);
-                await new Promise(resolve => setTimeout(resolve, 2000));
+                // Update progress: waiting for stats
+                try {
+                  await supabase.from('job_progress').update({
+                    step: tables.length + 1,
+                    total_steps: tables.length + 2,
+                    progress: 95,
+                    message: 'Waiting for statistics to update...',
+                    updated_at: new Date().toISOString()
+                  }).eq('jobid', jobIdInt);
+                } catch (progressErr) {
+                  console.warn('[admin] Failed to update progress:', progressErr);
+                }
+                
+                // Wait longer for stats to update after VACUUM (PostgreSQL needs time to update pg_stat)
+                console.log(`[admin] Waiting 3 seconds for stats to update after VACUUM...`);
+                await new Promise(resolve => setTimeout(resolve, 3000));
                 console.log(`[admin] VACUUM process completed successfully`);
               } catch (vacuumErr) {
                 console.error(`[admin] Failed to run VACUUM:`, {
@@ -2169,10 +2242,25 @@ export default async function handler(req, res) {
                   if (rpcError) {
                     error = rpcError.message;
                   } else {
-                    if (isDatabaseMaintenanceJob(jobid) && functionName.includes('run_database_maintenance')) {
+                    if (isDatabaseMaintenanceJob(jobIdInt) && functionName.includes('run_database_maintenance')) {
                       const payload = buildDatabaseMaintenancePayload(rpcData);
                       if (payload) {
                         rpcData = payload;
+                      }
+                      
+                      // Update progress: stats collection complete
+                      // Get table count from the payload if available
+                      const tableCount = payload?.tables?.length || 14; // Default to 14 if not available
+                      try {
+                        await supabase.from('job_progress').update({
+                          step: tableCount + 2,
+                          total_steps: tableCount + 2,
+                          progress: 100,
+                          message: 'Database maintenance completed',
+                          updated_at: new Date().toISOString()
+                        }).eq('jobid', jobIdInt);
+                      } catch (progressErr) {
+                        console.warn('[admin] Failed to update final progress:', progressErr);
                       }
                     }
                     executionResult = rpcData;
