@@ -110,44 +110,80 @@ export default async function handler(req, res) {
 
       case 'questions':
         {
-          // Get top questions - increased limit to show all questions
-          const { data: topQuestions, error: questionsError } = await supa
-            .from('chat_question_frequency')
-            .select('*')
-            .order('frequency', { ascending: false })
-            .limit(1000);
-
-          if (questionsError) throw new Error(`Top questions failed: ${questionsError.message}`);
-
-          // Get recent questions with page context to surface representative page per question
-          const { data: recentQuestions, error: recentError } = await supa
+          // Calculate question frequency on-demand from chat_interactions
+          // (chat_question_frequency table was dropped as redundant)
+          const { data: allInteractions, error: interactionsError } = await supa
             .from('chat_interactions')
-            .select('question, created_at, page_context')
+            .select('question, confidence, created_at, page_context')
+            .not('question', 'is', null)
+            .not('answer', 'is', null)  // Only count answered questions
             .order('created_at', { ascending: false })
-            .limit(50);
+            .limit(10000);  // Limit to recent interactions for performance
 
-          if (recentError) throw new Error(`Recent questions failed: ${recentError.message}`);
+          if (interactionsError) throw new Error(`Top questions failed: ${interactionsError.message}`);
 
-          // Build a quick map of last page per question
-          const lastPageByQuestion = {};
-          (recentQuestions || []).forEach((r) => {
-            if (!lastPageByQuestion[r.question]) {
+          // Aggregate question frequency and calculate averages
+          const questionStats = {};
+          (allInteractions || []).forEach((r) => {
+            const q = r.question?.trim();
+            if (!q) return;
+
+            if (!questionStats[q]) {
+              questionStats[q] = {
+                question_text: q,
+                frequency: 0,
+                confidence_sum: 0,
+                confidence_count: 0,
+                last_seen: r.created_at,
+                last_page: null
+              };
+            }
+
+            questionStats[q].frequency += 1;
+            if (typeof r.confidence === 'number') {
+              questionStats[q].confidence_sum += r.confidence;
+              questionStats[q].confidence_count += 1;
+            }
+            
+            // Update last_seen if this is more recent
+            if (new Date(r.created_at) > new Date(questionStats[q].last_seen)) {
+              questionStats[q].last_seen = r.created_at;
+              // Update last_page from most recent interaction
               const pc = r.page_context || {};
-              lastPageByQuestion[r.question] = pc.pathname || pc.url || null;
+              questionStats[q].last_page = pc.pathname || pc.url || null;
+            } else if (!questionStats[q].last_page) {
+              // Fallback: use page from any interaction if we don't have one yet
+              const pc = r.page_context || {};
+              questionStats[q].last_page = pc.pathname || pc.url || null;
             }
           });
 
-          // Attach last_page to topQuestions if available
-          const topWithPage = (topQuestions || []).map((q) => ({
-            ...q,
-            last_page: lastPageByQuestion[q.question_text] || null
-          }));
+          // Convert to array and calculate avg_confidence
+          const topQuestions = Object.values(questionStats)
+            .map(q => ({
+              question_text: q.question_text,
+              frequency: q.frequency,
+              avg_confidence: q.confidence_count > 0 ? q.confidence_sum / q.confidence_count : null,
+              last_seen: q.last_seen,
+              last_page: q.last_page
+            }))
+            .sort((a, b) => b.frequency - a.frequency)
+            .slice(0, 1000);  // Top 1000 by frequency
+
+          // Get recent questions for the recentQuestions array
+          const recentQuestions = (allInteractions || [])
+            .slice(0, 50)
+            .map(r => ({
+              question: r.question,
+              created_at: r.created_at,
+              page_context: r.page_context
+            }));
 
           return sendJSON(res, 200, {
             ok: true,
             questions: {
-              topQuestions: topWithPage,
-              recentQuestions: recentQuestions || []
+              topQuestions: topQuestions,
+              recentQuestions: recentQuestions
             }
           });
         }
