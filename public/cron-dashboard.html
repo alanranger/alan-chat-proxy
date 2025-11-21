@@ -2733,9 +2733,10 @@
       // Fetch run history and render sparklines for each job
       for (const job of jobs) {
         try {
-          const logRes = await fetch(`${API_BASE}/api/admin?action=get_job_logs&jobid=${job.jobid}`, {
-            headers: buildAuthHeaders()
-          });
+        const logRes = await fetch(`${API_BASE}/api/admin?action=get_job_logs&jobid=${job.jobid}&_t=${Date.now()}`, {
+          headers: buildAuthHeaders(),
+          cache: 'no-store'
+        });
           const { logs } = await logRes.json();
           
           if (logs && logs.length > 0) {
@@ -4371,8 +4372,9 @@
       jobLogsCache.set(jobid, { loading: true, error: null, entries: null });
       
       try {
-        const response = await fetch(`${API_BASE}/api/admin?action=get_job_logs&jobid=${jobid}`, {
-          headers: buildAuthHeaders()
+        const response = await fetch(`${API_BASE}/api/admin?action=get_job_logs&jobid=${jobid}&_t=${Date.now()}`, {
+          headers: buildAuthHeaders(),
+          cache: 'no-store'
         });
         
         const { logs } = await response.json();
@@ -4415,10 +4417,12 @@
         const duration = log.end_time 
           ? ((new Date(log.end_time) - new Date(log.start_time)) / 1000).toFixed(2) + 's'
           : 'N/A';
-        const isSuccess = log.status === 'succeeded' || log.status === 'success';
+        // Check for success - explicitly check for failed/error status
+        const isSuccess = log.status === 'succeeded' || log.status === 'success' || 
+                         (log.status !== 'failed' && log.status !== 'error');
         const statusClass = isSuccess ? 'status-success' : 'status-failed';
-        const statusText = isSuccess ? 'Success' : 'Fail';
-        const message = log.return_message || 'No message';
+        const statusText = isSuccess ? 'Success' : 'Failed';
+        const message = log.return_message || (isSuccess ? 'No message' : 'Error occurred');
         const encodedMessage = encodeURIComponent(message);
         const safeMessage = escapeHtml(message);
         
