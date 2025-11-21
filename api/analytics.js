@@ -326,23 +326,55 @@ export default async function handler(req, res) {
 
       case 'insights':
         {
-          // Get insights and recommendations
-          const { data: lowConfidence, error: lowConfError } = await supa
-            .from('chat_question_frequency')
-            .select('*')
-            .lt('avg_confidence', 0.5)
-            .order('frequency', { ascending: false })
-            .limit(10);
+          // Calculate question frequency on-demand from chat_interactions
+          const { data: allInteractions, error: interactionsError } = await supa
+            .from('chat_interactions')
+            .select('question, confidence')
+            .not('question', 'is', null)
+            .not('answer', 'is', null);
 
-          if (lowConfError) throw new Error(`Low confidence failed: ${lowConfError.message}`);
+          if (interactionsError) throw new Error(`Insights data failed: ${interactionsError.message}`);
 
-          const { data: frequentQuestions, error: freqError } = await supa
-            .from('chat_question_frequency')
-            .select('*')
-            .order('frequency', { ascending: false })
-            .limit(10);
+          // Aggregate question frequency and confidence
+          const questionStats = {};
+          (allInteractions || []).forEach((r) => {
+            const q = r.question?.trim();
+            if (!q) return;
 
-          if (freqError) throw new Error(`Frequent questions failed: ${freqError.message}`);
+            if (!questionStats[q]) {
+              questionStats[q] = {
+                question_text: q,
+                frequency: 0,
+                confidence_sum: 0,
+                confidence_count: 0
+              };
+            }
+
+            questionStats[q].frequency += 1;
+            if (typeof r.confidence === 'number') {
+              questionStats[q].confidence_sum += r.confidence;
+              questionStats[q].confidence_count += 1;
+            }
+          });
+
+          // Convert to array and calculate avg_confidence
+          const allQuestions = Object.values(questionStats)
+            .map(q => ({
+              question_text: q.question_text,
+              frequency: q.frequency,
+              avg_confidence: q.confidence_count > 0 ? q.confidence_sum / q.confidence_count : null
+            }));
+
+          // Get low confidence questions
+          const lowConfidence = allQuestions
+            .filter(q => q.avg_confidence !== null && q.avg_confidence < 0.5)
+            .sort((a, b) => b.frequency - a.frequency)
+            .slice(0, 10);
+
+          // Get frequent questions
+          const frequentQuestions = allQuestions
+            .sort((a, b) => b.frequency - a.frequency)
+            .slice(0, 10);
 
           // Get feedback data
           const { data: feedbackData, error: feedbackError } = await supa
@@ -461,22 +493,18 @@ export default async function handler(req, res) {
           // Build Supabase query filters
           let interactionsQuery = supa.from('chat_interactions').select('*');
           let sessionsQuery = supa.from('chat_sessions').select('*');
-          let questionsQuery = supa.from('chat_question_frequency').select('*');
-          
+          // Questions are calculated on-demand, so we'll filter interactions instead
           // Apply filters
           if (startDate) {
             interactionsQuery = interactionsQuery.gte('created_at', startDate);
             sessionsQuery = sessionsQuery.gte('started_at', startDate);
-            questionsQuery = questionsQuery.gte('last_seen', startDate);
           }
           if (endDate) {
             interactionsQuery = interactionsQuery.lte('created_at', endDate + ' 23:59:59');
             sessionsQuery = sessionsQuery.lte('started_at', endDate + ' 23:59:59');
-            questionsQuery = questionsQuery.lte('last_seen', endDate + ' 23:59:59');
           }
           if (questionText) {
             interactionsQuery = interactionsQuery.ilike('question', `%${questionText}%`);
-            questionsQuery = questionsQuery.ilike('question_text', `%${questionText}%`);
           }
           if (sessionId) {
             interactionsQuery = interactionsQuery.ilike('session_id', `%${sessionId}%`);
@@ -505,11 +533,26 @@ export default async function handler(req, res) {
           
           if (sessionsError) throw new Error(`Preview sessions failed: ${sessionsError.message}`);
           
-          const { data: questions, error: questionsError } = await questionsQuery
-            .order('last_seen', { ascending: false })
-            .limit(100);
-          
-          if (questionsError) throw new Error(`Preview questions failed: ${questionsError.message}`);
+          // Calculate questions on-demand from filtered interactions
+          const questionStats = {};
+          (interactions || []).forEach((r) => {
+            const q = r.question?.trim();
+            if (!q) return;
+            if (!questionStats[q]) {
+              questionStats[q] = {
+                question_text: q,
+                frequency: 0,
+                last_seen: r.created_at
+              };
+            }
+            questionStats[q].frequency += 1;
+            if (new Date(r.created_at) > new Date(questionStats[q].last_seen)) {
+              questionStats[q].last_seen = r.created_at;
+            }
+          });
+          const questions = Object.values(questionStats)
+            .sort((a, b) => new Date(b.last_seen) - new Date(a.last_seen))
+            .slice(0, 100);
           
           return sendJSON(res, 200, {
             ok: true,
@@ -595,8 +638,8 @@ export default async function handler(req, res) {
           const { error: sessionsError } = await supa.from('chat_sessions').delete().neq('session_id', 'dummy');
           if (sessionsError) throw new Error(`Clear sessions failed: ${sessionsError.message}`);
           
-          const { error: questionsError } = await supa.from('chat_question_frequency').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-          if (questionsError) throw new Error(`Clear questions failed: ${questionsError.message}`);
+          // Questions are calculated on-demand from chat_interactions, so no separate table to clear
+          // Questions will be cleared when interactions are cleared
           
           return sendJSON(res, 200, {
             ok: true,
