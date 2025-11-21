@@ -3093,12 +3093,26 @@
           ? '<span style="background: #28a745; color: white; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: bold; margin-left: 8px;">🔒 FIXED</span>'
           : '<span style="background: #ffc107; color: #000; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: bold; margin-left: 8px;">⚠️ NOT FIXED</span>';
         
+        const baselineDate = new Date(baseline.test_timestamp);
+        const formattedDate = baselineDate.toLocaleDateString('en-GB', { 
+          day: '2-digit', 
+          month: '2-digit', 
+          year: 'numeric' 
+        });
+        const formattedTime = baselineDate.toLocaleTimeString('en-GB', { 
+          hour: '2-digit', 
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: false
+        });
+        
         return `
-          <div class="regression-test-section ${severityClass}">
+          <div class="regression-test-section ${severityClass}" ${isFixed ? 'style="background: #d4edda; border: 2px solid #28a745;"' : ''}>
             ${mirrorLabel}
-            <div style="font-weight: bold; margin-bottom: 8px; display: flex; align-items: center;">
-              ${comparison ? `${severityIcon} Regression Test: ${detected ? severity.toUpperCase() + ' REGRESSION DETECTED' : 'No Regression'}` : '📊 Baseline vs Latest Run'} ${fixedBadge}
+            <div style="font-weight: bold; margin-bottom: 8px; display: flex; align-items: center; ${isFixed ? 'color: #155724;' : ''}">
+              ${isFixed ? '🔒' : ''} ${comparison ? `${severityIcon} Regression Test: ${detected ? severity.toUpperCase() + ' REGRESSION DETECTED' : 'No Regression'}` : '📊 Baseline vs Latest Run'} ${fixedBadge}
             </div>
+            ${isFixed ? `<div style="margin-bottom: 8px; font-size: 12px; color: #155724; font-weight: 600;">Master Baseline Created: ${formattedDate} at ${formattedTime} (Test ID: #${baseline.id})</div>` : ''}
             <div class="regression-summary">
               <div class="regression-stat">
                 <div class="regression-stat-label">Baseline Success Rate</div>
@@ -3144,7 +3158,7 @@
                 ? `<button class="btn btn-warning btn-small" onclick="unsetFixedBaseline(${baseline.job_id}, ${baseline.id})" title="Unset this as the fixed baseline">🔓 Unset Fixed Baseline</button>`
                 : `<button class="btn btn-success btn-small" onclick="setFixedBaseline(${baseline.job_id}, ${baseline.id})" title="Set this as the fixed baseline to prevent regression creep">🔒 Set as Fixed Baseline</button>`}
             </div>
-            ${!isFixed ? `<div style="margin-top: 8px; font-size: 11px; color: #856404;">⚠️ This baseline is not fixed. Set it as fixed to prevent regression creep.</div>` : ''}
+            ${isFixed ? `<div style="margin-top: 8px; font-size: 11px; color: #155724; background: #c3e6cb; padding: 8px; border-radius: 4px; border: 1px solid #28a745;">🔒 <strong>Master Fixed Baseline</strong> (created ${formattedDate} at ${formattedTime}, Test ID: #${baseline.id}). All comparisons use this baseline to prevent regression creep.</div>` : `<div style="margin-top: 8px; font-size: 11px; color: #856404;">⚠️ This baseline is not fixed. Set it as fixed to prevent regression creep.</div>`}
           </div>
         `;
       }
