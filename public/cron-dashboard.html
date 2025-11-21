@@ -1951,6 +1951,7 @@
         name: apiJob.jobname || apiJob.name || `Job ${apiJob.jobid}`,
         last_run: apiJob.last_run || null,
         last_run_status: apiJob.last_run_status || null, // Preserve last_run_status from API
+        last_run_source: apiJob.last_run_source || null, // Preserve last_run_source from API (cron/manual)
         total_runs: apiJob.total_runs || 0,
         success_count: apiJob.success_count || 0,
         failed_count: apiJob.failed_count || 0,
