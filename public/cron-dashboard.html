@@ -4024,10 +4024,16 @@
       
       // Load regression test data for risky jobs (use pre-loaded data)
       let regressionSummary = '';
+      let hasFixedBaseline = false;
       if (riskyJobs.includes(jobIdNumber)) {
         const regressionSourceId = getRegressionSourceJobId(jobIdNumber);
         const regressionData = regressionTestData[regressionSourceId] || null;
         const mirroredFrom = regressionSourceId !== jobIdNumber ? regressionSourceId : null;
+        
+        // Check if there's a fixed baseline (either in baseline data or fixed_baseline_info)
+        hasFixedBaseline = regressionData?.baseline?.is_fixed_baseline === true || 
+                          regressionData?.fixed_baseline_info !== null;
+        
         regressionSummary = renderRegressionTestSummary(regressionData, jobIdNumber, mirroredFrom);
       }
       
