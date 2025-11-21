@@ -1688,13 +1688,13 @@
     }
 
     function mergeProgressWithActiveJob(jobid, prog) {
-      // If we have actual progress data, use it (even if job is no longer active)
-      if (prog && prog.progress !== undefined) {
-        // If progress is 100%, job is complete - stop using fallback
+      // ALWAYS prioritize actual progress data from API over any fallback
+      if (prog && prog.progress !== undefined && prog.progress !== null) {
+        // If progress is 100%, job is complete
         if (prog.progress >= 100) {
           return prog;
         }
-        // If we have progress data, use it
+        // If we have actual progress data, use it (even if job is no longer active)
         return prog;
       }
       
@@ -1704,11 +1704,9 @@
         return hintJobId === jobid;
       });
       if (!active) {
-        // Job no longer in active list - if we have progress data, use it
-        if (prog && prog.progress !== undefined) {
-          return prog;
-        }
-        // Otherwise, check if we have a start time for fallback
+        // Job no longer in active list
+        // If API returned null/undefined, it means no progress record exists
+        // Check if we have a start time for fallback
         const startTime = activeJobStartTimes.get(jobid);
         if (startTime) {
           const elapsed = (Date.now() - startTime) / 1000;
@@ -1827,9 +1825,6 @@
           msg.textContent = prog.message || `Progress: ${prog.progress}%`;
         }
         
-        // Continue polling if not complete
-        progressRetryState.set(jobid, { attempts: 0 });
-        
         // If progress is 100%, job is complete - stop polling and refresh
         if (prog.progress >= 100) {
           addDebugLog(`Job ${jobid} completed (100%)`, 'success');
@@ -1840,7 +1835,27 @@
           return;
         }
         
+        // If using fallback and job is no longer active, check if it actually completed
+        // Stop polling after a few attempts if job is no longer active
+        if (prog.activeFallback && prog.message && prog.message.includes('may have completed')) {
+          // Job is no longer in activeJobs - check actual progress one more time
+          // If still no progress data after 3 attempts, assume it completed and stop polling
+          const fallbackAttempts = progressRetryState.get(jobid)?.fallbackAttempts || 0;
+          if (fallbackAttempts >= 3) {
+            addDebugLog(`Job ${jobid} no longer active after ${fallbackAttempts} checks, assuming completed`, 'info');
+            activeJobStartTimes.delete(jobid);
+            progressRetryState.delete(jobid);
+            setTimeout(() => loadJobs(), 1000);
+            return;
+          }
+          progressRetryState.set(jobid, { attempts: 0, fallbackAttempts: fallbackAttempts + 1 });
+          // Check again in 5 seconds
+          setTimeout(() => pollJobProgress(jobid, attempt + 1), 5000);
+          return;
+        }
+        
         // Continue polling if not complete
+        progressRetryState.set(jobid, { attempts: 0 });
         if (prog.progress < 100 || (prog.message && prog.message.toLowerCase().includes('waiting'))) {
           const delay = prog.message && prog.message.toLowerCase().includes('waiting') ? 5000 : 2000;
           setTimeout(() => pollJobProgress(jobid, attempt + 1), delay);
