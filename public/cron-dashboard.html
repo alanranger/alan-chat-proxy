@@ -2740,10 +2740,16 @@
           
           if (logs && logs.length > 0) {
             // Build recent_runs array for sparkline
-            const recentRuns = logs.slice(0, 14).map(log => ({
-              date: log.start_time || log.end_time || new Date().toISOString(),
-              success: log.status === 'succeeded' || log.status === 'success'
-            }));
+            const recentRuns = logs.slice(0, 14).map(log => {
+              // Check for success - status can be 'succeeded', 'success', or 'failed'
+              const isSuccess = log.status === 'succeeded' || log.status === 'success' || (log.status !== 'failed' && log.status !== 'error');
+              return {
+                date: log.start_time || log.end_time || new Date().toISOString(),
+                success: isSuccess,
+                status: log.status,
+                return_message: log.return_message || null
+              };
+            });
             
             // Update job with recent_runs
             job.recent_runs = recentRuns;
@@ -3907,7 +3913,37 @@
       if (job.last_run_status && (job.last_run_status.toLowerCase() === 'failed' || job.last_run_status.toLowerCase() === 'error')) {
         const lastRunDate = new Date(job.last_run);
         const minutesSinceLastRun = Math.floor((now - lastRunDate) / (1000 * 60));
-        return { level: 'error', label: 'Error', reason: 'Last run failed ' + minutesSinceLastRun + ' minutes ago - ' + job.failed_count + ' total failures, ' + job.success_count + ' successes' };
+        const hoursSinceLastRun = Math.floor(minutesSinceLastRun / 60);
+        const daysSinceLastRun = Math.floor(hoursSinceLastRun / 24);
+        
+        // Format date/time for last run
+        const lastRunFormatted = lastRunDate.toLocaleString('en-GB', { 
+          day: '2-digit', 
+          month: '2-digit', 
+          year: 'numeric', 
+          hour: '2-digit', 
+          minute: '2-digit',
+          hour12: false
+        });
+        
+        // Extract error message (first line, truncated if too long)
+        let errorDetail = '';
+        if (job.last_run_error_message) {
+          const errorLines = job.last_run_error_message.split('\n');
+          const firstLine = errorLines[0] || '';
+          // Clean up common error prefixes
+          let cleaned = firstLine.replace(/^ERROR:\s*/i, '').replace(/^CONTEXT:.*$/i, '').trim();
+          errorDetail = cleaned.length > 120 ? cleaned.substring(0, 120) + '...' : cleaned;
+        }
+        
+        // Build detailed error message
+        let reason = `Last run failed on ${lastRunFormatted} (${minutesSinceLastRun} min ago)`;
+        if (errorDetail) {
+          reason += `: ${errorDetail}`;
+        }
+        reason += ` - ${job.failed_count} total failures, ${job.success_count} successes`;
+        
+        return { level: 'error', label: 'Error', reason: reason };
       }
       if (nextRunInMinutes === 0 && lastRun && minutesSinceLastRun > freqMinutes * 3) {
         return { level: 'error', label: 'Error', reason: 'Severely overdue - last run was ' + Math.floor(minutesSinceLastRun / freqMinutes) + 'x scheduled interval ago' };
@@ -3971,8 +4007,15 @@
       svg.setAttribute('height', height);
       svg.style.display = 'block';
       
+      // Store runHistory in container for tooltip access
+      container._runHistory = lastRuns;
+      
       lastRuns.forEach((run, index) => {
-        const isSuccess = run.success === true || run.status === 'succeeded' || run.status === 'success';
+        // Check for success - explicitly check for failed/error status
+        const isSuccess = run.success === true || 
+                         (run.success !== false && run.status && 
+                          run.status !== 'failed' && run.status !== 'error' && 
+                          (run.status === 'succeeded' || run.status === 'success'));
         const barHeight = isSuccess ? 35 : 12;
         const color = isSuccess ? '#5cb85c' : '#d9534f';
         
@@ -4007,11 +4050,29 @@
 
       const bars = svg.querySelectorAll('rect');
 
+      const lastRuns = container._runHistory || [];
+      
       bars.forEach((bar, idx) => {
         const success = bar.getAttribute('fill') === '#5cb85c';
-        const tooltipText = success
-          ? `Run #${idx + 1}: Success`
-          : `Run #${idx + 1}: Failed`;
+        const runData = lastRuns[idx];
+        const runDate = runData?.date ? new Date(runData.date).toLocaleString('en-GB', { 
+          day: '2-digit', 
+          month: '2-digit', 
+          year: 'numeric', 
+          hour: '2-digit', 
+          minute: '2-digit',
+          hour12: false
+        }) : 'Unknown date';
+        
+        let tooltipText = success
+          ? `Run #${idx + 1}: Success (${runDate})`
+          : `Run #${idx + 1}: Failed (${runDate})`;
+        
+        // Add error detail if available
+        if (!success && runData?.return_message) {
+          const errorMsg = runData.return_message.split('\n')[0].substring(0, 80);
+          tooltipText += ` - ${errorMsg}${errorMsg.length >= 80 ? '...' : ''}`;
+        }
 
         bar.style.cursor = 'pointer';
         
