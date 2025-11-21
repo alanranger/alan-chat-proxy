@@ -112,27 +112,28 @@ export default async function handler(req, res) {
         {
           // Calculate question frequency on-demand from chat_interactions
           // (chat_question_frequency table was dropped as redundant)
-          // Filter out regression test sessions (sessions starting with "test-" or having exactly 40 interactions)
           const { data: allInteractions, error: interactionsError } = await supa
             .from('chat_interactions')
             .select('question, confidence, created_at, page_context, session_id')
             .not('question', 'is', null)
             .not('answer', 'is', null)  // Only count answered questions
-            .not('session_id', 'like', 'test-%')  // Exclude regression test sessions
             .order('created_at', { ascending: false })
             .limit(10000);  // Limit to recent interactions for performance
 
           if (interactionsError) throw new Error(`Top questions failed: ${interactionsError.message}`);
 
-          // Additional filter: exclude sessions with exactly 40 interactions (regression test pattern)
-          // Get session IDs that have exactly 40 interactions
+          // Filter out regression test sessions:
+          // 1. Sessions starting with "test-" (regression test pattern)
+          // 2. Sessions with exactly 40 interactions (40q regression test pattern)
           const sessionCounts = {};
           (allInteractions || []).forEach(r => {
             sessionCounts[r.session_id] = (sessionCounts[r.session_id] || 0) + 1;
           });
           const regressionTestSessions = new Set(
             Object.entries(sessionCounts)
-              .filter(([_, count]) => count === 40)
+              .filter(([sessionId, count]) => 
+                sessionId.startsWith('test-') || count === 40
+              )
               .map(([sessionId, _]) => sessionId)
           );
 
@@ -346,24 +347,26 @@ export default async function handler(req, res) {
       case 'insights':
         {
           // Calculate question frequency on-demand from chat_interactions
-          // Filter out regression test sessions
           const { data: allInteractions, error: interactionsError } = await supa
             .from('chat_interactions')
             .select('question, confidence, session_id')
             .not('question', 'is', null)
-            .not('answer', 'is', null)
-            .not('session_id', 'like', 'test-%');  // Exclude regression test sessions
+            .not('answer', 'is', null);
 
           if (interactionsError) throw new Error(`Insights data failed: ${interactionsError.message}`);
 
-          // Additional filter: exclude sessions with exactly 40 interactions
+          // Filter out regression test sessions:
+          // 1. Sessions starting with "test-" (regression test pattern)
+          // 2. Sessions with exactly 40 interactions (40q regression test pattern)
           const sessionCounts = {};
           (allInteractions || []).forEach(r => {
             sessionCounts[r.session_id] = (sessionCounts[r.session_id] || 0) + 1;
           });
           const regressionTestSessions = new Set(
             Object.entries(sessionCounts)
-              .filter(([_, count]) => count === 40)
+              .filter(([sessionId, count]) => 
+                sessionId.startsWith('test-') || count === 40
+              )
               .map(([sessionId, _]) => sessionId)
           );
           const filteredInteractions = (allInteractions || []).filter(
