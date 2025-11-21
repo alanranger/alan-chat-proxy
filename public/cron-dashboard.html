@@ -3129,11 +3129,19 @@
               </div>
               <div class="regression-stat">
                 <div class="regression-stat-label">Baseline Confidence</div>
-                <div class="regression-stat-value">${comparison ? (parseFloat(comparisonBaselineStats.avg_confidence || baselineStats.avg_confidence || 0) * 100).toFixed(1) : baselineStats.avg_confidence}%</div>
+                <div class="regression-stat-value">${comparison 
+                  ? (comparisonBaselineStats.avg_confidence !== undefined 
+                      ? (parseFloat(comparisonBaselineStats.avg_confidence) * 100).toFixed(1)
+                      : baselineStats.avg_confidence)
+                  : baselineStats.avg_confidence}%</div>
               </div>
               <div class="regression-stat">
                 <div class="regression-stat-label">Latest Run Confidence</div>
-                <div class="regression-stat-value">${comparison ? (parseFloat(comparisonCurrentStats.avg_confidence || afterStats.avg_confidence || 0) * 100).toFixed(1) : afterStats.avg_confidence}%</div>
+                <div class="regression-stat-value">${comparison 
+                  ? (comparisonCurrentStats.avg_confidence !== undefined 
+                      ? (parseFloat(comparisonCurrentStats.avg_confidence) * 100).toFixed(1)
+                      : afterStats.avg_confidence)
+                  : afterStats.avg_confidence}%</div>
               </div>
               ${comparison ? `
               <div class="regression-stat">
