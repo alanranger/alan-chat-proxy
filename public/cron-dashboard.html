@@ -2272,6 +2272,21 @@
           regressionTestData[jobid] = data;
         });
 
+        // Also load fixed baseline info for all risky jobs to show on tiles
+        const fixedBaselinePromises = Array.from(new Set(
+          jobs
+            .filter(job => riskyJobs.includes(job.jobid))
+            .map(job => getRegressionSourceJobId(job.jobid))
+        )).map(jobid => loadFixedBaselineInfo(jobid).then(info => ({ jobid, info })));
+        
+        const fixedBaselineResults = await Promise.all(fixedBaselinePromises);
+        fixedBaselineResults.forEach(({ jobid, info }) => {
+          if (!regressionTestData[jobid]) {
+            regressionTestData[jobid] = { has_results: false };
+          }
+          regressionTestData[jobid].fixed_baseline_info = info;
+        });
+
         // Load database health data + active jobs before rendering
         await loadDatabaseHealth();
         await loadActiveJobs();
@@ -2947,6 +2962,26 @@
       return null;
     }
 
+    async function loadFixedBaselineInfo(jobid) {
+      if (!riskyJobs.includes(jobid)) return null;
+      
+      try {
+        const response = await fetch(`${API_BASE}/api/admin?action=get_fixed_baseline&jobid=${jobid}`, {
+          headers: buildAuthHeaders()
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          if (data.ok && data.has_fixed_baseline) {
+            return data.fixed_baseline;
+          }
+        }
+      } catch (error) {
+        console.error(`Error loading fixed baseline info for job ${jobid}:`, error);
+      }
+      return null;
+    }
+
     function renderRegressionTestSummary(regressionData, jobId = null, mirroredFromJobId = null) {
       const isMirrored = mirroredFromJobId && mirroredFromJobId !== jobId;
       const mirrorLabel = isMirrored
@@ -3101,6 +3136,51 @@
       }
       
       if (!baseline) {
+        // Check if there's a fixed baseline info even if no recent test run
+        const fixedBaselineInfo = regressionData?.fixed_baseline_info;
+        
+        if (fixedBaselineInfo) {
+          const fixedBaselineStats = {
+            success_rate: fixedBaselineInfo.total_questions > 0 
+              ? ((fixedBaselineInfo.successful_tests / fixedBaselineInfo.total_questions) * 100).toFixed(1)
+              : 0,
+            avg_confidence: (fixedBaselineInfo.avg_confidence * 100).toFixed(1),
+            total_questions: fixedBaselineInfo.total_questions || 40,
+            test_timestamp: fixedBaselineInfo.test_timestamp
+          };
+          
+          return `<div class="regression-test-section">
+            ${mirrorLabel}
+            <div style="font-weight: bold; margin-bottom: 8px; display: flex; align-items: center;">
+              🔒 Master Fixed Baseline (No recent test run)
+            </div>
+            <div class="regression-summary">
+              <div class="regression-stat">
+                <div class="regression-stat-label">Baseline Success Rate</div>
+                <div class="regression-stat-value">${fixedBaselineStats.success_rate}%</div>
+              </div>
+              <div class="regression-stat">
+                <div class="regression-stat-label">Baseline Confidence</div>
+                <div class="regression-stat-value">${fixedBaselineStats.avg_confidence}%</div>
+              </div>
+              <div class="regression-stat">
+                <div class="regression-stat-label">Total Questions</div>
+                <div class="regression-stat-value">${fixedBaselineStats.total_questions}</div>
+              </div>
+              <div class="regression-stat">
+                <div class="regression-stat-label">Created</div>
+                <div class="regression-stat-value" style="font-size: 10px;">${new Date(fixedBaselineStats.test_timestamp).toLocaleDateString()}</div>
+              </div>
+            </div>
+            <div style="margin-top: 8px; font-size: 11px; color: #155724; background: #d4edda; padding: 8px; border-radius: 4px; border: 1px solid #c3e6cb;">
+              🔒 <strong>This is the MASTER FIXED BASELINE.</strong> All future regression tests will compare against this baseline to prevent regression creep. This baseline will never be automatically deleted.
+            </div>
+            <div style="margin-top: 8px; font-size: 11px; color: #856404;">
+              <strong>Status:</strong> Waiting for next job run to compare against this baseline.
+            </div>
+          </div>`;
+        }
+        
         return `<div class="regression-test-section">
           <em>No baseline test found for job ${jobId}.</em>
           <div style="margin-top: 8px; font-size: 11px; color: #856404;">
@@ -3108,6 +3188,8 @@
             If no baseline exists, it means the job hasn't been run with regression testing yet, or the baseline test wasn't created properly.
             <br><br>
             <strong>Note:</strong> The wrapper function <code>refresh_v_products_unified_with_regression_test()</code> should create a baseline test automatically on the first run.
+            <br><br>
+            <strong>After creating a baseline:</strong> You can set it as the "Fixed Baseline" (master baseline) using the button that will appear. The fixed baseline will always be used for comparisons and will never be automatically deleted.
           </div>
         </div>`;
       }
@@ -3964,7 +4046,7 @@
         <div class="job-card" data-job-card-id="${job.jobid}" ${isLinkedJob ? `style="border: 2px solid ${borderColor};"` : ''}>
           <div class="job-header">
             <div>
-              <div class="job-title">${displayName}</div>
+              <div class="job-title">${displayName}${hasFixedBaseline ? ' <span style="background: #28a745; color: white; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: bold; margin-left: 8px;">🔒 MASTER BASELINE</span>' : ''}</div>
               <div class="job-id">ID: ${job.jobid}${isLinkedJob ? ` <span style="color: ${borderColor}; font-size: 16px; font-weight: 700;">↔ Linked to Jobs ${linkedIdsText}</span>` : ''}</div>
             </div>
             <span class="status-badge ${job.status === 'active' ? 'status-active' : 'status-inactive'}">
