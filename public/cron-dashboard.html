@@ -2999,7 +2999,7 @@
         success_rate: baseline.total_questions > 0 
           ? ((baseline.successful_tests / baseline.total_questions) * 100).toFixed(1)
           : 0,
-        avg_confidence: (baseline.avg_confidence * 100).toFixed(1),
+        avg_confidence: (parseFloat(baseline.avg_confidence || 0) * 100).toFixed(1),
         total_questions: baseline.total_questions || 40
       } : null;
       
@@ -3007,15 +3007,16 @@
         success_rate: after.total_questions > 0 
           ? ((after.successful_tests / after.total_questions) * 100).toFixed(1)
           : 0,
-        avg_confidence: (after.avg_confidence * 100).toFixed(1),
+        avg_confidence: (parseFloat(after.avg_confidence || 0) * 100).toFixed(1),
         total_questions: after.total_questions || 40
       } : null;
       
       // Show baseline only if no after test yet
       if (baseline && !after) {
+        // Check if this is the master baseline (is_fixed_baseline = true, shared across all jobs)
         const isFixed = baseline.is_fixed_baseline === true;
         const fixedBadge = isFixed 
-          ? '<span style="background: #28a745; color: white; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: bold; margin-left: 8px;">🔒 FIXED BASELINE</span>'
+          ? '<span style="background: #28a745; color: white; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: bold; margin-left: 8px;">🔒 MASTER BASELINE</span>'
           : '<span style="background: #ffc107; color: #000; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: bold; margin-left: 8px;">⚠️ NOT FIXED</span>';
         
         const baselineDate = new Date(baseline.test_timestamp);
@@ -3037,7 +3038,9 @@
             <div style="font-weight: bold; margin-bottom: 8px; display: flex; align-items: center; ${isFixed ? 'color: #155724;' : ''}">
               ${isFixed ? '🔒' : '📊'} ${isFixed ? 'Master Fixed Baseline' : 'Baseline Test Complete'} ${fixedBadge}
             </div>
-            ${isFixed ? `<div style="margin-bottom: 8px; font-size: 12px; color: #155724; font-weight: 600;">Created: ${formattedDate} at ${formattedTime} (Test ID: #${baseline.id})</div>` : ''}
+            <div style="margin-bottom: 8px; font-size: 12px; color: ${isFixed ? '#155724' : '#666'}; font-weight: 600;">
+              Created: ${formattedDate} at ${formattedTime} (Test ID: #${baseline.id}${baseline.job_id !== jobId ? `, from Job ${baseline.job_id}` : ''})
+            </div>
             <div class="regression-summary">
               <div class="regression-stat">
                 <div class="regression-stat-label">Baseline Success Rate</div>
@@ -3052,19 +3055,19 @@
                 <div class="regression-stat-value">${baselineStats.total_questions}</div>
               </div>
               <div class="regression-stat">
-                <div class="regression-stat-label">${isFixed ? 'Created' : 'Status'}</div>
-                <div class="regression-stat-value" style="font-size: ${isFixed ? '10px' : '12px'};">${isFixed ? `${formattedDate}<br>${formattedTime}` : 'Waiting for job run'}</div>
+                <div class="regression-stat-label">Status</div>
+                <div class="regression-stat-value" style="font-size: 12px;">Waiting for job run</div>
               </div>
             </div>
             <div style="margin-top: 8px; font-size: 11px; color: ${isFixed ? '#155724' : '#856404'}; ${isFixed ? 'background: #c3e6cb; padding: 8px; border-radius: 4px; border: 1px solid #28a745;' : ''}">
               ${isFixed 
-                ? `🔒 <strong>This is the MASTER FIXED BASELINE</strong> (created ${formattedDate} at ${formattedTime}, Test ID: #${baseline.id}). All future comparisons will use this baseline to prevent regression creep. This baseline will never be automatically deleted.`
-                : '⚠️ This baseline is NOT fixed. Each test may use a different baseline, allowing regressions to creep in. Click "Set as Fixed Baseline" to prevent this.'}
+                ? `🔒 <strong>This is the MASTER FIXED BASELINE</strong> (created ${formattedDate} at ${formattedTime}, Test ID: #${baseline.id}). All jobs use this same baseline for comparisons to prevent regression creep. This baseline will never be automatically deleted.`
+                : `⚠️ This baseline is NOT fixed. Set it as the master baseline so ALL jobs use the same reference point. Click "Set as Fixed Baseline" to make this the master baseline for all jobs.`}
             </div>
             <div style="margin-top: 10px;">
               ${isFixed 
-                ? `<button class="btn btn-warning btn-small" onclick="unsetFixedBaseline(${baseline.job_id}, ${baseline.id})" title="Unset this as the fixed baseline">🔓 Unset Fixed Baseline</button>`
-                : `<button class="btn btn-success btn-small" onclick="setFixedBaseline(${baseline.job_id}, ${baseline.id})" title="Set this as the fixed baseline to prevent regression creep">🔒 Set as Fixed Baseline</button>`}
+                ? `<button class="btn btn-warning btn-small" onclick="unsetFixedBaseline(${baseline.job_id}, ${baseline.id})" title="Unset this as the master baseline">🔓 Unset Master Baseline</button>`
+                : `<button class="btn btn-success btn-small" onclick="setFixedBaseline(${baseline.job_id}, ${baseline.id})" title="Set this as the master baseline for ALL jobs">🔒 Set as Master Baseline</button>`}
             </div>
           </div>
         `;
@@ -3090,7 +3093,7 @@
         
         const isFixed = baseline.is_fixed_baseline === true;
         const fixedBadge = isFixed 
-          ? '<span style="background: #28a745; color: white; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: bold; margin-left: 8px;">🔒 FIXED</span>'
+          ? '<span style="background: #28a745; color: white; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: bold; margin-left: 8px;">🔒 MASTER BASELINE</span>'
           : '<span style="background: #ffc107; color: #000; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: bold; margin-left: 8px;">⚠️ NOT FIXED</span>';
         
         const baselineDate = new Date(baseline.test_timestamp);
@@ -3112,7 +3115,9 @@
             <div style="font-weight: bold; margin-bottom: 8px; display: flex; align-items: center; ${isFixed ? 'color: #155724;' : ''}">
               ${isFixed ? '🔒' : ''} ${comparison ? `${severityIcon} Regression Test: ${detected ? severity.toUpperCase() + ' REGRESSION DETECTED' : 'No Regression'}` : '📊 Baseline vs Latest Run'} ${fixedBadge}
             </div>
-            ${isFixed ? `<div style="margin-bottom: 8px; font-size: 12px; color: #155724; font-weight: 600;">Master Baseline Created: ${formattedDate} at ${formattedTime} (Test ID: #${baseline.id})</div>` : ''}
+            <div style="margin-bottom: 8px; font-size: 12px; color: ${isFixed ? '#155724' : '#666'}; font-weight: 600;">
+              Master Baseline Created: ${formattedDate} at ${formattedTime} (Test ID: #${baseline.id}${baseline.job_id !== jobId ? `, from Job ${baseline.job_id}` : ''})
+            </div>
             <div class="regression-summary">
               <div class="regression-stat">
                 <div class="regression-stat-label">Baseline Success Rate</div>
@@ -3124,11 +3129,11 @@
               </div>
               <div class="regression-stat">
                 <div class="regression-stat-label">Baseline Confidence</div>
-                <div class="regression-stat-value">${comparison ? parseFloat(comparisonBaselineStats.avg_confidence || baselineStats.avg_confidence || 0).toFixed(3) : baselineStats.avg_confidence}%</div>
+                <div class="regression-stat-value">${comparison ? (parseFloat(comparisonBaselineStats.avg_confidence || baselineStats.avg_confidence || 0) * 100).toFixed(1) : baselineStats.avg_confidence}%</div>
               </div>
               <div class="regression-stat">
                 <div class="regression-stat-label">Latest Run Confidence</div>
-                <div class="regression-stat-value">${comparison ? parseFloat(comparisonCurrentStats.avg_confidence || afterStats.avg_confidence || 0).toFixed(3) : afterStats.avg_confidence}%</div>
+                <div class="regression-stat-value">${comparison ? (parseFloat(comparisonCurrentStats.avg_confidence || afterStats.avg_confidence || 0) * 100).toFixed(1) : afterStats.avg_confidence}%</div>
               </div>
               ${comparison ? `
               <div class="regression-stat">
@@ -3158,7 +3163,7 @@
                 ? `<button class="btn btn-warning btn-small" onclick="unsetFixedBaseline(${baseline.job_id}, ${baseline.id})" title="Unset this as the fixed baseline">🔓 Unset Fixed Baseline</button>`
                 : `<button class="btn btn-success btn-small" onclick="setFixedBaseline(${baseline.job_id}, ${baseline.id})" title="Set this as the fixed baseline to prevent regression creep">🔒 Set as Fixed Baseline</button>`}
             </div>
-            ${isFixed ? `<div style="margin-top: 8px; font-size: 11px; color: #155724; background: #c3e6cb; padding: 8px; border-radius: 4px; border: 1px solid #28a745;">🔒 <strong>Master Fixed Baseline</strong> (created ${formattedDate} at ${formattedTime}, Test ID: #${baseline.id}). All comparisons use this baseline to prevent regression creep.</div>` : `<div style="margin-top: 8px; font-size: 11px; color: #856404;">⚠️ This baseline is not fixed. Set it as fixed to prevent regression creep.</div>`}
+            ${isFixed ? `<div style="margin-top: 8px; font-size: 11px; color: #155724; background: #c3e6cb; padding: 8px; border-radius: 4px; border: 1px solid #28a745;">🔒 <strong>Master Fixed Baseline</strong> (created ${formattedDate} at ${formattedTime}, Test ID: #${baseline.id}). ALL jobs use this same baseline for comparisons to prevent regression creep.</div>` : `<div style="margin-top: 8px; font-size: 11px; color: #856404;">⚠️ This baseline is not fixed. Set it as the master baseline so ALL jobs use the same reference point.</div>`}
           </div>
         `;
       }

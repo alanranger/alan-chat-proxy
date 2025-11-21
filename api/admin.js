@@ -1603,21 +1603,22 @@ export default async function handler(req, res) {
         let afterResult = null;
         let comparison = null;
 
+        // MASTER BASELINE: All jobs use the SAME master baseline (not per-job)
+        // First, check if there's a fixed baseline (master baseline) - check ALL jobs, not just this one
+        const { data: masterBaselineTests, error: masterBaselineError } = await supabase
+          .from('regression_test_results')
+          .select('*')
+          .eq('test_phase', 'before')
+          .eq('is_fixed_baseline', true)
+          .order('test_timestamp', { ascending: false })
+          .limit(1);
+        
         // If we have a test run, check if it uses a fixed baseline
         // If not, prefer the fixed baseline over the test run's baseline
         if (testRun) {
-          // First, check if there's a fixed baseline for this job
-          const { data: fixedBaselineTests, error: fixedBaselineError } = await supabase
-            .from('regression_test_results')
-            .select('*')
-            .eq('job_id', jobid)
-            .eq('test_phase', 'before')
-            .eq('is_fixed_baseline', true)
-            .limit(1);
-          
-          if (!fixedBaselineError && fixedBaselineTests && fixedBaselineTests.length > 0) {
-            // Use fixed baseline instead of test run's baseline
-            baselineResult = fixedBaselineTests[0];
+          // Use master baseline if it exists (shared across all jobs)
+          if (!masterBaselineError && masterBaselineTests && masterBaselineTests.length > 0) {
+            baselineResult = masterBaselineTests[0];
           } else if (testRun.baseline_test_id) {
             // Fallback to test run's baseline if no fixed baseline exists
             const { data, error } = await supabase
@@ -1676,18 +1677,9 @@ export default async function handler(req, res) {
             }
           }
         } else {
-          // No test run yet - check for fixed baseline first, then fallback to latest
-          // FIXED BASELINE: Always use the fixed baseline if it exists to prevent regression creep
-          const { data: fixedBaselineTests, error: fixedBaselineError } = await supabase
-            .from('regression_test_results')
-            .select('*')
-            .eq('job_id', jobid)
-            .eq('test_phase', 'before')
-            .eq('is_fixed_baseline', true)
-            .limit(1);
-          
-          if (!fixedBaselineError && fixedBaselineTests && fixedBaselineTests.length > 0) {
-            baselineResult = fixedBaselineTests[0];
+          // No test run yet - use master baseline if it exists (shared across all jobs)
+          if (!masterBaselineError && masterBaselineTests && masterBaselineTests.length > 0) {
+            baselineResult = masterBaselineTests[0];
           } else {
             // Fallback to latest baseline if no fixed baseline exists
             const { data: baselineTests, error: baselineError } = await supabase
@@ -1815,27 +1807,23 @@ export default async function handler(req, res) {
       }
     }
 
-    // Get Fixed Baseline Info (GET /api/admin?action=get_fixed_baseline&jobid=XX)
+    // Get Master Baseline Info (GET /api/admin?action=get_fixed_baseline&jobid=XX)
+    // Note: jobid is optional - there's only one master baseline for all jobs
     if (req.method === 'GET' && action === 'get_fixed_baseline') {
       try {
-        const jobid = parseInt(req.query.jobid);
-        
-        if (!jobid) {
-          return res.status(400).json({ error: 'jobid parameter required' });
-        }
-
+        // Get the master baseline (shared across all jobs)
         const { data, error } = await supabase
           .from('regression_test_results')
           .select('*')
-          .eq('job_id', jobid)
           .eq('test_phase', 'before')
           .eq('is_fixed_baseline', true)
+          .order('test_timestamp', { ascending: false })
           .limit(1)
           .single();
 
         if (error && error.code !== 'PGRST116') {
-          console.error('Error getting fixed baseline:', error);
-          return res.status(500).json({ error: 'Failed to get fixed baseline', detail: error.message });
+          console.error('Error getting master baseline:', error);
+          return res.status(500).json({ error: 'Failed to get master baseline', detail: error.message });
         }
 
         return res.status(200).json({
