@@ -1370,45 +1370,54 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'missing jobid' });
       }
 
-      const { data: publicLogs, error: publicError } = await supabase
-        .from('job_run_details')
-        .select('*')
-        .eq('jobid', jobid)
-        .order('start_time', { ascending: false })
-        .limit(50);
-
-      if (publicError) {
-        console.error('Error getting job logs (public):', publicError);
-      }
-
-      let cronLogs = [];
-      try {
-        const { data: cronData, error: cronError } = await supabaseCron
+      // Get logs from both sources
+      const [publicResult, cronResult] = await Promise.all([
+        supabase
+          .from('job_run_details')
+          .select('id, jobid, status, command, return_message, start_time, end_time, created_at')
+          .eq('jobid', jobid)
+          .order('start_time', { ascending: false })
+          .limit(50),
+        supabaseCron
           .from('job_run_details')
           .select('runid, jobid, status, command, return_message, start_time, end_time, created_at')
           .eq('jobid', jobid)
           .order('start_time', { ascending: false })
-          .limit(50);
-        if (cronError) {
-          console.error('Error getting job logs (cron):', cronError);
-        } else {
-          cronLogs = (cronData || []).map(log => ({
-            ...log,
-            id: log.runid, // Map runid to id for consistency
-            duration_ms: log.end_time && log.start_time 
-              ? new Date(log.end_time) - new Date(log.start_time)
-              : null
-          }));
-          console.log(`[DEBUG] Fetched ${cronLogs.length} cron logs for job ${jobid}`);
-        }
-      } catch (cronQueryError) {
-        console.error('Unexpected error getting cron job logs:', cronQueryError);
+          .limit(50)
+      ]);
+
+      const publicLogs = publicResult.data || [];
+      const cronLogs = cronResult.data || [];
+
+      if (publicResult.error) {
+        console.error(`[DEBUG] Error getting public logs for job ${jobid}:`, publicResult.error);
+      }
+      if (cronResult.error) {
+        console.error(`[DEBUG] Error getting cron logs for job ${jobid}:`, cronResult.error);
       }
 
-      // Mark source for each log entry
-      const markedPublicLogs = (Array.isArray(publicLogs) ? publicLogs : []).map(log => ({ ...log, run_source: 'manual' }));
-      const markedCronLogs = cronLogs.map(log => ({ ...log, run_source: 'cron' }));
+      // Create a set of cron run start_times for quick lookup
+      const cronStartTimes = new Set(cronLogs.map(log => log.start_time));
+
+      // Mark source and normalize format
+      const markedPublicLogs = publicLogs.map(log => ({
+        ...log,
+        run_source: 'manual',
+        duration_ms: log.end_time && log.start_time 
+          ? new Date(log.end_time) - new Date(log.start_time)
+          : null
+      }));
+
+      const markedCronLogs = cronLogs.map(log => ({
+        ...log,
+        id: log.runid, // Map runid to id for consistency
+        run_source: 'cron',
+        duration_ms: log.end_time && log.start_time 
+          ? new Date(log.end_time) - new Date(log.start_time)
+          : null
+      }));
       
+      // Combine and sort by time
       const combinedLogs = [
         ...markedPublicLogs,
         ...markedCronLogs,
@@ -1417,6 +1426,8 @@ export default async function handler(req, res) {
         const timeB = new Date(b.start_time || b.end_time || 0).getTime();
         return timeB - timeA;
       }).slice(0, 50);
+
+      console.log(`[DEBUG] Combined logs for job ${jobid}: ${combinedLogs.length} total (${markedPublicLogs.length} manual, ${markedCronLogs.length} cron)`);
 
       console.log(`[DEBUG] Combined logs for job ${jobid}: ${combinedLogs.length} total (${markedPublicLogs.length} manual, ${markedCronLogs.length} cron)`);
       console.log('[DEBUG] Sample logs:', combinedLogs.slice(0, 3).map(l => ({ status: l.status, start_time: l.start_time, run_source: l.run_source })));
