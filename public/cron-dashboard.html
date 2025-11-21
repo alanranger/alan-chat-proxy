@@ -1688,14 +1688,27 @@
     }
 
     function mergeProgressWithActiveJob(jobid, prog) {
-      if (prog) return prog;
+      // If we have actual progress data, use it (even if job is no longer active)
+      if (prog && prog.progress !== undefined) {
+        // If progress is 100%, job is complete - stop using fallback
+        if (prog.progress >= 100) {
+          return prog;
+        }
+        // If we have progress data, use it
+        return prog;
+      }
+      
       const active = activeJobs.find(job => {
         if (!job.job_hint) return false;
         const hintJobId = extractJobIdFromHint(job.job_hint);
         return hintJobId === jobid;
       });
       if (!active) {
-        // Job no longer in active list - check if we have a start time
+        // Job no longer in active list - if we have progress data, use it
+        if (prog && prog.progress !== undefined) {
+          return prog;
+        }
+        // Otherwise, check if we have a start time for fallback
         const startTime = activeJobStartTimes.get(jobid);
         if (startTime) {
           const elapsed = (Date.now() - startTime) / 1000;
@@ -1816,12 +1829,27 @@
         
         // Continue polling if not complete
         progressRetryState.set(jobid, { attempts: 0 });
+        
+        // If progress is 100%, job is complete - stop polling and refresh
+        if (prog.progress >= 100) {
+          addDebugLog(`Job ${jobid} completed (100%)`, 'success');
+          activeJobStartTimes.delete(jobid); // Clean up
+          progressRetryState.delete(jobid); // Stop polling
+          // Refresh jobs list to show updated stats
+          setTimeout(() => loadJobs(), 1000);
+          return;
+        }
+        
+        // Continue polling if not complete
         if (prog.progress < 100 || (prog.message && prog.message.toLowerCase().includes('waiting'))) {
           const delay = prog.message && prog.message.toLowerCase().includes('waiting') ? 5000 : 2000;
           setTimeout(() => pollJobProgress(jobid, attempt + 1), delay);
         } else {
-          addDebugLog(`Job ${jobid} completed (100%)`, 'success');
-          activeJobStartTimes.delete(jobid); // Clean up
+          // Job might be complete but progress not updated - refresh jobs list
+          addDebugLog(`Job ${jobid} may have completed, refreshing jobs list`, 'info');
+          activeJobStartTimes.delete(jobid);
+          progressRetryState.delete(jobid);
+          setTimeout(() => loadJobs(), 1000);
         }
       } catch (err) {
         addDebugLog(`Failed to poll progress for job ${jobid}: ${err.message}`, 'error', { error: err });
