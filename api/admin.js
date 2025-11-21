@@ -919,24 +919,34 @@ export default async function handler(req, res) {
 
         const lastRunRows = Array.isArray(lastRunRowsData) ? lastRunRowsData : [];
 
-        // Determine source for each run (cron vs manual) by checking which table it came from
-        // Since get_job_last_runs combines both, we need to check separately
-        // For now, we'll mark based on whether it exists in cron.job_run_details
-        // This is a best-effort approach - the function combines both sources
-        const lastRunRowsWithSource = await Promise.all(lastRunRows.map(async (row) => {
-          // Check if this run exists in cron.job_run_details
-          const { data: cronCheck } = await supabaseCron
+        // Get cron runs separately to determine source
+        // We'll match by jobid + start_time to determine if a run is from cron
+        const cronRunTimes = new Set();
+        try {
+          const { data: cronRuns } = await supabaseCron
             .from('job_run_details')
-            .select('runid')
-            .eq('jobid', row.jobid)
-            .eq('start_time', row.start_time)
-            .limit(1);
+            .select('jobid, start_time')
+            .in('jobid', cleanedIds);
           
+          if (cronRuns) {
+            cronRuns.forEach(run => {
+              const key = `${run.jobid}_${run.start_time}`;
+              cronRunTimes.add(key);
+            });
+          }
+        } catch (cronCheckError) {
+          console.warn('Could not check cron runs for source detection:', cronCheckError);
+        }
+
+        // Mark source for each run
+        const lastRunRowsWithSource = lastRunRows.map((row) => {
+          const key = `${row.jobid}_${row.start_time}`;
+          const run_source = cronRunTimes.has(key) ? 'cron' : 'manual';
           return {
             ...row,
-            run_source: cronCheck && cronCheck.length > 0 ? 'cron' : 'manual'
+            run_source
           };
-        }));
+        });
 
         console.log('[DEBUG] Raw run history rows sample:', lastRunRowsWithSource.slice(0, 5));
 

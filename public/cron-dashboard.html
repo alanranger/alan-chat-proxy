@@ -2737,7 +2737,13 @@
           headers: buildAuthHeaders(),
           cache: 'no-store'
         });
-          const { logs } = await logRes.json();
+          const logData = await logRes.json();
+          const logs = logData.logs || [];
+          
+          // Debug: Log what we received for sparkline
+          if (job.jobid === 26) {
+            console.log(`[DEBUG] Sparkline logs for job 26:`, logs.length, 'entries', logs.slice(0, 5).map(l => ({ status: l.status, start_time: l.start_time, run_source: l.run_source })));
+          }
           
           if (logs && logs.length > 0) {
             // Build recent_runs array for sparkline
@@ -4387,7 +4393,11 @@
           cache: 'no-store'
         });
         
-        const { logs } = await response.json();
+        const data = await response.json();
+        const logs = data.logs || [];
+        
+        // Debug: Log what we received
+        console.log(`[DEBUG] Logs for job ${jobid}:`, logs.length, 'entries', logs.slice(0, 3));
         
         if (!logs || logs.length === 0) {
           drawer.innerHTML = '<div class="log-empty">No logs found for this job.</div>';
