@@ -4428,10 +4428,11 @@
           ? ((new Date(log.end_time) - new Date(log.start_time)) / 1000).toFixed(2) + 's'
           : 'N/A';
         // Check for success - explicitly check for failed/error status
-        const isSuccess = log.status === 'succeeded' || log.status === 'success' || 
-                         (log.status !== 'failed' && log.status !== 'error');
+        const isFailed = log.status === 'failed' || log.status === 'error';
+        const isSuccess = !isFailed && (log.status === 'succeeded' || log.status === 'success');
         const statusClass = isSuccess ? 'status-success' : 'status-failed';
         const statusText = isSuccess ? 'Success' : 'Failed';
+        const runSource = log.run_source ? ` (${log.run_source})` : '';
         const message = log.return_message || (isSuccess ? 'No message' : 'Error occurred');
         const encodedMessage = encodeURIComponent(message);
         const safeMessage = escapeHtml(message);
