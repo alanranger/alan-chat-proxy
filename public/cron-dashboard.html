@@ -3937,8 +3937,11 @@
           errorDetail = cleaned.length > 120 ? cleaned.substring(0, 120) + '...' : cleaned;
         }
         
+        // Determine run type (cron vs manual)
+        const runType = job.last_run_source === 'cron' ? 'Cron' : job.last_run_source === 'manual' ? 'Manual' : 'Unknown';
+        
         // Build detailed error message
-        let reason = `Last run failed on ${lastRunFormatted} (${minutesSinceLastRun} min ago)`;
+        let reason = `Last run failed on ${lastRunFormatted} (${runType}, ${minutesSinceLastRun} min ago)`;
         if (errorDetail) {
           reason += `: ${errorDetail}`;
         }
@@ -4013,10 +4016,11 @@
       
       lastRuns.forEach((run, index) => {
         // Check for success - explicitly check for failed/error status
-        const isSuccess = run.success === true || 
-                         (run.success !== false && run.status && 
-                          run.status !== 'failed' && run.status !== 'error' && 
-                          (run.status === 'succeeded' || run.status === 'success'));
+        // If status is explicitly 'failed' or 'error', it's a failure
+        // If success is explicitly false, it's a failure
+        // Otherwise, check if status indicates success
+        const isFailed = run.status === 'failed' || run.status === 'error' || run.success === false;
+        const isSuccess = !isFailed && (run.success === true || run.status === 'succeeded' || run.status === 'success');
         const barHeight = isSuccess ? 35 : 12;
         const color = isSuccess ? '#5cb85c' : '#d9534f';
         
@@ -4434,7 +4438,7 @@
         return `
           <div class="log-entry">
             <div class="log-entry-header">
-              <span class="log-status-badge ${statusClass}">${statusText}</span>
+              <span class="log-status-badge ${statusClass}">${statusText}${runSource}</span>
               <span class="log-timestamp">${startTime}</span>
               <span class="log-duration">${duration}</span>
               <button class="log-copy-btn" data-message="${encodedMessage}" onclick="copyLogEntryMessage(this)">📋 Copy</button>

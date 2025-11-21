@@ -919,9 +919,28 @@ export default async function handler(req, res) {
 
         const lastRunRows = Array.isArray(lastRunRowsData) ? lastRunRowsData : [];
 
-        console.log('[DEBUG] Raw run history rows sample:', lastRunRows.slice(0, 5));
+        // Determine source for each run (cron vs manual) by checking which table it came from
+        // Since get_job_last_runs combines both, we need to check separately
+        // For now, we'll mark based on whether it exists in cron.job_run_details
+        // This is a best-effort approach - the function combines both sources
+        const lastRunRowsWithSource = await Promise.all(lastRunRows.map(async (row) => {
+          // Check if this run exists in cron.job_run_details
+          const { data: cronCheck } = await supabaseCron
+            .from('job_run_details')
+            .select('runid')
+            .eq('jobid', row.jobid)
+            .eq('start_time', row.start_time)
+            .limit(1);
+          
+          return {
+            ...row,
+            run_source: cronCheck && cronCheck.length > 0 ? 'cron' : 'manual'
+          };
+        }));
 
-        return { statusAggregates, lastRunRows };
+        console.log('[DEBUG] Raw run history rows sample:', lastRunRowsWithSource.slice(0, 5));
+
+        return { statusAggregates, lastRunRows: lastRunRowsWithSource };
       } catch (err) {
         console.error('fetchJobRunAggregates - unexpected error', err);
         return { statusAggregates: [], lastRunRows: [] };
@@ -1253,6 +1272,7 @@ export default async function handler(req, res) {
             last_run: aggregatedLastRun || job.last_run || null,
             last_run_status: lastRunDetails?.status || null, // Include status of most recent run
             last_run_error_message: lastRunDetails?.return_message || null, // Include error message if failed
+            last_run_source: lastRunDetails?.run_source || null, // Include source (cron/manual)
             maintenanceSummary,
             maintenanceTopTables
           };
@@ -1305,9 +1325,13 @@ export default async function handler(req, res) {
           console.error('Unexpected error querying cron.job_run_details:', cronQueryError);
         }
 
+        // Mark source for each log entry
+        const markedPublicLogs = (Array.isArray(publicLogs) ? publicLogs : []).map(log => ({ ...log, run_source: 'manual' }));
+        const markedCronLogs = cronLogs.map(log => ({ ...log, run_source: 'cron' }));
+        
         const combinedLogs = [
-          ...(Array.isArray(publicLogs) ? publicLogs : []),
-          ...cronLogs,
+          ...markedPublicLogs,
+          ...markedCronLogs,
         ].sort((a, b) => {
           const timeA = new Date(a.start_time || a.end_time || 0).getTime();
           const timeB = new Date(b.start_time || b.end_time || 0).getTime();
@@ -1364,9 +1388,13 @@ export default async function handler(req, res) {
         console.error('Unexpected error getting cron job logs:', cronQueryError);
       }
 
+      // Mark source for each log entry
+      const markedPublicLogs = (Array.isArray(publicLogs) ? publicLogs : []).map(log => ({ ...log, run_source: 'manual' }));
+      const markedCronLogs = cronLogs.map(log => ({ ...log, run_source: 'cron' }));
+      
       const combinedLogs = [
-        ...(Array.isArray(publicLogs) ? publicLogs : []),
-        ...cronLogs,
+        ...markedPublicLogs,
+        ...markedCronLogs,
       ].sort((a, b) => {
         const timeA = new Date(a.start_time || a.end_time || 0).getTime();
         const timeB = new Date(b.start_time || b.end_time || 0).getTime();
