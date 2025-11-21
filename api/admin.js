@@ -1385,14 +1385,21 @@ export default async function handler(req, res) {
       try {
         const { data: cronData, error: cronError } = await supabaseCron
           .from('job_run_details')
-          .select('*')
+          .select('runid, jobid, status, command, return_message, start_time, end_time, created_at')
           .eq('jobid', jobid)
           .order('start_time', { ascending: false })
           .limit(50);
         if (cronError) {
           console.error('Error getting job logs (cron):', cronError);
         } else {
-          cronLogs = cronData || [];
+          cronLogs = (cronData || []).map(log => ({
+            ...log,
+            id: log.runid, // Map runid to id for consistency
+            duration_ms: log.end_time && log.start_time 
+              ? new Date(log.end_time) - new Date(log.start_time)
+              : null
+          }));
+          console.log(`[DEBUG] Fetched ${cronLogs.length} cron logs for job ${jobid}`);
         }
       } catch (cronQueryError) {
         console.error('Unexpected error getting cron job logs:', cronQueryError);
@@ -1411,7 +1418,8 @@ export default async function handler(req, res) {
         return timeB - timeA;
       }).slice(0, 50);
 
-      console.log('[DEBUG] Raw run history rows:', combinedLogs.slice(0, 5));
+      console.log(`[DEBUG] Combined logs for job ${jobid}: ${combinedLogs.length} total (${markedPublicLogs.length} manual, ${markedCronLogs.length} cron)`);
+      console.log('[DEBUG] Sample logs:', combinedLogs.slice(0, 3).map(l => ({ status: l.status, start_time: l.start_time, run_source: l.run_source })));
 
       if (!Array.isArray(publicLogs) && cronLogs.length === 0) {
         return res.status(500).json({ error: 'db_error', detail: 'Unable to fetch job run history.' });
