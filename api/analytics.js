@@ -356,7 +356,7 @@ export default async function handler(req, res) {
           if (interactionsError) throw new Error(`Insights data failed: ${interactionsError.message}`);
 
           // Filter out regression test sessions:
-          // 1. Sessions starting with "test-" (regression test pattern)
+          // 1. Sessions starting with "test-" or "analytics-test-" (regression test patterns)
           // 2. Sessions with exactly 40 interactions (40q regression test pattern)
           const sessionCounts = {};
           (allInteractions || []).forEach(r => {
@@ -365,7 +365,9 @@ export default async function handler(req, res) {
           const regressionTestSessions = new Set(
             Object.entries(sessionCounts)
               .filter(([sessionId, count]) => 
-                sessionId.startsWith('test-') || count === 40
+                sessionId.startsWith('test-') || 
+                sessionId.startsWith('analytics-test-') ||
+                count === 40
               )
               .map(([sessionId, _]) => sessionId)
           );
