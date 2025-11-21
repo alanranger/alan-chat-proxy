@@ -23,10 +23,10 @@ DECLARE
   v_table_match TEXT;
 BEGIN
   FOR r_job IN 
-    SELECT jobid, jobname, command
-    FROM cron.job
-    WHERE active = true
-    ORDER BY jobid
+    SELECT j.jobid, j.jobname, j.command
+    FROM cron.job j
+    WHERE j.active = true
+    ORDER BY j.jobid
   LOOP
     v_issues := ARRAY[]::TEXT[];
     
