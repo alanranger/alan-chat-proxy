@@ -3018,12 +3018,26 @@
           ? '<span style="background: #28a745; color: white; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: bold; margin-left: 8px;">🔒 FIXED BASELINE</span>'
           : '<span style="background: #ffc107; color: #000; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: bold; margin-left: 8px;">⚠️ NOT FIXED</span>';
         
+        const baselineDate = new Date(baseline.test_timestamp);
+        const formattedDate = baselineDate.toLocaleDateString('en-GB', { 
+          day: '2-digit', 
+          month: '2-digit', 
+          year: 'numeric' 
+        });
+        const formattedTime = baselineDate.toLocaleTimeString('en-GB', { 
+          hour: '2-digit', 
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: false
+        });
+        
         return `
-          <div class="regression-test-section no-regression">
+          <div class="regression-test-section ${isFixed ? 'no-regression' : ''}" ${isFixed ? 'style="background: #d4edda; border: 2px solid #28a745;"' : ''}>
             ${mirrorLabel}
-            <div style="font-weight: bold; margin-bottom: 8px; display: flex; align-items: center;">
-              📊 Baseline Test Complete ${fixedBadge}
+            <div style="font-weight: bold; margin-bottom: 8px; display: flex; align-items: center; ${isFixed ? 'color: #155724;' : ''}">
+              ${isFixed ? '🔒' : '📊'} ${isFixed ? 'Master Fixed Baseline' : 'Baseline Test Complete'} ${fixedBadge}
             </div>
+            ${isFixed ? `<div style="margin-bottom: 8px; font-size: 12px; color: #155724; font-weight: 600;">Created: ${formattedDate} at ${formattedTime} (Test ID: #${baseline.id})</div>` : ''}
             <div class="regression-summary">
               <div class="regression-stat">
                 <div class="regression-stat-label">Baseline Success Rate</div>
@@ -3038,13 +3052,13 @@
                 <div class="regression-stat-value">${baselineStats.total_questions}</div>
               </div>
               <div class="regression-stat">
-                <div class="regression-stat-label">Status</div>
-                <div class="regression-stat-value">Waiting for job run</div>
+                <div class="regression-stat-label">${isFixed ? 'Created' : 'Status'}</div>
+                <div class="regression-stat-value" style="font-size: ${isFixed ? '10px' : '12px'};">${isFixed ? `${formattedDate}<br>${formattedTime}` : 'Waiting for job run'}</div>
               </div>
             </div>
-            <div style="margin-top: 8px; font-size: 11px; color: ${isFixed ? '#155724' : '#856404'};">
+            <div style="margin-top: 8px; font-size: 11px; color: ${isFixed ? '#155724' : '#856404'}; ${isFixed ? 'background: #c3e6cb; padding: 8px; border-radius: 4px; border: 1px solid #28a745;' : ''}">
               ${isFixed 
-                ? '🔒 This is the FIXED baseline. All future comparisons will use this baseline to prevent regression creep.'
+                ? `🔒 <strong>This is the MASTER FIXED BASELINE</strong> (created ${formattedDate} at ${formattedTime}, Test ID: #${baseline.id}). All future comparisons will use this baseline to prevent regression creep. This baseline will never be automatically deleted.`
                 : '⚠️ This baseline is NOT fixed. Each test may use a different baseline, allowing regressions to creep in. Click "Set as Fixed Baseline" to prevent this.'}
             </div>
             <div style="margin-top: 10px;">
@@ -3149,10 +3163,26 @@
             test_timestamp: fixedBaselineInfo.test_timestamp
           };
           
-          return `<div class="regression-test-section">
+          const baselineDate = new Date(fixedBaselineStats.test_timestamp);
+          const formattedDate = baselineDate.toLocaleDateString('en-GB', { 
+            day: '2-digit', 
+            month: '2-digit', 
+            year: 'numeric' 
+          });
+          const formattedTime = baselineDate.toLocaleTimeString('en-GB', { 
+            hour: '2-digit', 
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: false
+          });
+          
+          return `<div class="regression-test-section" style="background: #d4edda; border: 2px solid #28a745;">
             ${mirrorLabel}
-            <div style="font-weight: bold; margin-bottom: 8px; display: flex; align-items: center;">
-              🔒 Master Fixed Baseline (No recent test run)
+            <div style="font-weight: bold; margin-bottom: 8px; display: flex; align-items: center; color: #155724;">
+              🔒 Master Fixed Baseline
+            </div>
+            <div style="margin-bottom: 8px; font-size: 12px; color: #155724; font-weight: 600;">
+              Created: ${formattedDate} at ${formattedTime}
             </div>
             <div class="regression-summary">
               <div class="regression-stat">
@@ -3168,12 +3198,12 @@
                 <div class="regression-stat-value">${fixedBaselineStats.total_questions}</div>
               </div>
               <div class="regression-stat">
-                <div class="regression-stat-label">Created</div>
-                <div class="regression-stat-value" style="font-size: 10px;">${new Date(fixedBaselineStats.test_timestamp).toLocaleDateString()}</div>
+                <div class="regression-stat-label">Test ID</div>
+                <div class="regression-stat-value" style="font-size: 10px;">#${fixedBaselineInfo.id}</div>
               </div>
             </div>
-            <div style="margin-top: 8px; font-size: 11px; color: #155724; background: #d4edda; padding: 8px; border-radius: 4px; border: 1px solid #c3e6cb;">
-              🔒 <strong>This is the MASTER FIXED BASELINE.</strong> All future regression tests will compare against this baseline to prevent regression creep. This baseline will never be automatically deleted.
+            <div style="margin-top: 8px; font-size: 11px; color: #155724; background: #c3e6cb; padding: 8px; border-radius: 4px; border: 1px solid #28a745;">
+              🔒 <strong>This is the MASTER FIXED BASELINE.</strong> All future regression tests will compare against this baseline (created ${formattedDate} at ${formattedTime}) to prevent regression creep. This baseline will never be automatically deleted.
             </div>
             <div style="margin-top: 8px; font-size: 11px; color: #856404;">
               <strong>Status:</strong> Waiting for next job run to compare against this baseline.
