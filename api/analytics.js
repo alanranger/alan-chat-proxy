@@ -112,19 +112,38 @@ export default async function handler(req, res) {
         {
           // Calculate question frequency on-demand from chat_interactions
           // (chat_question_frequency table was dropped as redundant)
+          // Filter out regression test sessions (sessions starting with "test-" or having exactly 40 interactions)
           const { data: allInteractions, error: interactionsError } = await supa
             .from('chat_interactions')
-            .select('question, confidence, created_at, page_context')
+            .select('question, confidence, created_at, page_context, session_id')
             .not('question', 'is', null)
             .not('answer', 'is', null)  // Only count answered questions
+            .not('session_id', 'like', 'test-%')  // Exclude regression test sessions
             .order('created_at', { ascending: false })
             .limit(10000);  // Limit to recent interactions for performance
 
           if (interactionsError) throw new Error(`Top questions failed: ${interactionsError.message}`);
 
+          // Additional filter: exclude sessions with exactly 40 interactions (regression test pattern)
+          // Get session IDs that have exactly 40 interactions
+          const sessionCounts = {};
+          (allInteractions || []).forEach(r => {
+            sessionCounts[r.session_id] = (sessionCounts[r.session_id] || 0) + 1;
+          });
+          const regressionTestSessions = new Set(
+            Object.entries(sessionCounts)
+              .filter(([_, count]) => count === 40)
+              .map(([sessionId, _]) => sessionId)
+          );
+
+          // Filter out regression test sessions
+          const filteredInteractions = (allInteractions || []).filter(
+            r => !regressionTestSessions.has(r.session_id)
+          );
+
           // Aggregate question frequency and calculate averages
           const questionStats = {};
-          (allInteractions || []).forEach((r) => {
+          filteredInteractions.forEach((r) => {
             const q = r.question?.trim();
             if (!q) return;
 
@@ -170,8 +189,8 @@ export default async function handler(req, res) {
             .sort((a, b) => b.frequency - a.frequency)
             .slice(0, 1000);  // Top 1000 by frequency
 
-          // Get recent questions for the recentQuestions array
-          const recentQuestions = (allInteractions || [])
+          // Get recent questions for the recentQuestions array (excluding regression tests)
+          const recentQuestions = filteredInteractions
             .slice(0, 50)
             .map(r => ({
               question: r.question,
@@ -327,17 +346,33 @@ export default async function handler(req, res) {
       case 'insights':
         {
           // Calculate question frequency on-demand from chat_interactions
+          // Filter out regression test sessions
           const { data: allInteractions, error: interactionsError } = await supa
             .from('chat_interactions')
-            .select('question, confidence')
+            .select('question, confidence, session_id')
             .not('question', 'is', null)
-            .not('answer', 'is', null);
+            .not('answer', 'is', null)
+            .not('session_id', 'like', 'test-%');  // Exclude regression test sessions
 
           if (interactionsError) throw new Error(`Insights data failed: ${interactionsError.message}`);
 
+          // Additional filter: exclude sessions with exactly 40 interactions
+          const sessionCounts = {};
+          (allInteractions || []).forEach(r => {
+            sessionCounts[r.session_id] = (sessionCounts[r.session_id] || 0) + 1;
+          });
+          const regressionTestSessions = new Set(
+            Object.entries(sessionCounts)
+              .filter(([_, count]) => count === 40)
+              .map(([sessionId, _]) => sessionId)
+          );
+          const filteredInteractions = (allInteractions || []).filter(
+            r => !regressionTestSessions.has(r.session_id)
+          );
+
           // Aggregate question frequency and confidence
           const questionStats = {};
-          (allInteractions || []).forEach((r) => {
+          filteredInteractions.forEach((r) => {
             const q = r.question?.trim();
             if (!q) return;
 
