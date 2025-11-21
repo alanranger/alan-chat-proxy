@@ -2015,21 +2015,15 @@ export default async function handler(req, res) {
                 const tables = Array.isArray(tablesData) ? tablesData : (tablesData?.tables || []);
                 if (tables.length === 0) throw new Error('No tables to vacuum');
                 
-                // Construct connection string
-                const encodedPassword = encodeURIComponent(dbPassword);
-                const connectionString = `postgresql://postgres:${encodedPassword}@db.${projectRef}.supabase.co:5432/postgres`;
+                // Use Supabase Edge Function for VACUUM (avoids DNS/connection issues from Vercel)
+                const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+                const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
                 
-                console.log(`[admin] Connecting to database for VACUUM (project: ${projectRef}, ${tables.length} tables)...`);
+                if (!supabaseUrl || !supabaseServiceKey) {
+                  throw new Error('SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required for VACUUM via Edge Function');
+                }
                 
-                const pgClient = new pg.Client({
-                  connectionString,
-                  ssl: { rejectUnauthorized: false }
-                });
-                
-                await pgClient.connect();
-                console.log(`[admin] Connected successfully, running VACUUM on ${tables.length} tables...`);
-                
-                const results = { success: [], errors: [] };
+                console.log(`[admin] Calling Supabase Edge Function for VACUUM (${tables.length} tables)...`);
                 
                 // Update progress: starting VACUUM
                 try {
@@ -2037,48 +2031,38 @@ export default async function handler(req, res) {
                     step: 1,
                     total_steps: tables.length + 2,
                     progress: 0,
-                    message: `Starting VACUUM on ${tables.length} tables...`,
+                    message: `Starting VACUUM on ${tables.length} tables via Edge Function...`,
                     updated_at: new Date().toISOString()
                   }).eq('jobid', jobIdInt);
                 } catch (progressErr) {
                   console.warn('[admin] Failed to update progress:', progressErr);
                 }
                 
-                for (let i = 0; i < tables.length; i++) {
-                  const table = tables[i];
-                  try {
-                    const escapedTable = `"${table.replace(/"/g, '""')}"`;
-                    
-                    // Use VACUUM with VERBOSE to get more info, and process_toast to clean up toast tables
-                    // VACUUM (VERBOSE, ANALYZE, PROCESS_TOAST) is more aggressive
-                    await pgClient.query(`VACUUM (VERBOSE, ANALYZE, PROCESS_TOAST) ${escapedTable}`);
-                    results.success.push(table);
-                    
-                    // Update progress
-                    const progressPct = Math.round(((i + 1) / tables.length) * 90); // Reserve 10% for stats
-                    try {
-                      await supabase.from('job_progress').update({
-                        step: i + 2,
-                        total_steps: tables.length + 2,
-                        progress: progressPct,
-                        message: `Vacuumed ${i + 1}/${tables.length} tables: ${table}`,
-                        updated_at: new Date().toISOString()
-                      }).eq('jobid', jobIdInt);
-                    } catch (progressErr) {
-                      // Ignore progress update errors
-                    }
-                    
-                    console.log(`[admin] ✓ VACUUM completed for ${table} (${i + 1}/${tables.length})`);
-                  } catch (err) {
-                    const errorMsg = `Failed to vacuum ${table}: ${err.message}`;
-                    results.errors.push(errorMsg);
-                    console.error(`[admin] ✗ ${errorMsg}`);
-                  }
+                const edgeFunctionUrl = `${supabaseUrl}/functions/v1/run-vacuum`;
+                const edgeResponse = await fetch(edgeFunctionUrl, {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${supabaseServiceKey}`,
+                    'apikey': supabaseServiceKey
+                  },
+                  body: JSON.stringify({ tables })
+                });
+                
+                if (!edgeResponse.ok) {
+                  const errorText = await edgeResponse.text();
+                  throw new Error(`Edge Function VACUUM failed: ${edgeResponse.status} ${errorText}`);
                 }
                 
-                await pgClient.end();
+                const edgeResult = await edgeResponse.json();
+                console.log(`[admin] Edge Function VACUUM completed:`, edgeResult);
                 
-                if (results.success.length === 0) {
+                const results = {
+                  success: edgeResult.success || [],
+                  errors: edgeResult.errors || []
+                };
+                
+                if (results.success.length === 0 && results.errors.length > 0) {
                   throw new Error(`VACUUM failed on all tables: ${results.errors.join('; ')}`);
                 }
                 
