@@ -4422,7 +4422,26 @@ function addRecencyTieBreaker(s, r) {
  const seen = r.last_seen ? Date.parse(r.last_seen) || 0 : 0;
  // Use publish_date if available, otherwise fall back to last_seen
  const recencyDate = publishDate > 0 ? publishDate : seen;
- return s * 1_000_000 + recencyDate;
+ 
+ // Calculate days since publication (or last_seen)
+ const now = Date.now();
+ const daysSincePublication = recencyDate > 0 ? (now - recencyDate) / (1000 * 60 * 60 * 24) : Infinity;
+ 
+ // Apply recency boost with decay: newer articles get more boost, but it's capped
+ // This prevents new articles from completely overwhelming older, more relevant content
+ let recencyBoost = 0;
+ if (daysSincePublication <= 7) {
+   recencyBoost = 20; // Very new articles (within 7 days)
+ } else if (daysSincePublication <= 30) {
+   recencyBoost = 10; // Recent articles (within 30 days)
+ } else if (daysSincePublication <= 90) {
+   recencyBoost = 5; // Moderately recent (within 90 days)
+ }
+ // Older articles get no recency boost - relevance score alone determines ranking
+ 
+ // Use smaller multiplier for tie-breaking (1000 instead of 1,000,000)
+ // This ensures relevance remains the primary factor, with recency as a tie-breaker
+ return s * 1000 + recencyBoost;
 }
 
 
