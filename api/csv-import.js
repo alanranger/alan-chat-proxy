@@ -630,16 +630,10 @@ async function importWorkshopProductMetadata(rows, supa) {
 
   if (metadata.length > 0) {
     // For non-events (start_date is NULL), manually handle upsert since PostgREST doesn't support partial indexes in onConflict
-    // Delete existing rows first, then insert new ones
+    // Delete existing rows first, then insert new ones (batched for large URL lists)
     const urls = metadata.map(m => m.url).filter(Boolean);
     if (urls.length > 0) {
-      const { error: deleteError } = await supa
-        .from('csv_metadata')
-        .delete()
-        .eq('csv_type', 'workshop_products')
-        .in('url', urls)
-        .is('start_date', null);
-      if (deleteError) throw deleteError;
+      await batchDeleteMetadata(supa, 'workshop_products', urls);
     }
     
     const { error } = await supa.from('csv_metadata').insert(metadata);
@@ -721,16 +715,10 @@ async function importProductSchemaMetadata(rows, supa) {
 
   if (metadata.length > 0) {
     // For non-events (start_date is NULL), manually handle upsert since PostgREST doesn't support partial indexes in onConflict
-    // Delete existing rows first, then insert new ones
+    // Delete existing rows first, then insert new ones (batched for large URL lists)
     const urls = metadata.map(m => m.url).filter(Boolean);
     if (urls.length > 0) {
-      const { error: deleteError } = await supa
-        .from('csv_metadata')
-        .delete()
-        .eq('csv_type', 'product_schema')
-        .in('url', urls)
-        .is('start_date', null);
-      if (deleteError) throw deleteError;
+      await batchDeleteMetadata(supa, 'product_schema', urls);
     }
     
     const { error } = await supa.from('csv_metadata').insert(metadata);
