@@ -4300,11 +4300,57 @@ function buildFallbackServicesQuery(client, genericServiceIntent, keywords, limi
 }
 
 // Helper: Process and return services
-function processAndReturnServices(data, genericServiceIntent, limitCap = MAX_SERVICE_RESULTS) {
+function processAndReturnServices(data, genericServiceIntent, limitCap = MAX_SERVICE_RESULTS, keywords = []) {
   const normalized = data.map(normalizeServiceTitle);
-  const result = genericServiceIntent ? deduplicateServices(normalized) : normalized;
-  logServicesResults(result);
-  return result.slice(0, limitCap);
+  const deduped = genericServiceIntent ? deduplicateServices(normalized) : normalized;
+  const ranked = rankServicesByKeywords(deduped, keywords);
+  logServicesResults(ranked);
+  return ranked.slice(0, limitCap);
+}
+
+function rankServicesByKeywords(services, keywords) {
+  if (!Array.isArray(services) || services.length === 0) return services;
+  const kw = (keywords || []).map(k => String(k || '').toLowerCase().trim()).filter(Boolean);
+  const now = Date.now();
+  return services
+    .map((service, idx) => {
+      const title = (service.title || service.csv_metadata?.title || '').toLowerCase();
+      const url = (service.page_url || service.url || '').toLowerCase();
+      const description = (service.description || service.meta_description || '').toLowerCase();
+      const categories = (service.categories || []).map(c => String(c || '').toLowerCase());
+      const tags = (service.tags || []).map(t => String(t || '').toLowerCase());
+      let score = 0;
+      if (kw.length === 0) {
+        // Recency-only score
+        score += computeServiceRecencyScore(service.last_seen, now);
+      } else {
+        kw.forEach(k => {
+          if (!k) return;
+          if (title.includes(k)) score += 8;
+          if (description.includes(k)) score += 4;
+          if (url.includes(k)) score += 2;
+          if (categories.some(c => c.includes(k)) || tags.some(t => t.includes(k))) score += 3;
+        });
+        score += computeServiceRecencyScore(service.last_seen, now);
+      }
+      return { service, score, idx };
+    })
+    .sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score;
+      return a.idx - b.idx;
+    })
+    .map(({ service }) => service);
+}
+
+function computeServiceRecencyScore(lastSeen, now) {
+  if (!lastSeen) return 0;
+  const timestamp = Date.parse(lastSeen);
+  if (Number.isNaN(timestamp)) return 0;
+  const daysOld = (now - timestamp) / (1000 * 60 * 60 * 24);
+  if (daysOld <= 7) return 6;
+  if (daysOld <= 30) return 4;
+  if (daysOld <= 90) return 2;
+  return 0;
 }
 
 async function findServices(client, { keywords, limit = 50 }) {
@@ -4320,7 +4366,7 @@ const displayLimit = Math.min(requestedLimit, MAX_SERVICE_RESULTS);
   const qPrimary = buildPrimaryServicesQuery(client, genericServiceIntent, keywords, queryLimit);
    const { data: primary, error: errPrimary } = await qPrimary;
    if (!errPrimary && Array.isArray(primary) && primary.length > 0) {
-    return processAndReturnServices(primary, genericServiceIntent, displayLimit);
+    return processAndReturnServices(primary, genericServiceIntent, displayLimit, keywords);
    }
  } catch (e) {
    console.warn('findServices primary query failed, attempting fallback', e);
@@ -4333,7 +4379,7 @@ const q = buildFallbackServicesQuery(client, genericServiceIntent, keywords, que
    console.error('findServices fallback error:', error);
    return [];
  }
-return processAndReturnServices(data || [], genericServiceIntent, displayLimit);
+return processAndReturnServices(data || [], genericServiceIntent, displayLimit, keywords);
 }
 
 // Helper functions for findArticles scoring
@@ -4475,6 +4521,7 @@ function buildArticlesBaseQuery(client, limit) {
  return client
  .from("v_articles_unified")
  .select("id, title, page_url, categories, tags, image_url, publish_date, description, json_ld_data, last_seen, kind, source_type")
+ .eq('kind', 'article')
  .limit(limit * 5);
 }
 
