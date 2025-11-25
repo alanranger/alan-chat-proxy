@@ -2126,6 +2126,18 @@ function applySynonymExpansion(lc) {
  values.forEach(synonym => lc += " " + synonym);
  }
  }
+ 
+ // Map "people" to "portrait" in photography context
+ if ((lc.includes("people") || lc.includes("person")) && (lc.includes("photograph") || lc.includes("photography"))) {
+   lc += " portrait";
+ }
+ 
+ // Enhance camera buying queries with relevant keywords
+ if ((lc.includes("camera") && (lc.includes("buy") || lc.includes("should") || lc.includes("best") || lc.includes("choose") || lc.includes("select"))) ||
+     (lc.includes("best") && lc.includes("camera") && (lc.includes("beginner") || lc.includes("for")))) {
+   lc += " choose select full frame crop sensor dslr mirrorless";
+ }
+ 
  return lc;
  }
  
@@ -4660,11 +4672,21 @@ const hasEquipmentKeyword = queryEquipmentKeywords.size > 0;
  }
 
  // Deduplicate articles by page_url or id before sorting
+ // Also filter out charity articles for memory card queries
  const seen = new Set();
  const unique = [];
+ const isMemoryCardQuery = normalizedKeywordString.includes('memory card') || normalizedKeywordString.includes('memorycard') || normalizedKeywordString.includes('sd card');
  for (const row of rows) {
    const key = (row.page_url || row.url || row.id || '').toString().replace(/\/+$/, '').trim();
    if (key && !seen.has(key)) {
+     // Filter out charity articles for memory card queries
+     if (isMemoryCardQuery) {
+       const t = (row.title || '').toLowerCase();
+       const u = (row.page_url || row.url || '').toLowerCase();
+       if (t.includes('crisis') || t.includes('charity') || u.includes('crisis') || u.includes('charity')) {
+         continue; // Skip charity articles for memory card queries
+       }
+     }
      seen.add(key);
      unique.push(row);
    }
@@ -4704,8 +4726,9 @@ function limitLandingResults(items) {
 function filterArticleKeywords(keywords){
   const allow = new Set([
     'sharp','sharpness','focus','focusing','blur','blurry','camera','camera shake','tripod','shutter','shutter speed','stabilization','ibis','vr',
-    'aperture','iso','exposure','metering','composition','white balance','depth of field','focal length','long exposure','hdr','noise','handheld',
-    'landscape','portrait','travel','studio','macro','wildlife','street'
+    'aperture','iso','exposure','metering','composition','white balance','depth of field','focal length','long exposure','hdr','bracketing','noise','handheld',
+    'landscape','portrait','travel','studio','macro','wildlife','street',
+    'full frame','crop sensor','dslr','mirrorless','choose','select','buy','purchase'
   ]);
   const normalized = (keywords || [])
     .map(k => String(k || '').toLowerCase().trim())
@@ -7965,7 +7988,9 @@ async function handleSpecificQueryAnswers(client, query) {
   }
   
   // 5. Cancellation/refund policy
-  if (/cancellation.*refund.*policy|cancellation.*policy.*courses|cancellation.*policy.*workshops/i.test(query)) {
+  if (/cancellation.*refund.*policy|cancellation.*policy.*courses|cancellation.*policy.*workshops|what.*your.*cancellation.*policy/i.test(query)) {
+    const keywords = extractKeywords(query);
+    const services = await findServices(client, { keywords: ['terms', 'conditions', 'policy', 'cancellation'], limit: 6 });
     const answer = `**Booking and Cancellation Policy**: For course changes, please notify at least four weeks in advance. Alan Ranger Photography has comprehensive booking terms and conditions covering cancellations, refunds, and rescheduling. The policy includes public liability insurance coverage and CRB disclosure. Specific terms may vary depending on the course or workshop you're booking.\n\n`;
     return {
       success: true,
@@ -7976,7 +8001,7 @@ async function handleSpecificQueryAnswers(client, query) {
         intent: 'advice',
         articles: [],
         events: [],
-        services: [],
+        services: services || [],
         products: []
       }
     };
@@ -9290,22 +9315,25 @@ function handleContactInfoQuery(query) {
 }
 
 // Helper: Handle gift voucher queries (Complexity: Low)
-function handleGiftVoucherQuery(query) {
+async function handleGiftVoucherQuery(client, query) {
   const qlc = query.toLowerCase();
   if (qlc.includes("voucher") || (qlc.includes("gift") && qlc.includes("offer"))) {
-    console.log(`✅ Gift voucher query detected, returning voucher answer as advice: "${query}"`);
+    console.log(`✅ Gift voucher query detected, fetching articles and services: "${query}"`);
+    const keywords = extractKeywords(query);
+    const articles = await findArticles(client, { keywords: ['gift', 'voucher'], limit: 6 });
+    const services = await findServices(client, { keywords: ['gift', 'voucher'], limit: 6 });
     return {
       success: true,
       confidence: 0.8,
       answer: `**Gift Vouchers**: Digital photography gift vouchers are available from £5-£600, perfect for any photography enthusiast. Vouchers can be used for workshops, courses, private lessons, or any photography tuition event. They expire 12 months from purchase date and can be split across multiple purchases. [Buy Gift Vouchers](https://www.alanranger.com/photography-gift-vouchers)\n\n`,
       type: "advice",
-      sources: { articles: [] },
+      sources: { articles, services },
       structured: {
         intent: "advice",
-        articles: [],
+        articles: articles || [],
         events: [],
         products: [],
-        services: []
+        services: services || []
       }
     };
   }
@@ -10150,7 +10178,7 @@ async function handleSpecificQueryTypes(client, query) {
   const contactInfo = handleContactInfoQuery(query);
   if (contactInfo) return contactInfo;
   
-  const giftVoucher = handleGiftVoucherQuery(query);
+  const giftVoucher = await handleGiftVoucherQuery(client, query);
   if (giftVoucher) return giftVoucher;
   
   const aboutAlan = await handleAboutAlanQuery(client, query);
@@ -10474,7 +10502,9 @@ async function addServicesForEnrichment(client, keywords, enriched, businessCate
     businessCategory === 'Course/Workshop Logistics' ||
     businessCategory === 'General Queries' ||
     // Keyword-based matching for common service queries
-    /\b(gift|voucher|certificate|booking|book|contact|service|course|workshop|lesson|mentoring|tutoring|tutorial|training|help|support|assistance|consultation|session|photography service|commercial|product photography|portrait|wedding|event photography|corporate|business|professional)\b/i.test(query || '');
+    /\b(gift|voucher|certificate|booking|book|contact|service|course|workshop|lesson|mentoring|tutoring|tutorial|training|help|support|assistance|consultation|session|photography service|commercial|product photography|portrait|wedding|event photography|corporate|business|professional)\b/i.test(query || '') ||
+    // Include services for "improve photography" queries
+    (/\b(improve|better|learn|develop|enhance)\b/i.test(query || '') && /\b(photography|photograph|skills)\b/i.test(query || ''));
   
   if (shouldAddServices) {
     const services = await findServices(client, { keywords, limit: 6 });
@@ -10489,11 +10519,15 @@ async function addServicesForEnrichment(client, keywords, enriched, businessCate
 async function addProductsForEnrichment(client, keywords, enriched, businessCategory, query) {
   const lc = (query || '').toLowerCase();
   
-  // Add products for equipment queries
+  // Add products for equipment queries and portrait/people photography queries
   const shouldAddProducts = 
     businessCategory === 'Equipment Recommendations' ||
     // Keyword-based matching for equipment/product queries
-    /\b(tripod|camera|lens|filter|flash|bag|memory card|sd card|equipment|gear|accessory|accessories|recommend|suggest|buy|purchase|need|required)\b/i.test(query || '');
+    /\b(tripod|camera|lens|filter|flash|bag|memory card|sd card|equipment|gear|accessory|accessories|recommend|suggest|buy|purchase|need|required)\b/i.test(query || '') ||
+    // Include products for portrait/people photography queries
+    (/\b(photograph|photography)\b/i.test(query || '') && /\b(people|person|portrait)\b/i.test(query || '')) ||
+    // Include products for "how do I photograph" queries with specific subjects (seascapes, sunsets, waterfalls)
+    (/\b(photograph|photography)\b/i.test(query || '') && /\b(seascape|sunset|waterfall|falls)\b/i.test(query || ''));
   
   if (shouldAddProducts) {
     const products = await findProducts(client, { keywords, limit: 6 });
@@ -10513,7 +10547,9 @@ async function addEventsForEnrichment(client, keywords, enriched, businessCatego
     businessCategory === 'Course/Workshop Logistics' ||
     businessCategory === 'Event Queries' ||
     // Keyword-based matching for event-related queries
-    /\b(workshop|course|class|event|session|training|field trip|residential|day trip|photography walk|photo walk)\b/i.test(query || '');
+    /\b(workshop|course|class|event|session|training|field trip|residential|day trip|photography walk|photo walk)\b/i.test(query || '') ||
+    // Include events for "how do I photograph" queries with specific subjects
+    (/\b(photograph|photography)\b/i.test(query || '') && /\b(seascape|sunset|waterfall|falls|autumn|bluebell|flower|people|portrait|wildlife|landscape)\b/i.test(query || ''));
   
   if (shouldAddEvents) {
     const events = await findEvents(client, { keywords, limit: 6 });
