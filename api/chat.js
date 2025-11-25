@@ -4354,32 +4354,74 @@ function computeServiceRecencyScore(lastSeen, now) {
 }
 
 async function findServices(client, { keywords, limit = 50 }) {
- console.log(`🔧 findServices called with keywords: ${keywords?.join(', ') || 'none'}`);
- const genericServiceIntent = Array.isArray(keywords) && keywords.length > 0 && 
-   keywords.every(k => /^(service|services|type|types|offer|offers|photography|photographic|what|do|you)$/i.test(String(k||'').trim()));
-const requestedLimit = typeof limit === 'number' && !Number.isNaN(limit) ? limit : 50;
-const queryLimit = Math.max(requestedLimit, MAX_SERVICE_RESULTS);
-const displayLimit = Math.min(requestedLimit, MAX_SERVICE_RESULTS);
+  console.log(`🔧 findServices called with keywords: ${keywords?.join(', ') || 'none'}`);
+  const genericServiceIntent = Array.isArray(keywords) && keywords.length > 0 && 
+    keywords.every(k => /^(service|services|type|types|offer|offers|photography|photographic|what|do|you)$/i.test(String(k||'').trim()));
+  const requestedLimit = typeof limit === 'number' && !Number.isNaN(limit) ? limit : 50;
+  const queryLimit = Math.max(requestedLimit, MAX_SERVICE_RESULTS);
+  const displayLimit = Math.min(requestedLimit, MAX_SERVICE_RESULTS);
 
- // 1) Primary: prefer landing/service pages imported via CSV
- try {
-  const qPrimary = buildPrimaryServicesQuery(client, genericServiceIntent, keywords, queryLimit);
-   const { data: primary, error: errPrimary } = await qPrimary;
-   if (!errPrimary && Array.isArray(primary) && primary.length > 0) {
-    return processAndReturnServices(primary, genericServiceIntent, displayLimit, keywords);
-   }
- } catch (e) {
-   console.warn('findServices primary query failed, attempting fallback', e);
- }
+  let combinedResults = [];
 
- // 2) Fallback: enforce csv_metadata.kind='service'
-const q = buildFallbackServicesQuery(client, genericServiceIntent, keywords, queryLimit);
- const { data, error } = await q;
- if (error) {
-   console.error('findServices fallback error:', error);
-   return [];
- }
-return processAndReturnServices(data || [], genericServiceIntent, displayLimit, keywords);
+  // 1) Primary: prefer landing/service pages imported via CSV
+  try {
+    const qPrimary = buildPrimaryServicesQuery(client, genericServiceIntent, keywords, queryLimit);
+    const { data: primary, error: errPrimary } = await qPrimary;
+    if (!errPrimary && Array.isArray(primary) && primary.length > 0) {
+      combinedResults = primary;
+    }
+  } catch (e) {
+    console.warn('findServices primary query failed, attempting fallback', e);
+  }
+
+  // 2) Fallback: enforce csv_metadata.kind='service'
+  try {
+    const q = buildFallbackServicesQuery(client, genericServiceIntent, keywords, queryLimit);
+    const { data, error } = await q;
+    if (!error && Array.isArray(data) && data.length > 0) {
+      combinedResults = [...combinedResults, ...data];
+    } else if (error) {
+      console.error('findServices fallback error:', error);
+    }
+  } catch (e) {
+    console.error('findServices fallback exception:', e);
+  }
+
+  // 3) Include workshop/courses stored as products
+  try {
+    const workshopServices = await fetchWorkshopServices(client, keywords, queryLimit);
+    if (workshopServices.length > 0) {
+      combinedResults = [...combinedResults, ...workshopServices];
+    }
+  } catch (e) {
+    console.warn('findServices workshop augmentation failed', e);
+  }
+
+  if (!combinedResults.length) return [];
+  return processAndReturnServices(combinedResults, genericServiceIntent, displayLimit, keywords);
+}
+
+async function fetchWorkshopServices(client, keywords, limit) {
+  let q = client
+    .from('page_entities')
+    .select('id, url, title, description, page_url, categories, tags, image_url, last_seen, csv_type, kind, csv_metadata!left(kind)')
+    .eq('csv_type', 'workshop_products')
+    .order('last_seen', { ascending: false })
+    .limit(limit);
+  if (keywords && keywords.length > 0) {
+    q = applyServicesKeywordFiltering(q, keywords);
+  }
+  const { data, error } = await q;
+  if (error || !Array.isArray(data)) {
+    if (error) console.warn('fetchWorkshopServices error:', error.message || error);
+    return [];
+  }
+  return data.map(item => ({
+    ...item,
+    title: item.title || item.page_url || item.url || 'Workshop',
+    page_url: item.page_url || item.url,
+    kind: 'service'
+  }));
 }
 
 // Helper functions for findArticles scoring
@@ -4708,7 +4750,7 @@ async function findArticles(client, { keywords, limit = 12, pageContext = null }
     return [];
   }
 
-  let rows = primaryResults.data || [];
+  let rows = filterArticleRows(primaryResults.data);
   console.log(`[DEBUG findArticles] Primary query: ${rows.length} results, keywords=${(searchTerms.length?searchTerms:enhancedKeywords).slice(0, 8).join(',')}`);
   if (rows.length > 0) {
     console.log(`[DEBUG findArticles] Primary titles: ${rows.slice(0, 3).map(r => r.title || 'NO_TITLE').join(' | ')}`);
@@ -4725,6 +4767,9 @@ async function findArticles(client, { keywords, limit = 12, pageContext = null }
   return final.slice(0, displayLimit);
 }
 
+function filterArticleRows(rows) {
+  return (rows || []).filter(r => (r.kind || 'article') === 'article');
+}
 // Helper: Execute primary search
 async function executePrimarySearch(client, searchTerms, enhancedKeywords, limit) {
   let q = buildArticlesBaseQuery(client, limit);
@@ -4738,14 +4783,14 @@ async function executeFallbackSearch(client, enhancedKeywords, currentRows) {
   const baseRows = Array.isArray(currentRows) ? currentRows : [];
   try {
     // Strategy 1: Recent slice with client-side filtering
-    const recentResults = await fetchRecentSlice(client, enhancedKeywords);
+    const recentResults = filterArticleRows(await fetchRecentSlice(client, enhancedKeywords));
     if (recentResults.length > 0) {
       console.log(`[DEBUG findArticles] Recent slice after filter: ${recentResults.length} rows`);
       return [...baseRows, ...recentResults];
     }
 
     // Strategy 2: Targeted search on titles/headlines
-    const targetedResults = await fetchTargetedSearch(client, enhancedKeywords);
+    const targetedResults = filterArticleRows(await fetchTargetedSearch(client, enhancedKeywords));
     if (targetedResults.length > 0) {
       console.log(`[DEBUG findArticles] Targeted after filter: ${targetedResults.length} rows`);
       return [...baseRows, ...targetedResults];
