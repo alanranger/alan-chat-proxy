@@ -3588,12 +3588,18 @@ async function generateClarificationQuestion(query, client = null, pageContext =
 
 function anyIlike(col, words) {
  // Builds PostgREST OR ILIKE expression for (col) against multiple words
+ // FIX: PostgREST's .ilike() method URL-encodes the pattern automatically when building the query.
+ // When we pre-encode "depth of field" as "depth%20of%20field", PostgREST treats %20 as literal,
+ // causing the query to search for the string "%20" instead of a space.
+ // Solution: Pass the unencoded string with spaces - PostgREST will handle encoding.
  const parts = (words || [])
  .map((w) => w.trim())
  .filter(Boolean)
     .map((w) => {
-      const encoded = encodeURIComponent(w);
-      return `${col}.ilike.%${encoded}%`;
+      // Don't pre-encode - PostgREST handles encoding. Just escape any existing % signs
+      // to prevent double-encoding issues
+      const escaped = w.replace(/%/g, '%25');
+      return `${col}.ilike.%${escaped}%`;
     });
  return parts.length ? parts.join(",") : null;
 }
