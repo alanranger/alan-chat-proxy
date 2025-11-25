@@ -25,6 +25,10 @@ process.on('uncaughtException', (error) => {
 // Seasonal terms for workshop detection and content analysis
 const seasonalTerms = ['autumn', 'spring', 'summer', 'winter', 'bluebell', 'seasonal'];
 
+const MAX_ARTICLE_RESULTS = 6;
+const MAX_SERVICE_RESULTS = 6;
+const MAX_LANDING_RESULTS = 6;
+
 /* ----------------------- Helper Functions ----------------------- */
 // Hash IP for privacy
 const hashIP = (ip) => {
@@ -4290,37 +4294,40 @@ function buildFallbackServicesQuery(client, genericServiceIntent, keywords, limi
 }
 
 // Helper: Process and return services
-function processAndReturnServices(data, genericServiceIntent) {
+function processAndReturnServices(data, genericServiceIntent, limitCap = MAX_SERVICE_RESULTS) {
   const normalized = data.map(normalizeServiceTitle);
   const result = genericServiceIntent ? deduplicateServices(normalized) : normalized;
   logServicesResults(result);
-  return result;
+  return result.slice(0, limitCap);
 }
 
 async function findServices(client, { keywords, limit = 50 }) {
  console.log(`🔧 findServices called with keywords: ${keywords?.join(', ') || 'none'}`);
  const genericServiceIntent = Array.isArray(keywords) && keywords.length > 0 && 
    keywords.every(k => /^(service|services|type|types|offer|offers|photography|photographic|what|do|you)$/i.test(String(k||'').trim()));
+const requestedLimit = typeof limit === 'number' && !Number.isNaN(limit) ? limit : 50;
+const queryLimit = Math.max(requestedLimit, MAX_SERVICE_RESULTS);
+const displayLimit = Math.min(requestedLimit, MAX_SERVICE_RESULTS);
 
  // 1) Primary: prefer landing/service pages imported via CSV
  try {
-   const qPrimary = buildPrimaryServicesQuery(client, genericServiceIntent, keywords, limit);
+  const qPrimary = buildPrimaryServicesQuery(client, genericServiceIntent, keywords, queryLimit);
    const { data: primary, error: errPrimary } = await qPrimary;
    if (!errPrimary && Array.isArray(primary) && primary.length > 0) {
-     return processAndReturnServices(primary, genericServiceIntent);
+    return processAndReturnServices(primary, genericServiceIntent, displayLimit);
    }
  } catch (e) {
    console.warn('findServices primary query failed, attempting fallback', e);
  }
 
  // 2) Fallback: enforce csv_metadata.kind='service'
- const q = buildFallbackServicesQuery(client, genericServiceIntent, keywords, limit);
+const q = buildFallbackServicesQuery(client, genericServiceIntent, keywords, queryLimit);
  const { data, error } = await q;
  if (error) {
    console.error('findServices fallback error:', error);
    return [];
  }
- return processAndReturnServices(data || [], genericServiceIntent);
+return processAndReturnServices(data || [], genericServiceIntent, displayLimit);
 }
 
 // Helper functions for findArticles scoring
@@ -4532,14 +4539,25 @@ function processAndSortResults(rows, keywords, limit) {
  ]);
  
  // Extract equipment keywords that are actually in the query
- const queryEquipmentKeywords = new Set();
- const hasEquipmentKeyword = kw.some(k => {
-   if (equipmentKeywords.has(k)) {
-     queryEquipmentKeywords.add(k);
-     return true;
-   }
-   return false;
- });
+const queryEquipmentKeywords = new Set();
+const normalizedKeywordString = kw.join(' ').replace(/\s+/g, ' ').trim();
+
+for (const token of kw) {
+  if (equipmentKeywords.has(token)) {
+    queryEquipmentKeywords.add(token);
+  }
+}
+
+for (const term of equipmentKeywords) {
+  if (term.includes(' ') && normalizedKeywordString.length > 0) {
+    const regex = new RegExp(`\\b${escapeRegex(term)}\\b`, 'i');
+    if (regex.test(normalizedKeywordString)) {
+      queryEquipmentKeywords.add(term);
+    }
+  }
+}
+
+const hasEquipmentKeyword = queryEquipmentKeywords.size > 0;
  
  if (hasEquipmentKeyword) {
    // Filter out genre keywords when equipment keywords are present
@@ -4580,22 +4598,58 @@ function processAndSortResults(rows, keywords, limit) {
  return filtered.slice(0, limit).map(x => x.r);
 }
 
+function escapeRegex(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function limitLandingResults(items) {
+  return (items || []).slice(0, MAX_LANDING_RESULTS);
+}
+
 function filterArticleKeywords(keywords){
   const allow = new Set([
     'sharp','sharpness','focus','focusing','blur','blurry','camera','camera shake','tripod','shutter','shutter speed','stabilization','ibis','vr',
     'aperture','iso','exposure','metering','composition','white balance','depth of field','focal length','long exposure','hdr','noise','handheld',
     'landscape','portrait','travel','studio','macro','wildlife','street'
   ]);
-  const cleaned = Array.from(new Set((keywords||[]).map(k=>String(k).toLowerCase().trim())));
-  return cleaned.filter(k=>k.length>=3 && (allow.has(k) || /^(?:iso|hdr|vr|ibis)$/i.test(k) || /\b(sharp|focus|blur|tripod|shutter|landscape|portrait|travel|studio|macro|wildlife|street)\b/.test(k)));
+  const normalized = (keywords || [])
+    .map(k => String(k || '').toLowerCase().trim())
+    .filter(Boolean);
+  const combined = normalized.join(' ').replace(/\s+/g, ' ').trim();
+
+  const phraseMatches = new Set();
+  if (combined.length > 0) {
+    for (const term of allow) {
+      if (term.includes(' ')) {
+        const regex = new RegExp(`\\b${escapeRegex(term)}\\b`, 'i');
+        if (regex.test(combined)) {
+          phraseMatches.add(term);
+        }
+      }
+    }
+  }
+
+  const cleaned = Array.from(new Set(normalized));
+  const allowedSingles = cleaned.filter(k =>
+    k.length >= 3 && (
+      allow.has(k) ||
+      /^(?:iso|hdr|vr|ibis)$/i.test(k) ||
+      /\b(sharp|focus|blur|tripod|shutter|landscape|portrait|travel|studio|macro|wildlife|street)\b/.test(k)
+    )
+  );
+
+  return Array.from(new Set([...allowedSingles, ...phraseMatches]));
 }
 
 async function findArticles(client, { keywords, limit = 12, pageContext = null }) {
   const enhancedKeywords = handlePageContext(pageContext, keywords);
   const searchTerms = filterArticleKeywords(enhancedKeywords);
+  const requestedLimit = typeof limit === 'number' && !Number.isNaN(limit) ? limit : 12;
+  const queryLimit = Math.max(requestedLimit, MAX_ARTICLE_RESULTS);
+  const displayLimit = Math.min(requestedLimit, MAX_ARTICLE_RESULTS);
   
   // Primary search
-  const primaryResults = await executePrimarySearch(client, searchTerms, enhancedKeywords, limit);
+  const primaryResults = await executePrimarySearch(client, searchTerms, enhancedKeywords, queryLimit);
   if (primaryResults.error) {
     console.log(`[DEBUG findArticles] Primary query error: ${primaryResults.error}`);
     return [];
@@ -4613,9 +4667,9 @@ async function findArticles(client, { keywords, limit = 12, pageContext = null }
   }
 
   console.log(`[DEBUG findArticles] Final rows before processAndSort: ${rows.length}`);
-  const final = processAndSortResults(rows, enhancedKeywords, limit);
+  const final = processAndSortResults(rows, enhancedKeywords, queryLimit);
   console.log(`[DEBUG findArticles] Final result count: ${final.length}`);
-  return final;
+  return final.slice(0, displayLimit);
 }
 
 // Helper: Execute primary search
@@ -5973,8 +6027,8 @@ async function processAdviceEarlyReturn(context) {
  topic: context.directKeywords.join(", "),
  events: [],
  products: [],
- services: [],
- landing: [],
+    services: [],
+    landing: limitLandingResults([]),
  articles: (articles || []).map(a => ({
  ...a,
  display_date: (function(){
@@ -6124,8 +6178,8 @@ async function handleEquipmentAdviceSynthesis(context) {
  topic: context.keywords.join(", "),
  events: [],
  products: [],
- services: [],
- landing: [],
+    services: [],
+    landing: limitLandingResults([]),
  articles: (normalizedArticles || []).map(a => ({
  ...a,
  display_date: (function(){
@@ -6174,8 +6228,8 @@ async function handleAdviceFollowupSynthesis(context) {
  topic: context.keywords.join(", "),
  events: [],
  products: [],
- services: [],
- landing: [],
+    services: [],
+    landing: limitLandingResults([]),
  articles: (articles || []).map(a => ({
  ...a,
  display_date: (function(){
@@ -6283,8 +6337,8 @@ async function handleAdviceClarification(context) {
  topic: (context.keywords || []).join(", "),
  events: [],
  products: [],
- services: [],
- landing: [],
+    services: [],
+    landing: limitLandingResults([]),
  articles: (articles || []).map(a => ({
  ...a,
  display_date: (function(){
@@ -6386,8 +6440,8 @@ async function handleResidentialPricingGuard(context) {
  topic: enrichedKeywords.join(", "), 
  events: [], 
  products: [], 
- services: [], 
- landing: [], 
+    services: [],
+    landing: limitLandingResults([]),
  articles: (processedArticles || []).map(a => ({ 
  ...a, 
  display_date: (function() { 
@@ -6867,8 +6921,8 @@ function handleFallbackResponse(context) {
  topic: keywords.join(", "),
  events: context.events,
  products: [],
- services: context.services,
- landing: [],
+    services: context.services,
+    landing: limitLandingResults([]),
  articles: context.articles
  },
  pills: pills,
@@ -10959,8 +11013,8 @@ function sendFallbackResponse(res, keywords) {
  topic: keywords.join(", "),
  events: [],
  products: [],
- services: [],
- landing: [],
+    services: [],
+    landing: limitLandingResults([]),
  articles: []
  },
  confidence: 0.30,
