@@ -4688,25 +4688,26 @@ async function executePrimarySearch(client, searchTerms, enhancedKeywords, limit
 
 // Helper: Execute fallback search strategies
 async function executeFallbackSearch(client, enhancedKeywords, currentRows) {
+  const baseRows = Array.isArray(currentRows) ? currentRows : [];
   try {
     // Strategy 1: Recent slice with client-side filtering
     const recentResults = await fetchRecentSlice(client, enhancedKeywords);
     if (recentResults.length > 0) {
       console.log(`[DEBUG findArticles] Recent slice after filter: ${recentResults.length} rows`);
-      return recentResults;
+      return [...baseRows, ...recentResults];
     }
 
     // Strategy 2: Targeted search on titles/headlines
     const targetedResults = await fetchTargetedSearch(client, enhancedKeywords);
     if (targetedResults.length > 0) {
       console.log(`[DEBUG findArticles] Targeted after filter: ${targetedResults.length} rows`);
-      return targetedResults;
+      return [...baseRows, ...targetedResults];
     }
   } catch (e) {
     console.log(`[DEBUG findArticles] Fallback exception: ${e.message}`);
   }
-  
-  return currentRows;
+
+  return baseRows;
 }
 
 // Helper: Fetch recent slice and filter
