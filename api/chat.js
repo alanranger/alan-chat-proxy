@@ -9402,38 +9402,33 @@ async function handleAboutAlanQuery(client, query) {
   if (isWhoIsAlan || isAlanBackground) {
     console.log(`✅ About Alan query detected, returning bio as advice: "${query}"`);
     // ONLY return About/Ethics/Testimonials landing pages for person queries
-    // These are static landing pages, so we create article-like entries for them
-    const landingPages = [
-      {
-        id: 'about-landing',
-        title: 'About Alan Ranger',
-        page_url: 'https://www.alanranger.com/about',
-        url: 'https://www.alanranger.com/about',
-        kind: 'article',
-        source_type: 'landing_page'
-      },
-      {
-        id: 'ethics-landing',
-        title: 'Ethics',
-        page_url: 'https://www.alanranger.com/ethics',
-        url: 'https://www.alanranger.com/ethics',
-        kind: 'article',
-        source_type: 'landing_page'
-      },
-      {
-        id: 'testimonials-landing',
-        title: 'Testimonials',
-        page_url: 'https://www.alanranger.com/testimonials',
-        url: 'https://www.alanranger.com/testimonials',
-        kind: 'article',
-        source_type: 'landing_page'
-      }
-    ];
+    // Use findServices to dynamically find landing pages matching these keywords
+    const landingPageKeywords = ['about', 'ethics', 'testimonials'];
+    const services = await findServices(client, { keywords: landingPageKeywords, limit: 10 });
     
-    console.log(`[handleAboutAlanQuery] Using hardcoded landing pages: ${landingPages.map(p => p.title).join(', ')}`);
+    // Filter to ONLY About/Ethics/Testimonials landing pages
+    const landingPages = (services || []).filter(s => {
+      const t = (s.title || '').toLowerCase();
+      const u = (s.page_url || s.url || '').toLowerCase();
+      // Match specific landing page patterns
+      const isAbout = (t.includes('about') || u.includes('/about')) && !t.includes('workshop') && !t.includes('course');
+      const isEthics = (t.includes('ethics') || u.includes('/ethics')) && !t.includes('workshop') && !t.includes('course');
+      const isTestimonials = (t.includes('testimonial') || u.includes('/testimonial')) && !t.includes('workshop') && !t.includes('course');
+      return isAbout || isEthics || isTestimonials;
+    });
     
-    // Return ONLY the 3 hardcoded landing pages - no fallback to regular articles
-    const finalArticles = landingPages;
+    // Convert services to article-like format for consistency
+    const finalArticles = landingPages.slice(0, 3).map(s => ({
+      id: s.id,
+      title: s.title,
+      page_url: s.page_url || s.url,
+      url: s.page_url || s.url,
+      kind: 'article',
+      source_type: 'landing_page',
+      description: s.description || ''
+    }));
+    
+    console.log(`[handleAboutAlanQuery] Found ${finalArticles.length} landing pages: ${finalArticles.map(p => p.title || p.page_url).join(', ')}`);
     console.log(`[handleAboutAlanQuery] Final result: ${finalArticles.length} landing pages`);
     if (finalArticles.length > 0) {
       console.log(`[handleAboutAlanQuery] Landing pages: ${finalArticles.map(a => a.title || a.page_url || 'unknown').join(', ')}`);
