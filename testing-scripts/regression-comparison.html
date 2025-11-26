@@ -1,0 +1,925 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Regression Test Comparison Tool</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      background-color: #f5f5f5;
+    }
+    .container {
+      background-color: white;
+      padding: 24px;
+      max-width: 1400px;
+      margin: 0 auto;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    h1 {
+      color: #333;
+      border-bottom: 3px solid #333;
+      padding-bottom: 10px;
+      margin-top: 0;
+    }
+    h2 {
+      color: #555;
+      margin-top: 30px;
+      border-bottom: 2px solid #ddd;
+      padding-bottom: 5px;
+    }
+    .controls {
+      background-color: #f9f9f9;
+      padding: 15px;
+      border-left: 4px solid #333;
+      margin: 20px 0;
+    }
+    .controls-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+    .field-group {
+      display: flex;
+      flex-direction: column;
+      flex: 1 1 260px;
+      min-width: 220px;
+    }
+    .field-group label {
+      font-size: 13px;
+      margin-bottom: 4px;
+      color: #444;
+      font-weight: 600;
+    }
+    .field-group input,
+    .field-group select {
+      padding: 6px 8px;
+      font-size: 13px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    button {
+      padding: 8px 14px;
+      font-size: 13px;
+      border-radius: 4px;
+      border: none;
+      cursor: pointer;
+      background-color: #333;
+      color: white;
+    }
+    button:disabled {
+      opacity: 0.6;
+      cursor: default;
+    }
+    .status {
+      font-size: 13px;
+      margin-top: 6px;
+      color: #555;
+    }
+    .error {
+      color: #dc3545;
+      font-weight: 600;
+    }
+    .summary-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+      background-color: white;
+    }
+    .summary-table th,
+    .summary-table td {
+      border: 1px solid #ddd;
+      padding: 12px;
+      text-align: left;
+    }
+    .summary-table th {
+      background-color: #333;
+      color: white;
+      font-weight: bold;
+    }
+    .summary-table tr:nth-child(even) {
+      background-color: #f9f9f9;
+    }
+    .comparison-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+      font-size: 12px;
+    }
+    .comparison-table th {
+      background-color: #333;
+      color: white;
+      padding: 12px 8px;
+      text-align: left;
+      font-weight: bold;
+      border: 1px solid #555;
+    }
+    .comparison-table td {
+      border: 1px solid #ddd;
+      padding: 10px 8px;
+      vertical-align: top;
+    }
+    .comparison-table tr:nth-child(even) {
+      background-color: #f9f9f9;
+    }
+    .comparison-table tr:hover {
+      background-color: #f0f0f0;
+    }
+    .query-col {
+      font-weight: bold;
+      width: 17%;
+    }
+    .baseline-col,
+    .current-col {
+      width: 25%;
+    }
+    .status-col {
+      width: 8%;
+      text-align: center;
+    }
+    .notes-col {
+      width: 25%;
+    }
+    .status-better {
+      color: #28a745;
+      font-weight: bold;
+    }
+    .status-worse {
+      color: #dc3545;
+      font-weight: bold;
+    }
+    .status-mixed {
+      color: #ffc107;
+      font-weight: bold;
+    }
+    .status-same {
+      color: #6c757d;
+      font-weight: bold;
+    }
+    .content-line {
+      margin: 4px 0;
+      line-height: 1.4;
+    }
+    .content-type {
+      font-weight: 600;
+    }
+    @media print {
+      body {
+        background-color: white;
+        margin: 0;
+      }
+      .container {
+        box-shadow: none;
+        padding: 20px;
+      }
+      .comparison-table {
+        font-size: 10px;
+      }
+      .controls {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Regression Test Comparison Tool</h1>
+
+    <div class="controls">
+      <div class="controls-row">
+        <div class="field-group">
+          <label for="supabaseUrl">Supabase URL</label>
+          <input id="supabaseUrl" type="text" placeholder="e.g. https://xxxx.supabase.co" />
+        </div>
+        <div class="field-group">
+          <label for="supabaseKey">Supabase anon key</label>
+          <input id="supabaseKey" type="password" placeholder="Paste NEXT_PUBLIC_SUPABASE_ANON_KEY" />
+        </div>
+        <div class="field-group" style="align-self:flex-end; flex:0 0 auto;">
+          <button id="connectBtn">Connect &amp; Load Tests</button>
+        </div>
+      </div>
+      <div class="status" id="connectionStatus"></div>
+
+      <hr style="margin: 16px 0;" />
+
+      <div class="controls-row">
+        <div class="field-group">
+          <label for="baselineSelect">Baseline test (job, phase, date/time)</label>
+          <select id="baselineSelect" disabled>
+            <option value="">Connect first to load tests…</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label for="currentSelect">Comparison test (job, phase, date/time)</label>
+          <select id="currentSelect" disabled>
+            <option value="">Connect first to load tests…</option>
+          </select>
+        </div>
+        <div class="field-group" style="align-self:flex-end; flex:0 0 auto;">
+          <button id="compareBtn" disabled>Compare Selected Tests</button>
+        </div>
+      </div>
+      <div class="status" id="comparisonStatus"></div>
+    </div>
+
+    <div id="resultsContainer">
+      <!-- Summary and table will be injected here -->
+    </div>
+  </div>
+
+  <!-- Supabase JS (v2) from CDN -->
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <script>
+    // The 40 fixed queries, in order, with Q numbers
+    const QUERIES = [
+      "do you offer gift vouchers",
+      "how do I focus in landscape photography",
+      "how do I improve my photography",
+      "how do I photograph autumn colours",
+      "how do I photograph bluebells",
+      "how do I photograph flowers",
+      "how do I photograph people",
+      "how do I photograph seascapes",
+      "how do I photograph sunsets",
+      "how do I photograph waterfalls",
+      "how do I photograph wildlife",
+      "how do I take better landscape photos",
+      "how do I use a tripod",
+      "How long are your workshops?",
+      "How much is a residential photography course and does it include B&B",
+      "what camera should I buy",
+      "what is a histogram",
+      "what is aperture",
+      "what is composition in photography",
+      "what is depth of field",
+      "what is golden hour",
+      "what is HDR photography",
+      "what is ISO",
+      "what is long exposure photography",
+      "what is macro photography",
+      "what is portrait photography",
+      "what is shutter speed",
+      "what is the best camera for beginners",
+      "what is the best lens for landscape photography",
+      "what is the best time of day for landscape photography",
+      "what is the difference between prime and zoom lenses",
+      "what is the rule of thirds",
+      "what is your cancellation policy",
+      "what is your next workshop date and where is it",
+      "what memory card should I buy",
+      "what settings should I use for landscape photography",
+      "what tripod should I buy",
+      "when are your next Autumn workshops and where are they?",
+      "when is the next devon workshop",
+      "whens the next bluebell workshops and whats the cost"
+    ];
+
+    let supabaseClient = null;
+    let testIndex = {}; // id -> { label }
+
+    // --- Helper: safely prefill from window or localStorage without hard-coding secrets ---
+    function prefillSupabaseCreds() {
+      try {
+        const urlInput = document.getElementById('supabaseUrl');
+        const keyInput = document.getElementById('supabaseKey');
+
+        // 1) From global variables you can define in a local helper script:
+        //    <script>window.__SUPABASE_URL = '...'; window.__SUPABASE_ANON_KEY = '...';</script>
+        if (window.__SUPABASE_URL && !urlInput.value) {
+          urlInput.value = window.__SUPABASE_URL;
+        }
+        if (window.__SUPABASE_ANON_KEY && !keyInput.value) {
+          keyInput.value = window.__SUPABASE_ANON_KEY;
+        }
+
+        // 2) Fallback: from localStorage (you can set these via devtools console once)
+        //    localStorage.setItem('regression_supabase_url', 'https://xxx.supabase.co');
+        //    localStorage.setItem('regression_supabase_anon_key', 'anon-key-here');
+        if (!urlInput.value) {
+          const storedUrl = window.localStorage.getItem('regression_supabase_url');
+          if (storedUrl) urlInput.value = storedUrl;
+        }
+        if (!keyInput.value) {
+          const storedKey = window.localStorage.getItem('regression_supabase_anon_key');
+          if (storedKey) keyInput.value = storedKey;
+        }
+      } catch (e) {
+        console.warn('Prefill of Supabase creds failed or not available:', e);
+      }
+    }
+
+    function setConnectionStatus(message, isError = false) {
+      const el = document.getElementById('connectionStatus');
+      el.textContent = message || '';
+      el.className = 'status' + (isError ? ' error' : '');
+    }
+
+    function setComparisonStatus(message, isError = false) {
+      const el = document.getElementById('comparisonStatus');
+      el.textContent = message || '';
+      el.className = 'status' + (isError ? ' error' : '');
+    }
+
+    function extractContentCounts(structured) {
+      return {
+        articles: (structured && structured.articles && structured.articles.length) || 0,
+        services: (structured && structured.services && structured.services.length) || 0,
+        events: (structured && structured.events && structured.events.length) || 0,
+        products: (structured && structured.products && structured.products.length) || 0
+      };
+    }
+
+    function getTopItems(structured, type, limit = 3) {
+      const items = (structured && structured[type]) || [];
+      return items.slice(0, limit).map(item => {
+        const id =
+          item.id ||
+          (item.raw && item.raw.id) ||
+          item.event_id ||
+          item.product_id ||
+          'N/A';
+        const title =
+          item.title ||
+          (item.raw && (item.raw.name || item.raw.title)) ||
+          item.event_title ||
+          item.product_title ||
+          'N/A';
+        return { id, title: String(title) };
+      });
+    }
+
+    function determineStatus(baseline, current) {
+      const baselineTotal =
+        baseline.articles + baseline.services + baseline.events + baseline.products;
+      const currentTotal =
+        current.articles + current.services + current.events + current.products;
+
+      // Quick no-content cases
+      if (baselineTotal === 0 && currentTotal === 0) return 'same';
+      if (baselineTotal === 0 && currentTotal > 0) return 'better';
+      if (baselineTotal > 0 && currentTotal === 0) return 'worse';
+
+      const articlesMatch = baseline.articles === current.articles;
+      const servicesMatch = baseline.services === current.services;
+      const eventsMatch = baseline.events === current.events;
+      const productsMatch = baseline.products === current.products;
+
+      const topBase = baseline.topArticles && baseline.topArticles[0];
+      const topCurr = current.topArticles && current.topArticles[0];
+      const topArticleChanged =
+        !!topBase &&
+        !!topCurr &&
+        String(topBase.id || '') !== String(topCurr.id || '');
+
+      // Heuristic:
+      if (currentTotal > baselineTotal * 1.2 && articlesMatch && servicesMatch) {
+        return 'better';
+      }
+      if (currentTotal < baselineTotal * 0.8) {
+        return 'worse';
+      }
+      if (topArticleChanged && Math.abs(currentTotal - baselineTotal) <= 2) {
+        return 'mixed';
+      }
+      if (articlesMatch && servicesMatch && eventsMatch && productsMatch) {
+        return 'same';
+      }
+      return 'mixed';
+    }
+
+    function generateNotes(row) {
+      const notes = [];
+      if (row.baseline.counts.articles !== row.current.counts.articles) {
+        notes.push(`Articles: ${row.baseline.counts.articles} → ${row.current.counts.articles}`);
+      }
+      if (row.baseline.counts.services !== row.current.counts.services) {
+        notes.push(`Services: ${row.baseline.counts.services} → ${row.current.counts.services}`);
+      }
+      if (row.baseline.counts.events !== row.current.counts.events) {
+        notes.push(`Events: ${row.baseline.counts.events} → ${row.current.counts.events}`);
+      }
+      if (row.baseline.counts.products !== row.current.counts.products) {
+        notes.push(`Products: ${row.baseline.counts.products} → ${row.current.counts.products}`);
+      }
+
+      if (
+        row.baseline.topArticles[0] &&
+        row.current.topArticles[0] &&
+        String(row.baseline.topArticles[0].id) !== String(row.current.topArticles[0].id)
+      ) {
+        notes.push('Top article changed');
+      }
+
+      return notes.length > 0 ? notes.join('; ') : 'No significant changes';
+    }
+
+    function formatDateTime(isoString) {
+      if (!isoString) return '';
+      try {
+        const d = new Date(isoString);
+        return d.toISOString().replace('T', ' ').replace('Z', ' UTC');
+      } catch {
+        return isoString;
+      }
+    }
+
+    async function connectAndLoadTests() {
+      const url = document.getElementById('supabaseUrl').value.trim();
+      const key = document.getElementById('supabaseKey').value.trim();
+
+      if (!url || !key) {
+        setConnectionStatus('Supabase URL and anon key are required.', true);
+        return;
+      }
+
+      setConnectionStatus('Connecting to Supabase and loading tests…');
+      document.getElementById('connectBtn').disabled = true;
+
+      try {
+        supabaseClient = window.supabase.createClient(url, key);
+
+        // Fetch recent regression_test_runs to build a mapping
+        const { data, error } = await supabaseClient
+          .from('regression_test_runs')
+          .select('id, job_id, job_name, created_at, baseline_test_id, after_test_id')
+          .order('created_at', { ascending: false })
+          .limit(200);
+
+        if (error) {
+          console.error(error);
+          throw error;
+        }
+
+        testIndex = {};
+
+        (data || []).forEach(run => {
+          const baseId = run.baseline_test_id;
+          const afterId = run.after_test_id;
+          const job = run.job_id;
+          const jname = run.job_name || '';
+          const when = formatDateTime(run.created_at);
+
+          if (baseId) {
+            if (!testIndex[baseId]) {
+              testIndex[baseId] = [];
+            }
+            testIndex[baseId].push({
+              phase: 'baseline',
+              job,
+              jobName: jname,
+              createdAt: when,
+              runId: run.id
+            });
+          }
+          if (afterId) {
+            if (!testIndex[afterId]) {
+              testIndex[afterId] = [];
+            }
+            testIndex[afterId].push({
+              phase: 'after',
+              job,
+              jobName: jname,
+              createdAt: when,
+              runId: run.id
+            });
+          }
+        });
+
+        // Also fetch recent regression_test_results directly so standalone tests
+        // like master baseline 878 and latest runs (e.g. 944) always appear,
+        // even if they are not referenced in the last 200 runs.
+        const { data: resultsList, error: resultsError } = await supabaseClient
+          .from('regression_test_results')
+          .select('id, created_at')
+          .order('created_at', { ascending: false })
+          .limit(300);
+
+        if (resultsError) {
+          console.error(resultsError);
+          // Not fatal – we can still use whatever we got from runs
+        } else {
+          (resultsList || []).forEach(r => {
+            const id = r.id;
+            const when = formatDateTime(r.created_at);
+            if (!testIndex[id]) {
+              testIndex[id] = [
+                {
+                  phase: null,
+                  job: null,
+                  jobName: '',
+                  createdAt: when,
+                  runId: null
+                }
+              ];
+            } else {
+              // Ensure we have at least one createdAt populated
+              if (!testIndex[id][0].createdAt && when) {
+                testIndex[id][0].createdAt = when;
+              }
+            }
+          });
+        }
+
+        populateSelects();
+        setConnectionStatus(
+          'Connected. Select baseline and comparison tests, then click "Compare Selected Tests".'
+        );
+      } catch (e) {
+        console.error(e);
+        setConnectionStatus('Failed to connect or load tests. Check console for details.', true);
+      } finally {
+        document.getElementById('connectBtn').disabled = false;
+      }
+    }
+
+    function populateSelects() {
+      const baselineSelect = document.getElementById('baselineSelect');
+      const currentSelect = document.getElementById('currentSelect');
+
+      baselineSelect.innerHTML = '';
+      currentSelect.innerHTML = '';
+
+      const allIds = Object.keys(testIndex)
+        .map(id => parseInt(id, 10))
+        .filter(id => !Number.isNaN(id))
+        .sort((a, b) => a - b); // ascending by test id
+
+      if (allIds.length === 0) {
+        baselineSelect.innerHTML = '<option value="">No tests found</option>';
+        currentSelect.innerHTML = '<option value="">No tests found</option>';
+        baselineSelect.disabled = true;
+        currentSelect.disabled = true;
+        document.getElementById('compareBtn').disabled = true;
+        return;
+      }
+
+      const makeLabel = (testId, meta) => {
+        const m = meta[0]; // just take first run that references this test id
+        const jobPart = m.job != null ? `job ${m.job}` : 'job ?';
+        const namePart = m.jobName ? ` – ${m.jobName}` : '';
+        const phasePart = m.phase ? ` – phase: ${m.phase}` : '';
+        const whenPart = m.createdAt ? ` – ${m.createdAt}` : '';
+        const isMasterBaseline = testId === 878;
+        const baselineTag = isMasterBaseline ? ' [MASTER BASELINE]' : '';
+        return `Test ${testId}${baselineTag} (${jobPart}${namePart}${phasePart}${whenPart})`;
+      };
+
+      const addOption = (select, value, label) => {
+        const opt = document.createElement('option');
+        opt.value = value;
+        opt.textContent = label;
+        select.appendChild(opt);
+      };
+
+      addOption(baselineSelect, '', 'Select baseline test…');
+      addOption(currentSelect, '', 'Select comparison test…');
+
+      allIds.forEach(id => {
+        const label = makeLabel(id, testIndex[id]);
+        addOption(baselineSelect, String(id), label);
+        addOption(currentSelect, String(id), label);
+      });
+
+      baselineSelect.disabled = false;
+      currentSelect.disabled = false;
+      document.getElementById('compareBtn').disabled = false;
+    }
+
+    async function compareSelected() {
+      if (!supabaseClient) {
+        setComparisonStatus('Connect to Supabase first.', true);
+        return;
+      }
+
+      const baselineId = document.getElementById('baselineSelect').value;
+      const currentId = document.getElementById('currentSelect').value;
+
+      if (!baselineId || !currentId) {
+        setComparisonStatus('Select both baseline and comparison tests.', true);
+        return;
+      }
+
+      setComparisonStatus(`Loading results for baseline ${baselineId} and current ${currentId}…`);
+      document.getElementById('compareBtn').disabled = true;
+
+      try {
+        const [baselineRes, currentRes] = await Promise.all([
+          supabaseClient
+            .from('regression_test_results')
+            .select('results, created_at')
+            .eq('id', baselineId)
+            .single(),
+          supabaseClient
+            .from('regression_test_results')
+            .select('results, created_at')
+            .eq('id', currentId)
+            .single()
+        ]);
+
+        if (baselineRes.error) throw baselineRes.error;
+        if (currentRes.error) throw currentRes.error;
+
+        const baselineResults = (baselineRes.data && baselineRes.data.results) || [];
+        const currentResults = (currentRes.data && currentRes.data.results) || [];
+
+        const baselineCreatedAt = formatDateTime(baselineRes.data.created_at);
+        const currentCreatedAt = formatDateTime(currentRes.data.created_at);
+
+        const { html, summary } = buildComparisonHtml(
+          parseInt(baselineId, 10),
+          baselineCreatedAt,
+          parseInt(currentId, 10),
+          currentCreatedAt,
+          baselineResults,
+          currentResults
+        );
+
+        document.getElementById('resultsContainer').innerHTML = html;
+        setComparisonStatus(
+          `Done. Better: ${summary.better}, Worse: ${summary.worse}, Mixed: ${summary.mixed}, Same: ${summary.same}.`
+        );
+      } catch (e) {
+        console.error(e);
+        setComparisonStatus('Error loading or comparing tests. Check console for details.', true);
+      } finally {
+        document.getElementById('compareBtn').disabled = false;
+      }
+    }
+
+    function buildComparisonHtml(
+      baselineId,
+      baselineCreatedAt,
+      currentId,
+      currentCreatedAt,
+      baselineResults,
+      currentResults
+    ) {
+      const baselineMap = new Map();
+      baselineResults.forEach(r => {
+        if (r && r.query) {
+          baselineMap.set(String(r.query).toLowerCase(), r);
+        }
+      });
+
+      const currentMap = new Map();
+      currentResults.forEach(r => {
+        if (r && r.query) {
+          currentMap.set(String(r.query).toLowerCase(), r);
+        }
+      });
+
+      const rows = [];
+      let better = 0,
+        worse = 0,
+        mixed = 0,
+        same = 0;
+
+      QUERIES.forEach((query, idx) => {
+        const qNum = idx + 1;
+        const key = query.toLowerCase();
+        const baseEntry = baselineMap.get(key) || null;
+        const currEntry = currentMap.get(key) || null;
+
+        if (!baseEntry && !currEntry) {
+          return;
+        }
+
+        const baseCounts = extractContentCounts(baseEntry && baseEntry.response && baseEntry.response.structured);
+        const currCounts = extractContentCounts(currEntry && currEntry.response && currEntry.response.structured);
+
+        const baseTopArticles = getTopItems(
+          baseEntry && baseEntry.response && baseEntry.response.structured,
+          'articles',
+          1
+        );
+        const baseTopServices = getTopItems(
+          baseEntry && baseEntry.response && baseEntry.response.structured,
+          'services',
+          1
+        );
+        const baseTopEvents = getTopItems(
+          baseEntry && baseEntry.response && baseEntry.response.structured,
+          'events',
+          1
+        );
+
+        const currTopArticles = getTopItems(
+          currEntry && currEntry.response && currEntry.response.structured,
+          'articles',
+          1
+        );
+        const currTopServices = getTopItems(
+          currEntry && currEntry.response && currEntry.response.structured,
+          'services',
+          1
+        );
+        const currTopEvents = getTopItems(
+          currEntry && currEntry.response && currEntry.response.structured,
+          'events',
+          1
+        );
+
+        const status = determineStatus(
+          { ...baseCounts, topArticles: baseTopArticles },
+          { ...currCounts, topArticles: currTopArticles }
+        );
+
+        if (status === 'better') better++;
+        else if (status === 'worse') worse++;
+        else if (status === 'mixed') mixed++;
+        else same++;
+
+        rows.push({
+          qNum,
+          query,
+          baseline: {
+            counts: baseCounts,
+            topArticles: baseTopArticles,
+            topServices: baseTopServices,
+            topEvents: baseTopEvents
+          },
+          current: {
+            counts: currCounts,
+            topArticles: currTopArticles,
+            topServices: currTopServices,
+            topEvents: currTopEvents
+          },
+          status
+        });
+      });
+
+      const summary = { better, worse, mixed, same };
+
+      const rowsHtml = rows
+        .map(row => {
+          const statusClass = 'status-' + row.status;
+          const statusIcon =
+            row.status === 'better'
+              ? '✅'
+              : row.status === 'worse'
+              ? '❌'
+              : row.status === 'mixed'
+              ? '⚠️'
+              : '➖';
+          const statusLabel = row.status.charAt(0).toUpperCase() + row.status.slice(1);
+
+          const baselineText = [
+            row.baseline.counts.articles > 0
+              ? `<div class="content-line"><span class="content-type">Articles:</span> ${
+                  row.baseline.counts.articles
+                }${
+                  row.baseline.topArticles[0]
+                    ? ` ("${row.baseline.topArticles[0].title.substring(0, 60)}${
+                        row.baseline.topArticles[0].title.length > 60 ? '...' : ''
+                      }" ID:${row.baseline.topArticles[0].id})`
+                    : ''
+                }</div>`
+              : '',
+            row.baseline.counts.services > 0
+              ? `<div class="content-line"><span class="content-type">Services:</span> ${
+                  row.baseline.counts.services
+                }${
+                  row.baseline.topServices[0]
+                    ? ` ("${row.baseline.topServices[0].title.substring(0, 60)}${
+                        row.baseline.topServices[0].title.length > 60 ? '...' : ''
+                      }" ID:${row.baseline.topServices[0].id})`
+                    : ''
+                }</div>`
+              : '',
+            row.baseline.counts.events > 0
+              ? `<div class="content-line"><span class="content-type">Events:</span> ${
+                  row.baseline.counts.events
+                }${
+                  row.baseline.topEvents[0]
+                    ? ` ("${row.baseline.topEvents[0].title.substring(0, 60)}${
+                        row.baseline.topEvents[0].title.length > 60 ? '...' : ''
+                      }")`
+                    : ''
+                }</div>`
+              : ''
+          ]
+            .filter(Boolean)
+            .join('') || '<div class="content-line"><em>(No content)</em></div>';
+
+          const currentText = [
+            row.current.counts.articles > 0
+              ? `<div class="content-line"><span class="content-type">Articles:</span> ${
+                  row.current.counts.articles
+                }${
+                  row.current.topArticles[0]
+                    ? ` ("${row.current.topArticles[0].title.substring(0, 60)}${
+                        row.current.topArticles[0].title.length > 60 ? '...' : ''
+                      }" ID:${row.current.topArticles[0].id})`
+                    : ''
+                }</div>`
+              : '',
+            row.current.counts.services > 0
+              ? `<div class="content-line"><span class="content-type">Services:</span> ${
+                  row.current.counts.services
+                }${
+                  row.current.topServices[0]
+                    ? ` ("${row.current.topServices[0].title.substring(0, 60)}${
+                        row.current.topServices[0].title.length > 60 ? '...' : ''
+                      }" ID:${row.current.topServices[0].id})`
+                    : ''
+                }</div>`
+              : '',
+            row.current.counts.events > 0
+              ? `<div class="content-line"><span class="content-type">Events:</span> ${
+                  row.current.counts.events
+                }${
+                  row.current.topEvents[0]
+                    ? ` ("${row.current.topEvents[0].title.substring(0, 60)}${
+                        row.current.topEvents[0].title.length > 60 ? '...' : ''
+                      }")`
+                    : ''
+                }</div>`
+              : ''
+          ]
+            .filter(Boolean)
+            .join('') || '<div class="content-line"><em>(No content)</em></div>';
+
+          const notes = generateNotes(row);
+
+          return `
+          <tr>
+            <td class="query-col"><strong>Q${row.qNum}. ${row.query}</strong></td>
+            <td>${baselineText}</td>
+            <td>${currentText}</td>
+            <td class="status-col ${statusClass}">${statusIcon} <strong>${statusLabel}</strong></td>
+            <td class="notes-col">${notes}</td>
+          </tr>`;
+        })
+        .join('\n');
+
+      const html = `
+      <h2>Summary Counts</h2>
+      <table class="summary-table">
+        <thead>
+          <tr>
+            <th>Status</th>
+            <th>Count</th>
+            <th>Percentage</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>✅ <strong>Better</strong></td>
+            <td>${better}</td>
+            <td>${((better / QUERIES.length) * 100).toFixed(1)}%</td>
+          </tr>
+          <tr>
+            <td>❌ <strong>Worse</strong></td>
+            <td>${worse}</td>
+            <td>${((worse / QUERIES.length) * 100).toFixed(1)}%</td>
+          </tr>
+          <tr>
+            <td>⚠️ <strong>Mixed</strong></td>
+            <td>${mixed}</td>
+            <td>${((mixed / QUERIES.length) * 100).toFixed(1)}%</td>
+          </tr>
+          <tr>
+            <td>➖ <strong>Same</strong></td>
+            <td>${same}</td>
+            <td>${((same / QUERIES.length) * 100).toFixed(1)}%</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2>Detailed Comparison Table</h2>
+      <p><strong>Baseline Test:</strong> #${baselineId} (${baselineCreatedAt})<br>
+      <strong>Current Test:</strong> #${currentId} (${currentCreatedAt})<br>
+      <strong>Total Queries:</strong> ${QUERIES.length}</p>
+
+      <table class="comparison-table">
+        <thead>
+          <tr>
+            <th class="query-col">Query</th>
+            <th class="baseline-col">Baseline (type: count, top item)</th>
+            <th class="current-col">Current (type: count, top item)</th>
+            <th class="status-col">Status</th>
+            <th class="notes-col">Notes</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rowsHtml}
+        </tbody>
+      </table>
+      `;
+
+      return { html, summary };
+    }
+
+    document.getElementById('connectBtn').addEventListener('click', connectAndLoadTests);
+    document.getElementById('compareBtn').addEventListener('click', compareSelected);
+
+    // Prefill fields on load for convenience (using user-defined globals or localStorage)
+    window.addEventListener('DOMContentLoaded', prefillSupabaseCreds);
+  </script>
+</body>
+</html>
+
+

@@ -1,0 +1,796 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Question-by-Question Breakdown: Baseline vs Current</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            padding: 30px;
+            max-width: 1400px;
+            margin: 0 auto;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            border-bottom: 3px solid #333;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #555;
+            margin-top: 30px;
+            border-bottom: 2px solid #ddd;
+            padding-bottom: 5px;
+        }
+        .overview {
+            background-color: #f9f9f9;
+            padding: 15px;
+            border-left: 4px solid #333;
+            margin: 20px 0;
+        }
+        .summary-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background-color: white;
+        }
+        .summary-table th,
+        .summary-table td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        .summary-table th {
+            background-color: #333;
+            color: white;
+            font-weight: bold;
+        }
+        .summary-table tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            font-size: 12px;
+        }
+        .comparison-table th {
+            background-color: #333;
+            color: white;
+            padding: 12px 8px;
+            text-align: left;
+            font-weight: bold;
+            border: 1px solid #555;
+        }
+        .comparison-table td {
+            border: 1px solid #ddd;
+            padding: 10px 8px;
+            vertical-align: top;
+        }
+        .comparison-table tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        .comparison-table tr:hover {
+            background-color: #f0f0f0;
+        }
+        .query-col {
+            font-weight: bold;
+            width: 15%;
+        }
+        .baseline-col,
+        .current-col {
+            width: 25%;
+        }
+        .status-col {
+            width: 8%;
+            text-align: center;
+        }
+        .notes-col {
+            width: 27%;
+        }
+        .status-better {
+            color: #28a745;
+            font-weight: bold;
+        }
+        .status-worse {
+            color: #dc3545;
+            font-weight: bold;
+        }
+        .status-mixed {
+            color: #ffc107;
+            font-weight: bold;
+        }
+        .status-same {
+            color: #6c757d;
+            font-weight: bold;
+        }
+        .content-line {
+            margin: 4px 0;
+            line-height: 1.4;
+        }
+        .content-type {
+            font-weight: 600;
+        }
+        @media print {
+            body {
+                background-color: white;
+                margin: 0;
+            }
+            .container {
+                box-shadow: none;
+                padding: 20px;
+            }
+            .comparison-table {
+                font-size: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Question-by-Question Breakdown: Baseline vs Current</h1>
+        
+        <div class="overview">
+            <strong>Overview</strong><br>
+            <strong>Baseline Test:</strong> #878 (2025-11-21)<br>
+            <strong>Current Test:</strong> #935 (2025-11-25)<br>
+            <strong>Total Queries:</strong> 40
+        </div>
+
+        <h2>Summary Counts</h2>
+        <table class="summary-table">
+            <thead>
+                <tr>
+                    <th>Status</th>
+                    <th>Count</th>
+                    <th>Percentage</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>✅ <strong>Better</strong></td>
+                    <td>10</td>
+                    <td>25%</td>
+                </tr>
+                <tr>
+                    <td>❌ <strong>Worse</strong></td>
+                    <td>3</td>
+                    <td>7.5%</td>
+                </tr>
+                <tr>
+                    <td>⚠️ <strong>Mixed</strong></td>
+                    <td>5</td>
+                    <td>12.5%</td>
+                </tr>
+                <tr>
+                    <td>➖ <strong>Same</strong></td>
+                    <td>22</td>
+                    <td>55%</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h2>Detailed Comparison Table</h2>
+        <table class="comparison-table">
+            <thead>
+                <tr>
+                    <th class="query-col">Query</th>
+                    <th class="baseline-col">Baseline (type: count, top item)</th>
+                    <th class="current-col">Current (type: count, top item)</th>
+                    <th class="status-col">Status</th>
+                    <th class="notes-col">Notes</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="query-col"><strong>Q1. do you offer gift vouchers</strong></td>
+                    <td>
+                        <div class="content-line"><span class="content-type">Articles:</span> 1 ("Photography Gift Vouchers | Digital eCard | Email Delivery" ID:257032)</div>
+                        <div class="content-line"><span class="content-type">Services:</span> 3 ("Photography Gift Vouchers - Buy Online..." ID:244470)</div>
+                        <div class="content-line"><span class="content-type">Events:</span> 0</div>
+                    </td>
+                    <td>
+                        <div class="content-line"><span class="content-type">Articles:</span> 0</div>
+                        <div class="content-line"><span class="content-type">Services:</span> 0</div>
+                        <div class="content-line"><span class="content-type">Events:</span> 0</div>
+                        <div class="content-line"><em>(Bot response only, no sections)</em></div>
+                    </td>
+                    <td class="status-col status-worse">❌ <strong>Worse</strong></td>
+                    <td>Lost article and services; now only bot response with no sections</td>
+                </tr>
+                <tr>
+                    <td class="query-col"><strong>Q2. how do I focus in landscape photography</strong></td>
+                    <td>
+                        <div class="content-line"><span class="content-type">Articles:</span> 1 ("08 What is FOCUS in Photography: Key Concepts Explained" ID:256969)</div>
+                        <div class="content-line"><span class="content-type">Services:</span> 0</div>
+                        <div class="content-line"><span class="content-type">Events:</span> 0</div>
+                    </td>
+                    <td>
+                        <div class="content-line"><span class="content-type">Articles:</span> 2 ("Focus Modes and Tracking Photography Practice Assignment" ID:265299, "08 What is FOCUS..." ID:256969)</div>
+                        <div class="content-line"><span class="content-type">Services:</span> 0</div>
+                        <div class="content-line"><span class="content-type">Events:</span> 0</div>
+                    </td>
+                    <td class="status-col status-better">✅ <strong>Better</strong></td>
+                    <td>Added assignment article; proper guide still present at #2</td>
+                </tr>
+                <tr>
+                    <td class="query-col"><strong>Q3. how do I improve my photography</strong></td>
+                    <td>
+                        <div class="content-line"><span class="content-type">Articles:</span> 12 (mix of guides like "Composition Curiousness - Part 1" ID:256399)</div>
+                        <div class="content-line"><span class="content-type">Services:</span> 0</div>
+                        <div class="content-line"><span class="content-type">Events:</span> 0</div>
+                    </td>
+                    <td>
+                        <div class="content-line"><span class="content-type">Articles:</span> 6 (all assignments, "Landscapes Photography Practise Assignment" ID:265279)</div>
+                        <div class="content-line"><span class="content-type">Services:</span> 0</div>
+                        <div class="content-line"><span class="content-type">Events:</span> 0</div>
+                    </td>
+                    <td class="status-col status-mixed">⚠️ <strong>Mixed</strong></td>
+                    <td>Capped at 6 but now all assignments; should include services (mentoring, courses, private lessons) and landing pages</td>
+                </tr>
+                <tr>
+                    <td class="query-col"><strong>Q4. how do I photograph autumn colours</strong></td>
+                    <td>
+                        <div class="content-line"><span class="content-type">Articles:</span> 12 ("Composition Curiousness - Part 1" ID:256399)</div>
+                        <div class="content-line"><span class="content-type">Services:</span> 0</div>
+                        <div class="content-line"><span class="content-type">Events:</span> 11 ("Fairy Glen Betws-y-Coed Photography Workshop - Wales Autumn")</div>
+                    </td>
+                    <td>
+                        <div class="content-line"><span class="content-type">Articles:</span> 6 ("Landscapes Photography Practise Assignment" ID:265279)</div>
+                        <div class="content-line"><span class="content-type">Services:</span> 0</div>
+                        <div class="content-line"><span class="content-type">Events:</span> 11 (same event)</div>
+                    </td>
+                    <td class="status-col status-mixed">⚠️ <strong>Mixed</strong></td>
+                    <td>Capped at 6, now assignment-heavy; events unchanged</td>
+                </tr>
+                <tr>
+                    <td class="query-col"><strong>Q5. how do I photograph bluebells</strong></td>
+                    <td>
+                        <div class="content-line"><span class="content-type">Articles:</span> 12 ("Composition Curiousness - Part 1" ID:256399)</div>
+                        <div class="content-line"><span class="content-type">Services:</span> 0</div>
+                        <div class="content-line"><span class="content-type">Events:</span> 0</div>
+                    </td>
+                    <td>
+                        <div class="content-line"><span class="content-type">Articles:</span> 6 ("Top Tips for photographing bluebells | A Professional Guide" ID:256382)</div>
+                        <div class="content-line"><span class="content-type">Services:</span> 0</div>
+                        <div class="content-line"><span class="content-type">Events:</span> 0</div>
+                    </td>
+                    <td class="status-col status-better">✅ <strong>Better</strong></td>
+                    <td>Now shows proper bluebell guide at #1; capped at 6</td>
+                </tr>
+                <tr>
+                    <td class="query-col"><strong>Q6. how do I photograph flowers</strong></td>
+                    <td>
+                        <div class="content-line"><span class="content-type">Articles:</span> 12 ("Composition Curiousness - Part 1" ID:256399)</div>
+                        <div class="content-line"><span class="content-type">Services:</span> 0</div>
+                        <div class="content-line"><span class="content-type">Events:</span> 0</div>
+                    </td>
+                    <td>
+                        <div class="content-line"><span class="content-type">Articles:</span> 6 ("Landscapes Photography Practise Assignment" ID:265279)</div>
+                        <div class="content-line"><span class="content-type">Services:</span> 0</div>
+                        <div class="content-line"><span class="content-type">Events:</span> 0</div>
+                    </td>
+                    <td class="status-col status-mixed">⚠️ <strong>Mixed</strong></td>
+                    <td>Capped at 6 but assignment-heavy; should show flower-specific guide</td>
+                </tr>
+                <tr>
+                    <td class="query-col"><strong>Q7. how do I photograph people</strong></td>
+                    <td>
+                        <div class="content-line"><span class="content-type">Articles:</span> 12 ("Composition Curiousness - Part 1" ID:256399)</div>
+                        <div class="content-line"><span class="content-type">Services:</span> 0</div>
+                        <div class="content-line"><span class="content-type">Events:</span> 0</div>
+                    </td>
+                    <td>
+                        <div class="content-line"><span class="content-type">Articles:</span> 6 ("Landscapes Photography Practise Assignment" ID:265279)</div>
+                        <div class="content-line"><span class="content-type">Services:</span> 0</div>
+                        <div class="content-line"><span class="content-type">Events:</span> 0</div>
+                    </td>
+                    <td class="status-col status-mixed">⚠️ <strong>Mixed</strong></td>
+                    <td>Capped at 6 but assignment-heavy; should show people photography guide</td>
+                </tr>
+                <tr>
+                    <td class="query-col"><strong>Q8. how do I photograph seascapes</strong></td>
+                    <td>
+                        <div class="content-line"><span class="content-type">Articles:</span> 12 ("Composition Curiousness - Part 1" ID:256399)</div>
+                        <div class="content-line"><span class="content-type">Services:</span> 0</div>
+                        <div class="content-line"><span class="content-type">Events:</span> 0</div>
+                    </td>
+                    <td>
+                        <div class="content-line"><span class="content-type">Articles:</span> 6 ("Landscapes Photography Practise Assignment" ID:265279)</div>
+                        <div class="content-line"><span class="content-type">Services:</span> 0</div>
+                        <div class="content-line"><span class="content-type">Events:</span> 0</div>
+                    </td>
+                    <td class="status-col status-mixed">⚠️ <strong>Mixed</strong></td>
+                    <td>Capped at 6 but assignment-heavy; should show seascape guide</td>
+                </tr>
+                <tr>
+                    <td class="query-col"><strong>Q9. how do I photograph sunsets</strong></td>
+                    <td>
+                        <div class="content-line"><span class="content-type">Articles:</span> 12 ("Composition Curiousness - Part 1" ID:256399)</div>
+                        <div class="content-line"><span class="content-type">Services:</span> 0</div>
+                        <div class="content-line"><span class="content-type">Events:</span> 0</div>
+                    </td>
+                    <td>
+                        <div class="content-line"><span class="content-type">Articles:</span> 6 ("Landscapes Photography Practise Assignment" ID:265279)</div>
+                        <div class="content-line"><span class="content-type">Services:</span> 0</div>
+                        <div class="content-line"><span class="content-type">Events:</span> 0</div>
+                    </td>
+                    <td class="status-col status-mixed">⚠️ <strong>Mixed</strong></td>
+                    <td>Capped at 6 but assignment-heavy; should show sunset guide</td>
+                </tr>
+                <tr>
+                    <td class="query-col"><strong>Q10. how do I photograph waterfalls</strong></td>
+                    <td>
+                        <div class="content-line"><span class="content-type">Articles:</span> 12 ("Composition Curiousness - Part 1" ID:256399)</div>
+                        <div class="content-line"><span class="content-type">Services:</span> 0</div>
+                        <div class="content-line"><span class="content-type">Events:</span> 0</div>
+                    </td>
+                    <td>
+                        <div class="content-line"><span class="content-type">Articles:</span> 6 ("Landscapes Photography Practise Assignment" ID:265279)</div>
+                        <div class="content-line"><span class="content-type">Services:</span> 0</div>
+                        <div class="content-line"><span class="content-type">Events:</span> 0</div>
+                    </td>
+                    <td class="status-col status-mixed">⚠️ <strong>Mixed</strong></td>
+                    <td>Capped at 6 but assignment-heavy; should show waterfall guide</td>
+                </tr>
+                <tr>
+                    <td class="query-col"><strong>Q11. how do I photograph wildlife</strong></td>
+                    <td>
+                        <div class="content-line"><span class="content-type">Articles:</span> 12 ("Best Tripod for Landscape Photography Benro Mammoth + GD36PT" ID:260851)</div>
+                        <div class="content-line"><span class="content-type">Services:</span> 0</div>
+                        <div class="content-line"><span class="content-type">Events:</span> 0</div>
+                    </td>
+                    <td>
+                        <div class="content-line"><span class="content-type">Articles:</span> 6 ("Photographing Autumn - UK landscape photography guide" ID:256423)</div>
+                        <div class="content-line"><span class="content-type">Services:</span> 0</div>
+                        <div class="content-line"><span class="content-type">Events:</span> 0</div>
+                    </td>
+                    <td class="status-col status-better">✅ <strong>Better</strong></td>
+                    <td>Better first article (seasonal guide vs tripod); still needs wildlife-specific content</td>
+                </tr>
+                <tr>
+                    <td class="query-col"><strong>Q12. how do I take better landscape photos</strong></td>
+                    <td>
+                        <div class="content-line"><span class="content-type">Articles:</span> 12 ("Best Tripod for Landscape Photography Benro Mammoth + GD36PT" ID:260851)</div>
+                        <div class="content-line"><span class="content-type">Services:</span> 0</div>
+                        <div class="content-line"><span class="content-type">Events:</span> 0</div>
+                    </td>
+                    <td>
+                        <div class="content-line"><span class="content-type">Articles:</span> 6 ("Mastering LANDSCAPE PHOTOGRAPHY: Tips and Techniques" ID:256898)</div>
+                        <div class="content-line"><span class="content-type">Services:</span> 0</div>
+                        <div class="content-line"><span class="content-type">Events:</span> 0</div>
+                    </td>
+                    <td class="status-col status-better">✅ <strong>Better</strong></td>
+                    <td>Proper landscape guide now #1 instead of tripod product</td>
+                </tr>
+                <tr>
+                    <td class="query-col"><strong>Q13. how do I use a tripod</strong></td>
+                    <td>
+                        <div class="content-line"><span class="content-type">Articles:</span> 10 ("Best Tripod for Landscape Photography Benro Mammoth + GD36PT" ID:260851)</div>
+                        <div class="content-line"><span class="content-type">Services:</span> 0</div>
+                        <div class="content-line"><span class="content-type">Events:</span> 0</div>
+                    </td>
+                    <td>
+                        <div class="content-line"><span class="content-type">Articles:</span> 6 ("Handheld vs Tripod Stability Photography Assignment" ID:265301, then tripod guides)</div>
+                        <div class="content-line"><span class="content-type">Services:</span> 0</div>
+                        <div class="content-line"><span class="content-type">Events:</span> 0</div>
+                    </td>
+                    <td class="status-col status-better">✅ <strong>Better</strong></td>
+                    <td>Assignment + proper tripod guides; capped at 6</td>
+                </tr>
+                <tr>
+                    <td class="query-col"><strong>Q14. How long are your workshops?</strong></td>
+                    <td>
+                        <div class="content-line"><span class="content-type">Articles:</span> 0</div>
+                        <div class="content-line"><span class="content-type">Services:</span> 0</div>
+                        <div class="content-line"><span class="content-type">Events:</span> 6 ("Suffolk Landscape Photography Workshop - Long Exposure")</div>
+                    </td>
+                    <td>
+                        <div class="content-line"><span class="content-type">Articles:</span> 0</div>
+                        <div class="content-line"><span class="content-type">Services:</span> 0</div>
+                        <div class="content-line"><span class="content-type">Events:</span> 6 (same event)</div>
+                    </td>
+                    <td class="status-col status-same">➖ <strong>Same</strong></td>
+                    <td>Event-only response; unchanged</td>
+                </tr>
+                <tr>
+                    <td class="query-col"><strong>Q15. How much is a residential photography course and does it include B&B</strong></td>
+                    <td>
+                        <div class="content-line"><span class="content-type">Articles:</span> 0</div>
+                        <div class="content-line"><span class="content-type">Services:</span> 0</div>
+                        <div class="content-line"><span class="content-type">Events:</span> 18 (" Dorset Photography Workshop | Jurassic Coast Photography")</div>
+                    </td>
+                    <td>
+                        <div class="content-line"><span class="content-type">Articles:</span> 0</div>
+                        <div class="content-line"><span class="content-type">Services:</span> 0</div>
+                        <div class="content-line"><span class="content-type">Events:</span> 18 (same event)</div>
+                    </td>
+                    <td class="status-col status-same">➖ <strong>Same</strong></td>
+                    <td>Event-only response; unchanged</td>
+                </tr>
+                <tr>
+                    <td class="query-col"><strong>Q16. what camera should I buy</strong></td>
+                    <td>
+                        <div class="content-line"><span class="content-type">Articles:</span> 12 ("15 Camera Settings — Photography Field Checklists PDF Bundle" ID:257003)</div>
+                        <div class="content-line"><span class="content-type">Services:</span> 0</div>
+                        <div class="content-line"><span class="content-type">Events:</span> 0</div>
+                    </td>
+                    <td>
+                        <div class="content-line"><span class="content-type">Articles:</span> 6 ("Tripod for Camera: Guide To Which, Why, How to Use A Tripod" ID:256409)</div>
+                        <div class="content-line"><span class="content-type">Services:</span> 0</div>
+                        <div class="content-line"><span class="content-type">Events:</span> 0</div>
+                    </td>
+                    <td class="status-col status-mixed">⚠️ <strong>Mixed</strong></td>
+                    <td>Still not direct camera buying guide; tripod guide is better than PDF bundle but not ideal</td>
+                </tr>
+                <tr>
+                    <td class="query-col"><strong>Q17. what is a histogram</strong></td>
+                    <td>
+                        <div class="content-line"><span class="content-type">Articles:</span> 0</div>
+                        <div class="content-line"><span class="content-type">Services:</span> 0</div>
+                        <div class="content-line"><span class="content-type">Events:</span> 0</div>
+                    </td>
+                    <td>
+                        <div class="content-line"><span class="content-type">Articles:</span> 1 ("Histogram and Exposure Review Photography Assignment" ID:265300)</div>
+                        <div class="content-line"><span class="content-type">Services:</span> 0</div>
+                        <div class="content-line"><span class="content-type">Events:</span> 0</div>
+                    </td>
+                    <td class="status-col status-better">✅ <strong>Better</strong></td>
+                    <td>Now returns article (was empty before)</td>
+                </tr>
+                <tr>
+                    <td class="query-col"><strong>Q18. what is aperture</strong></td>
+                    <td>
+                        <div class="content-line"><span class="content-type">Articles:</span> 1 ("15 Camera Settings — Photography Field Checklists PDF Bundle" ID:257003 - product)</div>
+                        <div class="content-line"><span class="content-type">Services:</span> 0</div>
+                        <div class="content-line"><span class="content-type">Events:</span> 0</div>
+                    </td>
+                    <td>
+                        <div class="content-line"><span class="content-type">Articles:</span> 2 ("02 What is APERTURE in photography: A Guide for Beginners" ID:256372, "Aperture and Depth of Field Photography Assignment" ID:265306)</div>
+                        <div class="content-line"><span class="content-type">Services:</span> 0</div>
+                        <div class="content-line"><span class="content-type">Events:</span> 0</div>
+                    </td>
+                    <td class="status-col status-better">✅ <strong>Better</strong></td>
+                    <td>Proper educational guide restored to #1; assignment added as #2</td>
+                </tr>
+                <tr>
+                    <td class="query-col"><strong>Q19. what is composition in photography</strong></td>
+                    <td>
+                        <div class="content-line"><span class="content-type">Articles:</span> 11 ("Composition Curiousness - Part 1 | Professional Guide" ID:256399)</div>
+                        <div class="content-line"><span class="content-type">Services:</span> 0</div>
+                        <div class="content-line"><span class="content-type">Events:</span> 0</div>
+                    </td>
+                    <td>
+                        <div class="content-line"><span class="content-type">Articles:</span> 6 ("Composition in Photography: Why the Camera Isn't the Artist" ID:256847)</div>
+                        <div class="content-line"><span class="content-type">Services:</span> 0</div>
+                        <div class="content-line"><span class="content-type">Events:</span> 0</div>
+                    </td>
+                    <td class="status-col status-same">➖ <strong>Same</strong></td>
+                    <td>Same content, just capped at 6 and order reshuffled; both are proper composition articles</td>
+                </tr>
+                <tr>
+                    <td class="query-col"><strong>Q20. what is depth of field</strong></td>
+                    <td>
+                        <div class="content-line"><span class="content-type">Articles:</span> 6 (all products, e.g. "Poppy Fields Photography Workshops | Worcestershire" ID:256764)</div>
+                        <div class="content-line"><span class="content-type">Services:</span> 0</div>
+                        <div class="content-line"><span class="content-type">Events:</span> 0</div>
+                    </td>
+                    <td>
+                        <div class="content-line"><span class="content-type">Articles:</span> 2 ("09 What is DEPTH OF FIELD in Photography: A Beginners Guide" ID:256968, "Aperture and Depth of Field Photography Assignment" ID:265306)</div>
+                        <div class="content-line"><span class="content-type">Services:</span> 0</div>
+                        <div class="content-line"><span class="content-type">Events:</span> 0</div>
+                    </td>
+                    <td class="status-col status-better">✅ <strong>Better</strong></td>
+                    <td>Proper explainer restored to #1; assignment at #2; product leakage fixed</td>
+                </tr>
+                <tr>
+                    <td class="query-col"><strong>Q21. what is golden hour</strong></td>
+                    <td>
+                        <div class="content-line"><span class="content-type">Articles:</span> 1 ("Learn Photography - How? - 10,000 Hours of Practice" ID:256481)</div>
+                        <div class="content-line"><span class="content-type">Services:</span> 0</div>
+                        <div class="content-line"><span class="content-type">Events:</span> 0</div>
+                    </td>
+                    <td>
+                        <div class="content-line"><span class="content-type">Articles:</span> 1 (same article ID:256481)</div>
+                        <div class="content-line"><span class="content-type">Services:</span> 0</div>
+                        <div class="content-line"><span class="content-type">Events:</span> 0</div>
+                    </td>
+                    <td class="status-col status-same">➖ <strong>Same</strong></td>
+                    <td>Unchanged</td>
+                </tr>
+                <tr>
+                    <td class="query-col"><strong>Q22. what is HDR photography</strong></td>
+                    <td>
+                        <div class="content-line"><span class="content-type">Articles:</span> 12 ("Composition Curiousness - Part 1" ID:256399)</div>
+                        <div class="content-line"><span class="content-type">Services:</span> 0</div>
+                        <div class="content-line"><span class="content-type">Events:</span> 0</div>
+                    </td>
+                    <td>
+                        <div class="content-line"><span class="content-type">Articles:</span> 6 ("Landscapes Photography Practise Assignment" ID:265279)</div>
+                        <div class="content-line"><span class="content-type">Services:</span> 0</div>
+                        <div class="content-line"><span class="content-type">Events:</span> 0</div>
+                    </td>
+                    <td class="status-col status-worse">❌ <strong>Worse</strong></td>
+                    <td>Lost proper HDR content; now only assignments</td>
+                </tr>
+                <tr>
+                    <td class="query-col"><strong>Q23. what is ISO</strong></td>
+                    <td>
+                        <div class="content-line"><span class="content-type">Articles:</span> 3 ("04 What is ISO in Photography: A Guide for Beginners." ID:256346, plus camera comparison articles)</div>
+                        <div class="content-line"><span class="content-type">Services:</span> 0</div>
+                        <div class="content-line"><span class="content-type">Events:</span> 0</div>
+                    </td>
+                    <td>
+                        <div class="content-line"><span class="content-type">Articles:</span> 4 (same 3 + "ISO and Noise Control Photography Practice Assignment" ID:265304)</div>
+                        <div class="content-line"><span class="content-type">Services:</span> 0</div>
+                        <div class="content-line"><span class="content-type">Events:</span> 0</div>
+                    </td>
+                    <td class="status-col status-better">✅ <strong>Better</strong></td>
+                    <td>Proper article maintained at #1; assignment added as supplementary</td>
+                </tr>
+                <tr>
+                    <td class="query-col"><strong>Q24. what is long exposure photography</strong></td>
+                    <td>
+                        <div class="content-line"><span class="content-type">Articles:</span> 12 ("Fireworks Photography Workshop | Long Exposure | Kenilworth" ID:256790)</div>
+                        <div class="content-line"><span class="content-type">Services:</span> 0</div>
+                        <div class="content-line"><span class="content-type">Events:</span> 0</div>
+                    </td>
+                    <td>
+                        <div class="content-line"><span class="content-type">Articles:</span> 6 ("01 What is EXPOSURE in photography: A Guide for Beginners" ID:256963)</div>
+                        <div class="content-line"><span class="content-type">Services:</span> 0</div>
+                        <div class="content-line"><span class="content-type">Events:</span> 0</div>
+                    </td>
+                    <td class="status-col status-better">✅ <strong>Better</strong></td>
+                    <td>Proper educational content now #1 instead of workshop listing</td>
+                </tr>
+                <tr>
+                    <td class="query-col"><strong>Q25. what is macro photography</strong></td>
+                    <td>
+                        <div class="content-line"><span class="content-type">Articles:</span> 12 (mixed irrelevant content, "Best Tripod for Landscape Photography Benro Mammoth + GD36PT" ID:260851)</div>
+                        <div class="content-line"><span class="content-type">Services:</span> 24 (generic services, "Professional Digital DSLR Camera Sensor Clean | Coventry" ID:256741)</div>
+                        <div class="content-line"><span class="content-type">Events:</span> 0</div>
+                    </td>
+                    <td>
+                        <div class="content-line"><span class="content-type">Articles:</span> 6 ("Unlocking the Art of MACRO PHOTOGRAPHY: Techniques and Tips" ID:256805, plus assignments)</div>
+                        <div class="content-line"><span class="content-type">Services:</span> 6 ("Macro Photography Workshop - Abstract and Macro Warwickshire" ID:257042, plus general services)</div>
+                        <div class="content-line"><span class="content-type">Events:</span> 0</div>
+                    </td>
+                    <td class="status-col status-better">✅ <strong>Better</strong></td>
+                    <td>Proper macro article #1; macro workshop now #1 in services; product leakage fixed</td>
+                </tr>
+                <tr>
+                    <td class="query-col"><strong>Q26. what is portrait photography</strong></td>
+                    <td>
+                        <div class="content-line"><span class="content-type">Articles:</span> 5 ("What is PORTRAIT PHOTOGRAPHY:  Essential Tips for Beginners" ID:256978)</div>
+                        <div class="content-line"><span class="content-type">Services:</span> 6 ("Professional Digital DSLR Camera Sensor Clean | Coventry" ID:256741)</div>
+                        <div class="content-line"><span class="content-type">Events:</span> 0</div>
+                    </td>
+                    <td>
+                        <div class="content-line"><span class="content-type">Articles:</span> 5 (same article ID:256978, plus "Portrait Photography Practice Assignment")</div>
+                        <div class="content-line"><span class="content-type">Services:</span> 6 ("SOMERSET Landscape Photography Workshops 9 - 11 May 2025" ID:257705)</div>
+                        <div class="content-line"><span class="content-type">Events:</span> 0</div>
+                    </td>
+                    <td class="status-col status-same">➖ <strong>Same</strong></td>
+                    <td>Same proper article #1; services changed but still generic</td>
+                </tr>
+                <tr>
+                    <td class="query-col"><strong>Q27. what is shutter speed</strong></td>
+                    <td>
+                        <div class="content-line"><span class="content-type">Articles:</span> 3 (wrong content: "15 Camera Settings — Photography Field Checklists PDF Bundle" ID:257003, ISO article, focus article)</div>
+                        <div class="content-line"><span class="content-type">Services:</span> 0</div>
+                        <div class="content-line"><span class="content-type">Events:</span> 0</div>
+                    </td>
+                    <td>
+                        <div class="content-line"><span class="content-type">Articles:</span> 2 ("Shutter Speed and Motion Photography Practice Assignment" ID:265308, "03 What is SHUTTER SPEED in photography: Guide for Beginners" ID:256379)</div>
+                        <div class="content-line"><span class="content-type">Services:</span> 0</div>
+                        <div class="content-line"><span class="content-type">Events:</span> 0</div>
+                    </td>
+                    <td class="status-col status-better">✅ <strong>Better</strong></td>
+                    <td>Proper shutter speed guide now included (#2); assignment at #1</td>
+                </tr>
+                <tr>
+                    <td class="query-col"><strong>Q28. what is the best camera for beginners</strong></td>
+                    <td>
+                        <div class="content-line"><span class="content-type">Articles:</span> 12 ("15 Camera Settings — Photography Field Checklists PDF Bundle" ID:257003)</div>
+                        <div class="content-line"><span class="content-type">Services:</span> 0</div>
+                        <div class="content-line"><span class="content-type">Events:</span> 30 ("Camera Courses For Beginners - Week 1 of 3 - Coventry 4-12")</div>
+                    </td>
+                    <td>
+                        <div class="content-line"><span class="content-type">Articles:</span> 6 ("BEST CAMERA BAGS for Different Trips:  My 2024 Picks" ID:256820)</div>
+                        <div class="content-line"><span class="content-type">Services:</span> 0</div>
+                        <div class="content-line"><span class="content-type">Events:</span> 30 (same event)</div>
+                    </td>
+                    <td class="status-col status-mixed">⚠️ <strong>Mixed</strong></td>
+                    <td>Still not direct camera buying guide; events unchanged</td>
+                </tr>
+                <tr>
+                    <td class="query-col"><strong>Q29. what is the best lens for landscape photography</strong></td>
+                    <td>
+                        <div class="content-line"><span class="content-type">Articles:</span> 12 ("Best Tripod for Landscape Photography Benro Mammoth + GD36PT" ID:260851)</div>
+                        <div class="content-line"><span class="content-type">Services:</span> 0</div>
+                        <div class="content-line"><span class="content-type">Events:</span> 0</div>
+                    </td>
+                    <td>
+                        <div class="content-line"><span class="content-type">Articles:</span> 6 (same tripod article ID:260851)</div>
+                        <div class="content-line"><span class="content-type">Services:</span> 0</div>
+                        <div class="content-line"><span class="content-type">Events:</span> 0</div>
+                    </td>
+                    <td class="status-col status-same">➖ <strong>Same</strong></td>
+                    <td>Still showing tripod instead of lens guide; needs lens-specific content</td>
+                </tr>
+                <tr>
+                    <td class="query-col"><strong>Q30. what is the best time of day for landscape photography</strong></td>
+                    <td>
+                        <div class="content-line"><span class="content-type">Articles:</span> 12 ("Best Tripod for Landscape Photography Benro Mammoth + GD36PT" ID:260851)</div>
+                        <div class="content-line"><span class="content-type">Services:</span> 24 (generic services, "Professional Digital DSLR Camera Sensor Clean | Coventry" ID:256741)</div>
+                        <div class="content-line"><span class="content-type">Events:</span> 0</div>
+                    </td>
+                    <td>
+                        <div class="content-line"><span class="content-type">Articles:</span> 6 ("Mastering LANDSCAPE PHOTOGRAPHY: Tips and Techniques" ID:256898)</div>
+                        <div class="content-line"><span class="content-type">Services:</span> 6 ("Best UK Outdoor Landscape Photography Workshops | Book Now" ID:244506)</div>
+                        <div class="content-line"><span class="content-type">Events:</span> 0</div>
+                    </td>
+                    <td class="status-col status-better">✅ <strong>Better</strong></td>
+                    <td>Proper landscape guide now #1; better service match</td>
+                </tr>
+                <tr>
+                    <td class="query-col"><strong>Q31. what is the difference between prime and zoom lenses</strong></td>
+                    <td>
+                        <div class="content-line"><span class="content-type">Articles:</span> 4 ("Camera Lenses: When to Buy New, Used, or Rent: A Guide" ID:256377)</div>
+                        <div class="content-line"><span class="content-type">Services:</span> 0</div>
+                        <div class="content-line"><span class="content-type">Events:</span> 0</div>
+                    </td>
+                    <td>
+                        <div class="content-line"><span class="content-type">Articles:</span> 4 (same article ID:256377)</div>
+                        <div class="content-line"><span class="content-type">Services:</span> 0</div>
+                        <div class="content-line"><span class="content-type">Events:</span> 0</div>
+                    </td>
+                    <td class="status-col status-same">➖ <strong>Same</strong></td>
+                    <td>Unchanged</td>
+                </tr>
+                <tr>
+                    <td class="query-col"><strong>Q32. what is the rule of thirds</strong></td>
+                    <td>
+                        <div class="content-line"><span class="content-type">Articles:</span> 1 ("Photography COMPOSITION RULES: A Guide for Beginners" ID:256896)</div>
+                        <div class="content-line"><span class="content-type">Services:</span> 0</div>
+                        <div class="content-line"><span class="content-type">Events:</span> 0</div>
+                    </td>
+                    <td>
+                        <div class="content-line"><span class="content-type">Articles:</span> 1 (same article ID:256896)</div>
+                        <div class="content-line"><span class="content-type">Services:</span> 0</div>
+                        <div class="content-line"><span class="content-type">Events:</span> 0</div>
+                    </td>
+                    <td class="status-col status-same">➖ <strong>Same</strong></td>
+                    <td>Unchanged</td>
+                </tr>
+                <tr>
+                    <td class="query-col"><strong>Q33. what is your cancellation policy</strong></td>
+                    <td>
+                        <div class="content-line"><span class="content-type">Articles:</span> 1 ("01 What is EXPOSURE in photography: A Guide for Beginners" ID:256963 - wrong)</div>
+                        <div class="content-line"><span class="content-type">Services:</span> 0</div>
+                        <div class="content-line"><span class="content-type">Events:</span> 0</div>
+                    </td>
+                    <td>
+                        <div class="content-line"><span class="content-type">Articles:</span> 1 ("Landscapes Photography Practise Assignment - Free Lesson" ID:265279 - still wrong)</div>
+                        <div class="content-line"><span class="content-type">Services:</span> 0</div>
+                        <div class="content-line"><span class="content-type">Events:</span> 0</div>
+                    </td>
+                    <td class="status-col status-worse">❌ <strong>Worse</strong></td>
+                    <td>Still showing wrong content; needs actual policy article</td>
+                </tr>
+                <tr>
+                    <td class="query-col"><strong>Q34. what is your next workshop date and where is it</strong></td>
+                    <td>
+                        <div class="content-line"><span class="content-type">Articles:</span> 0</div>
+                        <div class="content-line"><span class="content-type">Services:</span> 6 ("Landscape Photography workshops near me - UK - 2024-2025" ID:244550)</div>
+                        <div class="content-line"><span class="content-type">Events:</span> 40 (" Dorset Photography Workshop | Jurassic Coast Photography")</div>
+                    </td>
+                    <td>
+                        <div class="content-line"><span class="content-type">Articles:</span> 0</div>
+                        <div class="content-line"><span class="content-type">Services:</span> 6 ("SOMERSET Landscape Photography Workshops 9 - 11 May 2025" ID:257705)</div>
+                        <div class="content-line"><span class="content-type">Events:</span> 40 (same event)</div>
+                    </td>
+                    <td class="status-col status-same">➖ <strong>Same</strong></td>
+                    <td>Service/event-only response; services changed but still appropriate</td>
+                </tr>
+                <tr>
+                    <td class="query-col"><strong>Q35. what memory card should I buy</strong></td>
+                    <td>
+                        <div class="content-line"><span class="content-type">Articles:</span> 2 ("A Christmas Day memory for those less fortunate. | Crisis" ID:256510 - wrong)</div>
+                        <div class="content-line"><span class="content-type">Services:</span> 0</div>
+                        <div class="content-line"><span class="content-type">Events:</span> 0</div>
+                    </td>
+                    <td>
+                        <div class="content-line"><span class="content-type">Articles:</span> 1 (same charity article ID:256510 - still wrong)</div>
+                        <div class="content-line"><span class="content-type">Services:</span> 0</div>
+                        <div class="content-line"><span class="content-type">Events:</span> 0</div>
+                    </td>
+                    <td class="status-col status-worse">❌ <strong>Worse</strong></td>
+                    <td>Still showing charity article instead of memory card buying guide</td>
+                </tr>
+                <tr>
+                    <td class="query-col"><strong>Q36. what settings should I use for landscape photography</strong></td>
+                    <td>
+                        <div class="content-line"><span class="content-type">Articles:</span> 12 ("Best Tripod for Landscape Photography Benro Mammoth + GD36PT" ID:260851)</div>
+                        <div class="content-line"><span class="content-type">Services:</span> 24 (generic services, "Professional Digital DSLR Camera Sensor Clean | Coventry" ID:256741)</div>
+                        <div class="content-line"><span class="content-type">Events:</span> 0</div>
+                    </td>
+                    <td>
+                        <div class="content-line"><span class="content-type">Articles:</span> 6 ("Mastering LANDSCAPE PHOTOGRAPHY: Tips and Techniques" ID:256898, plus assignments)</div>
+                        <div class="content-line"><span class="content-type">Services:</span> 6 ("SOMERSET Landscape Photography Workshops 9 - 11 May 2025" ID:257705)</div>
+                        <div class="content-line"><span class="content-type">Events:</span> 0</div>
+                    </td>
+                    <td class="status-col status-better">✅ <strong>Better</strong></td>
+                    <td>Proper landscape guide now #1; better service match</td>
+                </tr>
+                <tr>
+                    <td class="query-col"><strong>Q37. what tripod should I buy</strong></td>
+                    <td>
+                        <div class="content-line"><span class="content-type">Articles:</span> 10 ("Best Tripod for Landscape Photography Benro Mammoth + GD36PT" ID:260851)</div>
+                        <div class="content-line"><span class="content-type">Services:</span> 0</div>
+                        <div class="content-line"><span class="content-type">Events:</span> 0</div>
+                    </td>
+                    <td>
+                        <div class="content-line"><span class="content-type">Articles:</span> 6 ("Handheld vs Tripod Stability Photography Assignment" ID:265301, then tripod guides including ID:260851)</div>
+                        <div class="content-line"><span class="content-type">Services:</span> 0</div>
+                        <div class="content-line"><span class="content-type">Events:</span> 0</div>
+                    </td>
+                    <td class="status-col status-better">✅ <strong>Better</strong></td>
+                    <td>Assignment + proper tripod guides; capped at 6</td>
+                </tr>
+                <tr>
+                    <td class="query-col"><strong>Q38. when are your next Autumn workshops and where are they?</strong></td>
+                    <td>
+                        <div class="content-line"><span class="content-type">Articles:</span> 0</div>
+                        <div class="content-line"><span class="content-type">Services:</span> 0</div>
+                        <div class="content-line"><span class="content-type">Events:</span> 11 ("Fairy Glen Betws-y-Coed Photography Workshop - Wales Autumn")</div>
+                    </td>
+                    <td>
+                        <div class="content-line"><span class="content-type">Articles:</span> 0</div>
+                        <div class="content-line"><span class="content-type">Services:</span> 0</div>
+                        <div class="content-line"><span class="content-type">Events:</span> 11 (same event)</div>
+                    </td>
+                    <td class="status-col status-same">➖ <strong>Same</strong></td>
+                    <td>Event-only response; unchanged</td>
+                </tr>
+                <tr>
+                    <td class="query-col"><strong>Q39. when is the next devon workshop</strong></td>
+                    <td>
+                        <div class="content-line"><span class="content-type">Articles:</span> 0</div>
+                        <div class="content-line"><span class="content-type">Services:</span> 6 ("Landscape Photography workshops near me - UK - 2024-2025" ID:244550)</div>
+                        <div class="content-line"><span class="content-type">Events:</span> 2 ("Hartland Quay, Devon Seascape Photography Workshop")</div>
+                    </td>
+                    <td>
+                        <div class="content-line"><span class="content-type">Articles:</span> 0</div>
+                        <div class="content-line"><span class="content-type">Services:</span> 6 ("SOMERSET Landscape Photography Workshops 9 - 11 May 2025" ID:257705)</div>
+                        <div class="content-line"><span class="content-type">Events:</span> 2 (same event)</div>
+                    </td>
+                    <td class="status-col status-same">➖ <strong>Same</strong></td>
+                    <td>Service/event-only response; services changed but still appropriate</td>
+                </tr>
+                <tr>
+                    <td class="query-col"><strong>Q40. whens the next bluebell workshops and whats the cost</strong></td>
+                    <td>
+                        <div class="content-line"><span class="content-type">Articles:</span> 0</div>
+                        <div class="content-line"><span class="content-type">Services:</span> 0</div>
+                        <div class="content-line"><span class="content-type">Events:</span> 12 ("Bluebell Photography Workshop | Warwickshire | 20 Apr")</div>
+                    </td>
+                    <td>
+                        <div class="content-line"><span class="content-type">Articles:</span> 0</div>
+                        <div class="content-line"><span class="content-type">Services:</span> 0</div>
+                        <div class="content-line"><span class="content-type">Events:</span> 12 (same event)</div>
+                    </td>
+                    <td class="status-col status-same">➖ <strong>Same</strong></td>
+                    <td>Event-only response; unchanged</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>
