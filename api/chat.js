@@ -9407,13 +9407,16 @@ async function handleAboutAlanQuery(client, query) {
     const services = await findServices(client, { keywords: landingPageKeywords, limit: 10 });
     
     // Filter to ONLY About/Ethics/Testimonials landing pages
+    // Match actual URLs: /about-alan-ranger, /my-ethical-policy, /testimonials-customer-reviews
     const landingPages = (services || []).filter(s => {
       const t = (s.title || '').toLowerCase();
       const u = (s.page_url || s.url || '').toLowerCase();
-      // Match specific landing page patterns
-      const isAbout = (t.includes('about') || u.includes('/about')) && !t.includes('workshop') && !t.includes('course');
-      const isEthics = (t.includes('ethics') || u.includes('/ethics')) && !t.includes('workshop') && !t.includes('course');
-      const isTestimonials = (t.includes('testimonial') || u.includes('/testimonial')) && !t.includes('workshop') && !t.includes('course');
+      // Match specific landing page patterns based on actual database entries
+      const isAbout = (t.includes('about alan ranger') || u.includes('/about-alan-ranger') || u.includes('/about')) && 
+                      !t.includes('workshop') && !t.includes('course');
+      const isEthics = (t.includes('ethical policy') || t.includes('ethics') || u.includes('/my-ethical-policy') || u.includes('/ethics'));
+      const isTestimonials = (t.includes('testimonial') || t.includes('customer reviews') || 
+                              u.includes('/testimonials-customer-reviews') || u.includes('/testimonials'));
       return isAbout || isEthics || isTestimonials;
     });
     
