@@ -465,6 +465,50 @@
       "whens the next bluebell workshops and whats the cost"
     ];
 
+    // Category tags aligned with interactive testing data (order matches QUERIES)
+    const QUERY_CATEGORIES = [
+      "Business Information",          // Q1
+      "Technical Advice",             // Q2
+      "Technical Advice",             // Q3
+      "Technical Advice",             // Q4
+      "Technical Advice",             // Q5
+      "Technical Advice",             // Q6
+      "Technical Advice",             // Q7
+      "Technical Advice",             // Q8
+      "Technical Advice",             // Q9
+      "Technical Advice",             // Q10
+      "Technical Advice",             // Q11
+      "Technical Advice",             // Q12
+      "Technical Advice",             // Q13
+      "Event Queries",                // Q14
+      "Course/Workshop Logistics",    // Q15
+      "Equipment Recommendations",    // Q16
+      "Technical Photography Concepts", // Q17
+      "Technical Photography Concepts", // Q18
+      "Technical Photography Concepts", // Q19
+      "Technical Photography Concepts", // Q20
+      "Technical Photography Concepts", // Q21
+      "Technical Photography Concepts", // Q22
+      "Technical Photography Concepts", // Q23
+      "Technical Photography Concepts", // Q24
+      "Technical Photography Concepts", // Q25
+      "Technical Photography Concepts", // Q26
+      "Technical Photography Concepts", // Q27
+      "Equipment Recommendations",    // Q28
+      "Equipment Recommendations",    // Q29
+      "Technical Advice",             // Q30
+      "Equipment Recommendations",    // Q31
+      "Technical Photography Concepts", // Q32
+      "Business Information",         // Q33
+      "Event Queries",                // Q34
+      "Equipment Recommendations",    // Q35
+      "Technical Advice",             // Q36
+      "Equipment Recommendations",    // Q37
+      "Event Queries",                // Q38
+      "Event Queries",                // Q39
+      "Event Queries"                 // Q40
+    ];
+
     let supabaseClient = null;
     let testIndex = {};
     let testsMeta = []; // flat list for manage/delete UI
@@ -993,9 +1037,11 @@
         worse = 0,
         mixed = 0,
         same = 0;
+      const categorySummary = {};
 
       QUERIES.forEach((query, idx) => {
         const qNum = idx + 1;
+        const category = QUERY_CATEGORIES[idx] || 'Uncategorised';
         const key = query.toLowerCase();
         const baseEntry = baselineMap.get(key) || null;
         const currEntry = currentMap.get(key) || null;
@@ -1048,10 +1094,15 @@
         else if (status === 'worse') worse++;
         else if (status === 'mixed') mixed++;
         else same++;
+        if (!categorySummary[category]) {
+          categorySummary[category] = { better: 0, worse: 0, mixed: 0, same: 0 };
+        }
+        categorySummary[category][status] = (categorySummary[category][status] || 0) + 1;
 
         rows.push({
           qNum,
           query,
+          category,
           baseline: {
             counts: baseCounts,
             topArticles: baseTopArticles,
@@ -1068,7 +1119,7 @@
         });
       });
 
-      const summary = { better, worse, mixed, same };
+      const summary = { better, worse, mixed, same, byCategory: categorySummary };
 
       const rowsHtml = rows
         .map(row => {
@@ -1164,6 +1215,7 @@
           return `
           <tr>
             <td class="query-col"><strong>Q${row.qNum}. ${row.query}</strong></td>
+            <td>${row.category}</td>
             <td>${baselineText}</td>
             <td>${currentText}</td>
             <td class="status-col ${statusClass}">${statusIcon} <strong>${statusLabel}</strong></td>
@@ -1215,6 +1267,7 @@
         <thead>
           <tr>
             <th class="query-col">Query</th>
+            <th>Category</th>
             <th class="baseline-col">Baseline (type: count, top item)</th>
             <th class="current-col">Current (type: count, top item)</th>
             <th class="status-col">Status</th>
@@ -1246,11 +1299,33 @@
             <td>${((summary[key] / total) * 100).toFixed(1)}%</td>
           </tr>`;
 
-        body.innerHTML =
+        let html =
           row('Better', '✅', 'better') +
           row('Worse', '❌', 'worse') +
           row('Mixed', '⚠️', 'mixed') +
           row('Same', '➖', 'same');
+
+        // Per-category breakdown
+        if (summary.byCategory) {
+          html += `
+            <tr><td colspan="3"><strong>Per-category breakdown</strong></td></tr>
+            <tr>
+              <th>Category</th>
+              <th colspan="2">Better / Worse / Mixed / Same</th>
+            </tr>`;
+          Object.keys(summary.byCategory)
+            .sort()
+            .forEach(cat => {
+              const c = summary.byCategory[cat];
+              html += `
+                <tr>
+                  <td>${cat}</td>
+                  <td>✅ ${c.better || 0} &nbsp; ❌ ${c.worse || 0} &nbsp; ⚠️ ${c.mixed || 0} &nbsp; ➖ ${c.same || 0}</td>
+                </tr>`;
+            });
+        }
+
+        body.innerHTML = html;
 
         backdrop.style.display = 'flex';
       } catch (e) {

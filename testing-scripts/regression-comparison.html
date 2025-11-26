@@ -277,6 +277,49 @@
       "whens the next bluebell workshops and whats the cost"
     ];
 
+    const QUERY_CATEGORIES = [
+      "Business Information",
+      "Technical Advice",
+      "Technical Advice",
+      "Technical Advice",
+      "Technical Advice",
+      "Technical Advice",
+      "Technical Advice",
+      "Technical Advice",
+      "Technical Advice",
+      "Technical Advice",
+      "Technical Advice",
+      "Technical Advice",
+      "Technical Advice",
+      "Event Queries",
+      "Course/Workshop Logistics",
+      "Equipment Recommendations",
+      "Technical Photography Concepts",
+      "Technical Photography Concepts",
+      "Technical Photography Concepts",
+      "Technical Photography Concepts",
+      "Technical Photography Concepts",
+      "Technical Photography Concepts",
+      "Technical Photography Concepts",
+      "Technical Photography Concepts",
+      "Technical Photography Concepts",
+      "Technical Photography Concepts",
+      "Technical Photography Concepts",
+      "Equipment Recommendations",
+      "Equipment Recommendations",
+      "Technical Advice",
+      "Equipment Recommendations",
+      "Technical Photography Concepts",
+      "Business Information",
+      "Event Queries",
+      "Equipment Recommendations",
+      "Technical Advice",
+      "Equipment Recommendations",
+      "Event Queries",
+      "Event Queries",
+      "Event Queries"
+    ];
+
     let supabaseClient = null;
     let testIndex = {}; // id -> { label }
 
@@ -718,6 +761,7 @@
 
       QUERIES.forEach((query, idx) => {
         const qNum = idx + 1;
+        const category = QUERY_CATEGORIES[idx] || 'Uncategorised';
         const key = query.toLowerCase();
         const baseEntry = baselineMap.get(key) || null;
         const currEntry = currentMap.get(key) || null;
@@ -780,6 +824,7 @@
         rows.push({
           qNum,
           query,
+          category,
           baseline: {
             counts: baseCounts,
             topArticles: baseTopArticles,
@@ -892,6 +937,7 @@
           return `
           <tr>
             <td class="query-col"><strong>Q${row.qNum}. ${row.query}</strong></td>
+            <td>${row.category}</td>
             <td>${baselineText}</td>
             <td>${currentText}</td>
             <td class="status-col ${statusClass}">${statusIcon} <strong>${statusLabel}</strong></td>
@@ -943,6 +989,7 @@
         <thead>
           <tr>
             <th class="query-col">Query</th>
+            <th>Category</th>
             <th class="baseline-col">Baseline (type: count, top item)</th>
             <th class="current-col">Current (type: count, top item)</th>
             <th class="status-col">Status</th>
