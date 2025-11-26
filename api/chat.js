@@ -1809,8 +1809,10 @@ function getServiceAnswers(lc) {
 
 function getAboutAnswers(lc) {
  // Check for Alan Ranger biographical queries
+ // NOTE: Alan Ranger queries are handled by handleAboutAlanQuery() which returns landing pages only
+ // So we return null here to let that handler take over
  if (isAlanRangerQuery(lc)) {
- return getAlanRangerBio();
+ return null; // Let handleAboutAlanQuery handle this with landing pages
  }
  
  // Check for ethical/environmental queries
@@ -9371,6 +9373,7 @@ async function handleGiftVoucherQuery(client, query) {
 // Helper: Handle about Alan queries (Complexity: Low)
 async function handleAboutAlanQuery(client, query) {
   const qlc = query.toLowerCase();
+  console.log(`[handleAboutAlanQuery] Checking query: "${query}"`);
   
   // Handle "where is alan based" queries specifically
   if (qlc.includes("alan ranger") && (qlc.includes("where") || qlc.includes("based"))) {
@@ -9392,7 +9395,11 @@ async function handleAboutAlanQuery(client, query) {
   }
   
   // Handle "who is alan" or background queries
-  if ((qlc.includes("alan ranger") || qlc.includes("who is")) && (qlc.includes("who") || qlc.includes("background") || qlc.includes("about") || qlc.includes("photographic background"))) {
+  // Match: "who is alan ranger", "who is alan", "alan ranger background", etc.
+  const isWhoIsAlan = qlc.includes("who is") && qlc.includes("alan");
+  const isAlanBackground = qlc.includes("alan ranger") && (qlc.includes("who") || qlc.includes("background") || qlc.includes("about") || qlc.includes("photographic background"));
+  
+  if (isWhoIsAlan || isAlanBackground) {
     console.log(`✅ About Alan query detected, returning bio as advice: "${query}"`);
     // ONLY return About/Ethics/Testimonials landing pages for person queries
     // Search directly for these specific landing pages
