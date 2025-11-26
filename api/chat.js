@@ -10772,15 +10772,24 @@ async function enrichAdviceWithRelatedInfo(client, query, structured) {
     let initialArticles = structured.articles || [];
     
     // For HDR queries, filter existing articles to only HDR-relevant ones
-    if (isHdrQuery && initialArticles.length > 0) {
-      const hdrRelevantTerms = ['bracketing', 'dynamic range', 'hdr', 'exposure', 'histogram', 'bracket'];
-      initialArticles = initialArticles.filter(a => {
-        const t = (a.title || '').toLowerCase();
-        const u = (a.page_url || a.url || '').toLowerCase();
-        const d = (a.description || '').toLowerCase();
-        return hdrRelevantTerms.some(term => t.includes(term) || u.includes(term) || d.includes(term));
-      });
-      console.log(`[ENRICH] HDR query - filtered initial articles: ${initialArticles.length}/${structured.articles?.length || 0} HDR-relevant`);
+    if (isHdrQuery) {
+      console.log(`[ENRICH] HDR query detected in enrichAdviceWithRelatedInfo: "${query}"`);
+      console.log(`[ENRICH] Initial articles count: ${initialArticles.length}`);
+      if (initialArticles.length > 0) {
+        const hdrRelevantTerms = ['bracketing', 'dynamic range', 'hdr', 'exposure', 'histogram', 'bracket'];
+        const beforeCount = initialArticles.length;
+        initialArticles = initialArticles.filter(a => {
+          const t = (a.title || '').toLowerCase();
+          const u = (a.page_url || a.url || '').toLowerCase();
+          const d = (a.description || '').toLowerCase();
+          const isRelevant = hdrRelevantTerms.some(term => t.includes(term) || u.includes(term) || d.includes(term));
+          if (!isRelevant) {
+            console.log(`[ENRICH] Filtering out non-HDR article: "${a.title || 'NO TITLE'}"`);
+          }
+          return isRelevant;
+        });
+        console.log(`[ENRICH] HDR query - filtered initial articles: ${initialArticles.length}/${beforeCount} HDR-relevant`);
+      }
     }
     
     const enriched = { 
@@ -10798,8 +10807,11 @@ async function enrichAdviceWithRelatedInfo(client, query, structured) {
     await addMissingEnrichmentItems(client, keywords, enriched, businessCategory, query);
     
     // Ensure we have at least one type of related info
-    if (!hasAnyRelatedInfo(enriched)) {
+    // Skip fallback for HDR queries - we want 0 articles if no HDR-relevant ones exist
+    if (!hasAnyRelatedInfo(enriched) && !isHdrQuery) {
       await addFallbackArticles(client, keywords, enriched);
+    } else if (isHdrQuery && !hasAnyRelatedInfo(enriched)) {
+      console.log(`[ENRICH] HDR query - no HDR-relevant articles found, skipping fallback to avoid generic articles`);
     }
     
     return enriched;
@@ -10876,8 +10888,12 @@ async function handleSourcesConversion(ragResult, client) {
       const items = await convertSourcesUrlsToArticles(client, ragResult.sources);
       if (items && items.length > 0) {
         // Separate products from articles based on kind field
-        const articles = items.filter(item => item.kind !== 'product');
+        let articles = items.filter(item => item.kind !== 'product');
         const products = items.filter(item => item.kind === 'product');
+        
+        // For HDR queries, filter articles to only HDR-relevant ones
+        // Note: We need to check the query from context, but we don't have it here
+        // So we'll filter in enrichAdviceWithRelatedInfo instead
         
         if (articles.length > 0) {
           ragResult.structured.articles = articles;
