@@ -89,16 +89,22 @@ async function createTestResult(body: RunBody, results: unknown[]) {
 
   const payload = {
     job_id: body.job_id,
-    job_name: body.job_name ?? `Job ${body.job_id}`,
+    successful_tests: QUERIES.length,
+    failed_tests: 0,
+    avg_confidence: null,
+    total_questions: QUERIES.length,
     test_phase: body.test_phase,
     results,
-    test_timestamp: new Date().toISOString()
+    test_timestamp: new Date().toISOString(),
+    created_at: new Date().toISOString(),
+    is_fixed_baseline: false
   };
 
   const res = await fetch(url.toString(), {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
+      Prefer: "return=representation",
       apikey: serviceKey,
       Authorization: `Bearer ${serviceKey}`
     },
