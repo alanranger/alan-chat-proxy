@@ -1255,6 +1255,50 @@
             2
           ) || data.avg_confidence}.`
         );
+
+        // Automatically compare master baseline vs new test and show summary modal
+        try {
+          const baselineSelect = document.getElementById('baselineSelect');
+          const currentSelect = document.getElementById('currentSelect');
+          let baselineId = null;
+
+          // Prefer official fixed baseline from /api/admin
+          const fixedRes = await fetch('/api/admin?action=get_fixed_baseline', {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${adminToken}`
+            }
+          });
+          if (fixedRes.ok) {
+            const fixedData = await fixedRes.json();
+            if (fixedData && fixedData.ok && fixedData.fixed_baseline && fixedData.fixed_baseline.id) {
+              baselineId = String(fixedData.fixed_baseline.id);
+            }
+          }
+
+          // Fallback: look for option tagged as [MASTER BASELINE]
+          if (!baselineId && baselineSelect && baselineSelect.options) {
+            const opts = baselineSelect.options;
+            for (let i = 0; i < opts.length; i++) {
+              const label = String(opts[i].textContent || '');
+              if (label.includes('[MASTER BASELINE]')) {
+                baselineId = opts[i].value;
+                break;
+              }
+            }
+          }
+
+          if (baselineId && baselineSelect && currentSelect && typeof compareSelected === 'function') {
+            baselineSelect.value = baselineId;
+            currentSelect.value = String(data.test_result_id);
+            await compareSelected();
+          } else {
+            logDebug('Auto-compare skipped (no baseline or selects)', { baselineId });
+          }
+        } catch (autoErr) {
+          console.error('Auto-compare after 40Q run failed', autoErr);
+          logDebug('autoCompareAfterRun failed', String(autoErr));
+        }
       } catch (e) {
         console.error(e);
         setRunStatus('Error running 40Q regression test. Check console/logs.', true);
