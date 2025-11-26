@@ -873,6 +873,14 @@
         setComparisonStatus('Select both baseline and comparison tests.', true);
         return;
       }
+      await compareByIds(baselineId, currentId);
+    }
+
+    async function compareByIds(baselineId, currentId) {
+      if (!supabaseClient) {
+        setComparisonStatus('Connect to Supabase first.', true);
+        return;
+      }
       setComparisonStatus(
         `Loading results for baseline ${baselineId} and current ${currentId}…`
       );
@@ -1288,10 +1296,11 @@
             }
           }
 
-          if (baselineId && baselineSelect && currentSelect && typeof compareSelected === 'function') {
-            baselineSelect.value = baselineId;
-            currentSelect.value = String(data.test_result_id);
-            await compareSelected();
+          if (baselineId && typeof compareByIds === 'function') {
+            // Also update selects for UI consistency (even if the option doesn't exist yet)
+            if (baselineSelect) baselineSelect.value = baselineId;
+            if (currentSelect) currentSelect.value = String(data.test_result_id);
+            await compareByIds(baselineId, String(data.test_result_id));
           } else {
             logDebug('Auto-compare skipped (no baseline or selects)', { baselineId });
           }
