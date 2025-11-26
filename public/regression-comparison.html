@@ -313,6 +313,9 @@
           <select id="baselineSelect" disabled>
             <option value="">Connect first to load tests…</option>
           </select>
+          <button id="setMasterBaselineBtn" type="button" style="margin-top:6px;font-size:12px;padding:6px 10px;">
+            🔒 Set selected baseline as Master Baseline
+          </button>
         </div>
         <div class="field-group">
           <label for="currentSelect">Comparison test (job, phase, date/time)</label>
@@ -1262,6 +1265,92 @@
       }
     }
 
+    async function setMasterBaselineFromUi() {
+      try {
+        const baselineIdStr = document.getElementById('baselineSelect').value;
+        const adminToken = document.getElementById('adminToken').value.trim();
+        if (!baselineIdStr) {
+          alert('Select a baseline test first.');
+          return;
+        }
+        if (!adminToken) {
+          alert('Admin API token is required to set the master baseline.');
+          return;
+        }
+        const baselineId = parseInt(baselineIdStr, 10);
+        if (!baselineId || Number.isNaN(baselineId)) {
+          alert('Invalid baseline test id.');
+          return;
+        }
+
+        // Find job_id and verify this is a baseline (test_phase = 'before')
+        let jobId = null;
+        const metaArr = testIndex[baselineId] || [];
+        if (metaArr[0] && metaArr[0].job != null) {
+          jobId = metaArr[0].job;
+        }
+
+        if (!supabaseClient) {
+          alert('Connect to Supabase first so we can verify the baseline.');
+          return;
+        }
+
+        const { data: baselineRow, error } = await supabaseClient
+          .from('regression_test_results')
+          .select('id, job_id, test_phase')
+          .eq('id', baselineId)
+          .single();
+
+        if (error || !baselineRow) {
+          console.error(error);
+          logDebug('setMasterBaselineFromUi: failed to load regression_test_results row', error || baselineRow);
+          alert('Unable to load baseline details from database.');
+          return;
+        }
+
+        if (baselineRow.test_phase !== 'before') {
+          alert('Selected test is not a baseline (test_phase != "before"). Only baseline tests can be set as the master baseline.');
+          return;
+        }
+
+        jobId = jobId != null ? jobId : baselineRow.job_id;
+        if (!jobId) {
+          alert('Baseline has no job_id; cannot set as master baseline.');
+          return;
+        }
+
+        if (!confirm(`Set test #${baselineId} (job ${jobId}, phase "before") as the MASTER baseline for all jobs?\n\nThis will:\n- Unset any existing master baseline\n- Mark this baseline as is_fixed_baseline = true (test_phase = 'before')\n- Cron dashboard and regression wrappers will use this new baseline id for comparisons.`)) {
+          return;
+        }
+
+        logDebug('Setting master baseline via /api/admin', { baselineId, jobId });
+
+        const res = await fetch('/api/admin?action=set_fixed_baseline', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${adminToken}`
+          },
+          body: JSON.stringify({ test_result_id: baselineId, job_id: jobId })
+        });
+        const data = await res.json();
+
+        if (!res.ok || !data.ok) {
+          console.error('Error from set_fixed_baseline', data);
+          logDebug('setMasterBaselineFromUi error response', { status: res.status, data });
+          alert(`Failed to set master baseline: ${data.error || 'unknown error'}`);
+          return;
+        }
+
+        logDebug('Master baseline updated', data);
+        alert('Master baseline updated successfully. Cron dashboard will now use this baseline id.');
+      } catch (e) {
+        console.error(e);
+        logDebug('setMasterBaselineFromUi failed', e);
+        alert('Error setting master baseline. See debug log for details.');
+      }
+    }
+
     function copyDebugLog() {
       try {
         const text = debugLines.join('\n');
@@ -1358,6 +1447,7 @@
         cb.checked = checked;
       });
     });
+    document.getElementById('setMasterBaselineBtn').addEventListener('click', setMasterBaselineFromUi);
     window.addEventListener('DOMContentLoaded', prefillSupabaseCreds);
   </script>
 </body>
