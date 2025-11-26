@@ -10571,6 +10571,10 @@ async function addArticlesForEnrichment(client, keywords, enriched, businessCate
   const isAlanRangerQuery = businessCategory === 'Person Queries' && 
                             (query.toLowerCase().includes('alan ranger') || query.toLowerCase().includes('who is alan'));
   
+  // Check for HDR queries - only add HDR-relevant articles
+  const qlc = (query || '').toLowerCase();
+  const isHdrQuery = qlc.includes('hdr') || (qlc.includes('high') && qlc.includes('dynamic') && qlc.includes('range'));
+  
   if (businessCategory !== 'Event Queries' && !isAlanRangerQuery) {
     const articles = await findArticles(client, { keywords, limit: 12 });
     if (articles && articles.length > 0) {
@@ -10581,10 +10585,24 @@ async function addArticlesForEnrichment(client, keywords, enriched, businessCate
         const key = (a.page_url || a.url || a.id || '').toString().replace(/\/+$/, '').trim();
         if (key) seen.add(key);
       });
-      const newArticles = articles.filter(a => {
+      
+      let newArticles = articles.filter(a => {
         const key = (a.page_url || a.url || a.id || '').toString().replace(/\/+$/, '').trim();
         return key && !seen.has(key);
       });
+      
+      // For HDR queries, filter to only HDR-relevant articles
+      if (isHdrQuery) {
+        const hdrRelevantTerms = ['bracketing', 'dynamic range', 'hdr', 'exposure', 'histogram', 'bracket'];
+        newArticles = newArticles.filter(a => {
+          const t = (a.title || '').toLowerCase();
+          const u = (a.page_url || a.url || '').toLowerCase();
+          const d = (a.description || '').toLowerCase();
+          return hdrRelevantTerms.some(term => t.includes(term) || u.includes(term) || d.includes(term));
+        });
+        console.log(`[ENRICH] HDR query detected - filtered to ${newArticles.length} HDR-relevant articles (from ${articles.length} total)`);
+      }
+      
       enriched.articles = [...existing, ...newArticles].slice(0, 12);
       console.log(`[ENRICH] Added ${newArticles.length} new articles (${existing.length} existing, ${articles.length} total found)`);
     }
