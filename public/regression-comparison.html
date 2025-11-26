@@ -228,6 +228,12 @@
     .comparison-table tr:hover {
       background-color: #f0f0f0;
     }
+    .question-num-col {
+      font-weight: bold;
+      width: 6%;
+      text-align: center;
+      color: #333;
+    }
     .query-col {
       font-weight: bold;
       width: 17%;
@@ -1268,7 +1274,8 @@
 
           return `
           <tr>
-            <td class="query-col"><strong>Q${row.qNum}. ${row.query}</strong></td>
+            <td class="question-num-col"><strong>Q${row.qNum}</strong></td>
+            <td class="query-col">${row.query}</td>
             <td>${row.category}</td>
             <td>${baselineText}</td>
             <td>${currentText}</td>
@@ -1320,6 +1327,7 @@
       <table class="comparison-table">
         <thead>
           <tr>
+            <th class="question-num-col">Question</th>
             <th class="query-col">Query</th>
             <th id="sortCategoryHeader" style="cursor:pointer;">Category ⇅</th>
             <th class="baseline-col">Baseline #${baselineId} (type: count, top item)</th>

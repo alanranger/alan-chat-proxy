@@ -9394,20 +9394,63 @@ async function handleAboutAlanQuery(client, query) {
   // Handle "who is alan" or background queries
   if ((qlc.includes("alan ranger") || qlc.includes("who is")) && (qlc.includes("who") || qlc.includes("background") || qlc.includes("about") || qlc.includes("photographic background"))) {
     console.log(`✅ About Alan query detected, returning bio as advice: "${query}"`);
-    // Prefer About/Ethics/Testimonials landing pages for person queries
-    const aboutKeywords = ['about alan ranger', 'ethics', 'testimonials', 'about', 'alan ranger'];
-    const articles = await findArticles(client, { keywords: aboutKeywords, limit: 12 });
+    // ONLY return About/Ethics/Testimonials landing pages for person queries
+    // Search directly for these specific landing pages
+    const landingPageUrls = ['/about', '/ethics', '/testimonials'];
+    const landingPages = [];
     
-    // Filter to prefer About/Ethics/Testimonials pages
-    const preferredArticles = (articles || []).filter(a => {
-      const t = (a.title || '').toLowerCase();
-      const u = (a.page_url || a.url || '').toLowerCase();
-      return t.includes('about') || t.includes('ethics') || t.includes('testimonial') ||
-             u.includes('about') || u.includes('ethics') || u.includes('testimonial');
-    });
+    // Try to find each landing page directly by URL pattern
+    for (const urlPattern of landingPageUrls) {
+      try {
+        const { data, error } = await client
+          .from('articles')
+          .select('*')
+          .or(`page_url.ilike.%${urlPattern}%,url.ilike.%${urlPattern}%`)
+          .limit(1);
+        
+        if (!error && data && data.length > 0) {
+          landingPages.push(data[0]);
+        }
+      } catch (e) {
+        console.log(`[handleAboutAlanQuery] Error searching for ${urlPattern}: ${e.message}`);
+      }
+    }
     
-    // Use preferred articles if found, otherwise fall back to all articles
-    const finalArticles = preferredArticles.length > 0 ? preferredArticles : articles;
+    // If we didn't find all 3 via direct URL search, try findArticles as fallback
+    if (landingPages.length < 3) {
+      const aboutKeywords = ['about alan ranger', 'ethics', 'testimonials'];
+      const articles = await findArticles(client, { keywords: aboutKeywords, limit: 20 });
+      
+      // Filter to ONLY About/Ethics/Testimonials landing pages
+      const foundPages = (articles || []).filter(a => {
+        const t = (a.title || '').toLowerCase();
+        const u = (a.page_url || a.url || '').toLowerCase();
+        // Match specific landing page patterns
+        const isAbout = (t.includes('about') || u.includes('/about')) && !t.includes('workshop') && !t.includes('course');
+        const isEthics = t.includes('ethics') || u.includes('/ethics');
+        const isTestimonials = (t.includes('testimonial') || u.includes('/testimonial')) && !t.includes('workshop') && !t.includes('course');
+        return isAbout || isEthics || isTestimonials;
+      });
+      
+      // Merge with directly found pages, avoiding duplicates
+      const seen = new Set();
+      landingPages.forEach(p => {
+        const key = (p.page_url || p.url || '').toString().replace(/\/+$/, '').trim();
+        if (key) seen.add(key);
+      });
+      
+      foundPages.forEach(p => {
+        const key = (p.page_url || p.url || '').toString().replace(/\/+$/, '').trim();
+        if (key && !seen.has(key) && landingPages.length < 3) {
+          landingPages.push(p);
+          seen.add(key);
+        }
+      });
+    }
+    
+    // Return ONLY the landing pages we found (max 3)
+    const finalArticles = landingPages.slice(0, 3);
+    console.log(`[handleAboutAlanQuery] Found ${finalArticles.length} landing pages: ${finalArticles.map(a => a.title || a.page_url || 'unknown').join(', ')}`);
     
     return {
       success: true,
@@ -10530,9 +10573,10 @@ function needsEnrichment(structured) {
 
 // Helper: Add articles for enrichment (Complexity: Low)
 async function addArticlesForEnrichment(client, keywords, enriched, businessCategory) {
-  // Add articles for most categories (except pure event queries)
+  // Add articles for most categories (except pure event queries and person queries)
+  // Person queries are handled specifically in handleAboutAlanQuery with landing pages only
   // This improves diversity and quality of related information
-  if (businessCategory !== 'Event Queries') {
+  if (businessCategory !== 'Event Queries' && businessCategory !== 'Person Queries') {
     const articles = await findArticles(client, { keywords, limit: 12 });
     if (articles && articles.length > 0) {
       const existing = enriched.articles || [];
@@ -10549,6 +10593,8 @@ async function addArticlesForEnrichment(client, keywords, enriched, businessCate
       enriched.articles = [...existing, ...newArticles].slice(0, 12);
       console.log(`[ENRICH] Added ${newArticles.length} new articles (${existing.length} existing, ${articles.length} total found)`);
     }
+  } else if (businessCategory === 'Person Queries') {
+    console.log(`[ENRICH] Skipping article enrichment for Person Queries - handled specifically with landing pages only`);
   }
 }
 
