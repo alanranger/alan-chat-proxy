@@ -338,6 +338,15 @@
         const urlInput = document.getElementById('supabaseUrl');
         const keyInput = document.getElementById('supabaseKey');
         const adminInput = document.getElementById('adminToken');
+
+        // 0) Hard-coded defaults (same pattern as testbench.html)
+        if (!urlInput.value) {
+          urlInput.value = 'https://igzvwbvgvmzvvzoclufx.supabase.co';
+        }
+        if (!keyInput.value) {
+          keyInput.value = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlnenZ3YnZndm16dnZ6b2NsdWZ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc2Nzc5MjgsImV4cCI6MjA3MzI1MzkyOH0.A9TCmnXKJhDRYBkrO0mAMPiUQeV9enweeyRWKWQ1SZY';
+        }
+
         if (window.__SUPABASE_URL && !urlInput.value) {
           urlInput.value = window.__SUPABASE_URL;
         }
