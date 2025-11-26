@@ -9402,23 +9402,28 @@ async function handleAboutAlanQuery(client, query) {
   if (isWhoIsAlan || isAlanBackground) {
     console.log(`✅ About Alan query detected, returning bio as advice: "${query}"`);
     // ONLY return About/Ethics/Testimonials landing pages for person queries
-    // Use findServices to dynamically find landing pages matching these keywords
-    const landingPageKeywords = ['about', 'ethics', 'testimonials'];
-    const services = await findServices(client, { keywords: landingPageKeywords, limit: 10 });
+    // Query database directly for these specific landing pages by URL pattern
+    const landingPageUrls = ['/about-alan-ranger', '/my-ethical-policy', '/testimonials-customer-reviews'];
+    const landingPages = [];
     
-    // Filter to ONLY About/Ethics/Testimonials landing pages
-    // Match actual URLs: /about-alan-ranger, /my-ethical-policy, /testimonials-customer-reviews
-    const landingPages = (services || []).filter(s => {
-      const t = (s.title || '').toLowerCase();
-      const u = (s.page_url || s.url || '').toLowerCase();
-      // Match specific landing page patterns based on actual database entries
-      const isAbout = (t.includes('about alan ranger') || u.includes('/about-alan-ranger') || u.includes('/about')) && 
-                      !t.includes('workshop') && !t.includes('course');
-      const isEthics = (t.includes('ethical policy') || t.includes('ethics') || u.includes('/my-ethical-policy') || u.includes('/ethics'));
-      const isTestimonials = (t.includes('testimonial') || t.includes('customer reviews') || 
-                              u.includes('/testimonials-customer-reviews') || u.includes('/testimonials'));
-      return isAbout || isEthics || isTestimonials;
-    });
+    for (const urlPattern of landingPageUrls) {
+      try {
+        const { data, error } = await client
+          .from('page_entities')
+          .select('id, title, page_url, url, description, csv_type')
+          .eq('csv_type', 'landing_service_pages')
+          .or(`page_url.ilike.%${urlPattern}%,url.ilike.%${urlPattern}%`)
+          .limit(1);
+        
+        if (!error && data && data.length > 0) {
+          landingPages.push(data[0]);
+        }
+      } catch (e) {
+        console.log(`[handleAboutAlanQuery] Error searching for ${urlPattern}: ${e.message}`);
+      }
+    }
+    
+    console.log(`[handleAboutAlanQuery] Found ${landingPages.length} landing pages via direct query`);
     
     // Convert services to article-like format for consistency
     const finalArticles = landingPages.slice(0, 3).map(s => ({
