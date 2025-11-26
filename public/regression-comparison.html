@@ -197,6 +197,10 @@
           <label for="supabaseKey">Supabase anon key</label>
           <input id="supabaseKey" type="password" placeholder="Paste NEXT_PUBLIC_SUPABASE_ANON_KEY" />
         </div>
+        <div class="field-group">
+          <label for="adminToken">Admin API token (Authorization bearer)</label>
+          <input id="adminToken" type="password" placeholder="Paste INGEST_TOKEN / automation bypass" />
+        </div>
         <div class="field-group" style="align-self:flex-end; flex:0 0 auto;">
           <button id="connectBtn">Connect &amp; Load Tests</button>
         </div>
@@ -248,6 +252,14 @@
       <div class="status" id="comparisonStatus"></div>
       <div class="status" id="runStatus"></div>
     </div>
+
+    <details id="debugPanel" open>
+      <summary style="cursor:pointer; font-weight:600; margin-top:10px;">Debug log</summary>
+      <div style="margin:10px 0;">
+        <button id="copyDebugBtn">Copy debug log</button>
+      </div>
+      <pre id="debugLog" style="background:#111; color:#eee; padding:10px; max-height:260px; overflow:auto; font-size:11px; border-radius:4px;"></pre>
+    </details>
 
     <div id="resultsContainer">
       <!-- Summary and table will be injected here -->
@@ -301,11 +313,31 @@
 
     let supabaseClient = null;
     let testIndex = {};
+    const debugLines = [];
+
+    function logDebug(message, extra) {
+      const ts = new Date().toISOString();
+      let line = `[${ts}] ${message}`;
+      if (extra !== undefined) {
+        try {
+          line += ' ' + JSON.stringify(extra);
+        } catch {
+          line += ' ' + String(extra);
+        }
+      }
+      debugLines.push(line);
+      const el = document.getElementById('debugLog');
+      if (el) {
+        el.textContent = debugLines.join('\n');
+        el.scrollTop = el.scrollHeight;
+      }
+    }
 
     function prefillSupabaseCreds() {
       try {
         const urlInput = document.getElementById('supabaseUrl');
         const keyInput = document.getElementById('supabaseKey');
+        const adminInput = document.getElementById('adminToken');
         if (window.__SUPABASE_URL && !urlInput.value) {
           urlInput.value = window.__SUPABASE_URL;
         }
@@ -320,8 +352,13 @@
           const storedKey = window.localStorage.getItem('regression_supabase_anon_key');
           if (storedKey) keyInput.value = storedKey;
         }
+        if (!adminInput.value) {
+          const storedAdmin = window.localStorage.getItem('regression_admin_token');
+          if (storedAdmin) adminInput.value = storedAdmin;
+        }
       } catch (e) {
         console.warn('Prefill of Supabase creds failed or not available:', e);
+        logDebug('PrefillSupabaseCreds failed', String(e));
       }
     }
 
@@ -329,18 +366,21 @@
       const el = document.getElementById('connectionStatus');
       el.textContent = message || '';
       el.className = 'status' + (isError ? ' error' : '');
+      logDebug(`ConnectionStatus: ${message}`, { isError });
     }
 
     function setComparisonStatus(message, isError = false) {
       const el = document.getElementById('comparisonStatus');
       el.textContent = message || '';
       el.className = 'status' + (isError ? ' error' : '');
+      logDebug(`ComparisonStatus: ${message}`, { isError });
     }
 
     function setRunStatus(message, isError = false) {
       const el = document.getElementById('runStatus');
       el.textContent = message || '';
       el.className = 'status' + (isError ? ' error' : '');
+      logDebug(`RunStatus: ${message}`, { isError });
     }
 
     function extractContentCounts(structured) {
@@ -449,10 +489,12 @@
         setConnectionStatus('Supabase URL and anon key are required.', true);
         return;
       }
+      logDebug('Connecting to Supabase', { url });
       setConnectionStatus('Connecting to Supabase and loading tests…');
       document.getElementById('connectBtn').disabled = true;
       try {
         supabaseClient = window.supabase.createClient(url, key);
+        logDebug('Supabase client created');
 
         const { data, error } = await supabaseClient
           .from('regression_test_runs')
@@ -461,6 +503,7 @@
           .limit(200);
         if (error) {
           console.error(error);
+          logDebug('Error loading regression_test_runs', error);
           throw error;
         }
 
@@ -512,6 +555,7 @@
           });
         } else {
           console.error(resultsError);
+          logDebug('Error loading regression_test_results', resultsError);
         }
 
         populateSelects();
@@ -521,6 +565,7 @@
       } catch (e) {
         console.error(e);
         setConnectionStatus('Failed to connect or load tests. Check console for details.', true);
+        logDebug('connectAndLoadTests failed', e);
       } finally {
         document.getElementById('connectBtn').disabled = false;
       }
@@ -591,6 +636,7 @@
       setComparisonStatus(
         `Loading results for baseline ${baselineId} and current ${currentId}…`
       );
+      logDebug('Comparing tests', { baselineId, currentId });
       document.getElementById('compareBtn').disabled = true;
 
       try {
@@ -629,6 +675,7 @@
       } catch (e) {
         console.error(e);
         setComparisonStatus('Error loading or comparing tests. Check console for details.', true);
+        logDebug('compareSelected failed', e);
       } finally {
         document.getElementById('compareBtn').disabled = false;
       }
@@ -902,16 +949,32 @@
         const testPhase = document.getElementById('runTestPhase').value || 'after';
         const jobNameInput = document.getElementById('runJobName').value.trim();
         const jobName = jobNameInput || `Job ${jobId} (UI 40Q run)`;
+        const adminToken = document.getElementById('adminToken').value.trim();
+        if (!adminToken) {
+          setRunStatus('Admin API token (Authorization bearer) is required to call /api/admin.', true);
+          return;
+        }
+        // Remember admin token locally for convenience (browser storage only)
+        try {
+          window.localStorage.setItem('regression_admin_token', adminToken);
+        } catch (e) {
+          console.warn('Unable to store admin token in localStorage', e);
+        }
 
         setRunStatus(`Starting 40Q regression test for job ${jobId} (${testPhase})…`);
         const res = await fetch('/api/admin?action=run_regression_test', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${adminToken}`
+          },
           body: JSON.stringify({ job_id: jobId, job_name: jobName, test_phase: testPhase })
         });
         const data = await res.json();
         if (!res.ok || !data.ok) {
-          throw new Error(data.error || 'Failed to run regression test');
+          const errMsg = data && data.error ? data.error : 'Failed to run regression test';
+          logDebug('run40qFromUi error response', { status: res.status, data });
+          throw new Error(errMsg);
         }
 
         setRunStatus(
@@ -922,12 +985,36 @@
       } catch (e) {
         console.error(e);
         setRunStatus('Error running 40Q regression test. Check console/logs.', true);
+        logDebug('run40qFromUi failed', e);
+      }
+    }
+
+    function copyDebugLog() {
+      try {
+        const text = debugLines.join('\n');
+        if (!text) {
+          alert('Debug log is empty.');
+          return;
+        }
+        navigator.clipboard.writeText(text).then(
+          () => {
+            logDebug('Debug log copied to clipboard');
+          },
+          err => {
+            console.error(err);
+            logDebug('Failed to copy debug log', err);
+          }
+        );
+      } catch (e) {
+        console.error(e);
+        logDebug('copyDebugLog failed', e);
       }
     }
 
     document.getElementById('connectBtn').addEventListener('click', connectAndLoadTests);
     document.getElementById('compareBtn').addEventListener('click', compareSelected);
     document.getElementById('run40qBtn').addEventListener('click', run40qFromUi);
+    document.getElementById('copyDebugBtn').addEventListener('click', copyDebugLog);
     window.addEventListener('DOMContentLoaded', prefillSupabaseCreds);
   </script>
 </body>
