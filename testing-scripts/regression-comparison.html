@@ -323,12 +323,45 @@
       el.className = 'status' + (isError ? ' error' : '');
     }
 
-    function extractContentCounts(structured) {
+    // Helper: simple follow-up detection (mirrors chat.html behaviour)
+    function isSimpleFollowUpQueryForUi(query) {
+      if (!query) return false;
+      const q = String(query);
+      const isFollowUpPattern = /^(how many|when|where|how much|how long|can i|do you|is there)/i.test(q);
+      const hasEventKeywords =
+        q.includes('book') ||
+        q.includes('buy') ||
+        q.includes('price') ||
+        q.includes('cost') ||
+        q.includes('workshop') ||
+        q.includes('course') ||
+        q.includes('event') ||
+        q.includes('class');
+      return isFollowUpPattern && !hasEventKeywords;
+    }
+
+    function normalizeStructuredForUi(structured, query) {
+      if (!structured) return structured;
+      const copy = {
+        ...structured,
+        articles: structured.articles || [],
+        services: structured.services || [],
+        events: structured.events || [],
+        products: structured.products || []
+      };
+      if (isSimpleFollowUpQueryForUi(query)) {
+        copy.services = [];
+      }
+      return copy;
+    }
+
+    function extractContentCounts(structured, query) {
+      const s = normalizeStructuredForUi(structured, query);
       return {
-        articles: (structured && structured.articles && structured.articles.length) || 0,
-        services: (structured && structured.services && structured.services.length) || 0,
-        events: (structured && structured.events && structured.events.length) || 0,
-        products: (structured && structured.products && structured.products.length) || 0
+        articles: (s && s.articles && s.articles.length) || 0,
+        services: (s && s.services && s.services.length) || 0,
+        events: (s && s.events && s.events.length) || 0,
+        products: (s && s.products && s.products.length) || 0
       };
     }
 
@@ -687,8 +720,14 @@
           return;
         }
 
-        const baseCounts = extractContentCounts(baseEntry && baseEntry.response && baseEntry.response.structured);
-        const currCounts = extractContentCounts(currEntry && currEntry.response && currEntry.response.structured);
+        const baseCounts = extractContentCounts(
+          baseEntry && baseEntry.response && baseEntry.response.structured,
+          query
+        );
+        const currCounts = extractContentCounts(
+          currEntry && currEntry.response && currEntry.response.structured,
+          query
+        );
 
         const baseTopArticles = getTopItems(
           baseEntry && baseEntry.response && baseEntry.response.structured,
