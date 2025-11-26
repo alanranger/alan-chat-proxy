@@ -10585,10 +10585,12 @@ async function addArticlesForEnrichment(client, keywords, enriched, businessCate
   }
   
   // Check for service queries - filter out generic assignment articles
-  const isServiceQuery = businessCategory === 'Business Information' && 
-                         (qlc.includes('service') || qlc.includes('offer') || qlc.includes('provide'));
+  // Match Business Information category OR General Queries that ask about services/offers
+  const isServiceQuery = (businessCategory === 'Business Information' || businessCategory === 'General Queries') && 
+                         (qlc.includes('service') || qlc.includes('offer') || qlc.includes('provide') || 
+                          qlc.includes('what types') || qlc.includes('what do you'));
   if (isServiceQuery) {
-    console.log(`[ENRICH] Service query detected: "${query}"`);
+    console.log(`[ENRICH] Service query detected: "${query}" (category: ${businessCategory})`);
   }
   
   if (businessCategory !== 'Event Queries' && !isAlanRangerQuery) {
@@ -10819,8 +10821,9 @@ async function enrichAdviceWithRelatedInfo(client, query, structured) {
     const qlc = (query || '').toLowerCase();
     const isHdrQuery = qlc.includes('hdr') || (qlc.includes('high') && qlc.includes('dynamic') && qlc.includes('range'));
     const isAstrophotographyQuery = qlc.includes('astrophotography') || (qlc.includes('astro') && qlc.includes('photography'));
-    const isServiceQuery = businessCategory === 'Business Information' && 
-                           (qlc.includes('service') || qlc.includes('offer') || qlc.includes('provide'));
+    const isServiceQuery = (businessCategory === 'Business Information' || businessCategory === 'General Queries') && 
+                           (qlc.includes('service') || qlc.includes('offer') || qlc.includes('provide') || 
+                            qlc.includes('what types') || qlc.includes('what do you'));
     
     let initialArticles = structured.articles || [];
     
