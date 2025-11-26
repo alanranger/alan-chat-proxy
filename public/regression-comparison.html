@@ -1418,6 +1418,15 @@
     function attachTableSortClickHandlers() {
       const catHeader = document.getElementById('sortCategoryHeader');
       const statusHeader = document.getElementById('sortStatusHeader');
+      const updateHeaderIndicators = () => {
+        if (catHeader) {
+          catHeader.textContent = currentSortKey === 'category' ? 'Category ▲' : 'Category ⇅';
+        }
+        if (statusHeader) {
+          statusHeader.textContent = currentSortKey === 'status' ? 'Status ▲' : 'Status ⇅';
+        }
+      };
+      updateHeaderIndicators();
       if (catHeader) {
         catHeader.onclick = () => {
           currentSortKey = currentSortKey === 'category' ? 'none' : 'category';
