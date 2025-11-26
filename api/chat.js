@@ -9402,64 +9402,38 @@ async function handleAboutAlanQuery(client, query) {
   if (isWhoIsAlan || isAlanBackground) {
     console.log(`✅ About Alan query detected, returning bio as advice: "${query}"`);
     // ONLY return About/Ethics/Testimonials landing pages for person queries
-    // Search directly for these specific landing pages
-    const landingPageUrls = ['/about', '/ethics', '/testimonials'];
-    const landingPages = [];
-    
-    // Try to find each landing page directly by URL pattern
-    for (const urlPattern of landingPageUrls) {
-      try {
-        const { data, error } = await client
-          .from('articles')
-          .select('*')
-          .or(`page_url.ilike.%${urlPattern}%,url.ilike.%${urlPattern}%`)
-          .limit(1);
-        
-        if (!error && data && data.length > 0) {
-          landingPages.push(data[0]);
-        }
-      } catch (e) {
-        console.log(`[handleAboutAlanQuery] Error searching for ${urlPattern}: ${e.message}`);
+    // These are static landing pages, so we create article-like entries for them
+    const landingPages = [
+      {
+        id: 'about-landing',
+        title: 'About Alan Ranger',
+        page_url: 'https://www.alanranger.com/about',
+        url: 'https://www.alanranger.com/about',
+        kind: 'article',
+        source_type: 'landing_page'
+      },
+      {
+        id: 'ethics-landing',
+        title: 'Ethics',
+        page_url: 'https://www.alanranger.com/ethics',
+        url: 'https://www.alanranger.com/ethics',
+        kind: 'article',
+        source_type: 'landing_page'
+      },
+      {
+        id: 'testimonials-landing',
+        title: 'Testimonials',
+        page_url: 'https://www.alanranger.com/testimonials',
+        url: 'https://www.alanranger.com/testimonials',
+        kind: 'article',
+        source_type: 'landing_page'
       }
-    }
+    ];
     
-    // If we didn't find all 3 via direct URL search, try findArticles as fallback
-    if (landingPages.length < 3) {
-      console.log(`[handleAboutAlanQuery] Only found ${landingPages.length} landing pages via direct search, trying findArticles fallback...`);
-      const aboutKeywords = ['about alan ranger', 'ethics', 'testimonials'];
-      const articles = await findArticles(client, { keywords: aboutKeywords, limit: 20 });
-      
-      // Filter to ONLY About/Ethics/Testimonials landing pages
-      const foundPages = (articles || []).filter(a => {
-        const t = (a.title || '').toLowerCase();
-        const u = (a.page_url || a.url || '').toLowerCase();
-        // Match specific landing page patterns - be more strict
-        const isAbout = (u.includes('/about') || u.endsWith('/about')) && !t.includes('workshop') && !t.includes('course') && !t.includes('blog');
-        const isEthics = (u.includes('/ethics') || u.endsWith('/ethics')) && !t.includes('workshop') && !t.includes('course');
-        const isTestimonials = (u.includes('/testimonial') || u.endsWith('/testimonial')) && !t.includes('workshop') && !t.includes('course');
-        return isAbout || isEthics || isTestimonials;
-      });
-      
-      console.log(`[handleAboutAlanQuery] Found ${foundPages.length} potential landing pages from findArticles`);
-      
-      // Merge with directly found pages, avoiding duplicates
-      const seen = new Set();
-      landingPages.forEach(p => {
-        const key = (p.page_url || p.url || '').toString().replace(/\/+$/, '').trim();
-        if (key) seen.add(key);
-      });
-      
-      foundPages.forEach(p => {
-        const key = (p.page_url || p.url || '').toString().replace(/\/+$/, '').trim();
-        if (key && !seen.has(key) && landingPages.length < 3) {
-          landingPages.push(p);
-          seen.add(key);
-        }
-      });
-    }
+    console.log(`[handleAboutAlanQuery] Using hardcoded landing pages: ${landingPages.map(p => p.title).join(', ')}`);
     
-    // Return ONLY the landing pages we found (max 3) - DO NOT fall back to regular articles
-    const finalArticles = landingPages.slice(0, 3);
+    // Return ONLY the 3 hardcoded landing pages - no fallback to regular articles
+    const finalArticles = landingPages;
     console.log(`[handleAboutAlanQuery] Final result: ${finalArticles.length} landing pages`);
     if (finalArticles.length > 0) {
       console.log(`[handleAboutAlanQuery] Landing pages: ${finalArticles.map(a => a.title || a.page_url || 'unknown').join(', ')}`);
