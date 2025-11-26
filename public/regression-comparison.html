@@ -323,6 +323,15 @@
             <option value="">Connect first to load tests…</option>
           </select>
         </div>
+        <div class="field-group">
+          <label for="sortBy">Table sort order</label>
+          <select id="sortBy">
+            <option value="none">Question order (Q1–Q40)</option>
+            <option value="category">Category (A–Z)</option>
+            <option value="status">Status (Worse → Better)</option>
+            <option value="category_status">Category, then Status</option>
+          </select>
+        </div>
         <div class="field-group" style="align-self:flex-end; flex:0 0 auto;">
           <button id="compareBtn" disabled>Compare Selected Tests</button>
         </div>
@@ -508,6 +517,12 @@
       "Event Queries",                // Q39
       "Event Queries"                 // Q40
     ];
+
+    // Sorting state for comparison table
+    let currentSortKey = 'none'; // 'none' | 'category' | 'status' | 'category_status'
+
+    // Remember last comparison so we can re-render when sort changes
+    let lastComparison = null; // { baselineId, baselineCreatedAt, baselineJobId, currentId, currentCreatedAt, currentJobId, baselineResults, currentResults }
 
     let supabaseClient = null;
     let testIndex = {};
@@ -1004,6 +1019,18 @@
           `Done. Better: ${summary.better}, Worse: ${summary.worse}, Mixed: ${summary.mixed}, Same: ${summary.same}.`
         );
         showSummaryModal(summary, baselineId, baselineCreatedAt, currentId, currentCreatedAt);
+
+        // Remember last comparison so we can resort without re-querying
+        lastComparison = {
+          baselineId: parseInt(baselineId, 10),
+          baselineCreatedAt,
+          baselineJobId,
+          currentId: parseInt(currentId, 10),
+          currentCreatedAt,
+          currentJobId,
+          baselineResults,
+          currentResults
+        };
       } catch (e) {
         console.error(e);
         setComparisonStatus('Error loading or comparing tests. Check console for details.', true);
@@ -1118,6 +1145,29 @@
           status
         });
       });
+
+      // Apply current sort to rows
+      const statusOrder = { worse: 0, mixed: 1, better: 2, same: 3 };
+      if (currentSortKey === 'category') {
+        rows.sort((a, b) => {
+          const c = a.category.localeCompare(b.category);
+          return c !== 0 ? c : a.qNum - b.qNum;
+        });
+      } else if (currentSortKey === 'status') {
+        rows.sort((a, b) => {
+          const sa = statusOrder[a.status] ?? 99;
+          const sb = statusOrder[b.status] ?? 99;
+          return sa !== sb ? sa - sb : a.qNum - b.qNum;
+        });
+      } else if (currentSortKey === 'category_status') {
+        rows.sort((a, b) => {
+          const c = a.category.localeCompare(b.category);
+          if (c !== 0) return c;
+          const sa = statusOrder[a.status] ?? 99;
+          const sb = statusOrder[b.status] ?? 99;
+          return sa !== sb ? sa - sb : a.qNum - b.qNum;
+        });
+      }
 
       const summary = { better, worse, mixed, same, byCategory: categorySummary };
 
@@ -1619,6 +1669,37 @@
       });
     });
     document.getElementById('setMasterBaselineBtn').addEventListener('click', setMasterBaselineFromUi);
+    const sortByEl = document.getElementById('sortBy');
+    if (sortByEl) {
+      sortByEl.addEventListener('change', async (e) => {
+        currentSortKey = e.target.value || 'none';
+        if (!lastComparison) return;
+        const {
+          baselineId,
+          baselineCreatedAt,
+          baselineJobId,
+          currentId,
+          currentCreatedAt,
+          currentJobId,
+          baselineResults,
+          currentResults
+        } = lastComparison;
+        const { html, summary } = buildComparisonHtml(
+          baselineId,
+          baselineCreatedAt,
+          baselineJobId,
+          currentId,
+          currentCreatedAt,
+          currentJobId,
+          baselineResults,
+          currentResults
+        );
+        document.getElementById('resultsContainer').innerHTML = html;
+        setComparisonStatus(
+          `Done. Better: ${summary.better}, Worse: ${summary.worse}, Mixed: ${summary.mixed}, Same: ${summary.same}.`
+        );
+      });
+    }
     window.addEventListener('DOMContentLoaded', prefillSupabaseCreds);
   </script>
 </body>
