@@ -10591,19 +10591,24 @@ async function addArticlesForEnrichment(client, keywords, enriched, businessCate
         return key && !seen.has(key);
       });
       
-      // For HDR queries, filter to only HDR-relevant articles
+      // For HDR queries, filter to only HDR-relevant articles (both existing and new)
       if (isHdrQuery) {
         const hdrRelevantTerms = ['bracketing', 'dynamic range', 'hdr', 'exposure', 'histogram', 'bracket'];
-        newArticles = newArticles.filter(a => {
+        const isHdrRelevant = (a) => {
           const t = (a.title || '').toLowerCase();
           const u = (a.page_url || a.url || '').toLowerCase();
           const d = (a.description || '').toLowerCase();
           return hdrRelevantTerms.some(term => t.includes(term) || u.includes(term) || d.includes(term));
-        });
-        console.log(`[ENRICH] HDR query detected - filtered to ${newArticles.length} HDR-relevant articles (from ${articles.length} total)`);
+        };
+        
+        // Filter both existing and new articles
+        const filteredExisting = existing.filter(isHdrRelevant);
+        newArticles = newArticles.filter(isHdrRelevant);
+        console.log(`[ENRICH] HDR query detected - filtered existing: ${filteredExisting.length}/${existing.length}, new: ${newArticles.length}/${articles.length} HDR-relevant articles`);
+        enriched.articles = [...filteredExisting, ...newArticles].slice(0, 12);
+      } else {
+        enriched.articles = [...existing, ...newArticles].slice(0, 12);
       }
-      
-      enriched.articles = [...existing, ...newArticles].slice(0, 12);
       console.log(`[ENRICH] Added ${newArticles.length} new articles (${existing.length} existing, ${articles.length} total found)`);
     }
   } else if (isAlanRangerQuery) {
