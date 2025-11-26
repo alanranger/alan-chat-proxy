@@ -258,7 +258,12 @@ function generateEquipmentAdviceResponse(query, articles, contentChunks) {
  // If no relevant articles found, return a basic response
  if (relevantArticles.length === 0) {
  console.log(`ðŸ”§ generateEquipmentAdviceResponse: No relevant articles found, returning basic response`);
- return generateBasicEquipmentAdvice(equipmentType);
+  // Special-case low confidence for memory card queries: avoid wrong-topic advice
+  if (equipmentType === 'memory card') {
+    console.log('🔧 generateEquipmentAdviceResponse: memory card query with no relevant articles – using low-confidence fallback');
+    return getLowConfidenceFallback();
+  }
+  return generateBasicEquipmentAdvice(equipmentType);
  }
  
  // Extract key considerations from articles
@@ -711,6 +716,12 @@ function generateBasicEquipmentAdvice(equipmentType) {
     'software': 'editing software'
   };
 
+  // For memory card questions with no strong content signals, prefer a human handover
+  if (equipmentType === 'memory card') {
+    console.log('🔧 generateBasicEquipmentAdvice: memory card type – using low-confidence fallback');
+    return getLowConfidenceFallback();
+  }
+
   const equipmentName = equipmentNames[equipmentType] || equipmentType;
 
   let response = `**Equipment Recommendations:**\n\n`;
@@ -719,6 +730,11 @@ function generateBasicEquipmentAdvice(equipmentType) {
   response += `\n\nFor detailed reviews and specific recommendations, check out Alan's photography guides on his blog.`;
 
   return response;
+}
+
+// Generic low-confidence fallback when we can’t confidently answer a gear question
+function getLowConfidenceFallback() {
+  return "I can’t find anything that confidently matches your question right now. Please contact Alan directly using the contact form or WhatsApp if you’d like to chat with him about this.";
 }
 // Helper function to clean response text and remove junk characters
 function cleanResponseText(text) {
