@@ -10578,6 +10578,19 @@ async function addArticlesForEnrichment(client, keywords, enriched, businessCate
     console.log(`[ENRICH] HDR query detected: "${query}"`);
   }
   
+  // Check for astrophotography queries - only add astrophotography/night photography relevant articles
+  const isAstrophotographyQuery = qlc.includes('astrophotography') || (qlc.includes('astro') && qlc.includes('photography'));
+  if (isAstrophotographyQuery) {
+    console.log(`[ENRICH] Astrophotography query detected: "${query}"`);
+  }
+  
+  // Check for service queries - filter out generic assignment articles
+  const isServiceQuery = businessCategory === 'Business Information' && 
+                         (qlc.includes('service') || qlc.includes('offer') || qlc.includes('provide'));
+  if (isServiceQuery) {
+    console.log(`[ENRICH] Service query detected: "${query}"`);
+  }
+  
   if (businessCategory !== 'Event Queries' && !isAlanRangerQuery) {
     const articles = await findArticles(client, { keywords, limit: 12 });
     if (articles && articles.length > 0) {
@@ -10608,6 +10621,43 @@ async function addArticlesForEnrichment(client, keywords, enriched, businessCate
         const filteredExisting = existing.filter(isHdrRelevant);
         newArticles = newArticles.filter(isHdrRelevant);
         console.log(`[ENRICH] HDR query detected - filtered existing: ${filteredExisting.length}/${existing.length}, new: ${newArticles.length}/${articles.length} HDR-relevant articles`);
+        enriched.articles = [...filteredExisting, ...newArticles].slice(0, 12);
+      } 
+      // For astrophotography queries, filter to only astrophotography/night photography relevant articles
+      else if (isAstrophotographyQuery) {
+        const astroRelevantTerms = ['astrophotography', 'astro', 'night photography', 'night photo', 'low light', 'star', 'milky way', 'long exposure'];
+        const isAstroRelevant = (a) => {
+          const t = (a.title || '').toLowerCase();
+          const u = (a.page_url || a.url || '').toLowerCase();
+          const d = (a.description || '').toLowerCase();
+          // Exclude generic workshop articles unless they're specifically about astrophotography
+          const isGenericWorkshop = (t.includes('workshop') || u.includes('workshop')) && 
+                                    !t.includes('astro') && !t.includes('night') && !t.includes('low light');
+          if (isGenericWorkshop) return false;
+          return astroRelevantTerms.some(term => t.includes(term) || u.includes(term) || d.includes(term));
+        };
+        
+        const filteredExisting = existing.filter(isAstroRelevant);
+        newArticles = newArticles.filter(isAstroRelevant);
+        console.log(`[ENRICH] Astrophotography query - filtered existing: ${filteredExisting.length}/${existing.length}, new: ${newArticles.length}/${articles.length} astro-relevant articles`);
+        enriched.articles = [...filteredExisting, ...newArticles].slice(0, 12);
+      }
+      // For service queries, filter out generic assignment articles
+      else if (isServiceQuery) {
+        const isServiceRelevant = (a) => {
+          const t = (a.title || '').toLowerCase();
+          const u = (a.page_url || a.url || '').toLowerCase();
+          // Exclude generic assignment articles
+          const isAssignment = t.includes('assignment') || t.includes('practice assignment') || u.includes('assignment');
+          // Prefer service-related articles
+          const isServiceRelated = t.includes('service') || t.includes('course') || t.includes('workshop') || 
+                                   t.includes('tuition') || t.includes('training') || u.includes('service');
+          return !isAssignment || isServiceRelated;
+        };
+        
+        const filteredExisting = existing.filter(isServiceRelevant);
+        newArticles = newArticles.filter(isServiceRelevant);
+        console.log(`[ENRICH] Service query - filtered existing: ${filteredExisting.length}/${existing.length}, new: ${newArticles.length}/${articles.length} service-relevant articles`);
         enriched.articles = [...filteredExisting, ...newArticles].slice(0, 12);
       } else {
         enriched.articles = [...existing, ...newArticles].slice(0, 12);
@@ -10765,9 +10815,12 @@ async function enrichAdviceWithRelatedInfo(client, query, structured) {
   console.log(`[ENRICH] Adding related info for ${businessCategory} query: "${query}"`);
   
   try {
-    // Check for HDR queries - filter existing articles first
+    // Check for HDR, astrophotography, and service queries - filter existing articles first
     const qlc = (query || '').toLowerCase();
     const isHdrQuery = qlc.includes('hdr') || (qlc.includes('high') && qlc.includes('dynamic') && qlc.includes('range'));
+    const isAstrophotographyQuery = qlc.includes('astrophotography') || (qlc.includes('astro') && qlc.includes('photography'));
+    const isServiceQuery = businessCategory === 'Business Information' && 
+                           (qlc.includes('service') || qlc.includes('offer') || qlc.includes('provide'));
     
     let initialArticles = structured.articles || [];
     
@@ -10791,6 +10844,50 @@ async function enrichAdviceWithRelatedInfo(client, query, structured) {
         console.log(`[ENRICH] HDR query - filtered initial articles: ${initialArticles.length}/${beforeCount} HDR-relevant`);
       }
     }
+    // For astrophotography queries, filter to only astrophotography/night photography relevant articles
+    else if (isAstrophotographyQuery) {
+      console.log(`[ENRICH] Astrophotography query detected in enrichAdviceWithRelatedInfo: "${query}"`);
+      if (initialArticles.length > 0) {
+        const astroRelevantTerms = ['astrophotography', 'astro', 'night photography', 'night photo', 'low light', 'star', 'milky way', 'long exposure'];
+        const beforeCount = initialArticles.length;
+        initialArticles = initialArticles.filter(a => {
+          const t = (a.title || '').toLowerCase();
+          const u = (a.page_url || a.url || '').toLowerCase();
+          const d = (a.description || '').toLowerCase();
+          // Exclude generic workshop articles unless they're specifically about astrophotography
+          const isGenericWorkshop = (t.includes('workshop') || u.includes('workshop')) && 
+                                    !t.includes('astro') && !t.includes('night') && !t.includes('low light');
+          if (isGenericWorkshop) {
+            console.log(`[ENRICH] Filtering out generic workshop article: "${a.title || 'NO TITLE'}"`);
+            return false;
+          }
+          return astroRelevantTerms.some(term => t.includes(term) || u.includes(term) || d.includes(term));
+        });
+        console.log(`[ENRICH] Astrophotography query - filtered initial articles: ${initialArticles.length}/${beforeCount} astro-relevant`);
+      }
+    }
+    // For service queries, filter out generic assignment articles
+    else if (isServiceQuery) {
+      console.log(`[ENRICH] Service query detected in enrichAdviceWithRelatedInfo: "${query}"`);
+      if (initialArticles.length > 0) {
+        const beforeCount = initialArticles.length;
+        initialArticles = initialArticles.filter(a => {
+          const t = (a.title || '').toLowerCase();
+          const u = (a.page_url || a.url || '').toLowerCase();
+          // Exclude generic assignment articles
+          const isAssignment = t.includes('assignment') || t.includes('practice assignment') || u.includes('assignment');
+          // Prefer service-related articles
+          const isServiceRelated = t.includes('service') || t.includes('course') || t.includes('workshop') || 
+                                   t.includes('tuition') || t.includes('training') || u.includes('service');
+          if (isAssignment && !isServiceRelated) {
+            console.log(`[ENRICH] Filtering out assignment article: "${a.title || 'NO TITLE'}"`);
+            return false;
+          }
+          return true;
+        });
+        console.log(`[ENRICH] Service query - filtered initial articles: ${initialArticles.length}/${beforeCount} service-relevant`);
+      }
+    }
     
     const enriched = { 
       ...structured,
@@ -10807,11 +10904,11 @@ async function enrichAdviceWithRelatedInfo(client, query, structured) {
     await addMissingEnrichmentItems(client, keywords, enriched, businessCategory, query);
     
     // Ensure we have at least one type of related info
-    // Skip fallback for HDR queries - we want 0 articles if no HDR-relevant ones exist
-    if (!hasAnyRelatedInfo(enriched) && !isHdrQuery) {
+    // Skip fallback for HDR and astrophotography queries - we want 0 articles if no relevant ones exist
+    if (!hasAnyRelatedInfo(enriched) && !isHdrQuery && !isAstrophotographyQuery) {
       await addFallbackArticles(client, keywords, enriched);
-    } else if (isHdrQuery && !hasAnyRelatedInfo(enriched)) {
-      console.log(`[ENRICH] HDR query - no HDR-relevant articles found, skipping fallback to avoid generic articles`);
+    } else if ((isHdrQuery || isAstrophotographyQuery) && !hasAnyRelatedInfo(enriched)) {
+      console.log(`[ENRICH] ${isHdrQuery ? 'HDR' : 'Astrophotography'} query - no relevant articles found, skipping fallback to avoid generic articles`);
     }
     
     return enriched;
