@@ -82,6 +82,27 @@
       color: #dc3545;
       font-weight: 600;
     }
+    .run-progress {
+      margin-top: 6px;
+      height: 6px;
+      width: 220px;
+      border-radius: 999px;
+      background: #e5e7eb;
+      overflow: hidden;
+      display: none;
+    }
+    .run-progress-inner {
+      height: 100%;
+      width: 40%;
+      background: linear-gradient(90deg, #f97316, #facc15);
+      border-radius: 999px;
+      animation: progressPulse 1.1s ease-in-out infinite;
+    }
+    @keyframes progressPulse {
+      0% { transform: translateX(-60%); }
+      50% { transform: translateX(40%); }
+      100% { transform: translateX(140%); }
+    }
     .summary-table {
       width: 100%;
       border-collapse: collapse;
@@ -251,6 +272,9 @@
       </div>
       <div class="status" id="comparisonStatus"></div>
       <div class="status" id="runStatus"></div>
+      <div class="run-progress" id="runProgress">
+        <div class="run-progress-inner"></div>
+      </div>
     </div>
 
     <details id="debugPanel" open>
@@ -361,7 +385,11 @@
           const storedKey = window.localStorage.getItem('regression_supabase_anon_key');
           if (storedKey) keyInput.value = storedKey;
         }
-        if (!adminInput.value) {
+        if (adminInput && !adminInput.value) {
+          // Prefer explicit global if you define: window.__ADMIN_TOKEN = '...'
+          if (window.__ADMIN_TOKEN) {
+            adminInput.value = window.__ADMIN_TOKEN;
+          }
           const storedAdmin = window.localStorage.getItem('regression_admin_token');
           if (storedAdmin) adminInput.value = storedAdmin;
         }
@@ -971,6 +999,8 @@
         }
 
         setRunStatus(`Starting 40Q regression test for job ${jobId} (${testPhase})…`);
+        const progressEl = document.getElementById('runProgress');
+        if (progressEl) progressEl.style.display = 'block';
         const res = await fetch('/api/admin?action=run_regression_test', {
           method: 'POST',
           headers: {
@@ -995,6 +1025,9 @@
         console.error(e);
         setRunStatus('Error running 40Q regression test. Check console/logs.', true);
         logDebug('run40qFromUi failed', e);
+      } finally {
+        const progressEl = document.getElementById('runProgress');
+        if (progressEl) progressEl.style.display = 'none';
       }
     }
 
