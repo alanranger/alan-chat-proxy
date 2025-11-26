@@ -1031,6 +1031,7 @@
           baselineResults,
           currentResults
         };
+        attachTableSortClickHandlers();
       } catch (e) {
         console.error(e);
         setComparisonStatus('Error loading or comparing tests. Check console for details.', true);
@@ -1317,10 +1318,10 @@
         <thead>
           <tr>
             <th class="query-col">Query</th>
-            <th>Category</th>
+            <th id="sortCategoryHeader" style="cursor:pointer;">Category</th>
             <th class="baseline-col">Baseline (type: count, top item)</th>
             <th class="current-col">Current (type: count, top item)</th>
-            <th class="status-col">Status</th>
+            <th class="status-col" id="sortStatusHeader" style="cursor:pointer;">Status</th>
             <th class="notes-col">Notes</th>
           </tr>
         </thead>
@@ -1381,6 +1382,53 @@
       } catch (e) {
         console.error(e);
         logDebug('showSummaryModal failed', e);
+      }
+    }
+
+    // Re-render the last comparison using the current sort key
+    function rerenderLastComparison() {
+      if (!lastComparison) return;
+      const {
+        baselineId,
+        baselineCreatedAt,
+        baselineJobId,
+        currentId,
+        currentCreatedAt,
+        currentJobId,
+        baselineResults,
+        currentResults
+      } = lastComparison;
+      const { html, summary } = buildComparisonHtml(
+        baselineId,
+        baselineCreatedAt,
+        baselineJobId,
+        currentId,
+        currentCreatedAt,
+        currentJobId,
+        baselineResults,
+        currentResults
+      );
+      document.getElementById('resultsContainer').innerHTML = html;
+      setComparisonStatus(
+        `Done. Better: ${summary.better}, Worse: ${summary.worse}, Mixed: ${summary.mixed}, Same: ${summary.same}.`
+      );
+      attachTableSortClickHandlers();
+    }
+
+    function attachTableSortClickHandlers() {
+      const catHeader = document.getElementById('sortCategoryHeader');
+      const statusHeader = document.getElementById('sortStatusHeader');
+      if (catHeader) {
+        catHeader.onclick = () => {
+          currentSortKey = currentSortKey === 'category' ? 'none' : 'category';
+          rerenderLastComparison();
+        };
+      }
+      if (statusHeader) {
+        statusHeader.onclick = () => {
+          currentSortKey = currentSortKey === 'status' ? 'none' : 'status';
+          rerenderLastComparison();
+        };
       }
     }
 
@@ -1671,33 +1719,9 @@
     document.getElementById('setMasterBaselineBtn').addEventListener('click', setMasterBaselineFromUi);
     const sortByEl = document.getElementById('sortBy');
     if (sortByEl) {
-      sortByEl.addEventListener('change', async (e) => {
+      sortByEl.addEventListener('change', (e) => {
         currentSortKey = e.target.value || 'none';
-        if (!lastComparison) return;
-        const {
-          baselineId,
-          baselineCreatedAt,
-          baselineJobId,
-          currentId,
-          currentCreatedAt,
-          currentJobId,
-          baselineResults,
-          currentResults
-        } = lastComparison;
-        const { html, summary } = buildComparisonHtml(
-          baselineId,
-          baselineCreatedAt,
-          baselineJobId,
-          currentId,
-          currentCreatedAt,
-          currentJobId,
-          baselineResults,
-          currentResults
-        );
-        document.getElementById('resultsContainer').innerHTML = html;
-        setComparisonStatus(
-          `Done. Better: ${summary.better}, Worse: ${summary.worse}, Mixed: ${summary.mixed}, Same: ${summary.same}.`
-        );
+        rerenderLastComparison();
       });
     }
     window.addEventListener('DOMContentLoaded', prefillSupabaseCreds);
