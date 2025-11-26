@@ -9418,6 +9418,7 @@ async function handleAboutAlanQuery(client, query) {
     
     // If we didn't find all 3 via direct URL search, try findArticles as fallback
     if (landingPages.length < 3) {
+      console.log(`[handleAboutAlanQuery] Only found ${landingPages.length} landing pages via direct search, trying findArticles fallback...`);
       const aboutKeywords = ['about alan ranger', 'ethics', 'testimonials'];
       const articles = await findArticles(client, { keywords: aboutKeywords, limit: 20 });
       
@@ -9425,12 +9426,14 @@ async function handleAboutAlanQuery(client, query) {
       const foundPages = (articles || []).filter(a => {
         const t = (a.title || '').toLowerCase();
         const u = (a.page_url || a.url || '').toLowerCase();
-        // Match specific landing page patterns
-        const isAbout = (t.includes('about') || u.includes('/about')) && !t.includes('workshop') && !t.includes('course');
-        const isEthics = t.includes('ethics') || u.includes('/ethics');
-        const isTestimonials = (t.includes('testimonial') || u.includes('/testimonial')) && !t.includes('workshop') && !t.includes('course');
+        // Match specific landing page patterns - be more strict
+        const isAbout = (u.includes('/about') || u.endsWith('/about')) && !t.includes('workshop') && !t.includes('course') && !t.includes('blog');
+        const isEthics = (u.includes('/ethics') || u.endsWith('/ethics')) && !t.includes('workshop') && !t.includes('course');
+        const isTestimonials = (u.includes('/testimonial') || u.endsWith('/testimonial')) && !t.includes('workshop') && !t.includes('course');
         return isAbout || isEthics || isTestimonials;
       });
+      
+      console.log(`[handleAboutAlanQuery] Found ${foundPages.length} potential landing pages from findArticles`);
       
       // Merge with directly found pages, avoiding duplicates
       const seen = new Set();
@@ -9448,9 +9451,14 @@ async function handleAboutAlanQuery(client, query) {
       });
     }
     
-    // Return ONLY the landing pages we found (max 3)
+    // Return ONLY the landing pages we found (max 3) - DO NOT fall back to regular articles
     const finalArticles = landingPages.slice(0, 3);
-    console.log(`[handleAboutAlanQuery] Found ${finalArticles.length} landing pages: ${finalArticles.map(a => a.title || a.page_url || 'unknown').join(', ')}`);
+    console.log(`[handleAboutAlanQuery] Final result: ${finalArticles.length} landing pages`);
+    if (finalArticles.length > 0) {
+      console.log(`[handleAboutAlanQuery] Landing pages: ${finalArticles.map(a => a.title || a.page_url || 'unknown').join(', ')}`);
+    } else {
+      console.log(`[handleAboutAlanQuery] WARNING: No landing pages found! Returning empty articles array.`);
+    }
     
     return {
       success: true,
@@ -10572,11 +10580,14 @@ function needsEnrichment(structured) {
 }
 
 // Helper: Add articles for enrichment (Complexity: Low)
-async function addArticlesForEnrichment(client, keywords, enriched, businessCategory) {
-  // Add articles for most categories (except pure event queries and person queries)
-  // Person queries are handled specifically in handleAboutAlanQuery with landing pages only
-  // This improves diversity and quality of related information
-  if (businessCategory !== 'Event Queries' && businessCategory !== 'Person Queries') {
+async function addArticlesForEnrichment(client, keywords, enriched, businessCategory, query = '') {
+  // Add articles for most categories (except pure event queries)
+  // For Person Queries: only skip if it's specifically about Alan Ranger (handled in handleAboutAlanQuery)
+  // Other person queries should get normal article enrichment
+  const isAlanRangerQuery = businessCategory === 'Person Queries' && 
+                            (query.toLowerCase().includes('alan ranger') || query.toLowerCase().includes('who is alan'));
+  
+  if (businessCategory !== 'Event Queries' && !isAlanRangerQuery) {
     const articles = await findArticles(client, { keywords, limit: 12 });
     if (articles && articles.length > 0) {
       const existing = enriched.articles || [];
@@ -10593,8 +10604,8 @@ async function addArticlesForEnrichment(client, keywords, enriched, businessCate
       enriched.articles = [...existing, ...newArticles].slice(0, 12);
       console.log(`[ENRICH] Added ${newArticles.length} new articles (${existing.length} existing, ${articles.length} total found)`);
     }
-  } else if (businessCategory === 'Person Queries') {
-    console.log(`[ENRICH] Skipping article enrichment for Person Queries - handled specifically with landing pages only`);
+  } else if (isAlanRangerQuery) {
+    console.log(`[ENRICH] Skipping article enrichment for Alan Ranger query - handled specifically with landing pages only`);
   }
 }
 
@@ -10752,8 +10763,8 @@ async function enrichAdviceWithRelatedInfo(client, query, structured) {
       products: structured.products || []
     };
     
-    // Always try to add articles (unless pure event query)
-    await addArticlesForEnrichment(client, keywords, enriched, businessCategory);
+    // Always try to add articles (unless pure event query or Alan Ranger person query)
+    await addArticlesForEnrichment(client, keywords, enriched, businessCategory, query);
     
     // Add missing enrichment items
     await addMissingEnrichmentItems(client, keywords, enriched, businessCategory, query);
