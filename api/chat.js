@@ -10574,6 +10574,9 @@ async function addArticlesForEnrichment(client, keywords, enriched, businessCate
   // Check for HDR queries - only add HDR-relevant articles
   const qlc = (query || '').toLowerCase();
   const isHdrQuery = qlc.includes('hdr') || (qlc.includes('high') && qlc.includes('dynamic') && qlc.includes('range'));
+  if (isHdrQuery) {
+    console.log(`[ENRICH] HDR query detected: "${query}"`);
+  }
   
   if (businessCategory !== 'Event Queries' && !isAlanRangerQuery) {
     const articles = await findArticles(client, { keywords, limit: 12 });
@@ -10762,9 +10765,27 @@ async function enrichAdviceWithRelatedInfo(client, query, structured) {
   console.log(`[ENRICH] Adding related info for ${businessCategory} query: "${query}"`);
   
   try {
+    // Check for HDR queries - filter existing articles first
+    const qlc = (query || '').toLowerCase();
+    const isHdrQuery = qlc.includes('hdr') || (qlc.includes('high') && qlc.includes('dynamic') && qlc.includes('range'));
+    
+    let initialArticles = structured.articles || [];
+    
+    // For HDR queries, filter existing articles to only HDR-relevant ones
+    if (isHdrQuery && initialArticles.length > 0) {
+      const hdrRelevantTerms = ['bracketing', 'dynamic range', 'hdr', 'exposure', 'histogram', 'bracket'];
+      initialArticles = initialArticles.filter(a => {
+        const t = (a.title || '').toLowerCase();
+        const u = (a.page_url || a.url || '').toLowerCase();
+        const d = (a.description || '').toLowerCase();
+        return hdrRelevantTerms.some(term => t.includes(term) || u.includes(term) || d.includes(term));
+      });
+      console.log(`[ENRICH] HDR query - filtered initial articles: ${initialArticles.length}/${structured.articles?.length || 0} HDR-relevant`);
+    }
+    
     const enriched = { 
       ...structured,
-      articles: structured.articles || [],
+      articles: initialArticles,
       services: structured.services || [],
       events: structured.events || [],
       products: structured.products || []
