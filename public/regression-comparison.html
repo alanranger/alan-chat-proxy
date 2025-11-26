@@ -103,6 +103,83 @@
       50% { transform: translateX(40%); }
       100% { transform: translateX(140%); }
     }
+    /* Manage tests table */
+    .manage-tests {
+      margin-top: 16px;
+      font-size: 12px;
+    }
+    .manage-tests table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 8px;
+    }
+    .manage-tests th,
+    .manage-tests td {
+      border: 1px solid #ddd;
+      padding: 6px 8px;
+      text-align: left;
+    }
+    .manage-tests th {
+      background-color: #f3f4f6;
+      font-weight: 600;
+    }
+    .manage-tests tbody tr:nth-child(even) {
+      background-color: #f9fafb;
+    }
+    .manage-tests-actions {
+      margin-top: 8px;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      justify-content: flex-start;
+      flex-wrap: wrap;
+    }
+    /* Summary modal */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(15,23,42,0.45);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+    .modal {
+      background: #fff;
+      border-radius: 10px;
+      padding: 18px 20px;
+      max-width: 420px;
+      width: 100%;
+      box-shadow: 0 12px 30px rgba(15,23,42,0.35);
+      font-size: 14px;
+    }
+    .modal h3 {
+      margin: 0 0 8px 0;
+      font-size: 18px;
+    }
+    .modal small {
+      color: #6b7280;
+    }
+    .modal-summary-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 12px 0;
+      font-size: 13px;
+    }
+    .modal-summary-table th,
+    .modal-summary-table td {
+      border: 1px solid #e5e7eb;
+      padding: 6px 8px;
+      text-align: left;
+    }
+    .modal-summary-table th {
+      background: #f3f4f6;
+    }
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 10px;
+    }
     .summary-table {
       width: 100%;
       border-collapse: collapse;
@@ -277,6 +354,56 @@
       </div>
     </div>
 
+    <details class="manage-tests">
+      <summary style="cursor:pointer;font-weight:600;">Manage regression tests (delete old runs)</summary>
+      <div class="manage-tests" id="manageTestsContainer">
+        <div style="margin-top:6px;font-size:12px;color:#4b5563;">
+          Below are recent regression tests (from <code>regression_test_results</code> / <code>regression_test_runs</code>). 
+          Tick rows and click "Delete selected tests" to remove them from the database.
+        </div>
+        <div class="manage-tests-actions">
+          <button id="refreshTestsBtn" type="button">Refresh list</button>
+          <button id="deleteTestsBtn" type="button" style="background:#b91c1c;">Delete selected tests</button>
+          <span id="manageTestsStatus" class="status"></span>
+        </div>
+        <div style="max-height:260px;overflow:auto;margin-top:8px;">
+          <table id="testsTable">
+            <thead>
+              <tr>
+                <th style="width:32px;"><input type="checkbox" id="selectAllTests"></th>
+                <th>ID</th>
+                <th>Job</th>
+                <th>Phase</th>
+                <th>Run ID</th>
+                <th>Date/Time (UK)</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </details>
+
+    <div class="modal-backdrop" id="summaryModalBackdrop">
+      <div class="modal">
+        <h3>Comparison summary</h3>
+        <div id="summaryModalMeta"><small></small></div>
+        <table class="modal-summary-table">
+          <thead>
+            <tr>
+              <th>Status</th>
+              <th>Count</th>
+              <th>Percentage</th>
+            </tr>
+          </thead>
+          <tbody id="summaryModalBody"></tbody>
+        </table>
+        <div class="modal-footer">
+          <button id="closeSummaryModalBtn" type="button">Close</button>
+        </div>
+      </div>
+    </div>
+
     <details id="debugPanel" open>
       <summary style="cursor:pointer; font-weight:600; margin-top:10px;">Debug log</summary>
       <div style="margin:10px 0;">
@@ -337,6 +464,7 @@
 
     let supabaseClient = null;
     let testIndex = {};
+    let testsMeta = []; // flat list for manage/delete UI
     const debugLines = [];
 
     function logDebug(message, extra) {
@@ -513,7 +641,11 @@
       if (!isoString) return '';
       try {
         const d = new Date(isoString);
-        return d.toISOString().replace('T', ' ').replace('Z', ' UTC');
+        // Show as UK local (GMT/BST) to match how you read cron times
+        return d.toLocaleString('en-GB', {
+          timeZone: 'Europe/London',
+          hour12: false
+        }) + ' GMT';
       } catch {
         return isoString;
       }
@@ -537,7 +669,7 @@
           .from('regression_test_runs')
           .select('id, job_id, job_name, created_at, baseline_test_id, after_test_id')
           .order('created_at', { ascending: false })
-          .limit(200);
+          .limit(500);
         if (error) {
           console.error(error);
           logDebug('Error loading regression_test_runs', error);
@@ -577,11 +709,20 @@
           .from('regression_test_results')
           .select('id, created_at')
           .order('created_at', { ascending: false })
-          .limit(300);
+          .limit(1000);
         if (!resultsError) {
+          testsMeta = [];
           (resultsList || []).forEach(r => {
             const id = r.id;
             const when = formatDateTime(r.created_at);
+            testsMeta.push({
+              id,
+              createdAt: when,
+              // phase/job info will be enriched from testIndex below
+              job: null,
+              phase: null,
+              runId: null
+            });
             if (!testIndex[id]) {
               testIndex[id] = [
                 { phase: null, job: null, jobName: '', createdAt: when, runId: null }
@@ -596,6 +737,7 @@
         }
 
         populateSelects();
+        renderTestsTable();
         setConnectionStatus(
           'Connected. Select baseline and comparison tests, then click "Compare Selected Tests".'
         );
@@ -659,6 +801,64 @@
       document.getElementById('compareBtn').disabled = false;
     }
 
+    function renderTestsTable() {
+      try {
+        const tbody = document.querySelector('#testsTable tbody');
+        if (!tbody) return;
+        tbody.innerHTML = '';
+
+        // Build an enriched list from testIndex and testsMeta
+        const rows = [];
+        Object.keys(testIndex).forEach(idStr => {
+          const id = parseInt(idStr, 10);
+          if (Number.isNaN(id)) return;
+          const metaArr = testIndex[id] || [];
+          const primary = metaArr[0] || {};
+          rows.push({
+            id,
+            job: primary.job,
+            phase: primary.phase || '',
+            runId: primary.runId,
+            createdAt: primary.createdAt || ''
+          });
+        });
+
+        // If we have testsMeta with better timestamps, merge them
+        testsMeta.forEach(tm => {
+          const existing = rows.find(r => r.id === tm.id);
+          if (!existing) {
+            rows.push({
+              id: tm.id,
+              job: tm.job,
+              phase: tm.phase,
+              runId: tm.runId,
+              createdAt: tm.createdAt
+            });
+          } else if (!existing.createdAt && tm.createdAt) {
+            existing.createdAt = tm.createdAt;
+          }
+        });
+
+        rows.sort((a, b) => a.id - b.id); // ascending by id
+
+        rows.forEach(r => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td><input type="checkbox" class="test-select" data-id="${r.id}"></td>
+            <td>${r.id}</td>
+            <td>${r.job != null ? r.job : ''}</td>
+            <td>${r.phase || ''}</td>
+            <td>${r.runId != null ? r.runId : ''}</td>
+            <td>${r.createdAt || ''}</td>
+          `;
+          tbody.appendChild(tr);
+        });
+      } catch (e) {
+        console.error(e);
+        logDebug('renderTestsTable failed', e);
+      }
+    }
+
     async function compareSelected() {
       if (!supabaseClient) {
         setComparisonStatus('Connect to Supabase first.', true);
@@ -709,6 +909,7 @@
         setComparisonStatus(
           `Done. Better: ${summary.better}, Worse: ${summary.worse}, Mixed: ${summary.mixed}, Same: ${summary.same}.`
         );
+        showSummaryModal(summary, baselineId, baselineCreatedAt, currentId, currentCreatedAt);
       } catch (e) {
         console.error(e);
         setComparisonStatus('Error loading or comparing tests. Check console for details.', true);
@@ -974,6 +1175,36 @@
       return { html, summary };
     }
 
+    function showSummaryModal(summary, baselineId, baselineCreatedAt, currentId, currentCreatedAt) {
+      try {
+        const backdrop = document.getElementById('summaryModalBackdrop');
+        const body = document.getElementById('summaryModalBody');
+        const metaEl = document.getElementById('summaryModalMeta');
+        if (!backdrop || !body || !metaEl) return;
+
+        metaEl.innerHTML = `<small>Baseline: #${baselineId} (${baselineCreatedAt})<br>Current: #${currentId} (${currentCreatedAt})</small>`;
+
+        const total = QUERIES.length || 40;
+        const row = (label, icon, key) => `
+          <tr>
+            <td>${icon} <strong>${label}</strong></td>
+            <td>${summary[key]}</td>
+            <td>${((summary[key] / total) * 100).toFixed(1)}%</td>
+          </tr>`;
+
+        body.innerHTML =
+          row('Better', '✅', 'better') +
+          row('Worse', '❌', 'worse') +
+          row('Mixed', '⚠️', 'mixed') +
+          row('Same', '➖', 'same');
+
+        backdrop.style.display = 'flex';
+      } catch (e) {
+        console.error(e);
+        logDebug('showSummaryModal failed', e);
+      }
+    }
+
     async function run40qFromUi() {
       setRunStatus('');
       try {
@@ -1057,6 +1288,76 @@
     document.getElementById('compareBtn').addEventListener('click', compareSelected);
     document.getElementById('run40qBtn').addEventListener('click', run40qFromUi);
     document.getElementById('copyDebugBtn').addEventListener('click', copyDebugLog);
+    document.getElementById('refreshTestsBtn').addEventListener('click', connectAndLoadTests);
+    document.getElementById('deleteTestsBtn').addEventListener('click', async () => {
+      if (!supabaseClient) {
+        setConnectionStatus('Connect to Supabase first.', true);
+        return;
+      }
+      try {
+        const statusEl = document.getElementById('manageTestsStatus');
+        const checkboxes = Array.from(document.querySelectorAll('.test-select'));
+        const selectedIds = checkboxes
+          .filter(cb => cb.checked)
+          .map(cb => parseInt(cb.getAttribute('data-id'), 10))
+          .filter(id => !Number.isNaN(id));
+        if (!selectedIds.length) {
+          if (statusEl) statusEl.textContent = 'No tests selected.';
+          return;
+        }
+        if (!confirm(`Delete ${selectedIds.length} test(s) from regression_test_results and unlink from runs?`)) {
+          return;
+        }
+        if (statusEl) statusEl.textContent = 'Deleting selected tests…';
+        logDebug('Deleting tests', { ids: selectedIds });
+
+        const { error: delResultsError } = await supabaseClient
+          .from('regression_test_results')
+          .delete()
+          .in('id', selectedIds);
+        if (delResultsError) {
+          console.error(delResultsError);
+          logDebug('Error deleting regression_test_results', delResultsError);
+          if (statusEl) statusEl.textContent = 'Error deleting tests (results). Check logs.';
+          return;
+        }
+
+        // Null out references in regression_test_runs so history remains but without these tests
+        const { error: updateRunsError } = await supabaseClient
+          .from('regression_test_runs')
+          .update({ baseline_test_id: null })
+          .in('baseline_test_id', selectedIds);
+        if (updateRunsError) {
+          console.error(updateRunsError);
+          logDebug('Error nulling baseline_test_id in regression_test_runs', updateRunsError);
+        }
+        const { error: updateRunsError2 } = await supabaseClient
+          .from('regression_test_runs')
+          .update({ after_test_id: null })
+          .in('after_test_id', selectedIds);
+        if (updateRunsError2) {
+          console.error(updateRunsError2);
+          logDebug('Error nulling after_test_id in regression_test_runs', updateRunsError2);
+        }
+
+        if (statusEl) statusEl.textContent = 'Deleted selected tests.';
+        // Refresh lists
+        await connectAndLoadTests();
+      } catch (e) {
+        console.error(e);
+        logDebug('Delete tests handler failed', e);
+      }
+    });
+    document.getElementById('closeSummaryModalBtn').addEventListener('click', () => {
+      const backdrop = document.getElementById('summaryModalBackdrop');
+      if (backdrop) backdrop.style.display = 'none';
+    });
+    document.getElementById('selectAllTests').addEventListener('change', (e) => {
+      const checked = e.target.checked;
+      document.querySelectorAll('.test-select').forEach(cb => {
+        cb.checked = checked;
+      });
+    });
     window.addEventListener('DOMContentLoaded', prefillSupabaseCreds);
   </script>
 </body>
