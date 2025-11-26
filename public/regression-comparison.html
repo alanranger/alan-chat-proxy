@@ -926,12 +926,12 @@
         const [baselineRes, currentRes] = await Promise.all([
           supabaseClient
             .from('regression_test_results')
-            .select('results, created_at')
+            .select('results, created_at, job_id')
             .eq('id', baselineId)
             .single(),
           supabaseClient
             .from('regression_test_results')
-            .select('results, created_at')
+            .select('results, created_at, job_id')
             .eq('id', currentId)
             .single()
         ]);
@@ -942,12 +942,16 @@
         const currentResults = (currentRes.data && currentRes.data.results) || [];
         const baselineCreatedAt = formatDateTime(baselineRes.data.created_at);
         const currentCreatedAt = formatDateTime(currentRes.data.created_at);
+        const baselineJobId = baselineRes.data && baselineRes.data.job_id;
+        const currentJobId = currentRes.data && currentRes.data.job_id;
 
         const { html, summary } = buildComparisonHtml(
           parseInt(baselineId, 10),
           baselineCreatedAt,
+          baselineJobId,
           parseInt(currentId, 10),
           currentCreatedAt,
+          currentJobId,
           baselineResults,
           currentResults
         );
@@ -968,8 +972,10 @@
     function buildComparisonHtml(
       baselineId,
       baselineCreatedAt,
+      baselineJobId,
       currentId,
       currentCreatedAt,
+      currentJobId,
       baselineResults,
       currentResults
     ) {
@@ -1201,8 +1207,8 @@
       </table>
 
       <h2>Detailed Comparison Table</h2>
-      <p><strong>Baseline Test:</strong> #${baselineId} (${baselineCreatedAt})<br>
-      <strong>Current Test:</strong> #${currentId} (${currentCreatedAt})<br>
+      <p><strong>Baseline Test:</strong> #${baselineId} (job ${baselineJobId ?? '?'}; ${baselineCreatedAt})<br>
+      <strong>Current Test:</strong> #${currentId} (job ${currentJobId ?? '?'}; ${currentCreatedAt})<br>
       <strong>Total Queries:</strong> ${QUERIES.length}</p>
 
       <table class="comparison-table">
