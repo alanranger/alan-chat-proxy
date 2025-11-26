@@ -9453,6 +9453,25 @@ function handleRagExtraction(articles, query) {
 
 // Helper: Generate fallback answer (Complexity: Low)
 function generateEquipmentFallback(qlc, isRecommendationQuery) {
+  // Special-case: memory card queries with no good match should use low-confidence fallback
+  if (qlc.includes('memory card') || qlc.includes('memory card should i buy')) {
+    const fallback = getLowConfidenceFallback();
+    return {
+      success: true,
+      confidence: 0.3, // Low confidence for no-match fallback
+      answer: fallback,
+      type: "advice",
+      sources: { articles: [] },
+      structured: {
+        intent: "advice",
+        articles: [],
+        events: [],
+        products: [],
+        services: []
+      }
+    };
+  }
+  
   if (isRecommendationQuery) {
     return {
       success: true,
@@ -11937,6 +11956,10 @@ function generateDirectEquipmentRecommendation(equipmentType, articles, query) {
   const relevantArticles = findRelevantEquipmentArticles(equipmentType, articles);
   
   if (relevantArticles.length === 0) {
+    // Special-case: memory card queries with no good match should use low-confidence fallback
+    if (equipmentType === 'memory card') {
+      return getLowConfidenceFallback();
+    }
     return `I'd be happy to help you choose ${equipmentType} equipment! Based on your photography needs, I can provide personalized recommendations.`;
   }
   
