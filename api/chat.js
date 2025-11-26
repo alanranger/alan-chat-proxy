@@ -4634,6 +4634,18 @@ function scoreArticleRow(r, kw, equipmentKeywords = null) {
  
  addBaseKeywordScore({ kw, t, u, add, has });
  
+ // HDR-specific boosting: prefer articles about bracketing, dynamic range, HDR, exposure, histogram
+ const isHdrQuery = kw.some(k => k.includes('hdr') || (k.includes('high') && k.includes('dynamic') && k.includes('range')));
+ if (isHdrQuery) {
+   const hdrRelevantTerms = ['bracketing', 'dynamic range', 'hdr', 'exposure', 'histogram', 'bracket'];
+   const hasHdrRelevantTerm = hdrRelevantTerms.some(term => has(t, term) || has(u, term));
+   if (hasHdrRelevantTerm) {
+     add(20); // Boost HDR-relevant articles
+   } else {
+     add(-10); // Penalize non-HDR-relevant articles for HDR queries
+   }
+ }
+ 
  // Prevent online course boost for genre articles when equipment keywords are present and article doesn't match them
  const shouldPreventOnlineCourseBoost = equipmentKeywords && equipmentKeywords.size > 0 && !matchesEquipment;
  const { hasCore, coreConcepts } = addOnlineCourseBoost({ categories, kw, t, add, has, preventBoost: shouldPreventOnlineCourseBoost });
@@ -9382,17 +9394,30 @@ async function handleAboutAlanQuery(client, query) {
   // Handle "who is alan" or background queries
   if ((qlc.includes("alan ranger") || qlc.includes("who is")) && (qlc.includes("who") || qlc.includes("background") || qlc.includes("about") || qlc.includes("photographic background"))) {
     console.log(`✅ About Alan query detected, returning bio as advice: "${query}"`);
-    const keywords = extractKeywords(query);
-    const articles = await findArticles(client, { keywords, limit: 12 });
+    // Prefer About/Ethics/Testimonials landing pages for person queries
+    const aboutKeywords = ['about alan ranger', 'ethics', 'testimonials', 'about', 'alan ranger'];
+    const articles = await findArticles(client, { keywords: aboutKeywords, limit: 12 });
+    
+    // Filter to prefer About/Ethics/Testimonials pages
+    const preferredArticles = (articles || []).filter(a => {
+      const t = (a.title || '').toLowerCase();
+      const u = (a.page_url || a.url || '').toLowerCase();
+      return t.includes('about') || t.includes('ethics') || t.includes('testimonial') ||
+             u.includes('about') || u.includes('ethics') || u.includes('testimonial');
+    });
+    
+    // Use preferred articles if found, otherwise fall back to all articles
+    const finalArticles = preferredArticles.length > 0 ? preferredArticles : articles;
+    
     return {
       success: true,
       confidence: 0.8,
       answer: getAlanRangerBio().trim(),
       type: "advice",
-      sources: { articles: articles || [] },
+      sources: { articles: finalArticles || [] },
       structured: {
         intent: "advice",
-        articles: articles || [],
+        articles: finalArticles || [],
         events: [],
         products: [],
         services: []
@@ -10564,11 +10589,20 @@ async function addProductsForEnrichment(client, keywords, enriched, businessCate
     // Include products for "how do I photograph" queries with specific subjects (seascapes, sunsets, waterfalls)
     (/\b(photograph|photography)\b/i.test(query || '') && /\b(seascape|sunset|waterfall|falls)\b/i.test(query || ''));
   
-  if (shouldAddProducts) {
-    const products = await findProducts(client, { keywords, limit: 6 });
+  // Special case: RAW editing queries should include Lightroom course products
+  const isRawEditingQuery = (lc.includes('edit raw') || (lc.includes('edit') && lc.includes('raw'))) && 
+                             (businessCategory === 'Technical Advice' || businessCategory === 'Equipment Recommendations');
+  
+  if (shouldAddProducts || isRawEditingQuery) {
+    let searchKeywords = keywords;
+    // For RAW editing, specifically search for Lightroom course products
+    if (isRawEditingQuery) {
+      searchKeywords = ['lightroom', 'photo editing', 'editing course', 'lightroom course'];
+    }
+    const products = await findProducts(client, { keywords: searchKeywords, limit: 6 });
     if (products && products.length > 0) {
       enriched.products = (enriched.products || []).concat(products).slice(0, 6);
-      console.log(`[ENRICH] Added ${products.length} products for ${businessCategory}`);
+      console.log(`[ENRICH] Added ${products.length} products for ${businessCategory}${isRawEditingQuery ? ' (RAW editing -> Lightroom courses)' : ''}`);
     }
   }
 }
@@ -10586,11 +10620,20 @@ async function addEventsForEnrichment(client, keywords, enriched, businessCatego
     // Include events for "how do I photograph" queries with specific subjects
     (/\b(photograph|photography)\b/i.test(query || '') && /\b(seascape|sunset|waterfall|falls|autumn|bluebell|flower|people|portrait|wildlife|landscape)\b/i.test(query || ''));
   
-  if (shouldAddEvents) {
-    const events = await findEvents(client, { keywords, limit: 6 });
+  // Special case: RAW editing queries should include Lightroom course events/products
+  const isRawEditingQuery = (lc.includes('edit raw') || (lc.includes('edit') && lc.includes('raw'))) && 
+                             (businessCategory === 'Technical Advice' || businessCategory === 'Equipment Recommendations');
+  
+  if (shouldAddEvents || isRawEditingQuery) {
+    let searchKeywords = keywords;
+    // For RAW editing, specifically search for Lightroom courses
+    if (isRawEditingQuery) {
+      searchKeywords = ['lightroom', 'photo editing', 'editing course', 'lightroom course'];
+    }
+    const events = await findEvents(client, { keywords: searchKeywords, limit: 6 });
     if (events && events.length > 0) {
       enriched.events = (enriched.events || []).concat(events).slice(0, 6);
-      console.log(`[ENRICH] Added ${events.length} events for ${businessCategory}`);
+      console.log(`[ENRICH] Added ${events.length} events for ${businessCategory}${isRawEditingQuery ? ' (RAW editing -> Lightroom courses)' : ''}`);
     }
   }
 }
