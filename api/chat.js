@@ -9355,18 +9355,19 @@ async function handleContactInfoQuery(client, query) {
   if (qlc.includes("contact") || qlc.includes("phone") || qlc.includes("address") || qlc.includes("email") || qlc.includes("book a discovery call")) {
     console.log(`✅ Contact information query detected, returning contact details: "${query}"`);
     
-    // Try to find contact landing page - search more broadly
+    // Try to find contact page - search in both landing_service_pages and site_urls
     let contactLandingPage = null;
     try {
       const { data, error } = await client
         .from('page_entities')
         .select('id, title, page_url, url, description, csv_type')
-        .eq('csv_type', 'landing_service_pages')
-        .or('page_url.ilike.%contact%,url.ilike.%contact%,title.ilike.%contact%,page_url.ilike.%get-in-touch%,url.ilike.%get-in-touch%')
+        .in('csv_type', ['landing_service_pages', 'site_urls'])
+        .or('page_url.ilike.%contact%,url.ilike.%contact%,title.ilike.%contact%,page_url.ilike.%contact-us%,url.ilike.%contact-us%')
         .limit(1);
       
       if (!error && data && data.length > 0) {
         contactLandingPage = data[0];
+        console.log(`[handleContactInfoQuery] Found contact page: ${contactLandingPage.title} (${contactLandingPage.page_url || contactLandingPage.url})`);
       }
     } catch (e) {
       console.log(`[handleContactInfoQuery] Error searching for contact page: ${e.message}`);
@@ -9625,18 +9626,19 @@ async function handleCancellationPolicyQuery(client, query) {
       (qlc.includes('policy') || qlc.includes('terms'))) {
     console.log(`✅ Cancellation policy query detected: "${query}"`);
     
-    // Try to find terms and conditions landing page - search more broadly
+    // Try to find terms and conditions page - search in both landing_service_pages and site_urls
     let termsLandingPage = null;
     try {
       const { data, error } = await client
         .from('page_entities')
         .select('id, title, page_url, url, description, csv_type')
-        .eq('csv_type', 'landing_service_pages')
-        .or('page_url.ilike.%terms%,url.ilike.%terms%,page_url.ilike.%conditions%,url.ilike.%conditions%,title.ilike.%terms%,title.ilike.%conditions%,page_url.ilike.%booking-terms%,url.ilike.%booking-terms%')
+        .in('csv_type', ['landing_service_pages', 'site_urls'])
+        .or('page_url.ilike.%terms-and-conditions%,url.ilike.%terms-and-conditions%,title.ilike.%terms%,title.ilike.%conditions%')
         .limit(1);
       
       if (!error && data && data.length > 0) {
         termsLandingPage = data[0];
+        console.log(`[handleCancellationPolicyQuery] Found terms page: ${termsLandingPage.title} (${termsLandingPage.page_url || termsLandingPage.url})`);
       }
     } catch (e) {
       console.log(`[handleCancellationPolicyQuery] Error searching for terms page: ${e.message}`);
