@@ -11202,9 +11202,12 @@ async function addMissingEnrichmentItems(client, keywords, enriched, businessCat
                            (qlc.includes('laptop') || qlc.includes('computer')) && 
                            (qlc.includes('lightroom') || qlc.includes('course'));
   
-  // Queries that should skip services enrichment (handlers provide specific services)
+  // Queries that should skip services enrichment (handlers provide specific services or none)
   const shouldSkipServices = (qlc.includes('laptop') || qlc.includes('computer')) && 
-                             (qlc.includes('lightroom') || qlc.includes('course'));
+                             (qlc.includes('lightroom') || qlc.includes('course')) ||
+                             (qlc.includes('contact') || qlc.includes('book a discovery call')) ||
+                             ((qlc.includes('cancellation') || qlc.includes('refund')) && 
+                              (qlc.includes('policy') || qlc.includes('terms')));
   
   // Add services if missing (unless handler explicitly skipped)
   if (!shouldSkipServices && (!enriched.services || enriched.services.length === 0)) {
