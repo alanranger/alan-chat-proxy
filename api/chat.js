@@ -10592,6 +10592,11 @@ async function addArticlesForEnrichment(client, keywords, enriched, businessCate
   if (isServiceQuery) {
     console.log(`[ENRICH] Service query detected: "${query}" (category: ${businessCategory})`);
   }
+
+  // Check for policy / terms queries (e.g. cancellation or refund policy)
+  const isPolicyQuery = /cancellation|refund|terms and conditions|booking policy|cancellation policy|refund policy/i.test(
+    query || ''
+  );
   
   if (businessCategory !== 'Event Queries' && !isAlanRangerQuery) {
     const articles = await findArticles(client, { keywords, limit: 12 });
@@ -10624,6 +10629,21 @@ async function addArticlesForEnrichment(client, keywords, enriched, businessCate
         newArticles = newArticles.filter(isHdrRelevant);
         console.log(`[ENRICH] HDR query detected - filtered existing: ${filteredExisting.length}/${existing.length}, new: ${newArticles.length}/${articles.length} HDR-relevant articles`);
         enriched.articles = [...filteredExisting, ...newArticles].slice(0, 12);
+
+        // If we still have no HDR articles, do a targeted HDR search so we can surface
+        // key learning content on bracketing, dynamic range, HDR, exposure and histogram.
+        if (enriched.articles.length === 0) {
+          console.log('[ENRICH] HDR query - no HDR articles after initial filter, performing targeted HDR search');
+          const hdrKeywords = ['hdr', 'exposure bracketing', 'bracketing', 'dynamic range', 'histogram'];
+          const hdrArticles = await findArticles(client, { keywords: hdrKeywords, limit: 12 });
+          if (hdrArticles && hdrArticles.length > 0) {
+            const extra = hdrArticles.filter(isHdrRelevant);
+            if (extra.length > 0) {
+              console.log(`[ENRICH] HDR query - added ${extra.length} HDR articles from targeted search`);
+              enriched.articles = extra.slice(0, 12);
+            }
+          }
+        }
       } 
       // For astrophotography queries, filter to only astrophotography/night photography relevant articles
       else if (isAstrophotographyQuery) {
@@ -10649,11 +10669,39 @@ async function addArticlesForEnrichment(client, keywords, enriched, businessCate
         const isServiceRelevant = (a) => {
           const t = (a.title || '').toLowerCase();
           const u = (a.page_url || a.url || '').toLowerCase();
+          const d = (a.description || '').toLowerCase();
           // Exclude generic assignment articles
           const isAssignment = t.includes('assignment') || t.includes('practice assignment') || u.includes('assignment');
           // Prefer service-related articles
-          const isServiceRelated = t.includes('service') || t.includes('course') || t.includes('workshop') || 
-                                   t.includes('tuition') || t.includes('training') || u.includes('service');
+          const isServiceRelated =
+            t.includes('service') ||
+            t.includes('course') ||
+            t.includes('workshop') ||
+            t.includes('tuition') ||
+            t.includes('training') ||
+            u.includes('service');
+
+          // For policy queries, only keep articles that clearly look like policy / terms content
+          if (isPolicyQuery) {
+            const isPolicyRelated =
+              t.includes('terms') ||
+              t.includes('conditions') ||
+              t.includes('policy') ||
+              t.includes('cancellation') ||
+              t.includes('refund') ||
+              u.includes('terms') ||
+              u.includes('conditions') ||
+              u.includes('policy') ||
+              u.includes('cancellation') ||
+              u.includes('refund') ||
+              d.includes('terms') ||
+              d.includes('conditions') ||
+              d.includes('policy') ||
+              d.includes('cancellation') ||
+              d.includes('refund');
+            return isPolicyRelated;
+          }
+
           return !isAssignment || isServiceRelated;
         };
         
