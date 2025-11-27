@@ -136,7 +136,7 @@ All changes have been:
 ## Restore Instructions
 
 To restore to this point:
-1. Checkout commit: `[will be added after commit]`
+1. Checkout commit: `[check git log for latest commit hash]`
 2. Apply all migrations up to `20251127_add_vacuum_table_function`
 3. Ensure master baseline is set to test #973
 
