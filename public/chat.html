@@ -1419,8 +1419,12 @@ function isSimpleFollowUpQuery(query) {
   const hasEventKeywords = query.includes('book') || query.includes('buy') || query.includes('price') || 
                           query.includes('cost') || query.includes('workshop') || query.includes('course') || 
                           query.includes('event') || query.includes('class');
+
+  // Never treat clear service / hire questions as simple follow-ups,
+  // otherwise we hide the valuable service tiles (e.g. Q33).
+  const hasServiceKeywords = /\b(hire|service|services|photographer|tuition|lessons?)\b/i.test(query);
   
-  return isFollowUpPattern && !hasEventKeywords;
+  return isFollowUpPattern && !hasEventKeywords && !hasServiceKeywords;
 }
 
 // Helper function to format event date range
