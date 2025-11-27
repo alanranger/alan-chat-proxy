@@ -9362,7 +9362,7 @@ async function handleContactInfoQuery(client, query) {
         .from('page_entities')
         .select('id, title, page_url, url, description, csv_type')
         .in('csv_type', ['landing_service_pages', 'site_urls'])
-        .or('page_url.ilike.%contact%,url.ilike.%contact%,title.ilike.%contact%,page_url.ilike.%contact-us%,url.ilike.%contact-us%')
+        .or('page_url.ilike.%contact-us-alan-ranger-photography%,url.ilike.%contact-us-alan-ranger-photography%,page_url.ilike.%contact-us%,url.ilike.%contact-us%,title.ilike.%contact%')
         .limit(1);
       
       if (!error && data && data.length > 0) {
@@ -9633,7 +9633,7 @@ async function handleCancellationPolicyQuery(client, query) {
         .from('page_entities')
         .select('id, title, page_url, url, description, csv_type')
         .in('csv_type', ['landing_service_pages', 'site_urls'])
-        .or('page_url.ilike.%terms-and-conditions%,url.ilike.%terms-and-conditions%,title.ilike.%terms%,title.ilike.%conditions%')
+        .or('page_url.ilike.%terms-and-conditions%,url.ilike.%terms-and-conditions%,page_url.ilike.%website-terms-and-conditions%,url.ilike.%website-terms-and-conditions%,title.ilike.%terms%,title.ilike.%conditions%')
         .limit(1);
       
       if (!error && data && data.length > 0) {
