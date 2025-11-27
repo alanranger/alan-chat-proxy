@@ -1605,12 +1605,11 @@ export default async function handler(req, res) {
         let afterResult = null;
         let comparison = null;
 
-        // MASTER BASELINE: All jobs use the SAME master baseline (not per-job)
+        // MASTER BASELINE: All jobs use the SAME master baseline (not per-job, any phase)
         // First, check if there's a fixed baseline (master baseline) - check ALL jobs, not just this one
         const { data: masterBaselineTests, error: masterBaselineError } = await supabase
           .from('regression_test_results')
           .select('*')
-          .eq('test_phase', 'before')
           .eq('is_fixed_baseline', true)
           .order('test_timestamp', { ascending: false })
           .limit(1);
