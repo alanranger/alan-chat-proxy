@@ -1,5 +1,6 @@
 -- Function to clear all records from cron.job_run_details
 -- This is needed because direct deletion via Supabase client may have permission issues
+-- Note: cron.job_run_details is a system table, so we use TRUNCATE which is more reliable
 
 CREATE OR REPLACE FUNCTION public.clear_cron_job_run_details()
 RETURNS jsonb
@@ -15,12 +16,14 @@ BEGIN
   -- Get count before deletion
   SELECT COUNT(*) INTO v_before_count FROM cron.job_run_details;
 
-  -- Delete all records
-  DELETE FROM cron.job_run_details;
+  -- Use TRUNCATE instead of DELETE for system tables (more reliable)
+  -- TRUNCATE is faster and works better with system tables
+  TRUNCATE TABLE cron.job_run_details;
 
-  GET DIAGNOSTICS v_deleted_count = ROW_COUNT;
+  -- TRUNCATE doesn't set ROW_COUNT, so use the before_count as deleted_count
+  v_deleted_count := v_before_count;
 
-  -- Get count after deletion
+  -- Get count after truncation
   SELECT COUNT(*) INTO v_remaining_count FROM cron.job_run_details;
 
   RETURN jsonb_build_object(
