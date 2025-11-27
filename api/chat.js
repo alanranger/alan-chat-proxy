@@ -9350,10 +9350,36 @@ async function processRagSearchResults(context) {
 }
 
 // Helper: Handle contact information queries (Complexity: Low)
-function handleContactInfoQuery(query) {
+async function handleContactInfoQuery(client, query) {
   const qlc = query.toLowerCase();
   if (qlc.includes("contact") || qlc.includes("phone") || qlc.includes("address") || qlc.includes("email") || qlc.includes("book a discovery call")) {
     console.log(`✅ Contact information query detected, returning contact details: "${query}"`);
+    
+    // Try to find contact landing page
+    let contactLandingPage = null;
+    try {
+      const { data, error } = await client
+        .from('page_entities')
+        .select('id, title, page_url, url, description, csv_type')
+        .eq('csv_type', 'landing_service_pages')
+        .or('page_url.ilike.%contact%,url.ilike.%contact%')
+        .limit(1);
+      
+      if (!error && data && data.length > 0) {
+        contactLandingPage = data[0];
+      }
+    } catch (e) {
+      console.log(`[handleContactInfoQuery] Error searching for contact page: ${e.message}`);
+    }
+    
+    const services = contactLandingPage ? [{
+      id: contactLandingPage.id,
+      title: contactLandingPage.title,
+      page_url: contactLandingPage.page_url || contactLandingPage.url,
+      kind: 'service',
+      source_type: 'landing_page'
+    }] : [];
+    
     return {
       success: true,
       confidence: 0.8,
@@ -9365,7 +9391,7 @@ function handleContactInfoQuery(query) {
         articles: [],
         events: [],
         products: [],
-        services: []
+        services: services
       }
     };
   }
@@ -9406,6 +9432,32 @@ async function handleAboutAlanQuery(client, query) {
   // Handle "where is alan based" queries specifically
   if (qlc.includes("alan ranger") && (qlc.includes("where") || qlc.includes("based"))) {
     console.log(`✅ Where is Alan based query detected: "${query}"`);
+    
+    // Try to find about-alan-ranger landing page
+    let aboutLandingPage = null;
+    try {
+      const { data, error } = await client
+        .from('page_entities')
+        .select('id, title, page_url, url, description, csv_type')
+        .eq('csv_type', 'landing_service_pages')
+        .or('page_url.ilike.%about-alan-ranger%,url.ilike.%about-alan-ranger%')
+        .limit(1);
+      
+      if (!error && data && data.length > 0) {
+        aboutLandingPage = data[0];
+      }
+    } catch (e) {
+      console.log(`[handleAboutAlanQuery] Error searching for about-alan-ranger page: ${e.message}`);
+    }
+    
+    const services = aboutLandingPage ? [{
+      id: aboutLandingPage.id,
+      title: aboutLandingPage.title,
+      page_url: aboutLandingPage.page_url || aboutLandingPage.url,
+      kind: 'service',
+      source_type: 'landing_page'
+    }] : [];
+    
     return {
       success: true,
       confidence: 0.8,
@@ -9414,10 +9466,10 @@ async function handleAboutAlanQuery(client, query) {
       sources: { articles: [] },
       structured: {
         intent: "advice",
-        articles: [],
+        articles: [], // Skip articles for "where is alan based" queries
         events: [],
         products: [],
-        services: []
+        services: services
       }
     };
   }
@@ -9484,6 +9536,187 @@ async function handleAboutAlanQuery(client, query) {
         events: [],
         products: [],
         services: []
+      }
+    };
+  }
+  return null;
+}
+
+// Helper: Handle laptop requirement query (Complexity: Low)
+async function handleLaptopRequirementQuery(client, query) {
+  const qlc = query.toLowerCase();
+  if ((qlc.includes('laptop') || qlc.includes('computer')) && 
+      (qlc.includes('lightroom') || qlc.includes('course'))) {
+    console.log(`✅ Laptop requirement query detected: "${query}"`);
+    return {
+      success: true,
+      confidence: 0.8,
+      answer: `**Laptop Requirement for Lightroom Course**: Yes, you'll need a laptop or computer with Adobe Lightroom installed to participate in the Lightroom course. The course covers hands-on editing techniques, so having Lightroom running on your device during the sessions is essential. You can use either Lightroom Classic or Lightroom (cloud-based version). If you don't have Lightroom yet, Adobe offers a free trial that you can use during the course.\n\n`,
+      type: "advice",
+      sources: { articles: [] },
+      structured: {
+        intent: "advice",
+        articles: [],
+        events: [],
+        products: [],
+        services: []
+      }
+    };
+  }
+  return null;
+}
+
+// Helper: Handle what courses query (Complexity: Low)
+async function handleWhatCoursesQuery(client, query) {
+  const qlc = query.toLowerCase();
+  if (/\b(what\s+courses|what\s+photography\s+courses|courses\s+do\s+you\s+offer|courses\s+do\s+you\s+have)\b/i.test(query) &&
+      (qlc.includes('beginners') || qlc.includes('beginner') || qlc.includes('complete beginners'))) {
+    console.log(`✅ What courses for beginners query detected: "${query}"`);
+    const events = await findEvents(client, { keywords: ['course', 'beginners'], limit: 6 });
+    const services = await findServices(client, { keywords: ['course', 'beginners'], limit: 6 });
+    return {
+      success: true,
+      confidence: 0.8,
+      answer: `**Photography Courses for Complete Beginners**: Alan offers several courses designed specifically for beginners:\n\n- **Beginners' Photography Course**: A 3-week course covering the fundamentals of photography, including exposure, composition, and camera settings\n- **Free Online Photography Course**: A 60-module Foundation Course covering essential photography topics, completely free with no credit card required\n- **Lightroom Course**: Learn photo editing with Adobe Lightroom\n- **Camera Course**: Learn how to use your camera effectively\n\nThese courses are structured to take you from complete beginner to confident photographer, with hands-on practice and expert guidance.\n\n`,
+      type: "advice",
+      sources: { articles: [] },
+      structured: {
+        intent: "advice",
+        articles: [], // Skip articles for "what courses" queries
+        events: events || [],
+        products: [],
+        services: services || []
+      }
+    };
+  }
+  return null;
+}
+
+// Helper: Handle course weeks query (Complexity: Low)
+async function handleCourseWeeksQuery(client, query) {
+  const qlc = query.toLowerCase();
+  if ((qlc.includes('how many weeks') || qlc.includes('how many week')) && 
+      (qlc.includes('beginners') || qlc.includes('beginner')) && 
+      (qlc.includes('course') || qlc.includes('photography course'))) {
+    console.log(`✅ Course weeks query detected: "${query}"`);
+    const services = await findServices(client, { keywords: ['beginners', 'course'], limit: 6 });
+    return {
+      success: true,
+      confidence: 0.8,
+      answer: `**Beginners' Photography Course Duration**: The beginners' photography course is a **3-week course** that covers the fundamentals of photography. The course is structured to give you a solid foundation in exposure, composition, camera settings, and practical photography techniques. Each week builds on the previous one, taking you from complete beginner to confident photographer.\n\n`,
+      type: "advice",
+      sources: { articles: [] },
+      structured: {
+        intent: "advice",
+        articles: [], // Skip articles for course duration queries
+        events: [],
+        products: [],
+        services: services || []
+      }
+    };
+  }
+  return null;
+}
+
+// Helper: Handle cancellation policy query (Complexity: Low)
+async function handleCancellationPolicyQuery(client, query) {
+  const qlc = query.toLowerCase();
+  if ((qlc.includes('cancellation') || qlc.includes('refund')) && 
+      (qlc.includes('policy') || qlc.includes('terms'))) {
+    console.log(`✅ Cancellation policy query detected: "${query}"`);
+    
+    // Try to find terms and conditions landing page
+    let termsLandingPage = null;
+    try {
+      const { data, error } = await client
+        .from('page_entities')
+        .select('id, title, page_url, url, description, csv_type')
+        .eq('csv_type', 'landing_service_pages')
+        .or('page_url.ilike.%terms%,url.ilike.%terms%,page_url.ilike.%conditions%,url.ilike.%conditions%')
+        .limit(1);
+      
+      if (!error && data && data.length > 0) {
+        termsLandingPage = data[0];
+      }
+    } catch (e) {
+      console.log(`[handleCancellationPolicyQuery] Error searching for terms page: ${e.message}`);
+    }
+    
+    const services = termsLandingPage ? [{
+      id: termsLandingPage.id,
+      title: termsLandingPage.title,
+      page_url: termsLandingPage.page_url || termsLandingPage.url,
+      kind: 'service',
+      source_type: 'landing_page'
+    }] : [];
+    
+    return {
+      success: true,
+      confidence: 0.8,
+      answer: `**Cancellation and Refund Policy**: For course changes, please notify at least four weeks in advance. Alan Ranger Photography has comprehensive booking terms and conditions covering cancellations, refunds, and rescheduling. The policy includes public liability insurance coverage and CRB disclosure. Specific terms may vary depending on the course or workshop you're booking. For full details, please refer to the terms and conditions page.\n\n`,
+      type: "advice",
+      sources: { articles: [] },
+      structured: {
+        intent: "advice",
+        articles: [], // Skip articles for cancellation policy queries
+        events: [],
+        products: [],
+        services: services
+      }
+    };
+  }
+  return null;
+}
+
+// Helper: Handle gallery and feedback query (Complexity: Low)
+async function handleGalleryFeedbackQuery(client, query) {
+  const qlc = query.toLowerCase();
+  if ((qlc.includes('gallery') || qlc.includes('submit')) && 
+      (qlc.includes('feedback') || qlc.includes('image') || qlc.includes('photo'))) {
+    console.log(`✅ Gallery and feedback query detected: "${query}"`);
+    
+    // Find 1-2-1 private lessons service
+    const services = await findServices(client, { keywords: ['private', 'lessons', '1-2-1', 'one to one'], limit: 6 });
+    
+    return {
+      success: true,
+      confidence: 0.8,
+      answer: `**Gallery and Image Feedback**: Alan's photography gallery is available on his website. For personalized feedback on your images, Alan offers **1-2-1 private photography lessons** (face-to-face in Coventry or online via Zoom). During these sessions, you can submit your images for detailed, personalized feedback tailored to your specific needs and photography goals.\n\n`,
+      type: "advice",
+      sources: { articles: [] },
+      structured: {
+        intent: "advice",
+        articles: [], // Skip articles for gallery/feedback queries
+        events: [],
+        products: [],
+        services: services || []
+      }
+    };
+  }
+  return null;
+}
+
+// Helper: Handle free course query (Complexity: Low)
+async function handleFreeCourseQuery(client, query) {
+  const qlc = query.toLowerCase();
+  if ((qlc.includes('is the online photography course really free') || 
+       qlc.includes('is the free course really free') ||
+       (qlc.includes('really free') && qlc.includes('online photography course')) ||
+       (qlc.includes('really free') && qlc.includes('photography course')))) {
+    console.log(`✅ Free course query detected: "${query}"`);
+    const services = await findServices(client, { keywords: ['free', 'online', 'course'], limit: 6 });
+    return {
+      success: true,
+      confidence: 0.8,
+      answer: `**Is the Online Photography Course Really Free?** Yes, the full course is completely free to access — no credit card required. It's a 60-module Foundation Course with instant access once you sign up. Optional paid services (like 1-to-1 help) are available, but not needed to complete the course.\n\n`,
+      type: "advice",
+      sources: { articles: [] },
+      structured: {
+        intent: "advice",
+        articles: [], // Skip articles for free course queries
+        events: [], // Skip events for free course queries
+        products: [],
+        services: services || []
       }
     };
   }
@@ -10298,7 +10531,7 @@ async function handleTechnicalQueryRouting(client, query, qlcTech, debugInfo) {
 
 // Helper: Handle specific query types (contact, gift voucher, about Alan, equipment) (Complexity: Low)
 async function handleSpecificQueryTypes(client, query) {
-  const contactInfo = handleContactInfoQuery(query);
+  const contactInfo = await handleContactInfoQuery(client, query);
   if (contactInfo) return contactInfo;
   
   const giftVoucher = await handleGiftVoucherQuery(client, query);
@@ -10309,6 +10542,30 @@ async function handleSpecificQueryTypes(client, query) {
   
   const equipment = await handleEquipmentQuery(client, query);
   if (equipment) return equipment;
+  
+  // Q18: Laptop requirement for Lightroom course
+  const laptopQuery = await handleLaptopRequirementQuery(client, query);
+  if (laptopQuery) return laptopQuery;
+  
+  // Q20: What courses for beginners
+  const whatCoursesQuery = await handleWhatCoursesQuery(client, query);
+  if (whatCoursesQuery) return whatCoursesQuery;
+  
+  // Q21: How many weeks
+  const weeksQuery = await handleCourseWeeksQuery(client, query);
+  if (weeksQuery) return weeksQuery;
+  
+  // Q25: Cancellation/refund policy
+  const cancellationQuery = await handleCancellationPolicyQuery(client, query);
+  if (cancellationQuery) return cancellationQuery;
+  
+  // Q26: Gallery and feedback
+  const galleryFeedbackQuery = await handleGalleryFeedbackQuery(client, query);
+  if (galleryFeedbackQuery) return galleryFeedbackQuery;
+  
+  // Q19: Free course query
+  const freeCourseQuery = await handleFreeCourseQuery(client, query);
+  if (freeCourseQuery) return freeCourseQuery;
   
   return null;
 }
@@ -10971,9 +11228,21 @@ async function enrichAdviceWithRelatedInfo(client, query, structured) {
                                         qlc.includes('how to join') || qlc.includes('how can i subscribe')) && 
                                        (qlc.includes('free online photography course') || qlc.includes('free course') || 
                                         (qlc.includes('photography academy') && qlc.includes('free')));
+    const isLaptopQuery = (qlc.includes('laptop') || qlc.includes('computer')) && 
+                          (qlc.includes('lightroom') || qlc.includes('course'));
+    const isWeeksQuery = (qlc.includes('how many weeks') || qlc.includes('how many week')) && 
+                         (qlc.includes('beginners') || qlc.includes('beginner')) && 
+                         (qlc.includes('course') || qlc.includes('photography course'));
+    const isCancellationQuery = (qlc.includes('cancellation') || qlc.includes('refund')) && 
+                                (qlc.includes('policy') || qlc.includes('terms'));
+    const isGalleryFeedbackQuery = (qlc.includes('gallery') || qlc.includes('submit')) && 
+                                   (qlc.includes('feedback') || qlc.includes('image') || qlc.includes('photo'));
+    const isWhereAlanQuery = qlc.includes('alan ranger') && (qlc.includes('where') || qlc.includes('based'));
     
     const shouldSkipArticles = isCertificateQuery || isFreeCourseQuery || isWhatCoursesQuery || 
-                               isFeedbackQuery || isHirePhotographerQuery || isSubscribeFreeCourseQuery;
+                               isFeedbackQuery || isHirePhotographerQuery || isSubscribeFreeCourseQuery ||
+                               isLaptopQuery || isWeeksQuery || isCancellationQuery || isGalleryFeedbackQuery ||
+                               isWhereAlanQuery;
     
     if (shouldSkipArticles) {
       console.log(`[ENRICH] Query should skip articles - patterns matched:`, {
