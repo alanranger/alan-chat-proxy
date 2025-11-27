@@ -31,3 +31,7 @@ BEGIN
 END;
 $$;
 
+-- Grant execute permission to authenticated users (required for Supabase API calls)
+GRANT EXECUTE ON FUNCTION public.clear_cron_job_run_details() TO authenticated;
+GRANT EXECUTE ON FUNCTION public.clear_cron_job_run_details() TO anon;
+
