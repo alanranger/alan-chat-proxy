@@ -10734,7 +10734,23 @@ async function addServicesForEnrichment(client, keywords, enriched, businessCate
     (/\b(improve|better|learn|develop|enhance)\b/i.test(query || '') && /\b(photography|photograph|skills)\b/i.test(query || ''));
   
   if (shouldAddServices) {
-    const services = await findServices(client, { keywords, limit: 6 });
+    // Special case: hiring / commercial / portrait photography queries
+    // We want to strongly surface the core commercial and portrait service pages.
+    let searchKeywords = keywords;
+    const isHireProfessionalQuery =
+      (lc.includes('hire') || lc.includes('can i hire')) &&
+      lc.includes('photographer');
+    const isCommercialOrPortraitQuery =
+      lc.includes('commercial photography') ||
+      lc.includes('portrait photography') ||
+      isHireProfessionalQuery;
+
+    if (isCommercialOrPortraitQuery) {
+      searchKeywords = ['commercial photography', 'portrait photography', 'professional photographer'];
+      console.log('[ENRICH] Hire/commercial/portrait query detected – using targeted service keywords for enrichment');
+    }
+
+    const services = await findServices(client, { keywords: searchKeywords, limit: 6 });
     if (services && services.length > 0) {
       enriched.services = (enriched.services || []).concat(services).slice(0, 6);
       console.log(`[ENRICH] Added ${services.length} services for ${businessCategory}`);
@@ -10745,6 +10761,13 @@ async function addServicesForEnrichment(client, keywords, enriched, businessCate
 // Helper: Add products for enrichment (Complexity: Low)
 async function addProductsForEnrichment(client, keywords, enriched, businessCategory, query) {
   const lc = (query || '').toLowerCase();
+  
+  // For memory card questions, we intentionally do NOT add products.
+  // Alan wants these to hand over to a human, without suggesting specific items.
+  if (lc.includes('memory card') || lc.includes('sd card')) {
+    console.log('[ENRICH] Memory card query detected in addProductsForEnrichment – skipping products');
+    return;
+  }
   
   // Add products for equipment queries and portrait/people photography queries
   const shouldAddProducts = 
@@ -10777,6 +10800,17 @@ async function addProductsForEnrichment(client, keywords, enriched, businessCate
 // Helper: Add events for enrichment (Complexity: Low)
 async function addEventsForEnrichment(client, keywords, enriched, businessCategory, query) {
   const lc = (query || '').toLowerCase();
+  
+  // For flash photography technical advice, don't add events – this is a how-to,
+  // not a workshop search, and events can look like irrelevant upsell.
+  const isFlashAdviceQuery =
+    businessCategory === 'Technical Advice' &&
+    lc.includes('flash') &&
+    (lc.includes('photography') || lc.includes('use flash') || lc.includes('flash photography'));
+  if (isFlashAdviceQuery) {
+    console.log('[ENRICH] Flash technical advice query detected – skipping event enrichment');
+    return;
+  }
   
   // Expanded logic: Add events for course/workshop queries and keyword matching
   const shouldAddEvents = 
@@ -10865,13 +10899,22 @@ async function enrichAdviceWithRelatedInfo(client, query, structured) {
   console.log(`[ENRICH] Adding related info for ${businessCategory} query: "${query}"`);
   
   try {
-    // Check for HDR, astrophotography, and service queries - filter existing articles first
+    // Check for HDR, astrophotography, memory card, and service queries - filter existing articles first
     const qlc = (query || '').toLowerCase();
+    const isMemoryCardQuery = qlc.includes('memory card') || qlc.includes('sd card');
     const isHdrQuery = qlc.includes('hdr') || (qlc.includes('high') && qlc.includes('dynamic') && qlc.includes('range'));
     const isAstrophotographyQuery = qlc.includes('astrophotography') || (qlc.includes('astro') && qlc.includes('photography'));
     const isServiceQuery = (businessCategory === 'Business Information' || businessCategory === 'General Queries') && 
                            (qlc.includes('service') || qlc.includes('offer') || qlc.includes('provide') || 
                             qlc.includes('what types') || qlc.includes('what do you'));
+
+    // For memory card equipment questions, we deliberately avoid adding related
+    // articles/services/events/products so that the low-confidence fallback
+    // answer isn't artificially boosted by extra tiles.
+    if (isMemoryCardQuery) {
+      console.log('[ENRICH] Memory card query detected – skipping enrichment to avoid misleading extra content');
+      return structured;
+    }
     
     let initialArticles = structured.articles || [];
     
