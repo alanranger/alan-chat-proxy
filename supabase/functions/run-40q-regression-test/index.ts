@@ -1,7 +1,48 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 
+// Canonical 64Q questions (temporary: using 68Q list, will refine to 64Q later)
+// TODO: Move to universal source (database table or shared JSON) after testing
 const QUERIES = [
-  "do you offer gift vouchers",
+  "whens the next bluebell workshops and whats the cost",
+  "when is the next devon workshop",
+  "what is your next workshop date and where is it",
+  "when are your next Autumn workshops and where are they?",
+  "How long are your workshops?",
+  "How much is a residential photography course and does it include B&B",
+  "What is the difference between prime and zoom lenses?",
+  "What memory card should I buy?",
+  "Do you offer gift vouchers?",
+  "What is HDR photography?",
+  "What tripod do you recommend",
+  "What is long exposure and how can I find out more about it",
+  "How do I improve my composition and storytelling in photos?",
+  "\"What is the exposure triangle (aperture, shutter, ISO)?\"",
+  "How do I improve my photography skills?",
+  "What is your cancellation or refund policy for courses/workshops?",
+  "Do you do astrophotography workshops",
+  "Can my 14yr old attend your workshop",
+  "My pictures never seem sharp.  Can you advise on what I am doing wrong",
+  "What types of photography services do you offer?",
+  "What sort of camera do I need for your camera course",
+  "What gear or equipment do I need to bring to a workshop?",
+  "Do you I get a certificate with the photography course",
+  "Do I need a laptop for the lightroom course",
+  "Is the online photography course really free",
+  "What courses do you offer for complete beginners?",
+  "How many weeks is the beginners' photography course?",
+  "How do I get personalised feedback on my images",
+  "How can I contact you or book a discovery call?",
+  "Where is your gallery and can I submit my images for feedback?",
+  "\"What is depth of field, and how do I control it?\"",
+  "What is white balance and how do I use it?",
+  "Who is Alan Ranger and what is his photographic background?",
+  "Where is Alan Ranger based?",
+  "Can I hire you as a professional photographer in Coventry?",
+  "peter orton",
+  "who is alan ranger",
+  "How do I subscribe to the free online photography course?",
+  "How do I use flash photography?",
+  "How do I edit RAW files?",
   "how do I focus in landscape photography",
   "how do I improve my photography",
   "how do I photograph autumn colours",
@@ -14,15 +55,12 @@ const QUERIES = [
   "how do I photograph wildlife",
   "how do I take better landscape photos",
   "how do I use a tripod",
-  "How long are your workshops?",
-  "How much is a residential photography course and does it include B&B",
   "what camera should I buy",
   "what is a histogram",
   "what is aperture",
   "what is composition in photography",
   "what is depth of field",
   "what is golden hour",
-  "what is HDR photography",
   "what is ISO",
   "what is long exposure photography",
   "what is macro photography",
@@ -31,16 +69,8 @@ const QUERIES = [
   "what is the best camera for beginners",
   "what is the best lens for landscape photography",
   "what is the best time of day for landscape photography",
-  "what is the difference between prime and zoom lenses",
   "what is the rule of thirds",
-  "what is your cancellation policy",
-  "what is your next workshop date and where is it",
-  "what memory card should I buy",
-  "what settings should I use for landscape photography",
-  "what tripod should I buy",
-  "when are your next Autumn workshops and where are they?",
-  "when is the next devon workshop",
-  "whens the next bluebell workshops and whats the cost"
+  "what settings should I use for landscape photography"
 ];
 
 type RunBody = {
@@ -97,7 +127,8 @@ async function createTestResult(body: RunBody, results: unknown[]) {
     results,
     test_timestamp: new Date().toISOString(),
     created_at: new Date().toISOString(),
-    is_fixed_baseline: false
+    is_fixed_baseline: false,
+    question_set_version: "canonical-64q" // New unified question set
   };
 
   const res = await fetch(url.toString(), {

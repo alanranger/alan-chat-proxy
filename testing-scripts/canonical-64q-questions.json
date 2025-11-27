@@ -1,0 +1,485 @@
+{
+  "version": "1.0",
+  "created": "2025-11-27",
+  "description": "Canonical 64-question test set combining Interactive Testing and Regression Test questions",
+  "total_questions": 64,
+  "questions": [
+    {
+      "id": 1,
+      "question": "whens the next bluebell workshops and whats the cost",
+      "category": "Event Queries",
+      "focus": "Workshop, course, and event scheduling questions",
+      "source": "both"
+    },
+    {
+      "id": 2,
+      "question": "when is the next devon workshop",
+      "category": "Event Queries",
+      "focus": "Workshop, course, and event scheduling questions",
+      "source": "both"
+    },
+    {
+      "id": 3,
+      "question": "what is your next workshop date and where is it",
+      "category": "Event Queries",
+      "focus": "Workshop, course, and event scheduling questions",
+      "source": "both"
+    },
+    {
+      "id": 4,
+      "question": "when are your next Autumn workshops and where are they?",
+      "category": "Event Queries",
+      "focus": "Workshop, course, and event scheduling questions",
+      "source": "both"
+    },
+    {
+      "id": 5,
+      "question": "How long are your workshops?",
+      "category": "Event Queries",
+      "focus": "Workshop, course, and event scheduling questions",
+      "source": "both"
+    },
+    {
+      "id": 6,
+      "question": "How much is a residential photography course and does it include B&B",
+      "category": "Course/Workshop Logistics",
+      "focus": "Course details, requirements, and logistics",
+      "source": "both"
+    },
+    {
+      "id": 7,
+      "question": "What is the difference between prime and zoom lenses?",
+      "category": "Equipment Recommendations",
+      "focus": "Equipment advice and recommendations",
+      "source": "both-same"
+    },
+    {
+      "id": 8,
+      "question": "What memory card should I buy?",
+      "category": "Equipment Recommendations",
+      "focus": "Equipment advice and recommendations",
+      "source": "both-same"
+    },
+    {
+      "id": 9,
+      "question": "Do you offer gift vouchers?",
+      "category": "Business Information",
+      "focus": "Services, policies, contact, and business details",
+      "source": "both-same"
+    },
+    {
+      "id": 10,
+      "question": "What is HDR photography?",
+      "category": "Technical Photography Concepts",
+      "focus": "Fundamental photography concepts and definitions",
+      "source": "both-same"
+    },
+    {
+      "id": 11,
+      "question": "What tripod do you recommend",
+      "category": "Equipment Recommendations",
+      "focus": "Equipment advice and recommendations",
+      "source": "both-same"
+    },
+    {
+      "id": 12,
+      "question": "What is long exposure and how can I find out more about it",
+      "category": "Technical Photography Concepts",
+      "focus": "Fundamental photography concepts and definitions",
+      "source": "both-same"
+    },
+    {
+      "id": 13,
+      "question": "How do I improve my composition and storytelling in photos?",
+      "category": "Technical Advice",
+      "focus": "How-to and troubleshooting photography advice",
+      "source": "both-same"
+    },
+    {
+      "id": 14,
+      "question": "\"What is the exposure triangle (aperture, shutter, ISO)?\"",
+      "category": "Technical Photography Concepts",
+      "focus": "Fundamental photography concepts and definitions",
+      "source": "both-same"
+    },
+    {
+      "id": 15,
+      "question": "How do I improve my photography skills?",
+      "category": "Technical Advice",
+      "focus": "How-to and troubleshooting photography advice",
+      "source": "both-same"
+    },
+    {
+      "id": 16,
+      "question": "What is your cancellation or refund policy for courses/workshops?",
+      "category": "Business Information",
+      "focus": "Services, policies, contact, and business details",
+      "source": "both-same"
+    },
+    {
+      "id": 17,
+      "question": "Do you do astrophotography workshops",
+      "category": "General Queries",
+      "focus": "Miscellaneous questions",
+      "source": "interactive"
+    },
+    {
+      "id": 18,
+      "question": "Can my 14yr old attend your workshop",
+      "category": "General Queries",
+      "focus": "Miscellaneous questions",
+      "source": "interactive"
+    },
+    {
+      "id": 19,
+      "question": "My pictures never seem sharp.  Can you advise on what I am doing wrong",
+      "category": "General Queries",
+      "focus": "Miscellaneous questions",
+      "source": "interactive"
+    },
+    {
+      "id": 20,
+      "question": "What types of photography services do you offer?",
+      "category": "General Queries",
+      "focus": "Miscellaneous questions",
+      "source": "interactive"
+    },
+    {
+      "id": 21,
+      "question": "What sort of camera do I need for your camera course",
+      "category": "Equipment Recommendations",
+      "focus": "Equipment advice and recommendations",
+      "source": "interactive"
+    },
+    {
+      "id": 22,
+      "question": "What gear or equipment do I need to bring to a workshop?",
+      "category": "Equipment Recommendations",
+      "focus": "Equipment advice and recommendations",
+      "source": "interactive"
+    },
+    {
+      "id": 23,
+      "question": "Do you I get a certificate with the photography course",
+      "category": "Course/Workshop Logistics",
+      "focus": "Course details, requirements, and logistics",
+      "source": "interactive"
+    },
+    {
+      "id": 24,
+      "question": "Do I need a laptop for the lightroom course",
+      "category": "Course/Workshop Logistics",
+      "focus": "Course details, requirements, and logistics",
+      "source": "interactive"
+    },
+    {
+      "id": 25,
+      "question": "Is the online photography course really free",
+      "category": "Course/Workshop Logistics",
+      "focus": "Course details, requirements, and logistics",
+      "source": "interactive"
+    },
+    {
+      "id": 26,
+      "question": "What courses do you offer for complete beginners?",
+      "category": "Course/Workshop Logistics",
+      "focus": "Course details, requirements, and logistics",
+      "source": "interactive"
+    },
+    {
+      "id": 27,
+      "question": "How many weeks is the beginners' photography course?",
+      "category": "Course/Workshop Logistics",
+      "focus": "Course details, requirements, and logistics",
+      "source": "interactive"
+    },
+    {
+      "id": 28,
+      "question": "How do I get personalised feedback on my images",
+      "category": "Business Information",
+      "focus": "Services, policies, contact, and business details",
+      "source": "interactive"
+    },
+    {
+      "id": 29,
+      "question": "How can I contact you or book a discovery call?",
+      "category": "Business Information",
+      "focus": "Services, policies, contact, and business details",
+      "source": "interactive"
+    },
+    {
+      "id": 30,
+      "question": "Where is your gallery and can I submit my images for feedback?",
+      "category": "Business Information",
+      "focus": "Services, policies, contact, and business details",
+      "source": "interactive"
+    },
+    {
+      "id": 31,
+      "question": "\"What is depth of field, and how do I control it?\"",
+      "category": "Technical Photography Concepts",
+      "focus": "Fundamental photography concepts and definitions",
+      "source": "interactive"
+    },
+    {
+      "id": 32,
+      "question": "What is white balance and how do I use it?",
+      "category": "Technical Photography Concepts",
+      "focus": "Fundamental photography concepts and definitions",
+      "source": "interactive"
+    },
+    {
+      "id": 33,
+      "question": "Who is Alan Ranger and what is his photographic background?",
+      "category": "Person Queries",
+      "focus": "Questions about specific people",
+      "source": "interactive"
+    },
+    {
+      "id": 34,
+      "question": "Where is Alan Ranger based?",
+      "category": "Person Queries",
+      "focus": "Questions about specific people",
+      "source": "interactive"
+    },
+    {
+      "id": 35,
+      "question": "Can I hire you as a professional photographer in Coventry?",
+      "category": "Person Queries",
+      "focus": "Questions about specific people",
+      "source": "interactive"
+    },
+    {
+      "id": 36,
+      "question": "peter orton",
+      "category": "Person Queries",
+      "focus": "Questions about specific people",
+      "source": "interactive"
+    },
+    {
+      "id": 37,
+      "question": "who is alan ranger",
+      "category": "Person Queries",
+      "focus": "Questions about specific people",
+      "source": "interactive"
+    },
+    {
+      "id": 38,
+      "question": "How do I subscribe to the free online photography course?",
+      "category": "Technical Advice",
+      "focus": "How-to and troubleshooting photography advice",
+      "source": "interactive"
+    },
+    {
+      "id": 39,
+      "question": "How do I use flash photography?",
+      "category": "Technical Advice",
+      "focus": "How-to and troubleshooting photography advice",
+      "source": "interactive"
+    },
+    {
+      "id": 40,
+      "question": "How do I edit RAW files?",
+      "category": "Technical Advice",
+      "focus": "How-to and troubleshooting photography advice",
+      "source": "interactive"
+    },
+    {
+      "id": 41,
+      "question": "how do I focus in landscape photography",
+      "category": "Technical Advice",
+      "focus": "How-to and troubleshooting photography advice",
+      "source": "regression"
+    },
+    {
+      "id": 42,
+      "question": "how do I improve my photography",
+      "category": "Technical Advice",
+      "focus": "How-to and troubleshooting photography advice",
+      "source": "regression"
+    },
+    {
+      "id": 43,
+      "question": "how do I photograph autumn colours",
+      "category": "Technical Advice",
+      "focus": "How-to and troubleshooting photography advice",
+      "source": "regression"
+    },
+    {
+      "id": 44,
+      "question": "how do I photograph bluebells",
+      "category": "Technical Advice",
+      "focus": "How-to and troubleshooting photography advice",
+      "source": "regression"
+    },
+    {
+      "id": 45,
+      "question": "how do I photograph flowers",
+      "category": "Technical Advice",
+      "focus": "How-to and troubleshooting photography advice",
+      "source": "regression"
+    },
+    {
+      "id": 46,
+      "question": "how do I photograph people",
+      "category": "Technical Advice",
+      "focus": "How-to and troubleshooting photography advice",
+      "source": "regression"
+    },
+    {
+      "id": 47,
+      "question": "how do I photograph seascapes",
+      "category": "Technical Advice",
+      "focus": "How-to and troubleshooting photography advice",
+      "source": "regression"
+    },
+    {
+      "id": 48,
+      "question": "how do I photograph sunsets",
+      "category": "Technical Advice",
+      "focus": "How-to and troubleshooting photography advice",
+      "source": "regression"
+    },
+    {
+      "id": 49,
+      "question": "how do I photograph waterfalls",
+      "category": "Technical Advice",
+      "focus": "How-to and troubleshooting photography advice",
+      "source": "regression"
+    },
+    {
+      "id": 50,
+      "question": "how do I photograph wildlife",
+      "category": "Technical Advice",
+      "focus": "How-to and troubleshooting photography advice",
+      "source": "regression"
+    },
+    {
+      "id": 51,
+      "question": "how do I take better landscape photos",
+      "category": "Technical Advice",
+      "focus": "How-to and troubleshooting photography advice",
+      "source": "regression"
+    },
+    {
+      "id": 52,
+      "question": "how do I use a tripod",
+      "category": "Technical Advice",
+      "focus": "How-to and troubleshooting photography advice",
+      "source": "regression"
+    },
+    {
+      "id": 53,
+      "question": "what camera should I buy",
+      "category": "Equipment Recommendations",
+      "focus": "Equipment advice and recommendations",
+      "source": "regression"
+    },
+    {
+      "id": 54,
+      "question": "what is a histogram",
+      "category": "Technical Photography Concepts",
+      "focus": "Fundamental photography concepts and definitions",
+      "source": "regression"
+    },
+    {
+      "id": 55,
+      "question": "what is aperture",
+      "category": "Technical Photography Concepts",
+      "focus": "Fundamental photography concepts and definitions",
+      "source": "regression"
+    },
+    {
+      "id": 56,
+      "question": "what is composition in photography",
+      "category": "Technical Photography Concepts",
+      "focus": "Fundamental photography concepts and definitions",
+      "source": "regression"
+    },
+    {
+      "id": 57,
+      "question": "what is depth of field",
+      "category": "Technical Photography Concepts",
+      "focus": "Fundamental photography concepts and definitions",
+      "source": "regression"
+    },
+    {
+      "id": 58,
+      "question": "what is golden hour",
+      "category": "Technical Photography Concepts",
+      "focus": "Fundamental photography concepts and definitions",
+      "source": "regression"
+    },
+    {
+      "id": 59,
+      "question": "what is ISO",
+      "category": "Technical Photography Concepts",
+      "focus": "Fundamental photography concepts and definitions",
+      "source": "regression"
+    },
+    {
+      "id": 60,
+      "question": "what is long exposure photography",
+      "category": "Technical Photography Concepts",
+      "focus": "Fundamental photography concepts and definitions",
+      "source": "regression"
+    },
+    {
+      "id": 61,
+      "question": "what is macro photography",
+      "category": "Technical Photography Concepts",
+      "focus": "Fundamental photography concepts and definitions",
+      "source": "regression"
+    },
+    {
+      "id": 62,
+      "question": "what is portrait photography",
+      "category": "Technical Photography Concepts",
+      "focus": "Fundamental photography concepts and definitions",
+      "source": "regression"
+    },
+    {
+      "id": 63,
+      "question": "what is shutter speed",
+      "category": "Technical Photography Concepts",
+      "focus": "Fundamental photography concepts and definitions",
+      "source": "regression"
+    },
+    {
+      "id": 64,
+      "question": "what is the best camera for beginners",
+      "category": "Equipment Recommendations",
+      "focus": "Equipment advice and recommendations",
+      "source": "regression"
+    },
+    {
+      "id": 65,
+      "question": "what is the best lens for landscape photography",
+      "category": "Equipment Recommendations",
+      "focus": "Equipment advice and recommendations",
+      "source": "regression"
+    },
+    {
+      "id": 66,
+      "question": "what is the best time of day for landscape photography",
+      "category": "Technical Photography Concepts",
+      "focus": "Fundamental photography concepts and definitions",
+      "source": "regression"
+    },
+    {
+      "id": 67,
+      "question": "what is the rule of thirds",
+      "category": "Technical Photography Concepts",
+      "focus": "Fundamental photography concepts and definitions",
+      "source": "regression"
+    },
+    {
+      "id": 68,
+      "question": "what settings should I use for landscape photography",
+      "category": "Technical Advice",
+      "focus": "How-to and troubleshooting photography advice",
+      "source": "regression"
+    }
+  ]
+}
+
