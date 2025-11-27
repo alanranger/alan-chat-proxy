@@ -10549,6 +10549,10 @@ async function handleSpecificQueryTypes(client, query) {
   const galleryFeedbackQuery = await handleGalleryFeedbackQuery(client, query);
   if (galleryFeedbackQuery) return galleryFeedbackQuery;
   
+  // Q17: Certificate query
+  const certificateQuery = await handleCertificateQuery(client, query);
+  if (certificateQuery) return certificateQuery;
+  
   // Q19: Free course query
   const freeCourseQuery = await handleFreeCourseQuery(client, query);
   if (freeCourseQuery) return freeCourseQuery;
