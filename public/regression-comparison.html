@@ -646,10 +646,8 @@
         events: structured.events || [],
         products: structured.products || []
       };
-      // UI hides services for simple follow-up queries like "do you offer ..."
-      if (isSimpleFollowUpQueryForUi(query)) {
-        copy.services = [];
-      }
+      // Note: We removed the follow-up filter to match chat.html behavior
+      // Services/events are now always shown when backend returns them
       return copy;
     }
 
