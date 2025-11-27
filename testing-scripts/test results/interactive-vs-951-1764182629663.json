@@ -1,0 +1,1732 @@
+{
+  "generatedAt": "2025-11-26T18:43:49.663Z",
+  "apiEndpoint": "https://alan-chat-proxy.vercel.app/api/chat",
+  "regressionTestId": 951,
+  "baselineFile": "baseline-40-question-interactive-subset-2025-11-02T09-16-08.122Z.json",
+  "summary": {
+    "totalQuestions": 40,
+    "worseVsBaseline951": 31
+  },
+  "results": [
+    {
+      "index": 1,
+      "query": "whens the next bluebell workshops and whats the cost",
+      "category": "Event Queries",
+      "baseline": {
+        "type": "events",
+        "status": 200,
+        "confidence": 0.96,
+        "counts": {
+          "articles": 0,
+          "services": 0,
+          "events": 12,
+          "products": 0
+        }
+      },
+      "regression951": {
+        "type": "events",
+        "status": null,
+        "confidence": 0.96,
+        "counts": {
+          "articles": 0,
+          "services": 0,
+          "events": 12,
+          "products": 0
+        }
+      },
+      "liveNow": {
+        "type": "events",
+        "status": 200,
+        "confidence": 0.96,
+        "counts": {
+          "articles": 0,
+          "services": 0,
+          "events": 12,
+          "products": 0
+        }
+      },
+      "baselineAnswerPreview": "I found 12 events that match your query. The next workshop is \"Bluebell Photography Workshop | Warwickshire | 20 Apr\" on Monday, 20 April 2026 in Warwickshire. These include workshops in various locations with different skill levels and dates.",
+      "regression951AnswerPreview": "I found 12 events that match your query. The next workshop is \"Bluebell Photography Workshop | Warwickshire | 20 Apr\" on Monday, 20 April 2026 in Warwickshire. These include workshops in various locations with different skill levels and dates.",
+      "liveAnswerPreview": "I found 12 events that match your query. The next workshop is \"Bluebell Photography Workshop | Warwickshire | 20 Apr\" on Monday, 20 April 2026 in Warwickshire. These include workshops in various locations with different skill levels and dates.",
+      "statusVsBaseline_951": "same",
+      "statusVsBaseline_live": "same"
+    },
+    {
+      "index": 2,
+      "query": "when is the next devon workshop",
+      "category": "Event Queries",
+      "baseline": {
+        "type": "events",
+        "status": 200,
+        "confidence": 0.96,
+        "counts": {
+          "articles": 0,
+          "services": 6,
+          "events": 2,
+          "products": 0
+        }
+      },
+      "regression951": {
+        "type": "events",
+        "status": null,
+        "confidence": 0.96,
+        "counts": {
+          "articles": 0,
+          "services": 6,
+          "events": 2,
+          "products": 0
+        }
+      },
+      "liveNow": {
+        "type": "events",
+        "status": 200,
+        "confidence": 0.96,
+        "counts": {
+          "articles": 0,
+          "services": 6,
+          "events": 2,
+          "products": 0
+        }
+      },
+      "baselineAnswerPreview": "I found 2 events that match your query. The next Devon workshop is \"Hartland Quay, Devon Seascape Photography Workshop\" on Thursday, 19 February 2026 in Devon. These workshops are located in Devon and North Devon/Exmoor. Here are the details:\n\n**Hartland Quay, Devon Seascape Photography Workshop**\nâ€¢ Date: Thursday, 19 February 2026\nâ€¢ Location: Devon\nâ€¢ Equipment Needed: DSLR or Mirrorless Camera, Tripod and ND Filters\nâ€¢ Transport + B&B included\nâ€¢ Price: Â£750\nâ€¢ Level: Beginner to Adva…",
+      "regression951AnswerPreview": "I found 2 events that match your query. The next Devon workshop is \"Hartland Quay, Devon Seascape Photography Workshop\" on Thursday, 19 February 2026 in Devon. These workshops are located in Devon and North Devon/Exmoor. Here are the details:\n\n**Hartland Quay, Devon Seascape Photography Workshop**\nâ€¢ Date: Thursday, 19 February 2026\nâ€¢ Location: Devon\nâ€¢ Equipment Needed: DSLR or Mirrorless Camera, Tripod and ND Filters\nâ€¢ Transport + B&B included\nâ€¢ Price: Â£750\nâ€¢ Level: Beginner to Adva…",
+      "liveAnswerPreview": "I found 2 events that match your query. The next Devon workshop is \"Hartland Quay, Devon Seascape Photography Workshop\" on Thursday, 19 February 2026 in Devon. These workshops are located in Devon and North Devon/Exmoor. Here are the details:\n\n**Hartland Quay, Devon Seascape Photography Workshop**\nâ€¢ Date: Thursday, 19 February 2026\nâ€¢ Location: Devon\nâ€¢ Equipment Needed: DSLR or Mirrorless Camera, Tripod and ND Filters\nâ€¢ Transport + B&B included\nâ€¢ Price: Â£750\nâ€¢ Level: Beginner to Adva…",
+      "statusVsBaseline_951": "same",
+      "statusVsBaseline_live": "same"
+    },
+    {
+      "index": 3,
+      "query": "what is your next workshop date and where is it",
+      "category": "Event Queries",
+      "baseline": {
+        "type": "events",
+        "status": 200,
+        "confidence": 0.96,
+        "counts": {
+          "articles": 0,
+          "services": 6,
+          "events": 20,
+          "products": 0
+        }
+      },
+      "regression951": {
+        "type": "events",
+        "status": null,
+        "confidence": 0.96,
+        "counts": {
+          "articles": 0,
+          "services": 6,
+          "events": 40,
+          "products": 0
+        }
+      },
+      "liveNow": {
+        "type": "events",
+        "status": 200,
+        "confidence": 0.96,
+        "counts": {
+          "articles": 0,
+          "services": 6,
+          "events": 40,
+          "products": 0
+        }
+      },
+      "baselineAnswerPreview": "I found 20 events that match your query. The next workshop is \"Abstract and Macro Photography Workshop - Warwickshire\" on Saturday, 8 November 2025 in Alan Ranger Photography. These include workshops in various locations with different skill levels and dates.",
+      "regression951AnswerPreview": "I found 40 events that match your query. The next workshop is \" Dorset Photography Workshop | Jurassic Coast Photography\" on Friday, 16 January 2026 in Dorset. These include workshops in various locations with different skill levels and dates.",
+      "liveAnswerPreview": "I found 40 events that match your query. The next workshop is \" Dorset Photography Workshop | Jurassic Coast Photography\" on Friday, 16 January 2026 in Dorset. These include workshops in various locations with different skill levels and dates.",
+      "statusVsBaseline_951": "better",
+      "statusVsBaseline_live": "better"
+    },
+    {
+      "index": 4,
+      "query": "when are your next Autumn workshops and where are they?",
+      "category": "Event Queries",
+      "baseline": {
+        "type": "events",
+        "status": 200,
+        "confidence": 0.96,
+        "counts": {
+          "articles": 0,
+          "services": 0,
+          "events": 7,
+          "products": 0
+        }
+      },
+      "regression951": {
+        "type": "events",
+        "status": null,
+        "confidence": 0.96,
+        "counts": {
+          "articles": 0,
+          "services": 0,
+          "events": 11,
+          "products": 0
+        }
+      },
+      "liveNow": {
+        "type": "events",
+        "status": 200,
+        "confidence": 0.96,
+        "counts": {
+          "articles": 0,
+          "services": 0,
+          "events": 11,
+          "products": 0
+        }
+      },
+      "baselineAnswerPreview": "I found 7 events that match your query. The next workshop is \"Lake District Photography Workshops | Autumn in Cumbria\" on Friday, 14 November 2025 in Lake District. These include workshops in various locations with different skill levels and dates.",
+      "regression951AnswerPreview": "I found 11 events that match your query. The next workshop is \"Fairy Glen Betws-y-Coed Photography Workshop - Wales Autumn\" on Saturday, 3 October 2026 in Snowdonia National Park. These include workshops in various locations with different skill levels and dates.",
+      "liveAnswerPreview": "I found 11 events that match your query. The next workshop is \"Fairy Glen Betws-y-Coed Photography Workshop - Wales Autumn\" on Saturday, 3 October 2026 in Snowdonia National Park. These include workshops in various locations with different skill levels and dates.",
+      "statusVsBaseline_951": "better",
+      "statusVsBaseline_live": "better"
+    },
+    {
+      "index": 5,
+      "query": "How long are your workshops?",
+      "category": "Event Queries",
+      "baseline": {
+        "type": "events",
+        "status": 200,
+        "confidence": 0.96,
+        "counts": {
+          "articles": 0,
+          "services": 0,
+          "events": 4,
+          "products": 0
+        }
+      },
+      "regression951": {
+        "type": "events",
+        "status": null,
+        "confidence": 0.96,
+        "counts": {
+          "articles": 0,
+          "services": 0,
+          "events": 6,
+          "products": 0
+        }
+      },
+      "liveNow": {
+        "type": "events",
+        "status": 200,
+        "confidence": 0.96,
+        "counts": {
+          "articles": 0,
+          "services": 0,
+          "events": 6,
+          "products": 0
+        }
+      },
+      "baselineAnswerPreview": "I offer 2.5–4 hour sessions, one‑day workshops, and 2–5 day multi‑day workshops.\n\nHere are a couple of matching workshops:\n• Suffolk Landscape Photography Workshop - Long Exposure — 21 November 2025 — Suffolk\n• Long Exposure Photography Workshop - Kenilworth 31-3 — 31 March 2026 — Kenilworth",
+      "regression951AnswerPreview": "I offer 2.5–4 hour sessions, one‑day workshops, and 2–5 day multi‑day workshops.\n\nHere are a couple of matching workshops:\n• Suffolk Landscape Photography Workshop - Long Exposure — 6 February 2026 — Suffolk\n• Long Exposure Photography Workshop - Kenilworth 31-3 — 31 March 2026 — Kenilworth",
+      "liveAnswerPreview": "I offer 2.5–4 hour sessions, one‑day workshops, and 2–5 day multi‑day workshops.\n\nHere are a couple of matching workshops:\n• Suffolk Landscape Photography Workshop - Long Exposure — 6 February 2026 — Suffolk\n• Long Exposure Photography Workshop - Kenilworth 31-3 — 31 March 2026 — Kenilworth",
+      "statusVsBaseline_951": "better",
+      "statusVsBaseline_live": "better"
+    },
+    {
+      "index": 6,
+      "query": "How much is a residential photography course and does it include B&B",
+      "category": "General Queries",
+      "baseline": {
+        "type": "events",
+        "status": 200,
+        "confidence": 0.53,
+        "counts": {
+          "articles": 0,
+          "services": 0,
+          "events": 18,
+          "products": 0
+        }
+      },
+      "regression951": {
+        "type": "events",
+        "status": null,
+        "confidence": 0.53,
+        "counts": {
+          "articles": 0,
+          "services": 0,
+          "events": 18,
+          "products": 0
+        }
+      },
+      "liveNow": {
+        "type": "events",
+        "status": 200,
+        "confidence": 0.53,
+        "counts": {
+          "articles": 0,
+          "services": 0,
+          "events": 18,
+          "products": 0
+        }
+      },
+      "baselineAnswerPreview": "Yes—all multi‑day workshops include transport and B&B in the price. See individual workshop event cards for current prices.\n\nI offer 2–5 day multi‑day workshops.\n\nHere are a couple of matching workshops:\n• Lake District Photography Workshops | Autumn in Cumbria — 14 November 2025 — Lake District\n• Suffolk Landscape Photography Workshop - Long Exposure — 21 November 2025 — Suffolk",
+      "regression951AnswerPreview": "Yes—all multi‑day workshops include transport and B&B in the price. See individual workshop event cards for current prices.\n\nI offer 2–5 day multi‑day workshops.\n\nHere are a couple of matching workshops:\n•  Dorset Photography Workshop | Jurassic Coast Photography — 16 January 2026 — Dorset\n• Lake District Photography Workshop | Winter in Cumbria — 23 January 2026 — Lake District",
+      "liveAnswerPreview": "Yes—all multi‑day workshops include transport and B&B in the price. See individual workshop event cards for current prices.\n\nI offer 2–5 day multi‑day workshops.\n\nHere are a couple of matching workshops:\n•  Dorset Photography Workshop | Jurassic Coast Photography — 16 January 2026 — Dorset\n• Lake District Photography Workshop | Winter in Cumbria — 23 January 2026 — Lake District",
+      "statusVsBaseline_951": "same",
+      "statusVsBaseline_live": "same"
+    },
+    {
+      "index": 7,
+      "query": "Do you do astrophotography workshops",
+      "category": "General Queries",
+      "baseline": {
+        "type": "advice",
+        "status": 200,
+        "confidence": 0.8,
+        "counts": {
+          "articles": 12,
+          "services": 6,
+          "events": 0,
+          "products": 0
+        }
+      },
+      "regression951": {
+        "type": null,
+        "status": null,
+        "confidence": null,
+        "counts": {
+          "articles": 0,
+          "services": 0,
+          "events": 0,
+          "products": 0
+        }
+      },
+      "liveNow": {
+        "type": "advice",
+        "status": 200,
+        "confidence": 0.8,
+        "counts": {
+          "articles": 0,
+          "services": 6,
+          "events": 0,
+          "products": 0
+        }
+      },
+      "baselineAnswerPreview": "I don't currently offer specific astrophotography workshops, but I can help you learn astrophotography techniques. Many of my general photography workshops cover night photography and low-light techniques that are applicable to astrophotography. For specific astrophotography guidance, please contact me directly to discuss your needs.\n\n",
+      "regression951AnswerPreview": null,
+      "liveAnswerPreview": "I don't currently offer specific astrophotography workshops, but I can help you learn astrophotography techniques. Many of my general photography workshops cover night photography and low-light techniques that are applicable to astrophotography. For specific astrophotography guidance, please contact me directly to discuss your needs.\n\n",
+      "statusVsBaseline_951": "worse",
+      "statusVsBaseline_live": "worse"
+    },
+    {
+      "index": 8,
+      "query": "Can my 14yr old attend your workshop",
+      "category": "General Queries",
+      "baseline": {
+        "type": "advice",
+        "status": 200,
+        "confidence": 0.8,
+        "counts": {
+          "articles": 12,
+          "services": 6,
+          "events": 3,
+          "products": 0
+        }
+      },
+      "regression951": {
+        "type": null,
+        "status": null,
+        "confidence": null,
+        "counts": {
+          "articles": 0,
+          "services": 0,
+          "events": 0,
+          "products": 0
+        }
+      },
+      "liveNow": {
+        "type": "advice",
+        "status": 200,
+        "confidence": 0.8,
+        "counts": {
+          "articles": 6,
+          "services": 6,
+          "events": 6,
+          "products": 0
+        }
+      },
+      "baselineAnswerPreview": "Most of my workshops are suitable for photographers of all ages, including teenagers. However, some workshops may have age restrictions or require adult supervision for younger participants. Please contact me directly to discuss specific age requirements for the workshop you're interested in.\n\n",
+      "regression951AnswerPreview": null,
+      "liveAnswerPreview": "Most of my workshops are suitable for photographers of all ages, including teenagers. However, some workshops may have age restrictions or require adult supervision for younger participants. Please contact me directly to discuss specific age requirements for the workshop you're interested in.\n\n",
+      "statusVsBaseline_951": "worse",
+      "statusVsBaseline_live": "mixed"
+    },
+    {
+      "index": 9,
+      "query": "My pictures never seem sharp.  Can you advise on what I am doing wrong",
+      "category": "General Queries",
+      "baseline": {
+        "type": "advice",
+        "status": 200,
+        "confidence": 0.9,
+        "counts": {
+          "articles": 7,
+          "services": 0,
+          "events": 0,
+          "products": 0
+        }
+      },
+      "regression951": {
+        "type": null,
+        "status": null,
+        "confidence": null,
+        "counts": {
+          "articles": 0,
+          "services": 0,
+          "events": 0,
+          "products": 0
+        }
+      },
+      "liveNow": {
+        "type": "advice",
+        "status": 200,
+        "confidence": 0.9,
+        "counts": {
+          "articles": 7,
+          "services": 0,
+          "events": 0,
+          "products": 0
+        }
+      },
+      "baselineAnswerPreview": "Soft photos usually come from three things: focus missing the subject, shutter speed being too slow, or small camera shake.\n\nTry this now:\n• Use single‑point AF (AF‑C for moving subjects).\n• Raise shutter speed: at least 1/(focal length); 1/500–1/1000 for motion.\n• Stabilise the camera: brace stance, enable IBIS/VR, or use a tripod.\n\nWant a full checklist and tests? Ask: \"show sharpness checklist\".\n\nRelated guides:\n- 08 What is FOCUS in Photography: Key Concepts Explained\n- Focus — 1-Page Field …",
+      "regression951AnswerPreview": null,
+      "liveAnswerPreview": "Soft photos usually come from three things: focus missing the subject, shutter speed being too slow, or small camera shake.\n\nTry this now:\n• Use single‑point AF (AF‑C for moving subjects).\n• Raise shutter speed: at least 1/(focal length); 1/500–1/1000 for motion.\n• Stabilise the camera: brace stance, enable IBIS/VR, or use a tripod.\n\nWant a full checklist and tests? Ask: \"show sharpness checklist\".\n\nRelated guides:\n- 08 What is FOCUS in Photography: Key Concepts Explained\n- Focus Modes and Track…",
+      "statusVsBaseline_951": "worse",
+      "statusVsBaseline_live": "same"
+    },
+    {
+      "index": 10,
+      "query": "What types of photography services do you offer?",
+      "category": "General Queries",
+      "baseline": {
+        "type": "services",
+        "status": 200,
+        "confidence": 0.8,
+        "counts": {
+          "articles": 12,
+          "services": 24,
+          "events": 0,
+          "products": 0
+        }
+      },
+      "regression951": {
+        "type": null,
+        "status": null,
+        "confidence": null,
+        "counts": {
+          "articles": 0,
+          "services": 0,
+          "events": 0,
+          "products": 0
+        }
+      },
+      "liveNow": {
+        "type": "services",
+        "status": 200,
+        "confidence": 0.8,
+        "counts": {
+          "articles": 0,
+          "services": 6,
+          "events": 0,
+          "products": 0
+        }
+      },
+      "baselineAnswerPreview": "I offer a range of photography services — including Workshops, Camera sensor cleaning, Online lessons, Courses, Private lessons, RPS mentoring.",
+      "regression951AnswerPreview": null,
+      "liveAnswerPreview": "I offer a range of photography services — including Online lessons, Courses, RPS mentoring, Camera sensor cleaning, Private lessons.",
+      "statusVsBaseline_951": "worse",
+      "statusVsBaseline_live": "worse"
+    },
+    {
+      "index": 11,
+      "query": "What tripod do you recommend",
+      "category": "Equipment Recommendations",
+      "baseline": {
+        "type": "advice",
+        "status": 200,
+        "confidence": 0.8,
+        "counts": {
+          "articles": 9,
+          "services": 0,
+          "events": 0,
+          "products": 0
+        }
+      },
+      "regression951": {
+        "type": null,
+        "status": null,
+        "confidence": null,
+        "counts": {
+          "articles": 0,
+          "services": 0,
+          "events": 0,
+          "products": 0
+        }
+      },
+      "liveNow": {
+        "type": "advice",
+        "status": 200,
+        "confidence": 0.8,
+        "counts": {
+          "articles": 6,
+          "services": 0,
+          "events": 0,
+          "products": 0
+        }
+      },
+      "baselineAnswerPreview": "For tripods, I recommend lightweight carbon fiber models for travel, or sturdy aluminum for studio work. Look for features like quick-release plates and adjustable leg angles. I have detailed guides covering specific recommendations and technical details.",
+      "regression951AnswerPreview": null,
+      "liveAnswerPreview": "For tripods, I recommend lightweight carbon fiber models for travel, or sturdy aluminum for studio work. Look for features like quick-release plates and adjustable leg angles. I have detailed guides covering specific recommendations and technical details.",
+      "statusVsBaseline_951": "worse",
+      "statusVsBaseline_live": "worse"
+    },
+    {
+      "index": 12,
+      "query": "What sort of camera do I need for your camera course",
+      "category": "Equipment Recommendations",
+      "baseline": {
+        "type": "advice",
+        "status": 200,
+        "confidence": 0.8,
+        "counts": {
+          "articles": 25,
+          "services": 6,
+          "events": 3,
+          "products": 6
+        }
+      },
+      "regression951": {
+        "type": null,
+        "status": null,
+        "confidence": null,
+        "counts": {
+          "articles": 0,
+          "services": 0,
+          "events": 0,
+          "products": 0
+        }
+      },
+      "liveNow": {
+        "type": "advice",
+        "status": 200,
+        "confidence": 0.8,
+        "counts": {
+          "articles": 6,
+          "services": 6,
+          "events": 6,
+          "products": 6
+        }
+      },
+      "baselineAnswerPreview": "For my courses and workshops, any DSLR or mirrorless camera with manual controls will work perfectly. The key is having aperture, shutter speed, and ISO control. I have detailed guides covering specific recommendations and technical details.",
+      "regression951AnswerPreview": null,
+      "liveAnswerPreview": "For my courses and workshops, any DSLR or mirrorless camera with manual controls will work perfectly. The key is having aperture, shutter speed, and ISO control. I have detailed guides covering specific recommendations and technical details.",
+      "statusVsBaseline_951": "worse",
+      "statusVsBaseline_live": "worse"
+    },
+    {
+      "index": 13,
+      "query": "What gear or equipment do I need to bring to a workshop?",
+      "category": "Equipment Recommendations",
+      "baseline": {
+        "type": "advice",
+        "status": 200,
+        "confidence": 0.8,
+        "counts": {
+          "articles": 12,
+          "services": 6,
+          "events": 0,
+          "products": 6
+        }
+      },
+      "regression951": {
+        "type": null,
+        "status": null,
+        "confidence": null,
+        "counts": {
+          "articles": 0,
+          "services": 0,
+          "events": 0,
+          "products": 0
+        }
+      },
+      "liveNow": {
+        "type": "advice",
+        "status": 200,
+        "confidence": 0.8,
+        "counts": {
+          "articles": 12,
+          "services": 6,
+          "events": 0,
+          "products": 6
+        }
+      },
+      "baselineAnswerPreview": "For most workshops, you'll need a camera with manual controls (DSLR or mirrorless), spare batteries, memory cards, and appropriate clothing for outdoor conditions. Some workshops may require specific equipment like tripods or filters. I'll provide a detailed equipment list when you book a workshop.\n\n",
+      "regression951AnswerPreview": null,
+      "liveAnswerPreview": "For most workshops, you'll need a camera with manual controls (DSLR or mirrorless), spare batteries, memory cards, and appropriate clothing for outdoor conditions. Some workshops may require specific equipment like tripods or filters. I'll provide a detailed equipment list when you book a workshop.\n\n",
+      "statusVsBaseline_951": "worse",
+      "statusVsBaseline_live": "same"
+    },
+    {
+      "index": 14,
+      "query": "What is the difference between prime and zoom lenses?",
+      "category": "Equipment Recommendations",
+      "baseline": {
+        "type": "advice",
+        "status": 200,
+        "confidence": 0.8,
+        "counts": {
+          "articles": 8,
+          "services": 0,
+          "events": 0,
+          "products": 5
+        }
+      },
+      "regression951": {
+        "type": null,
+        "status": null,
+        "confidence": null,
+        "counts": {
+          "articles": 0,
+          "services": 0,
+          "events": 0,
+          "products": 0
+        }
+      },
+      "liveNow": {
+        "type": "advice",
+        "status": 200,
+        "confidence": 0.8,
+        "counts": {
+          "articles": 4,
+          "services": 0,
+          "events": 0,
+          "products": 6
+        }
+      },
+      "baselineAnswerPreview": "Here's what I can tell you: **Prime vs Zoom Lenses**: Prime lenses have a fixed focal length (e.g., 50mm) and typically offer better image quality and wider apertures for low light. Zoom lenses (e.g., 24-70mm) provide flexibility but may be heavier and have smaller maximum apertures. Prime lenses are great for learning composition and achieving shallow depth of field, while zoom lenses offer convenience for travel and varied shooting situations.\n\n",
+      "regression951AnswerPreview": null,
+      "liveAnswerPreview": "Here's what I can tell you: **Prime vs Zoom Lenses**: Prime lenses have a fixed focal length (e.g., 50mm) and typically offer better image quality and wider apertures for low light. Zoom lenses (e.g., 24-70mm) provide flexibility but may be heavier and have smaller maximum apertures. Prime lenses are great for learning composition and achieving shallow depth of field, while zoom lenses offer convenience for travel and varied shooting situations.\n\n",
+      "statusVsBaseline_951": "worse",
+      "statusVsBaseline_live": "worse"
+    },
+    {
+      "index": 15,
+      "query": "What memory card should I buy?",
+      "category": "Equipment Recommendations",
+      "baseline": {
+        "type": "advice",
+        "status": 200,
+        "confidence": 0.8,
+        "counts": {
+          "articles": 2,
+          "services": 0,
+          "events": 0,
+          "products": 3
+        }
+      },
+      "regression951": {
+        "type": null,
+        "status": null,
+        "confidence": null,
+        "counts": {
+          "articles": 0,
+          "services": 0,
+          "events": 0,
+          "products": 0
+        }
+      },
+      "liveNow": {
+        "type": "advice",
+        "status": 200,
+        "confidence": 0.7,
+        "counts": {
+          "articles": 0,
+          "services": 0,
+          "events": 0,
+          "products": 3
+        }
+      },
+      "baselineAnswerPreview": "I'd be happy to help you choose memory card equipment! Based on your photography needs, I can provide personalized recommendations.",
+      "regression951AnswerPreview": null,
+      "liveAnswerPreview": "I can’t find anything that confidently matches your question right now. Please contact Alan directly using the contact form or WhatsApp if you’d like to chat with him about this.",
+      "statusVsBaseline_951": "worse",
+      "statusVsBaseline_live": "worse"
+    },
+    {
+      "index": 16,
+      "query": "Do you I get a certificate with the photography course",
+      "category": "Course/Workshop Logistics",
+      "baseline": {
+        "type": "advice",
+        "status": 200,
+        "confidence": 0.8,
+        "counts": {
+          "articles": 12,
+          "services": 6,
+          "events": 0,
+          "products": 0
+        }
+      },
+      "regression951": {
+        "type": null,
+        "status": null,
+        "confidence": null,
+        "counts": {
+          "articles": 0,
+          "services": 0,
+          "events": 0,
+          "products": 0
+        }
+      },
+      "liveNow": {
+        "type": "advice",
+        "status": 200,
+        "confidence": 0.8,
+        "counts": {
+          "articles": 6,
+          "services": 6,
+          "events": 0,
+          "products": 0
+        }
+      },
+      "baselineAnswerPreview": "Here's what I can tell you: **Certificates**: The free online photography course provides free access to 60 modules of content covering photography fundamentals. While the course itself doesn't issue formal certificates, Alan offers various photography education services including workshops, courses, and private lessons that may include certificates or qualifications depending on the specific program.\n\n",
+      "regression951AnswerPreview": null,
+      "liveAnswerPreview": "Here's what I can tell you: **Certificates**: The free online photography course provides free access to 60 modules of content covering photography fundamentals. While the course itself doesn't issue formal certificates, Alan offers various photography education services including workshops, courses, and private lessons that may include certificates or qualifications depending on the specific program.\n\n",
+      "statusVsBaseline_951": "worse",
+      "statusVsBaseline_live": "worse"
+    },
+    {
+      "index": 17,
+      "query": "Do I need a laptop for the lightroom course",
+      "category": "Course/Workshop Logistics",
+      "baseline": {
+        "type": "events",
+        "status": 200,
+        "confidence": 0.96,
+        "counts": {
+          "articles": 12,
+          "services": 5,
+          "events": 6,
+          "products": 6
+        }
+      },
+      "regression951": {
+        "type": null,
+        "status": null,
+        "confidence": null,
+        "counts": {
+          "articles": 0,
+          "services": 0,
+          "events": 0,
+          "products": 0
+        }
+      },
+      "liveNow": {
+        "type": "events",
+        "status": 200,
+        "confidence": 0.96,
+        "counts": {
+          "articles": 6,
+          "services": 6,
+          "events": 9,
+          "products": 6
+        }
+      },
+      "baselineAnswerPreview": "I found 6 events that match your query. These include workshops in various locations with different skill levels and dates.",
+      "regression951AnswerPreview": null,
+      "liveAnswerPreview": "I found 9 events that match your query. These include workshops in various locations with different skill levels and dates.",
+      "statusVsBaseline_951": "worse",
+      "statusVsBaseline_live": "mixed"
+    },
+    {
+      "index": 18,
+      "query": "Is the online photography course really free",
+      "category": "Course/Workshop Logistics",
+      "baseline": {
+        "type": "advice",
+        "status": 200,
+        "confidence": 0.8,
+        "counts": {
+          "articles": 0,
+          "services": 1,
+          "events": 2,
+          "products": 0
+        }
+      },
+      "regression951": {
+        "type": null,
+        "status": null,
+        "confidence": null,
+        "counts": {
+          "articles": 0,
+          "services": 0,
+          "events": 0,
+          "products": 0
+        }
+      },
+      "liveNow": {
+        "type": "advice",
+        "status": 200,
+        "confidence": 0.8,
+        "counts": {
+          "articles": 0,
+          "services": 2,
+          "events": 5,
+          "products": 0
+        }
+      },
+      "baselineAnswerPreview": "**Is the Online Photography Course Really Free?** Yes, the full course is completely free to access — no credit card required. It's a 60-module Foundation Course with instant access once you sign up. Optional paid services (like 1-to-1 help) are available, but not needed to complete the course.\n\n\n\nIs it really free?Yes. The full course is free to access — no credit card required. Optional paid services (like 1-to-1 help) are available, but not needed to complete the course.Where should I start?B…",
+      "regression951AnswerPreview": null,
+      "liveAnswerPreview": "**Is the Online Photography Course Really Free?** Yes, the full course is completely free to access — no credit card required. It's a 60-module Foundation Course with instant access once you sign up. Optional paid services (like 1-to-1 help) are available, but not needed to complete the course.\n\n\n\nIs it really free?Yes. The full course is free to access — no credit card required. Optional paid services (like 1-to-1 help) are available, but not needed to complete the course.Where should I start?B…",
+      "statusVsBaseline_951": "worse",
+      "statusVsBaseline_live": "better"
+    },
+    {
+      "index": 19,
+      "query": "What courses do you offer for complete beginners?",
+      "category": "Course/Workshop Logistics",
+      "baseline": {
+        "type": "events",
+        "status": 200,
+        "confidence": 0.96,
+        "counts": {
+          "articles": 12,
+          "services": 3,
+          "events": 18,
+          "products": 0
+        }
+      },
+      "regression951": {
+        "type": null,
+        "status": null,
+        "confidence": null,
+        "counts": {
+          "articles": 0,
+          "services": 0,
+          "events": 0,
+          "products": 0
+        }
+      },
+      "liveNow": {
+        "type": "events",
+        "status": 200,
+        "confidence": 0.96,
+        "counts": {
+          "articles": 6,
+          "services": 6,
+          "events": 30,
+          "products": 0
+        }
+      },
+      "baselineAnswerPreview": "I found 18 events that match your query. These include workshops in various locations with different skill levels and dates.",
+      "regression951AnswerPreview": null,
+      "liveAnswerPreview": "I found 30 events that match your query. These include workshops in various locations with different skill levels and dates.",
+      "statusVsBaseline_951": "worse",
+      "statusVsBaseline_live": "better"
+    },
+    {
+      "index": 20,
+      "query": "How many weeks is the beginners’ photography course?",
+      "category": "Course/Workshop Logistics",
+      "baseline": {
+        "type": "events",
+        "status": 200,
+        "confidence": 0.96,
+        "counts": {
+          "articles": 12,
+          "services": 6,
+          "events": 18,
+          "products": 0
+        }
+      },
+      "regression951": {
+        "type": null,
+        "status": null,
+        "confidence": null,
+        "counts": {
+          "articles": 0,
+          "services": 0,
+          "events": 0,
+          "products": 0
+        }
+      },
+      "liveNow": {
+        "type": "events",
+        "status": 200,
+        "confidence": 0.96,
+        "counts": {
+          "articles": 6,
+          "services": 6,
+          "events": 30,
+          "products": 0
+        }
+      },
+      "baselineAnswerPreview": "I found 18 events that match your query. These include workshops in various locations with different skill levels and dates.",
+      "regression951AnswerPreview": null,
+      "liveAnswerPreview": "I found 30 events that match your query. These include workshops in various locations with different skill levels and dates.",
+      "statusVsBaseline_951": "worse",
+      "statusVsBaseline_live": "mixed"
+    },
+    {
+      "index": 21,
+      "query": "How do I get personalised feedback on my images",
+      "category": "Business Information",
+      "baseline": {
+        "type": "advice",
+        "status": 200,
+        "confidence": 0.8,
+        "counts": {
+          "articles": 0,
+          "services": 0,
+          "events": 0,
+          "products": 0
+        }
+      },
+      "regression951": {
+        "type": null,
+        "status": null,
+        "confidence": null,
+        "counts": {
+          "articles": 0,
+          "services": 0,
+          "events": 0,
+          "products": 0
+        }
+      },
+      "liveNow": {
+        "type": "advice",
+        "status": 200,
+        "confidence": 0.8,
+        "counts": {
+          "articles": 0,
+          "services": 5,
+          "events": 0,
+          "products": 0
+        }
+      },
+      "baselineAnswerPreview": "**Personalised Feedback**: Alan offers 1-2-1 private photography lessons (face-to-face in Coventry or online via Zoom) where you can get personalised feedback on your images. These sessions are tailored to your specific needs and help you improve your photography skills through direct critique and guidance.\n\n",
+      "regression951AnswerPreview": null,
+      "liveAnswerPreview": "**Personalised Feedback**: Alan offers 1-2-1 private photography lessons (face-to-face in Coventry or online via Zoom) where you can get personalised feedback on your images. These sessions are tailored to your specific needs and help you improve your photography skills through direct critique and guidance.\n\n",
+      "statusVsBaseline_951": "same",
+      "statusVsBaseline_live": "better"
+    },
+    {
+      "index": 22,
+      "query": "How can I contact you or book a discovery call?",
+      "category": "Business Information",
+      "baseline": {
+        "type": "advice",
+        "status": 200,
+        "confidence": 0.8,
+        "counts": {
+          "articles": 0,
+          "services": 1,
+          "events": 0,
+          "products": 0
+        }
+      },
+      "regression951": {
+        "type": null,
+        "status": null,
+        "confidence": null,
+        "counts": {
+          "articles": 0,
+          "services": 0,
+          "events": 0,
+          "products": 0
+        }
+      },
+      "liveNow": {
+        "type": "advice",
+        "status": 200,
+        "confidence": 0.8,
+        "counts": {
+          "articles": 0,
+          "services": 2,
+          "events": 0,
+          "products": 0
+        }
+      },
+      "baselineAnswerPreview": "**Contact Information**:\n- **Address**: 45 Hathaway Road, Coventry, CV4 9HW, United Kingdom\n- **Phone**: +44 781 701 7994\n- **Email**: info@alanranger.com\n- **Hours**: Monday-Sunday, 9am-5pm\n\n",
+      "regression951AnswerPreview": null,
+      "liveAnswerPreview": "**Contact Information**:\n- **Address**: 45 Hathaway Road, Coventry, CV4 9HW, United Kingdom\n- **Phone**: +44 781 701 7994\n- **Email**: info@alanranger.com\n- **Hours**: Monday-Sunday, 9am-5pm\n\n",
+      "statusVsBaseline_951": "worse",
+      "statusVsBaseline_live": "better"
+    },
+    {
+      "index": 23,
+      "query": "Do you offer gift vouchers?",
+      "category": "Business Information",
+      "baseline": {
+        "type": "advice",
+        "status": 200,
+        "confidence": 0.8,
+        "counts": {
+          "articles": 0,
+          "services": 1,
+          "events": 0,
+          "products": 0
+        }
+      },
+      "regression951": {
+        "type": null,
+        "status": null,
+        "confidence": null,
+        "counts": {
+          "articles": 0,
+          "services": 0,
+          "events": 0,
+          "products": 0
+        }
+      },
+      "liveNow": {
+        "type": "advice",
+        "status": 200,
+        "confidence": 0.8,
+        "counts": {
+          "articles": 0,
+          "services": 4,
+          "events": 0,
+          "products": 0
+        }
+      },
+      "baselineAnswerPreview": "Here's what I can tell you: **Gift Vouchers**: Digital photography gift vouchers are available from £5-£600, perfect for any photography enthusiast. Vouchers can be used for workshops, courses, private lessons, or any photography tuition event. They expire 12 months from purchase date and can be split across multiple purchases. [Buy Gift Vouchers](https://www.alanranger.com/photography-gift-vouchers)\n\n",
+      "regression951AnswerPreview": null,
+      "liveAnswerPreview": "Here's what I can tell you: **Gift Vouchers**: Digital photography gift vouchers are available from £5-£600, perfect for any photography enthusiast. Vouchers can be used for workshops, courses, private lessons, or any photography tuition event. They expire 12 months from purchase date and can be split across multiple purchases. [Buy Gift Vouchers](https://www.alanranger.com/photography-gift-vouchers)\n\n",
+      "statusVsBaseline_951": "worse",
+      "statusVsBaseline_live": "better"
+    },
+    {
+      "index": 24,
+      "query": "What is your cancellation or refund policy for courses/workshops?",
+      "category": "Business Information",
+      "baseline": {
+        "type": "advice",
+        "status": 200,
+        "confidence": 0.8,
+        "counts": {
+          "articles": 12,
+          "services": 6,
+          "events": 0,
+          "products": 0
+        }
+      },
+      "regression951": {
+        "type": null,
+        "status": null,
+        "confidence": null,
+        "counts": {
+          "articles": 0,
+          "services": 0,
+          "events": 0,
+          "products": 0
+        }
+      },
+      "liveNow": {
+        "type": "advice",
+        "status": 200,
+        "confidence": 0.8,
+        "counts": {
+          "articles": 5,
+          "services": 6,
+          "events": 0,
+          "products": 0
+        }
+      },
+      "baselineAnswerPreview": "**Booking and Cancellation Policy**: For course changes, please notify at least four weeks in advance. Alan Ranger Photography has comprehensive booking terms and conditions covering cancellations, refunds, and rescheduling. The policy includes public liability insurance coverage and CRB disclosure. Specific terms may vary depending on the course or workshop you're booking.\n\n",
+      "regression951AnswerPreview": null,
+      "liveAnswerPreview": "**Booking and Cancellation Policy**: For course changes, please notify at least four weeks in advance. Alan Ranger Photography has comprehensive booking terms and conditions covering cancellations, refunds, and rescheduling. The policy includes public liability insurance coverage and CRB disclosure. Specific terms may vary depending on the course or workshop you're booking.\n\n",
+      "statusVsBaseline_951": "worse",
+      "statusVsBaseline_live": "worse"
+    },
+    {
+      "index": 25,
+      "query": "Where is your gallery and can I submit my images for feedback?",
+      "category": "Business Information",
+      "baseline": {
+        "type": "advice",
+        "status": 200,
+        "confidence": 0.8,
+        "counts": {
+          "articles": 0,
+          "services": 0,
+          "events": 0,
+          "products": 0
+        }
+      },
+      "regression951": {
+        "type": null,
+        "status": null,
+        "confidence": null,
+        "counts": {
+          "articles": 0,
+          "services": 0,
+          "events": 0,
+          "products": 0
+        }
+      },
+      "liveNow": {
+        "type": "advice",
+        "status": 200,
+        "confidence": 0.8,
+        "counts": {
+          "articles": 0,
+          "services": 0,
+          "events": 0,
+          "products": 0
+        }
+      },
+      "baselineAnswerPreview": "**Gallery and Image Feedback**: Alan's photography gallery is available on his website. For personalized feedback on your images, Alan offers 1-2-1 private photography lessons and mentoring services. You can submit your images for detailed, personalized feedback during these sessions.\n\n",
+      "regression951AnswerPreview": null,
+      "liveAnswerPreview": "**Gallery and Image Feedback**: Alan's photography gallery is available on his website. For personalized feedback on your images, Alan offers 1-2-1 private photography lessons and mentoring services. You can submit your images for detailed, personalized feedback during these sessions.\n\n",
+      "statusVsBaseline_951": "same",
+      "statusVsBaseline_live": "same"
+    },
+    {
+      "index": 26,
+      "query": "What is long exposure and how can I find out more about it",
+      "category": "Technical Photography Concepts",
+      "baseline": {
+        "type": "advice",
+        "status": 200,
+        "confidence": 0.8,
+        "counts": {
+          "articles": 12,
+          "services": 0,
+          "events": 0,
+          "products": 0
+        }
+      },
+      "regression951": {
+        "type": null,
+        "status": null,
+        "confidence": null,
+        "counts": {
+          "articles": 0,
+          "services": 0,
+          "events": 0,
+          "products": 0
+        }
+      },
+      "liveNow": {
+        "type": "advice",
+        "status": 200,
+        "confidence": 0.8,
+        "counts": {
+          "articles": 6,
+          "services": 0,
+          "events": 0,
+          "products": 0
+        }
+      },
+      "baselineAnswerPreview": "Here's a clear explanation: **Long Exposure Photography** uses slow shutter speeds (typically 1 second or longer) to create unique effects. It's perfect for:\n- Blurring moving water (rivers, waterfalls, oceans) to create smooth, silky effects\n- Capturing light trails from cars at night\n- Creating motion blur in clouds\n- Producing dreamy, ethereal landscape images\n\nYou'll need a tripod for stability, neutral density (ND) filters to reduce light in bright conditions, and practice with your camera'…",
+      "regression951AnswerPreview": null,
+      "liveAnswerPreview": "Here's a clear explanation: **Long Exposure Photography** uses slow shutter speeds (typically 1 second or longer) to create unique effects. It's perfect for:\n- Blurring moving water (rivers, waterfalls, oceans) to create smooth, silky effects\n- Capturing light trails from cars at night\n- Creating motion blur in clouds\n- Producing dreamy, ethereal landscape images\n\nYou'll need a tripod for stability, neutral density (ND) filters to reduce light in bright conditions, and practice with your camera'…",
+      "statusVsBaseline_951": "worse",
+      "statusVsBaseline_live": "worse"
+    },
+    {
+      "index": 27,
+      "query": "\"What is the exposure triangle (aperture, shutter, ISO)?\"",
+      "category": "Technical Photography Concepts",
+      "baseline": {
+        "type": "advice",
+        "status": 200,
+        "confidence": 0.8,
+        "counts": {
+          "articles": 12,
+          "services": 0,
+          "events": 0,
+          "products": 0
+        }
+      },
+      "regression951": {
+        "type": null,
+        "status": null,
+        "confidence": null,
+        "counts": {
+          "articles": 0,
+          "services": 0,
+          "events": 0,
+          "products": 0
+        }
+      },
+      "liveNow": {
+        "type": "advice",
+        "status": 200,
+        "confidence": 0.8,
+        "counts": {
+          "articles": 6,
+          "services": 0,
+          "events": 0,
+          "products": 0
+        }
+      },
+      "baselineAnswerPreview": "Here's a clear explanation: **The Exposure Triangle** consists of three key settings:\n- **Aperture** (f-stop): Controls depth of field and light\n- **Shutter Speed**: Controls motion blur and light\n- **ISO**: Controls sensor sensitivity and light\n\nBalancing these three creates proper exposure.\n\n This concept is essential for understanding how your camera works and achieving the results you want.",
+      "regression951AnswerPreview": null,
+      "liveAnswerPreview": "Here's a clear explanation: **The Exposure Triangle** consists of three key settings:\n- **Aperture** (f-stop): Controls depth of field and light\n- **Shutter Speed**: Controls motion blur and light\n- **ISO**: Controls sensor sensitivity and light\n\nBalancing these three creates proper exposure.\n\n This concept is essential for understanding how your camera works and achieving the results you want.",
+      "statusVsBaseline_951": "worse",
+      "statusVsBaseline_live": "worse"
+    },
+    {
+      "index": 28,
+      "query": "\"What is depth of field, and how do I control it?\"",
+      "category": "Technical Photography Concepts",
+      "baseline": {
+        "type": "advice",
+        "status": 200,
+        "confidence": 0.8,
+        "counts": {
+          "articles": 7,
+          "services": 0,
+          "events": 0,
+          "products": 0
+        }
+      },
+      "regression951": {
+        "type": null,
+        "status": null,
+        "confidence": null,
+        "counts": {
+          "articles": 0,
+          "services": 0,
+          "events": 0,
+          "products": 0
+        }
+      },
+      "liveNow": {
+        "type": "advice",
+        "status": 200,
+        "confidence": 0.8,
+        "counts": {
+          "articles": 2,
+          "services": 0,
+          "events": 0,
+          "products": 0
+        }
+      },
+      "baselineAnswerPreview": "**Depth of field** is the area of your image that appears sharp. You control it with aperture: wider apertures (lower f-numbers) create shallow depth of field, while smaller apertures (higher f-numbers) keep more of the image in focus.\n\n",
+      "regression951AnswerPreview": null,
+      "liveAnswerPreview": "**Depth of field** is the area of your image that appears sharp. You control it with aperture: wider apertures (lower f-numbers) create shallow depth of field, while smaller apertures (higher f-numbers) keep more of the image in focus.\n\n",
+      "statusVsBaseline_951": "worse",
+      "statusVsBaseline_live": "worse"
+    },
+    {
+      "index": 29,
+      "query": "What is white balance and how do I use it?",
+      "category": "Technical Photography Concepts",
+      "baseline": {
+        "type": "advice",
+        "status": 200,
+        "confidence": 0.8,
+        "counts": {
+          "articles": 1,
+          "services": 0,
+          "events": 0,
+          "products": 0
+        }
+      },
+      "regression951": {
+        "type": null,
+        "status": null,
+        "confidence": null,
+        "counts": {
+          "articles": 0,
+          "services": 0,
+          "events": 0,
+          "products": 0
+        }
+      },
+      "liveNow": {
+        "type": "advice",
+        "status": 200,
+        "confidence": 0.8,
+        "counts": {
+          "articles": 2,
+          "services": 0,
+          "events": 0,
+          "products": 0
+        }
+      },
+      "baselineAnswerPreview": "**White Balance** controls the color temperature in your photos to ensure whites appear white under different lighting conditions. Different light sources have different color temperatures:\n- Daylight: 5000-5500K (neutral)\n- Shade: 7000-8000K (blue/cool)\n- Tungsten/Incandescent: 2500-3000K (warm/yellow)\n- Fluorescent: 4000-4500K (green)\n\nYou can use presets (Daylight, Cloudy, Tungsten, etc.) or set custom white balance. For the most accurate results, use a custom white balance by photographing a…",
+      "regression951AnswerPreview": null,
+      "liveAnswerPreview": "**White Balance** controls the color temperature in your photos to ensure whites appear white under different lighting conditions. Different light sources have different color temperatures:\n- Daylight: 5000-5500K (neutral)\n- Shade: 7000-8000K (blue/cool)\n- Tungsten/Incandescent: 2500-3000K (warm/yellow)\n- Fluorescent: 4000-4500K (green)\n\nYou can use presets (Daylight, Cloudy, Tungsten, etc.) or set custom white balance. For the most accurate results, use a custom white balance by photographing a…",
+      "statusVsBaseline_951": "worse",
+      "statusVsBaseline_live": "better"
+    },
+    {
+      "index": 30,
+      "query": "What is HDR photography?",
+      "category": "Technical Photography Concepts",
+      "baseline": {
+        "type": "advice",
+        "status": 200,
+        "confidence": 0.8,
+        "counts": {
+          "articles": 12,
+          "services": 0,
+          "events": 0,
+          "products": 0
+        }
+      },
+      "regression951": {
+        "type": null,
+        "status": null,
+        "confidence": null,
+        "counts": {
+          "articles": 0,
+          "services": 0,
+          "events": 0,
+          "products": 0
+        }
+      },
+      "liveNow": {
+        "type": "advice",
+        "status": 200,
+        "confidence": 0.8,
+        "counts": {
+          "articles": 6,
+          "services": 0,
+          "events": 0,
+          "products": 0
+        }
+      },
+      "baselineAnswerPreview": "**HDR (High Dynamic Range) Photography** combines multiple exposures of the same scene (one underexposed, one correctly exposed, one overexposed) to capture detail in both shadows and highlights. This is especially useful for:\n- High-contrast scenes (bright sky with dark foreground)\n- Landscape photography with dramatic skies\n- Indoor scenes with windows\n- Any scene where the camera can't capture the full range of light in a single exposure\n\nYou can create HDR images by taking multiple shots man…",
+      "regression951AnswerPreview": null,
+      "liveAnswerPreview": "**HDR (High Dynamic Range) Photography** combines multiple exposures of the same scene (one underexposed, one correctly exposed, one overexposed) to capture detail in both shadows and highlights. This is especially useful for:\n- High-contrast scenes (bright sky with dark foreground)\n- Landscape photography with dramatic skies\n- Indoor scenes with windows\n- Any scene where the camera can't capture the full range of light in a single exposure\n\nYou can create HDR images by taking multiple shots man…",
+      "statusVsBaseline_951": "worse",
+      "statusVsBaseline_live": "worse"
+    },
+    {
+      "index": 31,
+      "query": "Who is Alan Ranger and what is his photographic background?",
+      "category": "Person Queries",
+      "baseline": {
+        "type": "advice",
+        "status": 200,
+        "confidence": 0.8,
+        "counts": {
+          "articles": 25,
+          "services": 0,
+          "events": 0,
+          "products": 0
+        }
+      },
+      "regression951": {
+        "type": null,
+        "status": null,
+        "confidence": null,
+        "counts": {
+          "articles": 0,
+          "services": 0,
+          "events": 0,
+          "products": 0
+        }
+      },
+      "liveNow": {
+        "type": "advice",
+        "status": 200,
+        "confidence": 0.8,
+        "counts": {
+          "articles": 3,
+          "services": 0,
+          "events": 0,
+          "products": 0
+        }
+      },
+      "baselineAnswerPreview": "**About Alan Ranger**: Alan is a highly qualified professional photographer and photography tutor based in the Midlands, UK, with over 20 years of experience. He is a qualified Associate of the British Institute of Professional Photographers (BIPP) and holds ARPS (Associate of the Royal Photographic Society) distinctions. Alan offers personalised photography courses and workshops tailored to all skill levels, spanning various genres from portraits to landscape and black and white photography. He…",
+      "regression951AnswerPreview": null,
+      "liveAnswerPreview": "**About Alan Ranger**: Alan is a highly qualified professional photographer and photography tutor based in the Midlands, UK, with over 20 years of experience. He is a qualified Associate of the British Institute of Professional Photographers (BIPP) and holds ARPS (Associate of the Royal Photographic Society) distinctions. Alan offers personalised photography courses and workshops tailored to all skill levels, spanning various genres from portraits to landscape and black and white photography. He…",
+      "statusVsBaseline_951": "worse",
+      "statusVsBaseline_live": "worse"
+    },
+    {
+      "index": 32,
+      "query": "Where is Alan Ranger based?",
+      "category": "Person Queries",
+      "baseline": {
+        "type": "advice",
+        "status": 200,
+        "confidence": 0.8,
+        "counts": {
+          "articles": 0,
+          "services": 0,
+          "events": 0,
+          "products": 0
+        }
+      },
+      "regression951": {
+        "type": null,
+        "status": null,
+        "confidence": null,
+        "counts": {
+          "articles": 0,
+          "services": 0,
+          "events": 0,
+          "products": 0
+        }
+      },
+      "liveNow": {
+        "type": "advice",
+        "status": 200,
+        "confidence": 0.8,
+        "counts": {
+          "articles": 0,
+          "services": 0,
+          "events": 0,
+          "products": 0
+        }
+      },
+      "baselineAnswerPreview": "Here's what I can tell you: **Where is Alan Ranger based?** Alan Ranger is based in Coventry, United Kingdom (CV4 9HW). He offers photography workshops, courses, and private lessons both in-person in the Coventry area and online via Zoom. Many of his landscape photography workshops take place in locations throughout the UK, including Wales, Devon, Yorkshire, and the Lake District.\n\n",
+      "regression951AnswerPreview": null,
+      "liveAnswerPreview": "Here's what I can tell you: **Where is Alan Ranger based?** Alan Ranger is based in Coventry, United Kingdom (CV4 9HW). He offers photography workshops, courses, and private lessons both in-person in the Coventry area and online via Zoom. Many of his landscape photography workshops take place in locations throughout the UK, including Wales, Devon, Yorkshire, and the Lake District.\n\n",
+      "statusVsBaseline_951": "same",
+      "statusVsBaseline_live": "same"
+    },
+    {
+      "index": 33,
+      "query": "Can I hire you as a professional photographer in Coventry?",
+      "category": "Person Queries",
+      "baseline": {
+        "type": "advice",
+        "status": 200,
+        "confidence": 0.8,
+        "counts": {
+          "articles": 12,
+          "services": 6,
+          "events": 0,
+          "products": 0
+        }
+      },
+      "regression951": {
+        "type": null,
+        "status": null,
+        "confidence": null,
+        "counts": {
+          "articles": 0,
+          "services": 0,
+          "events": 0,
+          "products": 0
+        }
+      },
+      "liveNow": {
+        "type": "advice",
+        "status": 200,
+        "confidence": 0.8,
+        "counts": {
+          "articles": 6,
+          "services": 6,
+          "events": 0,
+          "products": 0
+        }
+      },
+      "baselineAnswerPreview": "Here's what I can tell you: **Hiring a Professional Photographer in Coventry**: Yes, Alan Ranger offers professional photography services in Coventry and the surrounding areas, in addition to his photography education services. He provides workshops, courses, and private lessons, as well as commercial photography services for various occasions and business needs.\n\n",
+      "regression951AnswerPreview": null,
+      "liveAnswerPreview": "Here's what I can tell you: **Hiring a Professional Photographer in Coventry**: Yes, Alan Ranger offers professional photography services in Coventry and the surrounding areas, in addition to his photography education services. He provides workshops, courses, and private lessons, as well as commercial photography services for various occasions and business needs.\n\n",
+      "statusVsBaseline_951": "worse",
+      "statusVsBaseline_live": "worse"
+    },
+    {
+      "index": 34,
+      "query": "peter orton",
+      "category": "Person Queries",
+      "baseline": {
+        "type": "advice",
+        "status": 200,
+        "confidence": 0.8,
+        "counts": {
+          "articles": 2,
+          "services": 0,
+          "events": 0,
+          "products": 0
+        }
+      },
+      "regression951": {
+        "type": null,
+        "status": null,
+        "confidence": null,
+        "counts": {
+          "articles": 0,
+          "services": 0,
+          "events": 0,
+          "products": 0
+        }
+      },
+      "liveNow": {
+        "type": "advice",
+        "status": 200,
+        "confidence": 0.8,
+        "counts": {
+          "articles": 1,
+          "services": 0,
+          "events": 0,
+          "products": 0
+        }
+      },
+      "baselineAnswerPreview": "# Case Study - Peter Orton - ARPS | RPS Distinctions Panel **Source**: [https://www.alanranger.com/blog-on-photography/peter-orton-rps-distinctions](https://www.alanranger.com/blog-on-photography/peter-orton-rps-distinctions) CASE STUDY - PETER ORTON - ARPS | RPS DISTINCTIONS PANEL",
+      "regression951AnswerPreview": null,
+      "liveAnswerPreview": "# Case Study - Peter Orton - ARPS | RPS Distinctions Panel **Source**: [https://www.alanranger.com/blog-on-photography/peter-orton-rps-distinctions](https://www.alanranger.com/blog-on-photography/peter-orton-rps-distinctions) CASE STUDY - PETER ORTON - ARPS | RPS DISTINCTIONS PANEL",
+      "statusVsBaseline_951": "worse",
+      "statusVsBaseline_live": "worse"
+    },
+    {
+      "index": 35,
+      "query": "who is alan ranger",
+      "category": "Person Queries",
+      "baseline": {
+        "type": "advice",
+        "status": 200,
+        "confidence": 0.8,
+        "counts": {
+          "articles": 25,
+          "services": 0,
+          "events": 0,
+          "products": 0
+        }
+      },
+      "regression951": {
+        "type": null,
+        "status": null,
+        "confidence": null,
+        "counts": {
+          "articles": 0,
+          "services": 0,
+          "events": 0,
+          "products": 0
+        }
+      },
+      "liveNow": {
+        "type": "advice",
+        "status": 200,
+        "confidence": 0.8,
+        "counts": {
+          "articles": 3,
+          "services": 0,
+          "events": 0,
+          "products": 0
+        }
+      },
+      "baselineAnswerPreview": "**About Alan Ranger**: Alan is a highly qualified professional photographer and photography tutor based in the Midlands, UK, with over 20 years of experience. He is a qualified Associate of the British Institute of Professional Photographers (BIPP) and holds ARPS (Associate of the Royal Photographic Society) distinctions. Alan offers personalised photography courses and workshops tailored to all skill levels, spanning various genres from portraits to landscape and black and white photography. He…",
+      "regression951AnswerPreview": null,
+      "liveAnswerPreview": "**About Alan Ranger**: Alan is a highly qualified professional photographer and photography tutor based in the Midlands, UK, with over 20 years of experience. He is a qualified Associate of the British Institute of Professional Photographers (BIPP) and holds ARPS (Associate of the Royal Photographic Society) distinctions. Alan offers personalised photography courses and workshops tailored to all skill levels, spanning various genres from portraits to landscape and black and white photography. He…",
+      "statusVsBaseline_951": "worse",
+      "statusVsBaseline_live": "worse"
+    },
+    {
+      "index": 36,
+      "query": "How do I subscribe to the free online photography course?",
+      "category": "Technical Advice",
+      "baseline": {
+        "type": "advice",
+        "status": 200,
+        "confidence": 0.8,
+        "counts": {
+          "articles": 0,
+          "services": 1,
+          "events": 0,
+          "products": 0
+        }
+      },
+      "regression951": {
+        "type": null,
+        "status": null,
+        "confidence": null,
+        "counts": {
+          "articles": 0,
+          "services": 0,
+          "events": 0,
+          "products": 0
+        }
+      },
+      "liveNow": {
+        "type": "advice",
+        "status": 200,
+        "confidence": 0.8,
+        "counts": {
+          "articles": 0,
+          "services": 2,
+          "events": 0,
+          "products": 0
+        }
+      },
+      "baselineAnswerPreview": "**How to Subscribe to the Free Online Photography Course**: Click the \"Sign up — Free Online Course\" button on the course page to register instantly with your email address. You'll receive an email to verify and confirm your subscription. Once verified, you'll gain instant access to all 60 free modules.\n\n",
+      "regression951AnswerPreview": null,
+      "liveAnswerPreview": "**How to Subscribe to the Free Online Photography Course**: Click the \"Sign up — Free Online Course\" button on the course page to register instantly with your email address. You'll receive an email to verify and confirm your subscription. Once verified, you'll gain instant access to all 60 free modules.\n\n",
+      "statusVsBaseline_951": "worse",
+      "statusVsBaseline_live": "better"
+    },
+    {
+      "index": 37,
+      "query": "How do I improve my composition and storytelling in photos?",
+      "category": "Technical Advice",
+      "baseline": {
+        "type": "advice",
+        "status": 200,
+        "confidence": 0.8,
+        "counts": {
+          "articles": 11,
+          "services": 0,
+          "events": 0,
+          "products": 0
+        }
+      },
+      "regression951": {
+        "type": null,
+        "status": null,
+        "confidence": null,
+        "counts": {
+          "articles": 0,
+          "services": 0,
+          "events": 0,
+          "products": 0
+        }
+      },
+      "liveNow": {
+        "type": "advice",
+        "status": 200,
+        "confidence": 0.8,
+        "counts": {
+          "articles": 6,
+          "services": 0,
+          "events": 0,
+          "products": 0
+        }
+      },
+      "baselineAnswerPreview": "Great composition is about leading the viewer's eye through your image. Key techniques include the rule of thirds, leading lines, framing, and creating visual balance. The goal is to tell a story or convey emotion through your arrangement of elements.\n\n",
+      "regression951AnswerPreview": null,
+      "liveAnswerPreview": "Great composition is about leading the viewer's eye through your image. Key techniques include the rule of thirds, leading lines, framing, and creating visual balance. The goal is to tell a story or convey emotion through your arrangement of elements.\n\n",
+      "statusVsBaseline_951": "worse",
+      "statusVsBaseline_live": "worse"
+    },
+    {
+      "index": 38,
+      "query": "How do I use flash photography?",
+      "category": "Technical Advice",
+      "baseline": {
+        "type": "advice",
+        "status": 200,
+        "confidence": 0.8,
+        "counts": {
+          "articles": 12,
+          "services": 0,
+          "events": 0,
+          "products": 6
+        }
+      },
+      "regression951": {
+        "type": null,
+        "status": null,
+        "confidence": null,
+        "counts": {
+          "articles": 0,
+          "services": 0,
+          "events": 0,
+          "products": 0
+        }
+      },
+      "liveNow": {
+        "type": "advice",
+        "status": 200,
+        "confidence": 0.8,
+        "counts": {
+          "articles": 6,
+          "services": 0,
+          "events": 0,
+          "products": 6
+        }
+      },
+      "baselineAnswerPreview": "**Flash Photography** helps you add light to your images in low-light situations or fill in shadows. Key techniques include:\n- **Bounce Flash**: Point the flash at a ceiling or wall to create softer, more natural-looking light\n- **Fill Flash**: Use flash in daylight to fill in shadows on your subject's face\n- **Flash Compensation**: Adjust flash power (-1 to -3 stops) to balance with ambient light\n- **Off-Camera Flash**: Position the flash away from the camera for more directional lighting\n- **D…",
+      "regression951AnswerPreview": null,
+      "liveAnswerPreview": "**Flash Photography** helps you add light to your images in low-light situations or fill in shadows. Key techniques include:\n- **Bounce Flash**: Point the flash at a ceiling or wall to create softer, more natural-looking light\n- **Fill Flash**: Use flash in daylight to fill in shadows on your subject's face\n- **Flash Compensation**: Adjust flash power (-1 to -3 stops) to balance with ambient light\n- **Off-Camera Flash**: Position the flash away from the camera for more directional lighting\n- **D…",
+      "statusVsBaseline_951": "worse",
+      "statusVsBaseline_live": "worse"
+    },
+    {
+      "index": 39,
+      "query": "How do I edit RAW files?",
+      "category": "Technical Advice",
+      "baseline": {
+        "type": "advice",
+        "status": 200,
+        "confidence": 0.8,
+        "counts": {
+          "articles": 9,
+          "services": 0,
+          "events": 0,
+          "products": 0
+        }
+      },
+      "regression951": {
+        "type": null,
+        "status": null,
+        "confidence": null,
+        "counts": {
+          "articles": 0,
+          "services": 0,
+          "events": 0,
+          "products": 0
+        }
+      },
+      "liveNow": {
+        "type": "advice",
+        "status": 200,
+        "confidence": 0.8,
+        "counts": {
+          "articles": 6,
+          "services": 0,
+          "events": 6,
+          "products": 2
+        }
+      },
+      "baselineAnswerPreview": "**How to Edit RAW Files**: RAW files require photo editing software to process. You'll need software like Adobe Lightroom, Photoshop, or free alternatives like Darktable or RawTherapee. Key steps:\n- Import RAW files into your editing software\n- Adjust exposure, white balance, and color temperature\n- Apply sharpening and noise reduction\n- Make creative adjustments to contrast, saturation, and highlights/shadows\n- Export as JPEG or other formats for sharing\n\nRAW files give you much more flexibilit…",
+      "regression951AnswerPreview": null,
+      "liveAnswerPreview": "**How to Edit RAW Files**: RAW files require photo editing software to process. You'll need software like Adobe Lightroom, Photoshop, or free alternatives like Darktable or RawTherapee. Key steps:\n- Import RAW files into your editing software\n- Adjust exposure, white balance, and color temperature\n- Apply sharpening and noise reduction\n- Make creative adjustments to contrast, saturation, and highlights/shadows\n- Export as JPEG or other formats for sharing\n\nRAW files give you much more flexibilit…",
+      "statusVsBaseline_951": "worse",
+      "statusVsBaseline_live": "better"
+    },
+    {
+      "index": 40,
+      "query": "How do I improve my photography skills?",
+      "category": "Technical Advice",
+      "baseline": {
+        "type": "advice",
+        "status": 200,
+        "confidence": 0.8,
+        "counts": {
+          "articles": 12,
+          "services": 0,
+          "events": 0,
+          "products": 0
+        }
+      },
+      "regression951": {
+        "type": null,
+        "status": null,
+        "confidence": null,
+        "counts": {
+          "articles": 0,
+          "services": 0,
+          "events": 0,
+          "products": 0
+        }
+      },
+      "liveNow": {
+        "type": "advice",
+        "status": 200,
+        "confidence": 0.8,
+        "counts": {
+          "articles": 6,
+          "services": 6,
+          "events": 0,
+          "products": 0
+        }
+      },
+      "baselineAnswerPreview": "**How to Improve Your Photography Skills**: Here are key ways to develop as a photographer:\n- **Practice regularly**: Take photos regularly and experiment with different subjects and settings\n- **Learn the fundamentals**: Master exposure (aperture, shutter speed, ISO), composition techniques, and focusing\n- **Study others' work**: Analyze photographs you admire to understand what makes them effective\n- **Get feedback**: Join photography communities, share your work, and learn from critiques\n- **…",
+      "regression951AnswerPreview": null,
+      "liveAnswerPreview": "**How to Improve Your Photography Skills**: Here are key ways to develop as a photographer:\n- **Practice regularly**: Take photos regularly and experiment with different subjects and settings\n- **Learn the fundamentals**: Master exposure (aperture, shutter speed, ISO), composition techniques, and focusing\n- **Study others' work**: Analyze photographs you admire to understand what makes them effective\n- **Get feedback**: Join photography communities, share your work, and learn from critiques\n- **…",
+      "statusVsBaseline_951": "worse",
+      "statusVsBaseline_live": "mixed"
+    }
+  ]
+}

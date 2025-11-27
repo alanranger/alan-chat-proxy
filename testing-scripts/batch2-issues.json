@@ -1,0 +1,98 @@
+[
+  {
+    "question": "Do you I get a certificate with the photography course",
+    "relatedScore": 75,
+    "botScore": 100,
+    "relatedNotes": "doesnt need the articles for this questions, services to free online course is enough",
+    "botNotes": "",
+    "category": "Course/Workshop Logistics"
+  },
+  {
+    "question": "Is the online photography course really free",
+    "relatedScore": 30,
+    "botScore": 50,
+    "relatedNotes": "doesnt need articles or events, service page is enough",
+    "botNotes": "duplicates some text",
+    "category": "Course/Workshop Logistics"
+  },
+  {
+    "question": "What courses do you offer for complete beginners?",
+    "relatedScore": 75,
+    "botScore": 50,
+    "relatedNotes": "shows relevant course events and service pages",
+    "botNotes": "initial response talks about workshops that are not the same as courses",
+    "category": "Course/Workshop Logistics"
+  },
+  {
+    "question": "How many weeks is the beginners' photography course?",
+    "relatedScore": 50,
+    "botScore": 30,
+    "relatedNotes": "to many irrelavent articles - correct service pages",
+    "botNotes": "didnt answer the question and should be able to detect its 3 weeks from data",
+    "category": "Course/Workshop Logistics"
+  },
+  {
+    "question": "How do I get personalised feedback on my images",
+    "relatedScore": 70,
+    "botScore": 100,
+    "relatedNotes": "irrelevant articles showing, perfect list of services",
+    "botNotes": "",
+    "category": "Business Information"
+  },
+  {
+    "question": "How can I contact you or book a discovery call?",
+    "relatedScore": 50,
+    "botScore": 100,
+    "relatedNotes": "showing service pages that are totally irrelevant rather than the contact us landing page",
+    "botNotes": "",
+    "category": "Business Information"
+  },
+  {
+    "question": "What is your cancellation or refund policy for courses/workshops?",
+    "relatedScore": 30,
+    "botScore": 100,
+    "relatedNotes": "should be able to show a landing page tile for terms and conditions doesnt need to show all these articles and irrelevant service pages",
+    "botNotes": "",
+    "category": "Business Information"
+  },
+  {
+    "question": "Where is your gallery and can I submit my images for feedback?",
+    "relatedScore": 1,
+    "botScore": 100,
+    "relatedNotes": "should be showing 1-2-1 private lessons online.  doesnt need any articles",
+    "botNotes": "",
+    "category": "Business Information"
+  },
+  {
+    "question": "What is depth of field",
+    "relatedScore": 0,
+    "botScore": 0,
+    "relatedNotes": "100",
+    "botNotes": "100",
+    "category": ""
+  },
+  {
+    "question": "Where is Alan Ranger based?",
+    "relatedScore": 50,
+    "botScore": 100,
+    "relatedNotes": "irrelevant related articles - should just link to about alan landing page",
+    "botNotes": "",
+    "category": "Person Queries"
+  },
+  {
+    "question": "Can I hire you as a professional photographer in Coventry?",
+    "relatedScore": 50,
+    "botScore": 100,
+    "relatedNotes": "correct service pages doesnt need articles",
+    "botNotes": "",
+    "category": "Person Queries"
+  },
+  {
+    "question": "How do I subscribe to the free online photography course?",
+    "relatedScore": 70,
+    "botScore": 100,
+    "relatedNotes": "doesnt need to show articles in this list as they are irrelevant",
+    "botNotes": "",
+    "category": "Technical Advice"
+  }
+]

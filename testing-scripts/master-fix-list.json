@@ -1,0 +1,664 @@
+{
+  "summary": {
+    "total": 68,
+    "ok": 25,
+    "needsFix": 14,
+    "needsAnalysis": 29
+  },
+  "issuesToFix": [
+    {
+      "canonicalId": 57,
+      "question": "what is depth of field",
+      "category": "Technical Photography Concepts",
+      "source": "interactive",
+      "botScore": 0,
+      "relatedScore": 0,
+      "botNotes": "100",
+      "relatedNotes": "100",
+      "priority": "HIGH",
+      "needsFix": true
+    },
+    {
+      "canonicalId": 30,
+      "question": "Where is your gallery and can I submit my images for feedback?",
+      "category": "Business Information",
+      "source": "interactive",
+      "botScore": 100,
+      "relatedScore": 1,
+      "botNotes": "",
+      "relatedNotes": "should be showing 1-2-1 private lessons online.  doesnt need any articles",
+      "priority": "HIGH",
+      "needsFix": true
+    },
+    {
+      "canonicalId": 32,
+      "question": "What is white balance and how do I use it?",
+      "category": "Technical Photography Concepts",
+      "source": "interactive",
+      "botScore": 10,
+      "relatedScore": 100,
+      "botNotes": "",
+      "relatedNotes": "",
+      "priority": "HIGH",
+      "needsFix": true
+    },
+    {
+      "canonicalId": 16,
+      "question": "What is your cancellation or refund policy for courses/workshops?",
+      "category": "Business Information",
+      "source": "interactive",
+      "botScore": 100,
+      "relatedScore": 30,
+      "botNotes": "",
+      "relatedNotes": "should be able to show a landing page tile for terms and conditions doesnt need to show all these articles and irrelevant service pages",
+      "priority": "HIGH",
+      "needsFix": true
+    },
+    {
+      "canonicalId": 25,
+      "question": "Is the online photography course really free",
+      "category": "Course/Workshop Logistics",
+      "source": "interactive",
+      "botScore": 50,
+      "relatedScore": 30,
+      "botNotes": "duplicates some text",
+      "relatedNotes": "doesnt need articles or events, service page is enough",
+      "priority": "HIGH",
+      "needsFix": true
+    },
+    {
+      "canonicalId": 27,
+      "question": "How many weeks is the beginners' photography course?",
+      "category": "Course/Workshop Logistics",
+      "source": "interactive",
+      "botScore": 30,
+      "relatedScore": 50,
+      "botNotes": "didnt answer the question and should be able to detect its 3 weeks from data",
+      "relatedNotes": "to many irrelavent articles - correct service pages",
+      "priority": "HIGH",
+      "needsFix": true
+    },
+    {
+      "canonicalId": 26,
+      "question": "What courses do you offer for complete beginners?",
+      "category": "Course/Workshop Logistics",
+      "source": "interactive",
+      "botScore": 50,
+      "relatedScore": 75,
+      "botNotes": "initial response talks about workshops that are not the same as courses",
+      "relatedNotes": "shows relevant course events and service pages",
+      "priority": "MEDIUM",
+      "needsFix": true
+    },
+    {
+      "canonicalId": 29,
+      "question": "How can I contact you or book a discovery call?",
+      "category": "Business Information",
+      "source": "interactive",
+      "botScore": 100,
+      "relatedScore": 50,
+      "botNotes": "",
+      "relatedNotes": "showing service pages that are totally irrelevant rather than the contact us landing page",
+      "priority": "MEDIUM",
+      "needsFix": true
+    },
+    {
+      "canonicalId": 34,
+      "question": "Where is Alan Ranger based?",
+      "category": "Person Queries",
+      "source": "interactive",
+      "botScore": 100,
+      "relatedScore": 50,
+      "botNotes": "",
+      "relatedNotes": "irrelevant related articles - should just link to about alan landing page",
+      "priority": "MEDIUM",
+      "needsFix": true
+    },
+    {
+      "canonicalId": 35,
+      "question": "Can I hire you as a professional photographer in Coventry?",
+      "category": "Person Queries",
+      "source": "interactive",
+      "botScore": 100,
+      "relatedScore": 50,
+      "botNotes": "",
+      "relatedNotes": "correct service pages doesnt need articles",
+      "priority": "MEDIUM",
+      "needsFix": true
+    },
+    {
+      "canonicalId": 28,
+      "question": "How do I get personalised feedback on my images",
+      "category": "Business Information",
+      "source": "interactive",
+      "botScore": 100,
+      "relatedScore": 70,
+      "botNotes": "",
+      "relatedNotes": "irrelevant articles showing, perfect list of services",
+      "priority": "LOW",
+      "needsFix": true
+    },
+    {
+      "canonicalId": 38,
+      "question": "How do I subscribe to the free online photography course?",
+      "category": "Technical Advice",
+      "source": "interactive",
+      "botScore": 100,
+      "relatedScore": 70,
+      "botNotes": "",
+      "relatedNotes": "doesnt need to show articles in this list as they are irrelevant",
+      "priority": "LOW",
+      "needsFix": true
+    },
+    {
+      "canonicalId": 23,
+      "question": "Do you I get a certificate with the photography course",
+      "category": "Course/Workshop Logistics",
+      "source": "interactive",
+      "botScore": 100,
+      "relatedScore": 75,
+      "botNotes": "",
+      "relatedNotes": "doesnt need the articles for this questions, services to free online course is enough",
+      "priority": "LOW",
+      "needsFix": true
+    },
+    {
+      "canonicalId": 24,
+      "question": "Do I need a laptop for the lightroom course",
+      "category": "Course/Workshop Logistics",
+      "source": "interactive",
+      "botScore": 75,
+      "relatedScore": 100,
+      "botNotes": "should be able to answer the question in the initial response",
+      "relatedNotes": "",
+      "priority": "LOW",
+      "needsFix": true
+    }
+  ],
+  "needsAnalysis": [
+    {
+      "canonicalId": 14,
+      "question": "\"What is the exposure triangle (aperture, shutter, ISO)?\"",
+      "category": "Technical Photography Concepts",
+      "source": "regression-only",
+      "needsFix": "unknown",
+      "status": "Needs regression test analysis"
+    },
+    {
+      "canonicalId": 31,
+      "question": "\"What is depth of field, and how do I control it?\"",
+      "category": "Technical Photography Concepts",
+      "source": "regression-only",
+      "needsFix": "unknown",
+      "status": "Needs regression test analysis"
+    },
+    {
+      "canonicalId": 41,
+      "question": "how do I focus in landscape photography",
+      "category": "Technical Advice",
+      "source": "regression-only",
+      "needsFix": "unknown",
+      "status": "Needs regression test analysis"
+    },
+    {
+      "canonicalId": 42,
+      "question": "how do I improve my photography",
+      "category": "Technical Advice",
+      "source": "regression-only",
+      "needsFix": "unknown",
+      "status": "Needs regression test analysis"
+    },
+    {
+      "canonicalId": 43,
+      "question": "how do I photograph autumn colours",
+      "category": "Technical Advice",
+      "source": "regression-only",
+      "needsFix": "unknown",
+      "status": "Needs regression test analysis"
+    },
+    {
+      "canonicalId": 44,
+      "question": "how do I photograph bluebells",
+      "category": "Technical Advice",
+      "source": "regression-only",
+      "needsFix": "unknown",
+      "status": "Needs regression test analysis"
+    },
+    {
+      "canonicalId": 45,
+      "question": "how do I photograph flowers",
+      "category": "Technical Advice",
+      "source": "regression-only",
+      "needsFix": "unknown",
+      "status": "Needs regression test analysis"
+    },
+    {
+      "canonicalId": 46,
+      "question": "how do I photograph people",
+      "category": "Technical Advice",
+      "source": "regression-only",
+      "needsFix": "unknown",
+      "status": "Needs regression test analysis"
+    },
+    {
+      "canonicalId": 47,
+      "question": "how do I photograph seascapes",
+      "category": "Technical Advice",
+      "source": "regression-only",
+      "needsFix": "unknown",
+      "status": "Needs regression test analysis"
+    },
+    {
+      "canonicalId": 48,
+      "question": "how do I photograph sunsets",
+      "category": "Technical Advice",
+      "source": "regression-only",
+      "needsFix": "unknown",
+      "status": "Needs regression test analysis"
+    },
+    {
+      "canonicalId": 49,
+      "question": "how do I photograph waterfalls",
+      "category": "Technical Advice",
+      "source": "regression-only",
+      "needsFix": "unknown",
+      "status": "Needs regression test analysis"
+    },
+    {
+      "canonicalId": 50,
+      "question": "how do I photograph wildlife",
+      "category": "Technical Advice",
+      "source": "regression-only",
+      "needsFix": "unknown",
+      "status": "Needs regression test analysis"
+    },
+    {
+      "canonicalId": 51,
+      "question": "how do I take better landscape photos",
+      "category": "Technical Advice",
+      "source": "regression-only",
+      "needsFix": "unknown",
+      "status": "Needs regression test analysis"
+    },
+    {
+      "canonicalId": 52,
+      "question": "how do I use a tripod",
+      "category": "Technical Advice",
+      "source": "regression-only",
+      "needsFix": "unknown",
+      "status": "Needs regression test analysis"
+    },
+    {
+      "canonicalId": 53,
+      "question": "what camera should I buy",
+      "category": "Equipment Recommendations",
+      "source": "regression-only",
+      "needsFix": "unknown",
+      "status": "Needs regression test analysis"
+    },
+    {
+      "canonicalId": 54,
+      "question": "what is a histogram",
+      "category": "Technical Photography Concepts",
+      "source": "regression-only",
+      "needsFix": "unknown",
+      "status": "Needs regression test analysis"
+    },
+    {
+      "canonicalId": 55,
+      "question": "what is aperture",
+      "category": "Technical Photography Concepts",
+      "source": "regression-only",
+      "needsFix": "unknown",
+      "status": "Needs regression test analysis"
+    },
+    {
+      "canonicalId": 56,
+      "question": "what is composition in photography",
+      "category": "Technical Photography Concepts",
+      "source": "regression-only",
+      "needsFix": "unknown",
+      "status": "Needs regression test analysis"
+    },
+    {
+      "canonicalId": 58,
+      "question": "what is golden hour",
+      "category": "Technical Photography Concepts",
+      "source": "regression-only",
+      "needsFix": "unknown",
+      "status": "Needs regression test analysis"
+    },
+    {
+      "canonicalId": 59,
+      "question": "what is ISO",
+      "category": "Technical Photography Concepts",
+      "source": "regression-only",
+      "needsFix": "unknown",
+      "status": "Needs regression test analysis"
+    },
+    {
+      "canonicalId": 60,
+      "question": "what is long exposure photography",
+      "category": "Technical Photography Concepts",
+      "source": "regression-only",
+      "needsFix": "unknown",
+      "status": "Needs regression test analysis"
+    },
+    {
+      "canonicalId": 61,
+      "question": "what is macro photography",
+      "category": "Technical Photography Concepts",
+      "source": "regression-only",
+      "needsFix": "unknown",
+      "status": "Needs regression test analysis"
+    },
+    {
+      "canonicalId": 62,
+      "question": "what is portrait photography",
+      "category": "Technical Photography Concepts",
+      "source": "regression-only",
+      "needsFix": "unknown",
+      "status": "Needs regression test analysis"
+    },
+    {
+      "canonicalId": 63,
+      "question": "what is shutter speed",
+      "category": "Technical Photography Concepts",
+      "source": "regression-only",
+      "needsFix": "unknown",
+      "status": "Needs regression test analysis"
+    },
+    {
+      "canonicalId": 64,
+      "question": "what is the best camera for beginners",
+      "category": "Equipment Recommendations",
+      "source": "regression-only",
+      "needsFix": "unknown",
+      "status": "Needs regression test analysis"
+    },
+    {
+      "canonicalId": 65,
+      "question": "what is the best lens for landscape photography",
+      "category": "Equipment Recommendations",
+      "source": "regression-only",
+      "needsFix": "unknown",
+      "status": "Needs regression test analysis"
+    },
+    {
+      "canonicalId": 66,
+      "question": "what is the best time of day for landscape photography",
+      "category": "Technical Photography Concepts",
+      "source": "regression-only",
+      "needsFix": "unknown",
+      "status": "Needs regression test analysis"
+    },
+    {
+      "canonicalId": 67,
+      "question": "what is the rule of thirds",
+      "category": "Technical Photography Concepts",
+      "source": "regression-only",
+      "needsFix": "unknown",
+      "status": "Needs regression test analysis"
+    },
+    {
+      "canonicalId": 68,
+      "question": "what settings should I use for landscape photography",
+      "category": "Technical Advice",
+      "source": "regression-only",
+      "needsFix": "unknown",
+      "status": "Needs regression test analysis"
+    }
+  ],
+  "ok": [
+    {
+      "canonicalId": 1,
+      "question": "whens the next bluebell workshops and whats the cost",
+      "category": "Event Queries",
+      "source": "interactive",
+      "botScore": 100,
+      "relatedScore": 100,
+      "needsFix": false,
+      "status": "OK"
+    },
+    {
+      "canonicalId": 2,
+      "question": "when is the next devon workshop",
+      "category": "Event Queries",
+      "source": "interactive",
+      "botScore": 100,
+      "relatedScore": 100,
+      "needsFix": false,
+      "status": "OK"
+    },
+    {
+      "canonicalId": 3,
+      "question": "what is your next workshop date and where is it",
+      "category": "Event Queries",
+      "source": "interactive",
+      "botScore": 100,
+      "relatedScore": 100,
+      "needsFix": false,
+      "status": "OK"
+    },
+    {
+      "canonicalId": 4,
+      "question": "when are your next Autumn workshops and where are they?",
+      "category": "Event Queries",
+      "source": "interactive",
+      "botScore": 100,
+      "relatedScore": 100,
+      "needsFix": false,
+      "status": "OK"
+    },
+    {
+      "canonicalId": 5,
+      "question": "How long are your workshops?",
+      "category": "Event Queries",
+      "source": "interactive",
+      "botScore": 100,
+      "relatedScore": 100,
+      "needsFix": false,
+      "status": "OK"
+    },
+    {
+      "canonicalId": 6,
+      "question": "How much is a residential photography course and does it include B&B",
+      "category": "Course/Workshop Logistics",
+      "source": "interactive",
+      "botScore": 100,
+      "relatedScore": 100,
+      "needsFix": false,
+      "status": "OK"
+    },
+    {
+      "canonicalId": 7,
+      "question": "What is the difference between prime and zoom lenses?",
+      "category": "Equipment Recommendations",
+      "source": "interactive",
+      "botScore": 100,
+      "relatedScore": 100,
+      "needsFix": false,
+      "status": "OK"
+    },
+    {
+      "canonicalId": 8,
+      "question": "What memory card should I buy?",
+      "category": "Equipment Recommendations",
+      "source": "interactive",
+      "botScore": 100,
+      "relatedScore": 100,
+      "needsFix": false,
+      "status": "OK"
+    },
+    {
+      "canonicalId": 9,
+      "question": "Do you offer gift vouchers?",
+      "category": "Business Information",
+      "source": "interactive",
+      "botScore": 100,
+      "relatedScore": 100,
+      "needsFix": false,
+      "status": "OK"
+    },
+    {
+      "canonicalId": 10,
+      "question": "What is HDR photography?",
+      "category": "Technical Photography Concepts",
+      "source": "interactive",
+      "botScore": 100,
+      "relatedScore": 100,
+      "needsFix": false,
+      "status": "OK"
+    },
+    {
+      "canonicalId": 11,
+      "question": "What tripod do you recommend",
+      "category": "Equipment Recommendations",
+      "source": "interactive",
+      "botScore": 100,
+      "relatedScore": 100,
+      "needsFix": false,
+      "status": "OK"
+    },
+    {
+      "canonicalId": 12,
+      "question": "What is long exposure and how can I find out more about it",
+      "category": "Technical Photography Concepts",
+      "source": "interactive",
+      "botScore": 100,
+      "relatedScore": 100,
+      "needsFix": false,
+      "status": "OK"
+    },
+    {
+      "canonicalId": 13,
+      "question": "How do I improve my composition and storytelling in photos?",
+      "category": "Technical Advice",
+      "source": "interactive",
+      "botScore": 100,
+      "relatedScore": 100,
+      "needsFix": false,
+      "status": "OK"
+    },
+    {
+      "canonicalId": 15,
+      "question": "How do I improve my photography skills?",
+      "category": "Technical Advice",
+      "source": "interactive",
+      "botScore": 100,
+      "relatedScore": 100,
+      "needsFix": false,
+      "status": "OK"
+    },
+    {
+      "canonicalId": 17,
+      "question": "Do you do astrophotography workshops",
+      "category": "General Queries",
+      "source": "interactive",
+      "botScore": 100,
+      "relatedScore": 100,
+      "needsFix": false,
+      "status": "OK"
+    },
+    {
+      "canonicalId": 18,
+      "question": "Can my 14yr old attend your workshop",
+      "category": "General Queries",
+      "source": "interactive",
+      "botScore": 100,
+      "relatedScore": 100,
+      "needsFix": false,
+      "status": "OK"
+    },
+    {
+      "canonicalId": 19,
+      "question": "My pictures never seem sharp.  Can you advise on what I am doing wrong",
+      "category": "General Queries",
+      "source": "interactive",
+      "botScore": 100,
+      "relatedScore": 100,
+      "needsFix": false,
+      "status": "OK"
+    },
+    {
+      "canonicalId": 20,
+      "question": "What types of photography services do you offer?",
+      "category": "General Queries",
+      "source": "interactive",
+      "botScore": 100,
+      "relatedScore": 100,
+      "needsFix": false,
+      "status": "OK"
+    },
+    {
+      "canonicalId": 21,
+      "question": "What sort of camera do I need for your camera course",
+      "category": "Equipment Recommendations",
+      "source": "interactive",
+      "botScore": 100,
+      "relatedScore": 100,
+      "needsFix": false,
+      "status": "OK"
+    },
+    {
+      "canonicalId": 22,
+      "question": "What gear or equipment do I need to bring to a workshop?",
+      "category": "Equipment Recommendations",
+      "source": "interactive",
+      "botScore": 100,
+      "relatedScore": 100,
+      "needsFix": false,
+      "status": "OK"
+    },
+    {
+      "canonicalId": 33,
+      "question": "Who is Alan Ranger and what is his photographic background?",
+      "category": "Person Queries",
+      "source": "interactive",
+      "botScore": 100,
+      "relatedScore": 100,
+      "needsFix": false,
+      "status": "OK"
+    },
+    {
+      "canonicalId": 36,
+      "question": "peter orton",
+      "category": "Person Queries",
+      "source": "interactive",
+      "botScore": 100,
+      "relatedScore": 100,
+      "needsFix": false,
+      "status": "OK"
+    },
+    {
+      "canonicalId": 37,
+      "question": "who is alan ranger",
+      "category": "Person Queries",
+      "source": "interactive",
+      "botScore": 100,
+      "relatedScore": 100,
+      "needsFix": false,
+      "status": "OK"
+    },
+    {
+      "canonicalId": 39,
+      "question": "How do I use flash photography?",
+      "category": "Technical Advice",
+      "source": "interactive",
+      "botScore": 100,
+      "relatedScore": 100,
+      "needsFix": false,
+      "status": "OK"
+    },
+    {
+      "canonicalId": 40,
+      "question": "How do I edit RAW files?",
+      "category": "Technical Advice",
+      "source": "interactive",
+      "botScore": 100,
+      "relatedScore": 100,
+      "needsFix": false,
+      "status": "OK"
+    }
+  ]
+}

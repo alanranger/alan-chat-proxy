@@ -627,14 +627,15 @@
         <table class="results-table" id="resultsTable">
             <thead>
                 <tr>
-                    <th onclick="sortTable(0)" class="sortable">Question ↕️</th>
-                    <th onclick="sortTable(1)" class="sortable">Status ↕️</th>
-                    <th onclick="sortTable(2)" class="sortable">Bot Response Score ↕️</th>
-                    <th onclick="sortTable(3)" class="sortable">Bot Response Notes ↕️</th>
-                    <th onclick="sortTable(4)" class="sortable">Related Score ↕️</th>
-                    <th onclick="sortTable(5)" class="sortable">Related Notes ↕️</th>
-                    <th onclick="sortTable(6)" class="sortable">Other Notes ↕️</th>
-                    <th onclick="sortTable(7)" class="sortable">Category ↕️</th>
+                    <th onclick="sortTable(0)" class="sortable">Question # ↕️</th>
+                    <th onclick="sortTable(1)" class="sortable">Question ↕️</th>
+                    <th onclick="sortTable(2)" class="sortable">Status ↕️</th>
+                    <th onclick="sortTable(3)" class="sortable">Bot Response Score ↕️</th>
+                    <th onclick="sortTable(4)" class="sortable">Bot Response Notes ↕️</th>
+                    <th onclick="sortTable(5)" class="sortable">Related Score ↕️</th>
+                    <th onclick="sortTable(6)" class="sortable">Related Notes ↕️</th>
+                    <th onclick="sortTable(7)" class="sortable">Other Notes ↕️</th>
+                    <th onclick="sortTable(8)" class="sortable">Category ↕️</th>
                 </tr>
             </thead>
             <tbody id="resultsBody">
@@ -1787,21 +1788,17 @@
                 }
             }
             
-            // Update stats immediately (lightweight)
+            // Update stats immediately
             addDebugLog('🔍 DEBUG: About to call updateStats()');
             updateStats();
             
-            // Defer heavy operations to prevent UI blocking
-            setTimeout(() => {
-                addDebugLog('🔍 DEBUG: About to call updateResultsTable()');
-                updateResultsTable();
-            }, 0);
+            // Update table and summary immediately (no delays)
+            addDebugLog('🔍 DEBUG: About to call updateResultsTable()');
+            updateResultsTable();
             
-            setTimeout(() => {
-                addDebugLog('🔍 DEBUG: About to call updateSummaryStats()');
-                updateSummaryStats(); // Force update of ALL masonry blocks
-                addDebugLog('🔍 DEBUG: All update functions called');
-            }, 0);
+            addDebugLog('🔍 DEBUG: About to call updateSummaryStats()');
+            updateSummaryStats();
+            addDebugLog('🔍 DEBUG: All update functions called');
             
             // Move to next question (or show completion message)
             if (currentQuestionIndex + 1 >= filteredQuestions.length) {
@@ -1811,10 +1808,8 @@
                 // Stay on current question to show the completed state
             } else {
                 addDebugLog(`🔍 DEBUG: Moving to next question: ${currentQuestionIndex + 1}`);
-                // Defer loading next question to prevent blocking
-                setTimeout(() => {
-                    loadQuestion(currentQuestionIndex + 1);
-                }, 100);
+                // Load next question immediately
+                loadQuestion(currentQuestionIndex + 1);
             }
         }
 
@@ -2178,7 +2173,7 @@
             allResults.push(...questionMap.values());
             
             // Always show ALL questions with their results
-            testQuestions.forEach(question => {
+            testQuestions.forEach((question, index) => {
                 addDebugLog(`🔍 DEBUG: Processing question in table: ${question.question}`);
                 
                 // Find the result for this question
@@ -2187,6 +2182,7 @@
                 addDebugLog(`🔍 DEBUG: Question "${question.question}" - displayResult: ${JSON.stringify(displayResult)}`);
                 
                 const row = document.createElement('tr');
+                const questionNum = index + 1; // Q1, Q2, etc. (fixed number based on position in testQuestions array)
                 
                 if (displayResult) {
                     // Handle both old format (confidenceScore, verdict) and new format (qualityScore, relevanceScore)
@@ -2197,6 +2193,7 @@
                     
                     // Question has been scored
                     row.innerHTML = `
+                        <td><strong>Q${questionNum}</strong></td>
                         <td>${question.question}</td>
                         <td><span class="status-badge ${qualityScore >= 70 && relevanceScore >= 70 ? 'status-pass' : 'status-fail'}">${verdict}</span></td>
                         <td>${qualityScore}</td>
@@ -2209,6 +2206,7 @@
                 } else {
                     // Question not yet scored
                     row.innerHTML = `
+                        <td><strong>Q${questionNum}</strong></td>
                         <td>${question.question}</td>
                         <td><span class="status-badge status-pending">Pending</span></td>
                         <td>-</td>
@@ -2219,6 +2217,8 @@
                         <td>${question.category}</td>
                     `;
                 }
+                // Store question number as data attribute for sorting
+                row.setAttribute('data-question-num', questionNum);
                 tbody.appendChild(row);
             });
         }
@@ -2250,19 +2250,33 @@
                 const aValue = a.cells[columnIndex].textContent.trim();
                 const bValue = b.cells[columnIndex].textContent.trim();
                 
-                // Handle numeric columns (Bot Response Score, Related Score)
-                if (columnIndex === 2 || columnIndex === 4) {
+                let comparison = 0;
+                
+                // Handle numeric columns (Bot Response Score = 3, Related Score = 5)
+                if (columnIndex === 3 || columnIndex === 5) {
                     const aNum = parseInt(aValue) || 0;
                     const bNum = parseInt(bValue) || 0;
-                    return newDirection === 'asc' ? aNum - bNum : bNum - aNum;
+                    comparison = newDirection === 'asc' ? aNum - bNum : bNum - aNum;
+                } else if (columnIndex === 0) {
+                    // Question # column - extract number from "Q1", "Q2", etc.
+                    const aNum = parseInt(aValue.replace('Q', '')) || 0;
+                    const bNum = parseInt(bValue.replace('Q', '')) || 0;
+                    comparison = newDirection === 'asc' ? aNum - bNum : bNum - aNum;
+                } else {
+                    // Handle text columns
+                    comparison = newDirection === 'asc' 
+                        ? aValue.localeCompare(bValue) 
+                        : bValue.localeCompare(aValue);
                 }
                 
-                // Handle text columns
-                if (newDirection === 'asc') {
-                    return aValue.localeCompare(bValue);
-                } else {
-                    return bValue.localeCompare(aValue);
+                // If values are equal, use question number as secondary sort (always ascending)
+                if (comparison === 0 && columnIndex !== 0) {
+                    const aQNum = parseInt(a.getAttribute('data-question-num') || '0');
+                    const bQNum = parseInt(b.getAttribute('data-question-num') || '0');
+                    return aQNum - bQNum;
                 }
+                
+                return comparison;
             });
             
             // Re-append sorted rows

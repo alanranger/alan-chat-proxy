@@ -9355,14 +9355,14 @@ async function handleContactInfoQuery(client, query) {
   if (qlc.includes("contact") || qlc.includes("phone") || qlc.includes("address") || qlc.includes("email") || qlc.includes("book a discovery call")) {
     console.log(`✅ Contact information query detected, returning contact details: "${query}"`);
     
-    // Try to find contact landing page
+    // Try to find contact landing page - search more broadly
     let contactLandingPage = null;
     try {
       const { data, error } = await client
         .from('page_entities')
         .select('id, title, page_url, url, description, csv_type')
         .eq('csv_type', 'landing_service_pages')
-        .or('page_url.ilike.%contact%,url.ilike.%contact%')
+        .or('page_url.ilike.%contact%,url.ilike.%contact%,title.ilike.%contact%,page_url.ilike.%get-in-touch%,url.ilike.%get-in-touch%')
         .limit(1);
       
       if (!error && data && data.length > 0) {
@@ -9625,14 +9625,14 @@ async function handleCancellationPolicyQuery(client, query) {
       (qlc.includes('policy') || qlc.includes('terms'))) {
     console.log(`✅ Cancellation policy query detected: "${query}"`);
     
-    // Try to find terms and conditions landing page
+    // Try to find terms and conditions landing page - search more broadly
     let termsLandingPage = null;
     try {
       const { data, error } = await client
         .from('page_entities')
         .select('id, title, page_url, url, description, csv_type')
         .eq('csv_type', 'landing_service_pages')
-        .or('page_url.ilike.%terms%,url.ilike.%terms%,page_url.ilike.%conditions%,url.ilike.%conditions%')
+        .or('page_url.ilike.%terms%,url.ilike.%terms%,page_url.ilike.%conditions%,url.ilike.%conditions%,title.ilike.%terms%,title.ilike.%conditions%,page_url.ilike.%booking-terms%,url.ilike.%booking-terms%')
         .limit(1);
       
       if (!error && data && data.length > 0) {
@@ -11176,13 +11176,26 @@ async function addFallbackArticles(client, keywords, enriched) {
 
 // Helper: Add enrichment items based on what's missing (Complexity: Low)
 async function addMissingEnrichmentItems(client, keywords, enriched, businessCategory, query) {
-  // Add services if missing
-  if (!enriched.services || enriched.services.length === 0) {
+  const qlc = (query || '').toLowerCase();
+  
+  // Queries that should skip events enrichment
+  const shouldSkipEvents = (qlc.includes('is the online photography course really free') || 
+                            qlc.includes('is the free course really free') ||
+                            (qlc.includes('really free') && qlc.includes('online photography course'))) ||
+                           (qlc.includes('laptop') || qlc.includes('computer')) && 
+                           (qlc.includes('lightroom') || qlc.includes('course'));
+  
+  // Queries that should skip services enrichment (handlers provide specific services)
+  const shouldSkipServices = (qlc.includes('laptop') || qlc.includes('computer')) && 
+                             (qlc.includes('lightroom') || qlc.includes('course'));
+  
+  // Add services if missing (unless handler explicitly skipped)
+  if (!shouldSkipServices && (!enriched.services || enriched.services.length === 0)) {
     await addServicesForEnrichment(client, keywords, enriched, businessCategory, query);
   }
   
-  // Add events if missing
-  if (!enriched.events || enriched.events.length === 0) {
+  // Add events if missing (unless handler explicitly skipped)
+  if (!shouldSkipEvents && (!enriched.events || enriched.events.length === 0)) {
     await addEventsForEnrichment(client, keywords, enriched, businessCategory, query);
   }
   
