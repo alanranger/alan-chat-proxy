@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Admin Panel - Alan Ranger Assistant</title>
+  <title>Admin Dashboard - Alan Ranger Assistant</title>
   <style>
     :root {
       --bg: #0f1419;
@@ -15,6 +15,9 @@
       --warning: #f59e0b;
       --error: #ef4444;
       --border: #374151;
+      --blue: #3b82f6;
+      --purple: #8b5cf6;
+      --pink: #ec4899;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -23,197 +26,399 @@
       color: var(--text); 
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       line-height: 1.6;
+      padding: 20px;
     }
 
-    .container { max-width: 800px; margin: 0 auto; padding: 20px; }
-    .header { margin-bottom: 30px; text-align: center; }
-    .header h1 { font-size: 2rem; margin-bottom: 8px; }
-    .header p { color: var(--text-muted); }
+    .container { max-width: 1400px; margin: 0 auto; }
+    
+    .header { 
+      text-align: center; 
+      margin-bottom: 40px; 
+      padding-bottom: 20px;
+      border-bottom: 2px solid var(--border);
+    }
+    .header h1 { 
+      font-size: 2.5rem; 
+      margin-bottom: 8px; 
+      color: var(--brand);
+    }
+    .header p { 
+      color: var(--text-muted); 
+      font-size: 1.1rem;
+    }
 
-    .card { 
-      background: var(--panel); 
-      border-radius: 12px; 
-      padding: 24px; 
-      border: 1px solid var(--border);
+    .section {
+      margin-bottom: 40px;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
       margin-bottom: 20px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
     }
 
-    .btn { 
-      display: inline-block; 
-      padding: 12px 24px; 
-      border-radius: 8px; 
-      border: none; 
-      cursor: pointer; 
-      font-weight: 600;
-      text-decoration: none;
-      transition: all 0.2s;
-      margin: 8px;
-    }
-    .btn-primary { background: var(--brand); color: #000; }
-    .btn-primary:hover { background: #d97706; }
-    .btn-secondary { background: var(--border); color: var(--text); }
-    .btn-secondary:hover { background: #4b5563; }
-    .btn-success { background: var(--success); color: #000; }
-    .btn-success:hover { background: #059669; }
-
-    .status { 
-      padding: 12px; 
-      border-radius: 8px; 
-      margin: 12px 0;
-      font-weight: 500;
-    }
-    .status.success { background: rgba(16, 185, 129, 0.2); color: var(--success); border: 1px solid var(--success); }
-    .status.error { background: rgba(239, 68, 68, 0.2); color: var(--error); border: 1px solid var(--error); }
-    .status.info { background: rgba(59, 130, 246, 0.2); color: #3b82f6; border: 1px solid #3b82f6; }
-
-    .loading { 
-      display: flex; 
-      align-items: center; 
-      justify-content: center; 
-      padding: 20px; 
-      color: var(--text-muted);
-    }
-
-    .form-group { margin-bottom: 16px; }
-    .form-group label { display: block; margin-bottom: 8px; font-weight: 500; }
-    .form-group input { 
-      width: 100%; 
-      padding: 8px 12px; 
-      background: var(--bg); 
-      border: 1px solid var(--border); 
-      border-radius: 6px; 
+    .section-header h2 {
+      font-size: 1.5rem;
       color: var(--text);
     }
 
-    .links { 
-      display: grid; 
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); 
-      gap: 16px; 
-      margin-top: 20px;
+    .section-icon {
+      font-size: 1.8rem;
     }
 
-    .link-card { 
-      background: var(--panel); 
-      border: 1px solid var(--border); 
-      border-radius: 8px; 
-      padding: 16px; 
-      text-align: center;
+    .tiles-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 20px;
+    }
+
+    .tile {
+      background: var(--panel);
+      border: 2px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      transition: all 0.3s ease;
+      cursor: pointer;
+      text-decoration: none;
+      color: inherit;
+      display: block;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .tile::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: var(--brand);
+      transform: scaleX(0);
+      transition: transform 0.3s ease;
+    }
+
+    .tile:hover {
+      border-color: var(--brand);
+      transform: translateY(-4px);
+      box-shadow: 0 8px 24px rgba(245, 158, 11, 0.2);
+    }
+
+    .tile:hover::before {
+      transform: scaleX(1);
+    }
+
+    .tile-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .tile-icon {
+      font-size: 2rem;
+      width: 48px;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 10px;
+      background: rgba(245, 158, 11, 0.1);
+      border: 1px solid rgba(245, 158, 11, 0.3);
+    }
+
+    .tile-title {
+      font-size: 1.3rem;
+      font-weight: 600;
+      color: var(--text);
+      flex: 1;
+    }
+
+    .tile-description {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      line-height: 1.5;
+      margin-bottom: 16px;
+    }
+
+    .tile-description p {
+      margin-bottom: 8px;
+    }
+
+    .tile-description p:last-child {
+      margin-bottom: 0;
+    }
+
+    .tile-badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-top: 12px;
+    }
+
+    .badge-internal {
+      background: rgba(16, 185, 129, 0.2);
+      color: var(--success);
+      border: 1px solid var(--success);
+    }
+
+    .badge-external {
+      background: rgba(59, 130, 246, 0.2);
+      color: var(--blue);
+      border: 1px solid var(--blue);
+    }
+
+    .quick-actions {
+      background: rgba(245, 158, 11, 0.1);
+      border: 1px solid var(--brand);
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 40px;
+    }
+
+    .quick-actions h2 {
+      margin-bottom: 16px;
+      color: var(--brand);
+    }
+
+    .btn {
+      display: inline-block;
+      padding: 10px 20px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      font-weight: 600;
+      text-decoration: none;
       transition: all 0.2s;
-    }
-    .link-card:hover { border-color: var(--brand); }
-    .link-card h3 { margin-bottom: 8px; color: var(--brand); }
-    .link-card p { color: var(--text-muted); font-size: 0.9rem; }
-
-    .help-box { 
-      background: rgba(59, 130, 246, 0.1); 
-      border: 1px solid #3b82f6; 
-      border-radius: 8px; 
-      padding: 16px; 
-      margin: 20px 0;
+      margin: 4px 8px 4px 0;
       font-size: 0.9rem;
     }
-    .help-box h3 { color: #3b82f6; margin-bottom: 12px; }
-    .help-box ul { margin: 8px 0; padding-left: 20px; }
-    .help-box li { margin: 6px 0; }
-    .help-box p { margin: 8px 0 0 0; }
+
+    .btn-primary { 
+      background: var(--brand); 
+      color: #000; 
+    }
+    .btn-primary:hover { 
+      background: #d97706; 
+    }
+    .btn-secondary { 
+      background: var(--border); 
+      color: var(--text); 
+    }
+    .btn-secondary:hover { 
+      background: #4b5563; 
+    }
+
+    .status {
+      padding: 12px;
+      border-radius: 8px;
+      margin: 12px 0;
+      font-weight: 500;
+      display: none;
+    }
+    .status.show {
+      display: block;
+    }
+    .status.success { 
+      background: rgba(16, 185, 129, 0.2); 
+      color: var(--success); 
+      border: 1px solid var(--success); 
+    }
+    .status.error { 
+      background: rgba(239, 68, 68, 0.2); 
+      color: var(--error); 
+      border: 1px solid var(--error); 
+    }
+    .status.info { 
+      background: rgba(59, 130, 246, 0.2); 
+      color: var(--blue); 
+      border: 1px solid var(--blue); 
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+    .form-group label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 500;
+    }
+    .form-group input {
+      width: 100%;
+      max-width: 300px;
+      padding: 8px 12px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+    }
+
+    @media (max-width: 768px) {
+      .tiles-grid {
+        grid-template-columns: 1fr;
+      }
+      .header h1 {
+        font-size: 2rem;
+      }
+    }
   </style>
 </head>
 <body>
   <div class="container">
     <div class="header">
-      <h1>Admin Panel</h1>
-      <p>Manage chat analytics and system operations</p>
-      <div class="help-box">
-        <h3>🔧 Step-by-Step Admin Instructions</h3>
-        
-        <h4>🚀 First Time Setup (Do This Now):</h4>
-        <ol>
-          <li><strong>Run Analytics Aggregation:</strong> Click the "Run Analytics Aggregation" button below</li>
-          <li><strong>Wait for Success Message:</strong> You should see "✅ Analytics aggregation completed successfully"</li>
-          <li><strong>Check Cron Status:</strong> Click "Check Cron Status" to verify automated jobs are running</li>
-          <li><strong>View Your Data:</strong> Click "Open Dashboard" to see your analytics</li>
-        </ol>
-
-        <h4>📊 Daily Operations (What Each Button Does):</h4>
-        <ol>
-          <li><strong>"Run Analytics Aggregation":</strong> Processes chat data into reports (run this if data looks old)</li>
-          <li><strong>"Check Cron Status":</strong> Verifies automated daily jobs are working</li>
-          <li><strong>"Run QA Check":</strong> Tests system health and data integrity</li>
-          <li><strong>"Refresh Mappings":</strong> Updates event-to-product links</li>
-          <li><strong>"Finalize Data":</strong> Completes data processing pipeline</li>
-        </ol>
-
-        <h4>🔄 When Things Go Wrong:</h4>
-        <ol>
-          <li><strong>No Data in Dashboard:</strong> Run "Analytics Aggregation" first</li>
-          <li><strong>Errors in Chat:</strong> Run "QA Check" to diagnose issues</li>
-          <li><strong>Wrong Product Links:</strong> Run "Refresh Mappings"</li>
-          <li><strong>Still Having Issues:</strong> Run "Finalize Data" to reset everything</li>
-        </ol>
-
-        <p><strong>💡 Pro Tip:</strong> The system runs automatically every day at 1 AM. You only need to use these buttons for immediate updates or troubleshooting!</p>
-      </div>
+      <h1>🚀 Admin Dashboard</h1>
+      <p>Central hub for all chat bot management tools</p>
     </div>
 
-    <!-- Quick Start Section -->
-    <div class="card" style="background: rgba(16, 185, 129, 0.1); border: 1px solid var(--success);">
-      <h2>🚀 Quick Start - Do This First!</h2>
-      <p><strong>New to this system? Follow these steps in order:</strong></p>
-      <ol style="margin: 12px 0; padding-left: 20px;">
-        <li>Click "Run Analytics Aggregation" below</li>
-        <li>Wait for the green success message</li>
-        <li>Click "Open Dashboard" to see your data</li>
-      </ol>
-    </div>
-
-    <div class="card">
-      <h2>Analytics Management</h2>
-      <p>Run analytics aggregation and manage data processing.</p>
-      
+    <!-- Quick Actions -->
+    <div class="quick-actions">
+      <h2>⚡ Quick Actions</h2>
       <div class="form-group">
         <label for="aggregation-date">Date for aggregation (leave empty for today):</label>
         <input type="date" id="aggregation-date" />
       </div>
-      
       <button class="btn btn-primary" onclick="runAggregation()">Run Analytics Aggregation</button>
       <button class="btn btn-secondary" onclick="checkCronStatus()">Check Cron Status</button>
-      
-      <div id="aggregation-status"></div>
-    </div>
-
-    <div class="card">
-      <h2>Quick Actions</h2>
-      <p>Common administrative tasks and system checks.</p>
-      
       <button class="btn btn-secondary" onclick="runQA()">Run QA Check</button>
-      <button class="btn btn-secondary" onclick="refreshMappings()">Refresh Mappings</button>
-      <button class="btn btn-secondary" onclick="finalizeData()">Finalize Data</button>
-      
-      <div id="action-status"></div>
+      <div id="quick-status" class="status"></div>
     </div>
 
-    <div class="card">
-      <h2>Dashboard & Analytics</h2>
-      <p>Access analytics dashboard and monitoring tools.</p>
-      
-      <div class="links">
-        <div class="link-card">
-          <h3>Analytics Dashboard</h3>
-          <p>View chat analytics, sessions, and performance metrics</p>
-          <a href="analytics.html" class="btn btn-success">Open Dashboard</a>
-        </div>
-        
-        <div class="link-card">
-          <h3>Bulk Upload</h3>
-          <p>Upload CSV data and manage content ingestion</p>
-          <a href="bulk-simple.html" class="btn btn-success">Open Bulk Upload</a>
-        </div>
-        
-        <div class="link-card">
-          <h3>Interactive Testing</h3>
-          <p>Test chat responses with 40-question suite and quality scoring</p>
-          <a href="interactive-testing.html" class="btn btn-success">Open Interactive Testing</a>
-        </div>
+    <!-- Chat & Testing Tools -->
+    <div class="section">
+      <div class="section-header">
+        <span class="section-icon">💬</span>
+        <h2>Chat & Testing Tools</h2>
+      </div>
+      <div class="tiles-grid">
+        <a href="chat.html" class="tile">
+          <div class="tile-header">
+            <div class="tile-icon">🤖</div>
+            <div class="tile-title">Chat Interface</div>
+          </div>
+          <div class="tile-description">
+            <p>Main chat bot interface for customer interactions.</p>
+            <p>Test responses, view structured content, and interact with the AI assistant.</p>
+          </div>
+          <span class="tile-badge badge-internal">Internal</span>
+        </a>
+
+        <a href="interactive-testing.html" class="tile">
+          <div class="tile-header">
+            <div class="tile-icon">🧪</div>
+            <div class="tile-title">Interactive Testing</div>
+          </div>
+          <div class="tile-description">
+            <p>Manual testing tool with 64-question suite and quality scoring.</p>
+            <p>Score responses, load regression tests, and export results for analysis.</p>
+          </div>
+          <span class="tile-badge badge-internal">Internal</span>
+        </a>
+
+        <a href="regression-comparison.html" class="tile">
+          <div class="tile-header">
+            <div class="tile-icon">📊</div>
+            <div class="tile-title">Regression Testing</div>
+          </div>
+          <div class="tile-description">
+            <p>Automated regression test comparison against master baseline.</p>
+            <p>Run 64Q tests, compare results, and track quality changes over time.</p>
+          </div>
+          <span class="tile-badge badge-internal">Internal</span>
+        </a>
+      </div>
+    </div>
+
+    <!-- Data Management -->
+    <div class="section">
+      <div class="section-header">
+        <span class="section-icon">📁</span>
+        <h2>Data Management</h2>
+      </div>
+      <div class="tiles-grid">
+        <a href="bulk-simple.html" class="tile">
+          <div class="tile-header">
+            <div class="tile-icon">🔄</div>
+            <div class="tile-title">Data Pipeline</div>
+          </div>
+          <div class="tile-description">
+            <p>Complete data ingestion and processing pipeline for CSV imports.</p>
+            <p>Import metadata, ingest content, build mappings, and finalize enrichment views.</p>
+          </div>
+          <span class="tile-badge badge-internal">Internal</span>
+        </a>
+
+        <a href="analytics.html" class="tile">
+          <div class="tile-header">
+            <div class="tile-icon">📈</div>
+            <div class="tile-title">Analytics Dashboard</div>
+          </div>
+          <div class="tile-description">
+            <p>Comprehensive analytics for chat sessions, interactions, and performance.</p>
+            <p>View metrics, trends, question frequency, and user engagement data.</p>
+          </div>
+          <span class="tile-badge badge-internal">Internal</span>
+        </a>
+      </div>
+    </div>
+
+    <!-- System Management -->
+    <div class="section">
+      <div class="section-header">
+        <span class="section-icon">⚙️</span>
+        <h2>System Management</h2>
+      </div>
+      <div class="tiles-grid">
+        <a href="cron-dashboard.html" class="tile">
+          <div class="tile-header">
+            <div class="tile-icon">⏰</div>
+            <div class="tile-title">Cron Dashboard</div>
+          </div>
+          <div class="tile-description">
+            <p>Monitor and manage all automated cron jobs and scheduled tasks.</p>
+            <p>View job status, run history, reset statistics, and manage master baseline.</p>
+          </div>
+          <span class="tile-badge badge-internal">Internal</span>
+        </a>
+      </div>
+    </div>
+
+    <!-- External Tools -->
+    <div class="section">
+      <div class="section-header">
+        <span class="section-icon">🔗</span>
+        <h2>External Tools</h2>
+      </div>
+      <div class="tiles-grid">
+        <a href="https://v0-workshops-optimiser.vercel.app/" target="_blank" class="tile">
+          <div class="tile-header">
+            <div class="tile-icon">📅</div>
+            <div class="tile-title">Workshop Planner</div>
+          </div>
+          <div class="tile-description">
+            <p>Workshop logistics planner for scheduling and optimizing workshop events.</p>
+            <p>Plan dates, manage capacity, and optimize workshop logistics and clustering.</p>
+          </div>
+          <span class="tile-badge badge-external">External</span>
+        </a>
+
+        <a href="https://schema-tools-six.vercel.app/" target="_blank" class="tile">
+          <div class="tile-header">
+            <div class="tile-icon">🏷️</div>
+            <div class="tile-title">Schema Tools</div>
+          </div>
+          <div class="tile-description">
+            <p>Schema generation and validation tools for structured data.</p>
+            <p>Generate JSON-LD schemas, validate product data, and manage schema templates.</p>
+          </div>
+          <span class="tile-badge badge-external">External</span>
+        </a>
       </div>
     </div>
   </div>
@@ -221,21 +426,22 @@
   <script>
     const adminToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlnenZ3YnZndm16dnZ6b2NsdWZ4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NzY3NzkyOCwiZXhwIjoyMDczMjUzOTI4fQ.W9tkTSYu6Wml0mUr-gJD6hcLMZDcbaYYaOsyDXuwd8M';
 
-    // Get admin token
     function getAdminToken() {
       return adminToken;
     }
 
-    // Show status message
     function showStatus(elementId, message, type = 'info') {
       const element = document.getElementById(elementId);
-      element.innerHTML = `<div class="status ${type}">${message}</div>`;
+      element.textContent = message;
+      element.className = `status ${type} show`;
+      setTimeout(() => {
+        element.classList.remove('show');
+      }, 5000);
     }
 
-    // Run analytics aggregation
     async function runAggregation() {
       const date = document.getElementById('aggregation-date').value;
-      showStatus('aggregation-status', 'Running analytics aggregation...', 'info');
+      showStatus('quick-status', 'Running analytics aggregation...', 'info');
       
       try {
         const response = await fetch('/api/admin?action=aggregate_analytics', {
@@ -252,21 +458,20 @@
         const data = await response.json();
         
         if (data.ok) {
-          showStatus('aggregation-status', 
+          showStatus('quick-status', 
             `✅ Analytics aggregation completed successfully for ${data.date}`, 'success');
         } else {
-          showStatus('aggregation-status', 
+          showStatus('quick-status', 
             `❌ Error: ${data.error} - ${data.detail}`, 'error');
         }
       } catch (error) {
-        showStatus('aggregation-status', 
+        showStatus('quick-status', 
           `❌ Network error: ${error.message}`, 'error');
       }
     }
 
-    // Check cron status
     async function checkCronStatus() {
-      showStatus('aggregation-status', 'Checking cron status...', 'info');
+      showStatus('quick-status', 'Checking cron status...', 'info');
       
       try {
         const response = await fetch('/api/admin?action=cron_status', {
@@ -282,20 +487,19 @@
           const status = cronJobs.length > 0 ? 
             `✅ Found ${cronJobs.length} active cron jobs` : 
             '⚠️ No active cron jobs found';
-          showStatus('aggregation-status', status, cronJobs.length > 0 ? 'success' : 'error');
+          showStatus('quick-status', status, cronJobs.length > 0 ? 'success' : 'error');
         } else {
-          showStatus('aggregation-status', 
+          showStatus('quick-status', 
             `❌ Error: ${data.error} - ${data.detail}`, 'error');
         }
       } catch (error) {
-        showStatus('aggregation-status', 
+        showStatus('quick-status', 
           `❌ Network error: ${error.message}`, 'error');
       }
     }
 
-    // Run QA check
     async function runQA() {
-      showStatus('action-status', 'Running QA check...', 'info');
+      showStatus('quick-status', 'Running QA check...', 'info');
       
       try {
         const response = await fetch('/api/admin?action=qa', {
@@ -308,84 +512,24 @@
         
         if (data.ok) {
           const checks = Object.keys(data.checks || {}).length;
-          showStatus('action-status', 
+          showStatus('quick-status', 
             `✅ QA check completed - ${checks} checks performed`, 'success');
         } else {
-          showStatus('action-status', 
+          showStatus('quick-status', 
             `❌ Error: ${data.error}`, 'error');
         }
       } catch (error) {
-        showStatus('action-status', 
-          `❌ Network error: ${error.message}`, 'error');
-      }
-    }
-
-    // Refresh mappings
-    async function refreshMappings() {
-      showStatus('action-status', 'Refreshing mappings...', 'info');
-      
-      try {
-        const response = await fetch('/api/admin', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer ' + getAdminToken()
-          },
-          body: JSON.stringify({
-            action: 'refresh'
-          })
-        });
-        
-        const data = await response.json();
-        
-        if (data.ok) {
-          showStatus('action-status', 
-            `✅ Mappings refreshed - ${data.mappingsCreated} new mappings created`, 'success');
-        } else {
-          showStatus('action-status', 
-            `❌ Error: ${data.error} - ${data.detail}`, 'error');
-        }
-      } catch (error) {
-        showStatus('action-status', 
-          `❌ Network error: ${error.message}`, 'error');
-      }
-    }
-
-    // Finalize data
-    async function finalizeData() {
-      showStatus('action-status', 'Finalizing data...', 'info');
-      
-      try {
-        const response = await fetch('/api/tools', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer ' + getAdminToken()
-          },
-          body: JSON.stringify({
-            action: 'finalize'
-          })
-        });
-        
-        const data = await response.json();
-        
-        if (data.ok) {
-          showStatus('action-status', 
-            `✅ Data finalized successfully`, 'success');
-        } else {
-          showStatus('action-status', 
-            `❌ Error: ${data.error} - ${data.detail}`, 'error');
-        }
-      } catch (error) {
-        showStatus('action-status', 
+        showStatus('quick-status', 
           `❌ Network error: ${error.message}`, 'error');
       }
     }
 
     // Initialize
     document.addEventListener('DOMContentLoaded', () => {
-      // Set default date to today
-      document.getElementById('aggregation-date').value = new Date().toISOString().split('T')[0];
+      const dateInput = document.getElementById('aggregation-date');
+      if (dateInput) {
+        dateInput.value = new Date().toISOString().split('T')[0];
+      }
     });
   </script>
 </body>
