@@ -2540,6 +2540,25 @@ export default async function handler(req, res) {
         
         console.log(`[reset_all_job_stats] Deleted from public.job_run_details`);
         
+        // Run VACUUM ANALYZE on public.job_run_details to reclaim disk space
+        try {
+          const { data: vacuumResult, error: vacuumError } = await supabase
+            .rpc('vacuum_table', { p_table_name: 'public.job_run_details' });
+          
+          if (vacuumError) {
+            console.warn('[reset_all_job_stats] VACUUM ANALYZE failed for public.job_run_details:', vacuumError);
+          } else {
+            const result = Array.isArray(vacuumResult) ? vacuumResult[0] : vacuumResult;
+            if (result?.ok) {
+              console.log('[reset_all_job_stats] VACUUM ANALYZE completed for public.job_run_details:', result.message);
+            } else {
+              console.warn('[reset_all_job_stats] VACUUM ANALYZE returned error:', result?.error || result?.message);
+            }
+          }
+        } catch (vacuumErr) {
+          console.warn('[reset_all_job_stats] Exception running VACUUM for public.job_run_details:', vacuumErr);
+        }
+        
         // Also clear cron.job_run_details (pg_cron system table)
         // The dashboard reads from both tables, so we need to clear both
         // First, check what's actually in cron table via get_job_run_counts to see current state

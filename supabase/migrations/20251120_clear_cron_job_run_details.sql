@@ -23,6 +23,10 @@ BEGIN
   -- TRUNCATE doesn't set ROW_COUNT, so use the before_count as deleted_count
   v_deleted_count := v_before_count;
 
+  -- Run VACUUM ANALYZE to reclaim disk space and update statistics
+  -- Note: VACUUM ANALYZE (not FULL) can run in a function, FULL requires exclusive lock
+  EXECUTE 'VACUUM ANALYZE cron.job_run_details';
+
   -- Get count after truncation
   SELECT COUNT(*) INTO v_remaining_count FROM cron.job_run_details;
 
