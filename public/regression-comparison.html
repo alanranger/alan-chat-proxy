@@ -335,7 +335,7 @@
         <div class="field-group">
           <label for="sortBy">Table sort order</label>
           <select id="sortBy">
-            <option value="none">Question order (Q1–Q68)</option>
+            <option value="none">Question order (Q1–Q64)</option>
             <option value="category">Category (A–Z)</option>
             <option value="status">Status (Worse → Better)</option>
             <option value="category_status">Category, then Status</option>
@@ -350,7 +350,7 @@
 
       <div class="controls-row">
         <div class="field-group">
-          <label for="runJobId">Run new 68Q regression test – Job ID</label>
+          <label for="runJobId">Run new 64Q regression test – Job ID</label>
           <input id="runJobId" type="number" placeholder="e.g. 31 or 999" />
         </div>
         <div class="field-group">
@@ -365,7 +365,7 @@
           <input id="runJobName" type="text" placeholder="Defaults to 'Job &lt;id&gt;'" />
         </div>
         <div class="field-group" style="align-self:flex-end; flex:0 0 auto;">
-          <button id="run40qBtn">Run 68Q Regression Test (via /api/admin)</button>
+          <button id="run40qBtn">Run 64Q Regression Test (via /api/admin)</button>
         </div>
       </div>
       <div class="status" id="comparisonStatus"></div>
@@ -1035,7 +1035,10 @@
       // Ensure questions are loaded
       if (!QUERIES || QUERIES.length === 0) {
         console.error('QUERIES not loaded yet');
-        return '<p>Error: Questions not loaded. Please refresh the page.</p>';
+        return {
+          html: '<p>Error: Questions not loaded. Please refresh the page.</p>',
+          summary: { better: 0, worse: 0, mixed: 0, same: 0 }
+        };
       }
 
       QUERIES.forEach((query, idx) => {
@@ -1425,7 +1428,7 @@
         }
         const testPhase = document.getElementById('runTestPhase').value || 'after';
         const jobNameInput = document.getElementById('runJobName').value.trim();
-        const jobName = jobNameInput || `Job ${jobId} (UI 68Q run)`;
+        const jobName = jobNameInput || `Job ${jobId} (UI 64Q run)`;
         const adminToken = document.getElementById('adminToken').value.trim();
         if (!adminToken) {
           setRunStatus('Admin API token (Authorization bearer) is required to call /api/admin.', true);
@@ -1438,7 +1441,7 @@
           console.warn('Unable to store admin token in localStorage', e);
         }
 
-        setRunStatus(`Starting 68Q regression test for job ${jobId} (${testPhase})…`);
+        setRunStatus(`Starting 64Q regression test for job ${jobId} (${testPhase})…`);
         const progressEl = document.getElementById('runProgress');
         if (progressEl) progressEl.style.display = 'block';
         const res = await fetch('/api/admin?action=run_regression_test', {
@@ -1457,7 +1460,7 @@
         }
 
         setRunStatus(
-          `68Q test started. New test_result_id: ${data.test_result_id}. Successful: ${data.successful_tests}, Failed: ${data.failed_tests}, Avg confidence: ${data.avg_confidence?.toFixed?.(
+          `64Q test started. New test_result_id: ${data.test_result_id}. Successful: ${data.successful_tests}, Failed: ${data.failed_tests}, Avg confidence: ${data.avg_confidence?.toFixed?.(
             2
           ) || data.avg_confidence}.`
         );
@@ -1495,20 +1498,32 @@
           }
 
           if (baselineId && typeof compareByIds === 'function') {
-            // Also update selects for UI consistency (even if the option doesn't exist yet)
-            if (baselineSelect) baselineSelect.value = baselineId;
-            if (currentSelect) currentSelect.value = String(data.test_result_id);
-            await compareByIds(baselineId, String(data.test_result_id));
+            // Wait for QUERIES to be loaded before comparing
+            let retries = 0;
+            while ((!QUERIES || QUERIES.length === 0) && retries < 10) {
+              await new Promise(resolve => setTimeout(resolve, 500));
+              retries++;
+            }
+            
+            if (!QUERIES || QUERIES.length === 0) {
+              logDebug('Auto-compare skipped: QUERIES not loaded after waiting', { baselineId });
+              setRunStatus('Test completed, but questions not loaded. Please refresh and compare manually.', false);
+            } else {
+              // Also update selects for UI consistency (even if the option doesn't exist yet)
+              if (baselineSelect) baselineSelect.value = baselineId;
+              if (currentSelect) currentSelect.value = String(data.test_result_id);
+              await compareByIds(baselineId, String(data.test_result_id));
+            }
           } else {
             logDebug('Auto-compare skipped (no baseline or selects)', { baselineId });
           }
         } catch (autoErr) {
-          console.error('Auto-compare after 68Q run failed', autoErr);
+          console.error('Auto-compare after 64Q run failed', autoErr);
           logDebug('autoCompareAfterRun failed', String(autoErr));
         }
       } catch (e) {
         console.error(e);
-        setRunStatus('Error running 68Q regression test. Check console/logs.', true);
+        setRunStatus('Error running 64Q regression test. Check console/logs.', true);
         logDebug('run40qFromUi failed', e);
       } finally {
         const progressEl = document.getElementById('runProgress');
