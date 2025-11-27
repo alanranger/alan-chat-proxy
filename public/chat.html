@@ -1700,9 +1700,6 @@ function renderServiceCard(s) {
 }
 
 function renderEventsBlock(structured, query){
-  // Skip events block for simple follow-up questions (but not for legitimate event queries)
-  if (isSimpleFollowUpQuery(query)) return '';
-  
   const all = futureEvents(structured);
   if(!all.length) return '';
   
@@ -1725,9 +1722,6 @@ function renderEventsBlock(structured, query){
 }
 
 function renderServicesBlock(structured, query){
-  // Skip services block for simple follow-up questions
-  if (isSimpleFollowUpQuery(query)) return '';
-  
   let all = structured?.services || [];
   if(!all.length) return '';
 
