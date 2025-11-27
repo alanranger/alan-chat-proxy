@@ -10974,6 +10974,17 @@ async function enrichAdviceWithRelatedInfo(client, query, structured) {
     
     const shouldSkipArticles = isCertificateQuery || isFreeCourseQuery || isWhatCoursesQuery || 
                                isFeedbackQuery || isHirePhotographerQuery || isSubscribeFreeCourseQuery;
+    
+    if (shouldSkipArticles) {
+      console.log(`[ENRICH] Query should skip articles - patterns matched:`, {
+        isCertificateQuery,
+        isFreeCourseQuery,
+        isWhatCoursesQuery,
+        isFeedbackQuery,
+        isHirePhotographerQuery,
+        isSubscribeFreeCourseQuery
+      });
+    }
 
     // For memory card equipment questions, we deliberately avoid adding related
     // articles/services/events/products so that the low-confidence fallback
