@@ -9633,7 +9633,8 @@ async function handleCancellationPolicyQuery(client, query) {
         .from('page_entities')
         .select('id, title, page_url, url, description, csv_type')
         .in('csv_type', ['landing_service_pages', 'site_urls'])
-        .or('page_url.ilike.%terms-and-conditions%,url.ilike.%terms-and-conditions%,page_url.ilike.%website-terms-and-conditions%,url.ilike.%website-terms-and-conditions%,title.ilike.%terms%,title.ilike.%conditions%')
+        .or('page_url.ilike.%terms-and-conditions%,url.ilike.%terms-and-conditions%,page_url.ilike.%website-terms-and-conditions%,url.ilike.%website-terms-and-conditions%,title.ilike.%terms%,title.ilike.%conditions%,title.ilike.%legal%')
+        .order('page_url', { ascending: true }) // Prefer terms-and-conditions over website-terms-and-conditions
         .limit(1);
       
       if (!error && data && data.length > 0) {
