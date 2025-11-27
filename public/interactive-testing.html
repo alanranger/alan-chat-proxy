@@ -1673,11 +1673,10 @@
                     sessionId: 'interactive-test-session'
                 };
                 
-                // DEBUG: Log the exact endpoint being called
-                const endpoint = '/api/chat';
+                // Use the same endpoint as regression testing tools for consistency
+                const endpoint = 'https://alan-chat-proxy.vercel.app/api/chat';
                 console.log('🔍 INTERACTIVE TEST DEBUG:', {
                     endpoint: endpoint,
-                    fullUrl: window.location.origin + endpoint,
                     payload: requestPayload
                 });
                 
