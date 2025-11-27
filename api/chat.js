@@ -11116,6 +11116,23 @@ async function addEventsForEnrichment(client, keywords, enriched, businessCatego
     return;
   }
   
+  // Skip events for free course queries
+  const isFreeCourseQuery = (lc.includes('is the online photography course really free') || 
+                             lc.includes('is the free course really free') ||
+                             (lc.includes('really free') && lc.includes('online photography course')));
+  if (isFreeCourseQuery) {
+    console.log('[ENRICH] Free course query detected – skipping event enrichment');
+    return;
+  }
+  
+  // Skip events for laptop requirement queries
+  const isLaptopQuery = (lc.includes('laptop') || lc.includes('computer')) && 
+                        (lc.includes('lightroom') || lc.includes('course'));
+  if (isLaptopQuery) {
+    console.log('[ENRICH] Laptop requirement query detected – skipping event enrichment');
+    return;
+  }
+  
   // Expanded logic: Add events for course/workshop queries and keyword matching
   const shouldAddEvents = 
     businessCategory === 'Course/Workshop Logistics' ||
