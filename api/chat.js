@@ -10954,6 +10954,25 @@ async function enrichAdviceWithRelatedInfo(client, query, structured) {
     const isServiceQuery = (businessCategory === 'Business Information' || businessCategory === 'General Queries') && 
                            (qlc.includes('service') || qlc.includes('offer') || qlc.includes('provide') || 
                             qlc.includes('what types') || qlc.includes('what do you'));
+    
+    // Queries that should NOT show articles - services/events are enough
+    const isCertificateQuery = (qlc.includes('certificate') || qlc.includes('certification')) && 
+                               (qlc.includes('course') || qlc.includes('photography'));
+    const isFreeCourseQuery = (qlc.includes('is the online photography course really free') || 
+                              qlc.includes('is the free course really free') ||
+                              (qlc.includes('really free') && qlc.includes('online photography course')));
+    const isWhatCoursesQuery = /\b(what\s+courses|what\s+photography\s+courses|courses\s+do\s+you\s+offer|courses\s+do\s+you\s+have)\b/i.test(query || '');
+    const isFeedbackQuery = (qlc.includes('feedback') || qlc.includes('personalised feedback') || qlc.includes('personalized feedback')) && 
+                            (qlc.includes('image') || qlc.includes('photo') || qlc.includes('picture'));
+    const isHirePhotographerQuery = (qlc.includes('hire') || qlc.includes('can i hire')) && 
+                                    (qlc.includes('photographer') || qlc.includes('professional photographer'));
+    const isSubscribeFreeCourseQuery = (qlc.includes('subscribe') || qlc.includes('sign up') || qlc.includes('how do i join') || 
+                                        qlc.includes('how to join') || qlc.includes('how can i subscribe')) && 
+                                       (qlc.includes('free online photography course') || qlc.includes('free course') || 
+                                        (qlc.includes('photography academy') && qlc.includes('free')));
+    
+    const shouldSkipArticles = isCertificateQuery || isFreeCourseQuery || isWhatCoursesQuery || 
+                               isFeedbackQuery || isHirePhotographerQuery || isSubscribeFreeCourseQuery;
 
     // For memory card equipment questions, we deliberately avoid adding related
     // articles/services/events/products so that the low-confidence fallback
@@ -10961,6 +10980,22 @@ async function enrichAdviceWithRelatedInfo(client, query, structured) {
     if (isMemoryCardQuery) {
       console.log('[ENRICH] Memory card query detected – skipping enrichment to avoid misleading extra content');
       return structured;
+    }
+    
+    // For queries that should only show services/events (no articles)
+    if (shouldSkipArticles) {
+      console.log(`[ENRICH] Query should skip articles (services/events only): "${query}"`);
+      // Remove articles but keep services and events
+      const enriched = { 
+        ...structured,
+        articles: [], // Clear articles
+        services: structured.services || [],
+        events: structured.events || [],
+        products: structured.products || []
+      };
+      // Still add services/events if missing, but skip articles
+      await addMissingEnrichmentItems(client, keywords, enriched, businessCategory, query);
+      return enriched;
     }
     
     let initialArticles = structured.articles || [];
@@ -11038,18 +11073,23 @@ async function enrichAdviceWithRelatedInfo(client, query, structured) {
       products: structured.products || []
     };
     
-    // Always try to add articles (unless pure event query or Alan Ranger person query)
-    await addArticlesForEnrichment(client, keywords, enriched, businessCategory, query);
+    // Always try to add articles (unless pure event query, Alan Ranger person query, or queries that should skip articles)
+    if (!shouldSkipArticles) {
+      await addArticlesForEnrichment(client, keywords, enriched, businessCategory, query);
+    } else {
+      console.log(`[ENRICH] Skipping article enrichment for query: "${query}"`);
+    }
     
     // Add missing enrichment items
     await addMissingEnrichmentItems(client, keywords, enriched, businessCategory, query);
     
     // Ensure we have at least one type of related info
-    // Skip fallback for HDR and astrophotography queries - we want 0 articles if no relevant ones exist
-    if (!hasAnyRelatedInfo(enriched) && !isHdrQuery && !isAstrophotographyQuery) {
+    // Skip fallback for HDR, astrophotography, and queries that should skip articles
+    if (!hasAnyRelatedInfo(enriched) && !isHdrQuery && !isAstrophotographyQuery && !shouldSkipArticles) {
       await addFallbackArticles(client, keywords, enriched);
-    } else if ((isHdrQuery || isAstrophotographyQuery) && !hasAnyRelatedInfo(enriched)) {
-      console.log(`[ENRICH] ${isHdrQuery ? 'HDR' : 'Astrophotography'} query - no relevant articles found, skipping fallback to avoid generic articles`);
+    } else if ((isHdrQuery || isAstrophotographyQuery || shouldSkipArticles) && !hasAnyRelatedInfo(enriched)) {
+      const reason = isHdrQuery ? 'HDR' : isAstrophotographyQuery ? 'Astrophotography' : 'services/events only';
+      console.log(`[ENRICH] ${reason} query - skipping fallback articles`);
     }
     
     return enriched;
