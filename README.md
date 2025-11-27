@@ -9,6 +9,9 @@ AI-powered chat bot for Alan Ranger Photography website, providing intelligent r
 - Analytics and quality tracking
 - Database health monitoring
 - Automated maintenance jobs
+- Regression testing system with master baseline
+- Interactive testing tools for manual quality assessment
+- Comprehensive cron job dashboard with stats reset
 
 ## Database Maintenance
 
@@ -98,14 +101,42 @@ Required environment variables:
 
 ```
 ├── api/              # API endpoints (Vercel serverless functions)
-├── public/           # Static files and dashboard
+├── public/           # Static files and dashboards
+│   ├── chat.html                    # Main chat interface
+│   ├── regression-comparison.html   # Regression test comparison tool
+│   ├── interactive-testing.html     # Manual testing and scoring tool
+│   ├── cron-dashboard.html         # Cron job monitoring dashboard
+│   ├── canonical-64q-questions.json # Single source of truth for test questions
+│   └── canonical-64q.js            # Shared question loader
 ├── scripts/          # Utility scripts
 │   └── db/          # Database maintenance scripts
 ├── supabase/         # Supabase migrations and Edge Functions
 │   ├── migrations/  # Database migrations
 │   └── functions/   # Edge Functions
+│       └── run-40q-regression-test/ # Regression test edge function
 └── docs/            # Documentation
 ```
+
+## Testing Infrastructure
+
+### Regression Testing
+- **Tool:** `public/regression-comparison.html`
+- **Test Set:** 64 questions (canonical set)
+- **Baseline System:** Master baseline for all jobs (currently test #973)
+- **Automation:** Automated comparison against master baseline
+
+### Interactive Testing
+- **Tool:** `public/interactive-testing.html`
+- **Purpose:** Manual scoring and quality assessment
+- **Features:** Load regression tests, score responses, export results
+
+### Cron Dashboard
+- **Tool:** `public/cron-dashboard.html`
+- **Features:** 
+  - Job monitoring and health status
+  - Reset individual or all job statistics
+  - Master baseline management
+  - Database health monitoring
 
 ---
 

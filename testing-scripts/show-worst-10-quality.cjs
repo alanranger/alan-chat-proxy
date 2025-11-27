@@ -1,4 +1,4 @@
-const fs = require('fs');
+const fs = require('fs');image.png
 const path = require('path');
 
 // Node 18+ has native fetch - use it directly
