@@ -471,6 +471,36 @@
         <p><strong>Categories:</strong> Event Queries • General Queries • Equipment Recommendations • Course/Workshop Logistics • Business Information • Technical Photography Concepts • Person Queries • Technical Advice</p>
     </div>
 
+    <!-- Regression Test Loader Section -->
+    <div class="test-section" style="background: #e3f2fd; border: 2px solid #2196f3;">
+        <h2>📥 Load Regression Test Results</h2>
+        <p style="color: #666; margin-bottom: 15px;">Load a 40Q regression test to view and score its responses</p>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+            <div>
+                <label for="supabaseUrl" style="display: block; margin-bottom: 5px; font-weight: 600;">Supabase URL:</label>
+                <input type="text" id="supabaseUrl" placeholder="https://your-project.supabase.co" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+            </div>
+            <div>
+                <label for="supabaseKey" style="display: block; margin-bottom: 5px; font-weight: 600;">Supabase Anon Key:</label>
+                <input type="text" id="supabaseKey" placeholder="eyJhbGci..." style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+            </div>
+        </div>
+        
+        <div style="margin-bottom: 15px;">
+            <button class="btn btn-primary" onclick="connectToSupabase()" style="margin-right: 10px;">Connect & Load Tests</button>
+            <span id="connectionStatus" style="color: #666; font-size: 14px;"></span>
+        </div>
+        
+        <div id="testSelectorSection" style="display: none;">
+            <label for="regressionTestSelect" style="display: block; margin-bottom: 5px; font-weight: 600;">Select Regression Test:</label>
+            <select id="regressionTestSelect" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; margin-bottom: 10px;" onchange="loadRegressionTest()">
+                <option value="">Select a test...</option>
+            </select>
+            <div id="testInfo" style="background: white; padding: 10px; border-radius: 4px; font-size: 14px; color: #666;"></div>
+        </div>
+    </div>
+
     <div class="test-section">
         <h2>📊 Test Progress</h2>
         
@@ -521,6 +551,9 @@
         <div id="currentQuestionCard" class="question-card current">
             <h3 id="questionText">Loading question...</h3>
             <p id="questionFocus">Loading focus...</p>
+            <div id="dataSourceIndicator" style="margin-top: 10px; padding: 8px; background: #e3f2fd; border-radius: 4px; font-size: 14px; color: #1976d2; display: none;">
+                <strong>📥 Viewing:</strong> <span id="dataSourceText">Live API response</span>
+            </div>
         </div>
 
         <div id="responseSection" class="hidden">
@@ -621,6 +654,174 @@
     </div>
 
     <script>
+        // Supabase connection and regression test loading
+        let supabaseClient = null;
+        let loadedRegressionTest = null;
+        let regressionTestData = null;
+        
+        // Prefill Supabase credentials
+        function prefillSupabaseCreds() {
+            const urlInput = document.getElementById('supabaseUrl');
+            const keyInput = document.getElementById('supabaseKey');
+            
+            if (!urlInput.value) {
+                urlInput.value = 'https://igzvwbvgvmzvvzoclufx.supabase.co';
+            }
+            if (!keyInput.value) {
+                keyInput.value = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlnenZ3YnZndm16dnZ6b2NsdWZ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc2Nzc5MjgsImV4cCI6MjA3MzI1MzkyOH0.A9TCmnXKJhDRYBkrO0mAMPiUQeV9enweeyRWKWQ1SZY';
+            }
+        }
+        
+        async function connectToSupabase() {
+            const url = document.getElementById('supabaseUrl').value.trim();
+            const key = document.getElementById('supabaseKey').value.trim();
+            const statusEl = document.getElementById('connectionStatus');
+            
+            if (!url || !key) {
+                statusEl.textContent = 'Please enter Supabase URL and Key';
+                statusEl.style.color = '#dc3545';
+                return;
+            }
+            
+            statusEl.textContent = 'Connecting...';
+            statusEl.style.color = '#666';
+            
+            try {
+                // Test connection by fetching regression tests
+                const response = await fetch(`${url}/rest/v1/regression_test_results?select=id,job_id,test_phase,test_timestamp,successful_tests,failed_tests,total_questions&order=test_timestamp.desc&limit=100`, {
+                    headers: {
+                        'apikey': key,
+                        'Authorization': `Bearer ${key}`
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${await response.text()}`);
+                }
+                
+                const tests = await response.json();
+                statusEl.textContent = `Connected! Found ${tests.length} tests`;
+                statusEl.style.color = '#28a745';
+                
+                // Store credentials
+                window.localStorage.setItem('interactive_supabase_url', url);
+                window.localStorage.setItem('interactive_supabase_key', key);
+                
+                // Populate dropdown
+                populateTestDropdown(tests, url, key);
+                
+            } catch (error) {
+                statusEl.textContent = `Error: ${error.message}`;
+                statusEl.style.color = '#dc3545';
+                console.error('Supabase connection error:', error);
+            }
+        }
+        
+        function populateTestDropdown(tests, url, key) {
+            const select = document.getElementById('regressionTestSelect');
+            const section = document.getElementById('testSelectorSection');
+            
+            select.innerHTML = '<option value="">Select a test...</option>';
+            
+            tests.forEach(test => {
+                const date = new Date(test.test_timestamp);
+                const dateStr = date.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
+                const timeStr = date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+                const label = `Test #${test.id} | Job ${test.job_id} | ${test.test_phase} | ${dateStr} ${timeStr} | ${test.successful_tests || 0}/${test.total_questions || 0} passed`;
+                const option = document.createElement('option');
+                option.value = test.id;
+                option.textContent = label;
+                option.dataset.url = url;
+                option.dataset.key = key;
+                select.appendChild(option);
+            });
+            
+            section.style.display = 'block';
+        }
+        
+        async function loadRegressionTest() {
+            const select = document.getElementById('regressionTestSelect');
+            const testId = select.value;
+            const infoEl = document.getElementById('testInfo');
+            
+            if (!testId) {
+                infoEl.textContent = '';
+                loadedRegressionTest = null;
+                regressionTestData = null;
+                return;
+            }
+            
+            const url = select.options[select.selectedIndex].dataset.url;
+            const key = select.options[select.selectedIndex].dataset.key;
+            
+            infoEl.textContent = 'Loading test data...';
+            infoEl.style.color = '#666';
+            
+            try {
+                const response = await fetch(`${url}/rest/v1/regression_test_results?id=eq.${testId}&select=*`, {
+                    headers: {
+                        'apikey': key,
+                        'Authorization': `Bearer ${key}`
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                
+                const data = await response.json();
+                if (!data || data.length === 0) {
+                    throw new Error('Test not found');
+                }
+                
+                const test = data[0];
+                loadedRegressionTest = test;
+                regressionTestData = test.results || [];
+                
+                // Create a map of query -> response for quick lookup
+                window.regressionResponseMap = new Map();
+                regressionTestData.forEach((result, index) => {
+                    if (result && result.query && result.response) {
+                        window.regressionResponseMap.set(result.query.toLowerCase(), {
+                            response: result.response,
+                            index: index
+                        });
+                    }
+                });
+                
+                infoEl.innerHTML = `
+                    <strong>Loaded:</strong> Test #${test.id} (${test.test_phase})<br>
+                    <strong>Date:</strong> ${new Date(test.test_timestamp).toLocaleString()}<br>
+                    <strong>Results:</strong> ${regressionTestData.length} questions loaded<br>
+                    <strong>Status:</strong> <span style="color: #28a745;">✓ Ready to view</span>
+                `;
+                infoEl.style.color = '#155724';
+                
+                // Reset to first question
+                if (filteredQuestions.length > 0) {
+                    loadQuestion(0);
+                }
+                
+            } catch (error) {
+                infoEl.textContent = `Error loading test: ${error.message}`;
+                infoEl.style.color = '#dc3545';
+                console.error('Error loading regression test:', error);
+            }
+        }
+        
+        // Initialize on page load
+        window.addEventListener('DOMContentLoaded', () => {
+            prefillSupabaseCreds();
+            
+            // Try to restore credentials from localStorage
+            const savedUrl = window.localStorage.getItem('interactive_supabase_url');
+            const savedKey = window.localStorage.getItem('interactive_supabase_key');
+            if (savedUrl && savedKey) {
+                document.getElementById('supabaseUrl').value = savedUrl;
+                document.getElementById('supabaseKey').value = savedKey;
+            }
+        });
+        
         // Test questions from Alan's baseline
         const testQuestions = [
             {
@@ -1432,7 +1633,41 @@
             }
             
             try {
-                // Get response from chat bot
+                let data = null;
+                const indicator = document.getElementById('dataSourceIndicator');
+                const indicatorText = document.getElementById('dataSourceText');
+                
+                // Check if we have regression test data for this question
+                if (window.regressionResponseMap) {
+                    const queryKey = question.question.toLowerCase();
+                    const regressionData = window.regressionResponseMap.get(queryKey);
+                    
+                    if (regressionData && regressionData.response) {
+                        // Use regression test response
+                        data = regressionData.response;
+                        console.log('🔍 Using regression test response for:', question.question);
+                        
+                        // Show indicator
+                        if (loadedRegressionTest) {
+                            indicator.style.display = 'block';
+                            indicatorText.textContent = `Regression Test #${loadedRegressionTest.id} (${loadedRegressionTest.test_phase}) - ${new Date(loadedRegressionTest.test_timestamp).toLocaleString()}`;
+                        }
+                        
+                        // Display response in chat format
+                        renderChatResponse(data);
+                        
+                        // Hide loading, show response section
+                        document.getElementById('loadingSection').classList.add('hidden');
+                        document.getElementById('responseSection').classList.remove('hidden');
+                        return;
+                    }
+                }
+                
+                // Show live API indicator
+                indicator.style.display = 'block';
+                indicatorText.textContent = 'Live API response';
+                
+                // Fallback to live API call if no regression data
                 const requestPayload = {
                     query: question.question,
                     sessionId: 'interactive-test-session'
@@ -1458,7 +1693,7 @@
                     throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                 }
                 
-                const data = await response.json();
+                data = await response.json();
                 
                 // DEBUG: Log the response to compare
                 console.log('🔍 INTERACTIVE TEST RESPONSE:', {
