@@ -536,6 +536,7 @@
     let supabaseClient = null;
     let testIndex = {};
     let testsMeta = []; // flat list for manage/delete UI
+    let masterBaselineId = null; // ID of the actual master baseline from DB
     const debugLines = [];
 
     function logDebug(message, extra) {
@@ -809,6 +810,23 @@
           }
         });
 
+        // First, find the actual master baseline
+        const { data: masterBaseline, error: masterError } = await supabaseClient
+          .from('regression_test_results')
+          .select('id')
+          .eq('is_fixed_baseline', true)
+          .order('test_timestamp', { ascending: false })
+          .limit(1)
+          .single();
+        
+        if (!masterError && masterBaseline) {
+          masterBaselineId = masterBaseline.id;
+          logDebug('Found master baseline', { id: masterBaselineId });
+        } else {
+          masterBaselineId = null;
+          logDebug('No master baseline found', masterError);
+        }
+
         const { data: resultsList, error: resultsError } = await supabaseClient
           .from('regression_test_results')
           .select('id, created_at')
@@ -879,7 +897,7 @@
         const namePart = m.jobName ? ` – ${m.jobName}` : '';
         const phasePart = m.phase ? ` – phase: ${m.phase}` : '';
         const whenPart = m.createdAt ? ` – ${m.createdAt}` : '';
-        const isMasterBaseline = testId === 878;
+        const isMasterBaseline = masterBaselineId !== null && testId === masterBaselineId;
         const baselineTag = isMasterBaseline ? ' [MASTER BASELINE]' : '';
         return `Test ${testId}${baselineTag} (${jobPart}${namePart}${phasePart}${whenPart})`;
       };

@@ -1810,14 +1810,13 @@ export default async function handler(req, res) {
     }
 
     // Get Master Baseline Info (GET /api/admin?action=get_fixed_baseline&jobid=XX)
-    // Note: jobid is optional - there's only one master baseline for all jobs
+    // Note: jobid is optional - there's only one master baseline for all jobs (any phase)
     if (req.method === 'GET' && action === 'get_fixed_baseline') {
       try {
-        // Get the master baseline (shared across all jobs)
+        // Get the master baseline (shared across all jobs, any phase)
         const { data, error } = await supabase
           .from('regression_test_results')
           .select('*')
-          .eq('test_phase', 'before')
           .eq('is_fixed_baseline', true)
           .order('test_timestamp', { ascending: false })
           .limit(1)
