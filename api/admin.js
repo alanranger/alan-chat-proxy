@@ -2523,11 +2523,10 @@ export default async function handler(req, res) {
         console.log(`[reset_all_job_stats] Before deletion - public.job_run_details: ${beforeCount || 0} records`);
         
         // Delete all records from public.job_run_details
-        const { error: deleteError, count: deletedCount } = await supabase
+        const { error: deleteError } = await supabase
           .from('job_run_details')
           .delete()
-          .gte('id', 0)
-          .select('*', { count: 'exact', head: true });
+          .gte('id', 0);
         
         if (deleteError) {
           throw new Error(`Failed to delete records: ${deleteError.message}`);
