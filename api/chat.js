@@ -8017,25 +8017,8 @@ async function handleSpecificQueryAnswers(client, query) {
     };
   }
   
-  // 5. Cancellation/refund policy
-  if (/cancellation.*refund.*policy|cancellation.*policy.*courses|cancellation.*policy.*workshops|what.*your.*cancellation.*policy/i.test(query)) {
-    const keywords = extractKeywords(query);
-    const services = await findServices(client, { keywords: ['terms', 'conditions', 'policy', 'cancellation'], limit: 6 });
-    const answer = `**Booking and Cancellation Policy**: For course changes, please notify at least four weeks in advance. Alan Ranger Photography has comprehensive booking terms and conditions covering cancellations, refunds, and rescheduling. The policy includes public liability insurance coverage and CRB disclosure. Specific terms may vary depending on the course or workshop you're booking.\n\n`;
-    return {
-      success: true,
-      type: 'advice',
-      confidence: 0.8,
-      answer: answer,
-      structured: {
-        intent: 'advice',
-        articles: [],
-        events: [],
-        services: services || [],
-        products: []
-      }
-    };
-  }
+  // 5. Cancellation/refund policy - REMOVED: Now handled by handleSpecificQueryTypes (handleCancellationPolicyQuery)
+  // This allows the more specific handler to find the terms/conditions landing page
   
   // 6. Hire photographer in Coventry
   if (/hire.*professional photographer.*coventry|can i hire.*photographer.*coventry/i.test(query)) {
