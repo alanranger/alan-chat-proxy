@@ -439,149 +439,33 @@
   </div>
 
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <script src="/canonical-64q.js"></script>
   <script>
-    // Canonical 68Q questions (temporary: will refine to 64Q and move to universal source after testing)
-    const QUERIES = [
-      "whens the next bluebell workshops and whats the cost",
-      "when is the next devon workshop",
-      "what is your next workshop date and where is it",
-      "when are your next Autumn workshops and where are they?",
-      "How long are your workshops?",
-      "How much is a residential photography course and does it include B&B",
-      "What is the difference between prime and zoom lenses?",
-      "What memory card should I buy?",
-      "Do you offer gift vouchers?",
-      "What is HDR photography?",
-      "What tripod do you recommend",
-      "What is long exposure and how can I find out more about it",
-      "How do I improve my composition and storytelling in photos?",
-      "\"What is the exposure triangle (aperture, shutter, ISO)?\"",
-      "How do I improve my photography skills?",
-      "What is your cancellation or refund policy for courses/workshops?",
-      "Do you do astrophotography workshops",
-      "Can my 14yr old attend your workshop",
-      "My pictures never seem sharp.  Can you advise on what I am doing wrong",
-      "What types of photography services do you offer?",
-      "What sort of camera do I need for your camera course",
-      "What gear or equipment do I need to bring to a workshop?",
-      "Do you I get a certificate with the photography course",
-      "Do I need a laptop for the lightroom course",
-      "Is the online photography course really free",
-      "What courses do you offer for complete beginners?",
-      "How many weeks is the beginners' photography course?",
-      "How do I get personalised feedback on my images",
-      "How can I contact you or book a discovery call?",
-      "Where is your gallery and can I submit my images for feedback?",
-      "\"What is depth of field, and how do I control it?\"",
-      "What is white balance and how do I use it?",
-      "Who is Alan Ranger and what is his photographic background?",
-      "Where is Alan Ranger based?",
-      "Can I hire you as a professional photographer in Coventry?",
-      "peter orton",
-      "who is alan ranger",
-      "How do I subscribe to the free online photography course?",
-      "How do I use flash photography?",
-      "How do I edit RAW files?",
-      "how do I focus in landscape photography",
-      "how do I improve my photography",
-      "how do I photograph autumn colours",
-      "how do I photograph bluebells",
-      "how do I photograph flowers",
-      "how do I photograph people",
-      "how do I photograph seascapes",
-      "how do I photograph sunsets",
-      "how do I photograph waterfalls",
-      "how do I photograph wildlife",
-      "how do I take better landscape photos",
-      "how do I use a tripod",
-      "what camera should I buy",
-      "what is a histogram",
-      "what is aperture",
-      "what is composition in photography",
-      "what is depth of field",
-      "what is golden hour",
-      "what is ISO",
-      "what is long exposure photography",
-      "what is macro photography",
-      "what is portrait photography",
-      "what is shutter speed",
-      "what is the best camera for beginners",
-      "what is the best lens for landscape photography",
-      "what is the best time of day for landscape photography",
-      "what is the rule of thirds",
-      "what settings should I use for landscape photography"
-    ];
-
-    // Category tags aligned with canonical 68Q list (order matches QUERIES)
-    const QUERY_CATEGORIES = [
-      "Event Queries",
-      "Event Queries",
-      "Event Queries",
-      "Event Queries",
-      "Event Queries",
-      "Course/Workshop Logistics",
-      "Equipment Recommendations",
-      "Equipment Recommendations",
-      "Business Information",
-      "Technical Photography Concepts",
-      "Equipment Recommendations",
-      "Technical Photography Concepts",
-      "Technical Advice",
-      "Technical Photography Concepts",
-      "Technical Advice",
-      "Business Information",
-      "General Queries",
-      "General Queries",
-      "General Queries",
-      "General Queries",
-      "Equipment Recommendations",
-      "Equipment Recommendations",
-      "Course/Workshop Logistics",
-      "Course/Workshop Logistics",
-      "Course/Workshop Logistics",
-      "Course/Workshop Logistics",
-      "Course/Workshop Logistics",
-      "Business Information",
-      "Business Information",
-      "Business Information",
-      "Technical Photography Concepts",
-      "Technical Photography Concepts",
-      "Person Queries",
-      "Person Queries",
-      "Person Queries",
-      "Person Queries",
-      "Person Queries",
-      "Technical Advice",
-      "Technical Advice",
-      "Technical Advice",
-      "Technical Advice",
-      "Technical Advice",
-      "Technical Advice",
-      "Technical Advice",
-      "Technical Advice",
-      "Technical Advice",
-      "Technical Advice",
-      "Technical Advice",
-      "Technical Advice",
-      "Technical Advice",
-      "Technical Advice",
-      "Equipment Recommendations",
-      "Technical Photography Concepts",
-      "Technical Photography Concepts",
-      "Technical Photography Concepts",
-      "Technical Photography Concepts",
-      "Technical Photography Concepts",
-      "Technical Photography Concepts",
-      "Technical Photography Concepts",
-      "Technical Photography Concepts",
-      "Technical Photography Concepts",
-      "Technical Photography Concepts",
-      "Equipment Recommendations",
-      "Equipment Recommendations",
-      "Technical Photography Concepts",
-      "Technical Photography Concepts",
-      "Technical Advice"
-    ];
+    // Load canonical 64Q questions from shared source
+    let QUERIES = [];
+    let QUERY_CATEGORIES = [];
+    
+    // Initialize canonical questions
+    (async function() {
+      try {
+        const questions = await Canonical64Q.getQuestionsWithMetadata();
+        QUERIES = questions.map(q => q.question);
+        QUERY_CATEGORIES = questions.map(q => q.category);
+        
+        // Initialize UI once questions are loaded
+        if (typeof populateSelects === 'function') {
+          populateSelects();
+        }
+      } catch (error) {
+        console.error('Failed to load canonical 64Q questions:', error);
+        // Fallback to empty array - UI will show error
+        QUERIES = [];
+        QUERY_CATEGORIES = [];
+      }
+    })();
+    
+    // Legacy hardcoded arrays completely removed - now using canonical source loaded above
+    // All questions and categories are loaded asynchronously from /canonical-64q-questions.json
 
     // Sorting state for comparison table
     let currentSortKey = 'none'; // 'none' | 'category' | 'status' | 'category_status'
@@ -1147,10 +1031,16 @@
         mixed = 0,
         same = 0;
       const categorySummary = {};
+      
+      // Ensure questions are loaded
+      if (!QUERIES || QUERIES.length === 0) {
+        console.error('QUERIES not loaded yet');
+        return '<p>Error: Questions not loaded. Please refresh the page.</p>';
+      }
 
       QUERIES.forEach((query, idx) => {
         const qNum = idx + 1;
-        const category = QUERY_CATEGORIES[idx] || 'Uncategorised';
+        const category = (QUERY_CATEGORIES && QUERY_CATEGORIES[idx]) ? QUERY_CATEGORIES[idx] : 'Uncategorised';
         const key = query.toLowerCase();
         const baseEntry = baselineMap.get(key) || null;
         const currEntry = currentMap.get(key) || null;

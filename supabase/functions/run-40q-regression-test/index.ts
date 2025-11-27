@@ -1,7 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 
-// Canonical 64Q questions (temporary: using 68Q list, will refine to 64Q later)
-// TODO: Move to universal source (database table or shared JSON) after testing
+// Canonical 64Q questions - unified test list
+// Note: This should match public/canonical-64q-questions.json (64 questions)
 const QUERIES = [
   "whens the next bluebell workshops and whats the cost",
   "when is the next devon workshop",

@@ -654,6 +654,7 @@
         </div>
     </div>
 
+    <script src="/canonical-64q.js"></script>
     <script>
         // Supabase connection and regression test loading
         let supabaseClient = null;
@@ -823,8 +824,35 @@
             }
         });
         
-        // Test questions from Alan's baseline
-        const testQuestions = [
+        // Load canonical 64Q questions from shared source
+        let testQuestions = [];
+        
+        // Initialize canonical questions
+        (async function() {
+          try {
+            const questions = await Canonical64Q.getQuestionsWithMetadata();
+            // Convert canonical format to interactive testing format
+            testQuestions = questions.map(q => ({
+              category: q.category,
+              question: q.question,
+              focus: q.focus,
+              expectedType: "advice"
+            }));
+            console.log(`✅ Loaded ${testQuestions.length} canonical questions for interactive testing`);
+            
+            // Initialize UI once questions are loaded
+            if (typeof initializeUI === 'function') {
+              initializeUI();
+            }
+          } catch (error) {
+            console.error('Failed to load canonical 64Q questions:', error);
+            // Fallback to empty array - UI will show error
+            testQuestions = [];
+          }
+        })();
+        
+        // Legacy hardcoded test questions (deprecated - using canonical source above)
+        const testQuestions_LEGACY_DEPRECATED = [
             {
                 category: "Event Queries",
                 question: "whens the next bluebell workshops and whats the cost",
@@ -1066,6 +1094,8 @@
                 expectedType: "advice"
             }
         ];
+        
+        // Note: testQuestions is now loaded asynchronously from canonical source above
 
         let currentQuestionIndex = 0;
         let testResults = [];
