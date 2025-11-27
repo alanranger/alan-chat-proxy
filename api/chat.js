@@ -8039,7 +8039,11 @@ async function handleSpecificQueryAnswers(client, query) {
   
   // 6. Hire photographer in Coventry
   if (/hire.*professional photographer.*coventry|can i hire.*photographer.*coventry/i.test(query)) {
-    const answer = `**Hiring a Professional Photographer in Coventry**: Yes, Alan Ranger offers professional photography services in Coventry and the surrounding areas, in addition to his photography education services. He provides workshops, courses, and private lessons, as well as commercial photography services for various occasions and business needs.\n\n`;
+    const answer = `**Hiring a Professional Photographer in Coventry**: Yes, Alan Ranger offers professional photography services in Coventry and the surrounding areas, in addition to his photography education services. He provides workshops, courses, and private lessons, as well as commercial photography services for various occasions and business needs.\n\n` +
+      `Here are the main pages to find more details and book:\n\n` +
+      `- [Hire a Professional Photographer in Coventry](https://www.alanranger.com/hire-a-professional-photographer-in-coventry)\n` +
+      `- [Commercial Photographer Coventry – For Professional Results](https://www.alanranger.com/professional-commercial-photographer-coventry)\n` +
+      `- [Professional Photographer Near Me – Portrait Photographer](https://www.alanranger.com/professional-photographer-near-me)\n\n`;
 
     // For hire/commercial photographer queries, surface the three core
     // service pages so users can click straight through to the right place.
