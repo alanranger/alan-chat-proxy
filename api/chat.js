@@ -10750,8 +10750,27 @@ async function addServicesForEnrichment(client, keywords, enriched, businessCate
       console.log('[ENRICH] Hire/commercial/portrait query detected – using targeted service keywords for enrichment');
     }
 
-    const services = await findServices(client, { keywords: searchKeywords, limit: 6 });
+    const services = await findServices(client, { keywords: searchKeywords, limit: 12 });
     if (services && services.length > 0) {
+      // For hire/commercial/portrait queries, filter down to the three core hire pages
+      if (isCommercialOrPortraitQuery) {
+        const preferredPatterns = [
+          '/hire-a-professional-photographer-in-coventry',
+          '/professional-commercial-photographer-coventry',
+          '/professional-photographer-near-me'
+        ];
+        const normalize = (u) => (u || '').toLowerCase().replace(/\/+$/, '');
+        const coreServices = services.filter(s => {
+          const url = normalize(s.page_url || s.url);
+          return preferredPatterns.some(p => url.includes(p));
+        });
+        if (coreServices.length > 0) {
+          enriched.services = coreServices.slice(0, 3);
+          console.log(`[ENRICH] Hire/commercial/portrait query – using ${coreServices.length} core hire/commercial/portrait services`);
+          return;
+        }
+      }
+
       enriched.services = (enriched.services || []).concat(services).slice(0, 6);
       console.log(`[ENRICH] Added ${services.length} services for ${businessCategory}`);
     }
