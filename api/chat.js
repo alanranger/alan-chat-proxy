@@ -9682,6 +9682,52 @@ async function handleGalleryFeedbackQuery(client, query) {
   return null;
 }
 
+// Helper: Handle certificate query (Complexity: Low)
+async function handleCertificateQuery(client, query) {
+  const qlc = query.toLowerCase();
+  if ((qlc.includes('certificate') || qlc.includes('certification')) && 
+      (qlc.includes('course') || qlc.includes('photography course') || qlc.includes('photography'))) {
+    console.log(`✅ Certificate query detected: "${query}"`);
+    
+    // Find the free online photography course service - search specifically for it
+    let services = await findServices(client, { keywords: ['free', 'online', 'course'], limit: 10 });
+    
+    // Filter to prioritize free online course service
+    if (services && services.length > 0) {
+      const freeCourseService = services.find(s => {
+        const title = (s.title || '').toLowerCase();
+        const url = ((s.page_url || s.url || '').toLowerCase());
+        return (title.includes('free') && (title.includes('course') || title.includes('academy'))) ||
+               url.includes('free') || url.includes('academy');
+      });
+      
+      // If we found the free course service, prioritize it
+      if (freeCourseService) {
+        services = [freeCourseService];
+      } else {
+        // Otherwise, just return the first few services (they're still relevant)
+        services = services.slice(0, 3);
+      }
+    }
+    
+    return {
+      success: true,
+      confidence: 0.8,
+      answer: `**Certificates**: The free online photography course provides free access to 60 modules of content covering photography fundamentals. While the course itself doesn't issue formal certificates, Alan offers various photography education services including workshops, courses, and private lessons that may include certificates or qualifications depending on the specific program.\n\n`,
+      type: "advice",
+      sources: { articles: [] },
+      structured: {
+        intent: "advice",
+        articles: [], // Skip articles for certificate queries - services to free online course is enough
+        events: [],
+        products: [],
+        services: services || []
+      }
+    };
+  }
+  return null;
+}
+
 // Helper: Handle free course query (Complexity: Low)
 async function handleFreeCourseQuery(client, query) {
   const qlc = query.toLowerCase();
