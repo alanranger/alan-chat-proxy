@@ -10958,12 +10958,13 @@ async function enrichAdviceWithRelatedInfo(client, query, structured) {
     // Queries that should NOT show articles - services/events are enough
     const isCertificateQuery = (qlc.includes('certificate') || qlc.includes('certification')) && 
                                (qlc.includes('course') || qlc.includes('photography'));
-    const isFreeCourseQuery = (qlc.includes('is the online photography course really free') || 
-                              qlc.includes('is the free course really free') ||
-                              (qlc.includes('really free') && qlc.includes('online photography course')));
+    const isFreeCourseQuery = (qlc.includes('really free') && qlc.includes('online photography course')) ||
+                              (qlc.includes('really free') && qlc.includes('photography course')) ||
+                              (qlc.includes('is the online photography course really free')) ||
+                              (qlc.includes('is the free course really free'));
     const isWhatCoursesQuery = /\b(what\s+courses|what\s+photography\s+courses|courses\s+do\s+you\s+offer|courses\s+do\s+you\s+have)\b/i.test(query || '');
     const isFeedbackQuery = (qlc.includes('feedback') || qlc.includes('personalised feedback') || qlc.includes('personalized feedback')) && 
-                            (qlc.includes('image') || qlc.includes('photo') || qlc.includes('picture'));
+                            (qlc.includes('image') || qlc.includes('photo') || qlc.includes('picture') || qlc.includes('images'));
     const isHirePhotographerQuery = (qlc.includes('hire') || qlc.includes('can i hire')) && 
                                     (qlc.includes('photographer') || qlc.includes('professional photographer'));
     const isSubscribeFreeCourseQuery = (qlc.includes('subscribe') || qlc.includes('sign up') || qlc.includes('how do i join') || 
