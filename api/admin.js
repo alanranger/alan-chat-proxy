@@ -2511,7 +2511,7 @@ export default async function handler(req, res) {
     // Reset All Job Statistics (POST /api/admin?action=reset_all_job_stats)
     if (req.method === 'POST' && action === 'reset_all_job_stats') {
       try {
-        // Get count before deletion
+        // Get count before deletion from public.job_run_details
         const { count: beforeCount, error: countError } = await supabase
           .from('job_run_details')
           .select('*', { count: 'exact', head: true });
@@ -2520,26 +2520,41 @@ export default async function handler(req, res) {
           throw new Error(`Failed to count records: ${countError.message}`);
         }
         
+        console.log(`[reset_all_job_stats] Before deletion - public.job_run_details: ${beforeCount || 0} records`);
+        
         // Delete all records from public.job_run_details
-        const { error: deleteError } = await supabase
+        const { error: deleteError, count: deletedCount } = await supabase
           .from('job_run_details')
           .delete()
-          .gte('id', 0);
+          .gte('id', 0)
+          .select('*', { count: 'exact', head: true });
         
         if (deleteError) {
           throw new Error(`Failed to delete records: ${deleteError.message}`);
         }
+        
+        console.log(`[reset_all_job_stats] Deleted from public.job_run_details`);
         
         // Also clear cron.job_run_details (pg_cron system table)
         // The dashboard reads from both tables, so we need to clear both
         // Use RPC function to delete from cron schema (permission issues with direct deletion)
         let cronDeletedCount = 0;
         let cronBeforeCount = 0;
+        
+        console.log(`[reset_all_job_stats] Calling clear_cron_job_run_details RPC...`);
         const { data: cronDeleteResult, error: cronDeleteError } = await supabase
           .rpc('clear_cron_job_run_details');
         
+        console.log(`[reset_all_job_stats] RPC response:`, { 
+          hasData: cronDeleteResult !== null && cronDeleteResult !== undefined,
+          dataType: typeof cronDeleteResult,
+          isArray: Array.isArray(cronDeleteResult),
+          error: cronDeleteError,
+          rawResult: JSON.stringify(cronDeleteResult)
+        });
+        
         if (cronDeleteError) {
-          console.error('Failed to clear cron.job_run_details:', cronDeleteError);
+          console.error('[reset_all_job_stats] Failed to clear cron.job_run_details:', cronDeleteError);
           // Don't fail the whole operation, but log the error
         } else if (cronDeleteResult !== null && cronDeleteResult !== undefined) {
           // RPC function returns jsonb directly, which Supabase client may parse as object or array
@@ -2556,7 +2571,7 @@ export default async function handler(req, res) {
             try {
               result = JSON.parse(result);
             } catch (e) {
-              console.warn('Failed to parse cron delete result as JSON:', e);
+              console.warn('[reset_all_job_stats] Failed to parse cron delete result as JSON:', e);
             }
           }
           
@@ -2564,14 +2579,14 @@ export default async function handler(req, res) {
           cronDeletedCount = Number(result?.deleted_count) || 0;
           cronBeforeCount = Number(result?.before_count) || 0;
           
-          console.log(`Cleared cron.job_run_details: ${cronDeletedCount} records (${cronBeforeCount} before)`, { 
+          console.log(`[reset_all_job_stats] Cleared cron.job_run_details: ${cronDeletedCount} records (${cronBeforeCount} before)`, { 
             rawResult: cronDeleteResult, 
             parsedResult: result,
             deletedCount: cronDeletedCount,
             beforeCount: cronBeforeCount
           });
         } else {
-          console.warn('clear_cron_job_run_details returned null/undefined');
+          console.warn('[reset_all_job_stats] clear_cron_job_run_details returned null/undefined');
         }
         
         // Also clear job_progress to reset progress tracking
@@ -2584,19 +2599,36 @@ export default async function handler(req, res) {
           console.warn('Failed to clear job_progress:', progressError);
         }
         
-        // Verify deletion
+        // Verify deletion from public.job_run_details
         const { count: afterCount, error: verifyError } = await supabase
           .from('job_run_details')
           .select('*', { count: 'exact', head: true });
         
         if (verifyError) {
-          console.warn('Failed to verify deletion count:', verifyError);
+          console.warn('[reset_all_job_stats] Failed to verify deletion count:', verifyError);
         }
         
         const deletedCount = (beforeCount || 0) - (afterCount || 0);
         const totalDeleted = deletedCount + cronDeletedCount;
         
-        console.log(`Reset all stats: Deleted ${deletedCount} from public.job_run_details, ${cronDeletedCount} from cron.job_run_details (total: ${totalDeleted})`);
+        console.log(`[reset_all_job_stats] Summary: Deleted ${deletedCount} from public.job_run_details (${beforeCount || 0} -> ${afterCount || 0}), ${cronDeletedCount} from cron.job_run_details (${cronBeforeCount || 0} before) (total: ${totalDeleted})`);
+        
+        // Also verify cron table was cleared by checking via RPC or direct query if possible
+        // Note: We can't directly query cron.job_run_details, but we can verify via get_job_run_counts
+        // This is just for logging/debugging
+        try {
+          const { data: verifyCronData, error: verifyCronError } = await supabase
+            .rpc('get_job_run_counts', { p_job_ids: [] });
+          
+          if (!verifyCronError && verifyCronData) {
+            const totalCronRuns = Array.isArray(verifyCronData) 
+              ? verifyCronData.reduce((sum, row) => sum + (Number(row.run_count) || 0), 0)
+              : 0;
+            console.log(`[reset_all_job_stats] Verification: get_job_run_counts shows ${totalCronRuns} total runs remaining across all jobs`);
+          }
+        } catch (verifyErr) {
+          console.warn('[reset_all_job_stats] Could not verify cron table via get_job_run_counts:', verifyErr);
+        }
 
         return res.status(200).json({
           ok: true,
