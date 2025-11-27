@@ -467,14 +467,15 @@
 <body>
     <div class="header">
         <h1>🤖 Comprehensive Interactive Chat Bot Testing</h1>
-        <p>Testing 40 questions across 8 business logic categories</p>
+        <p>Testing 64 questions across 8 business logic categories</p>
         <p><strong>Categories:</strong> Event Queries • General Queries • Equipment Recommendations • Course/Workshop Logistics • Business Information • Technical Photography Concepts • Person Queries • Technical Advice</p>
+        <p><strong>Testing 64 questions</strong> across 8 business logic categories.</p>
     </div>
 
     <!-- Regression Test Loader Section -->
     <div class="test-section" style="background: #e3f2fd; border: 2px solid #2196f3;">
         <h2>📥 Load Regression Test Results</h2>
-        <p style="color: #666; margin-bottom: 15px;">Load a 40Q regression test to view and score its responses</p>
+            <p style="color: #666; margin-bottom: 15px;">Load a 64Q regression test to view and score its responses</p>
         
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
             <div>
@@ -519,7 +520,7 @@
                 <button class="btn btn-secondary" onclick="filterByCategory('Technical Advice')" id="filterAdvice">Technical Advice</button>
             </div>
             <div style="margin-top: 10px; font-size: 14px; color: #666;">
-                <span id="filterStatus">Showing all 40 questions</span>
+                <span id="filterStatus">Loading questions...</span>
             </div>
         </div>
         
@@ -826,9 +827,11 @@
         
         // Load canonical 64Q questions from shared source
         let testQuestions = [];
+        let questionsLoaded = false;
+        let questionsLoadPromise = null;
         
         // Initialize canonical questions
-        (async function() {
+        questionsLoadPromise = (async function() {
           try {
             const questions = await Canonical64Q.getQuestionsWithMetadata();
             // Convert canonical format to interactive testing format
@@ -838,6 +841,7 @@
               focus: q.focus,
               expectedType: "advice"
             }));
+            questionsLoaded = true;
             console.log(`✅ Loaded ${testQuestions.length} canonical questions for interactive testing`);
             
             // Initialize UI once questions are loaded
@@ -848,8 +852,17 @@
             console.error('Failed to load canonical 64Q questions:', error);
             // Fallback to empty array - UI will show error
             testQuestions = [];
+            questionsLoaded = true; // Set to true even on error so UI can show error state
           }
         })();
+        
+        // Helper function to wait for questions to load
+        async function ensureQuestionsLoaded() {
+          if (!questionsLoaded && questionsLoadPromise) {
+            await questionsLoadPromise;
+          }
+          return questionsLoaded && testQuestions.length > 0;
+        }
         
         // Legacy hardcoded test questions (deprecated - using canonical source above)
         const testQuestions_LEGACY_DEPRECATED = [
@@ -1161,8 +1174,17 @@
         }
 
         // Initialize the test
-        function initTest() {
+        async function initTest() {
             addDebugLog('🔍 DEBUG: initTest() called');
+            
+            // Wait for questions to load first
+            const loaded = await ensureQuestionsLoaded();
+            if (!loaded) {
+                console.error('Questions not loaded - cannot initialize test');
+                document.getElementById('filterStatus').textContent = 'Error: Questions not loaded. Please refresh the page.';
+                return;
+            }
+            
             loadSavedScores();
             if (INCLUDE_BASELINE_SCORES) {
                 addDebugLog('🔍 DEBUG: Merging baseline scores (flag enabled)');
@@ -1184,6 +1206,15 @@
         // Apply category filter
         function applyFilter(category) {
             currentFilter = category;
+            
+            // Guard: ensure questions are loaded
+            if (!questionsLoaded || testQuestions.length === 0) {
+                console.warn('applyFilter called before questions loaded');
+                filteredQuestions = [];
+                document.getElementById('totalQuestions').textContent = '0';
+                document.getElementById('filterStatus').textContent = 'Loading questions...';
+                return;
+            }
             
             if (category === 'all') {
                 filteredQuestions = testQuestions;
@@ -1899,6 +1930,86 @@
             addDebugLog(`🔍 DEBUG: savedScores keys = ${Object.keys(savedScores).join(', ')}`);
             addDebugLog(`🔍 DEBUG: currentFilter = ${currentFilter}`);
             
+            // Guard: ensure questions are loaded
+            if (!questionsLoaded || testQuestions.length === 0) {
+                addDebugLog('🔍 DEBUG: updateSummaryStats called before questions loaded');
+                // Initialize empty category stats based on expected categories
+                const expectedCategories = [
+                    'Event Queries',
+                    'General Queries',
+                    'Equipment Recommendations',
+                    'Course/Workshop Logistics',
+                    'Business Information',
+                    'Technical Photography Concepts',
+                    'Person Queries',
+                    'Technical Advice'
+                ];
+                const categoryStats = {};
+                expectedCategories.forEach(cat => {
+                    categoryStats[cat] = {
+                        count: 0,
+                        botResponseSum: 0,
+                        relatedSum: 0,
+                        passCount: 0,
+                        failCount: 0
+                    };
+                });
+                addDebugLog(`🔍 DEBUG: Category stats calculated: ${JSON.stringify(categoryStats, null, 2)}`);
+                addDebugLog('🔍 DEBUG: Overall totals - questions: 0, pass: 0, fail: 0');
+                
+                // Render empty tiles
+                const breakdownDiv = document.getElementById('categoryBreakdown');
+                breakdownDiv.innerHTML = '<h4>📊 Performance by Category</h4>';
+                const masonryContainer = document.createElement('div');
+                masonryContainer.className = 'masonry-container';
+                masonryContainer.style.cssText = 'display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-top: 15px;';
+                
+                Object.keys(categoryStats).forEach(category => {
+                    const stats = categoryStats[category];
+                    const avgBotResponse = isNaN(stats.botResponseSum / stats.count) ? 0 : Math.round(stats.botResponseSum / stats.count);
+                    const avgRelated = isNaN(stats.relatedSum / stats.count) ? 0 : Math.round(stats.relatedSum / stats.count);
+                    const passCount = stats.passCount;
+                    const failCount = stats.failCount;
+                    
+                    const categoryTile = document.createElement('div');
+                    categoryTile.style.cssText = `
+                        background: white;
+                        border-radius: 12px;
+                        padding: 20px;
+                        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+                        border-left: 4px solid #dc3545;
+                        transition: transform 0.2s ease, box-shadow 0.2s ease;
+                    `;
+                    categoryTile.innerHTML = `
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                            <h5 style="margin: 0; font-size: 16px; font-weight: 600;">${category}</h5>
+                            <span style="background: #dc3545; color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 600;">X Critical</span>
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                            <div style="text-align: center;">
+                                <div style="font-size: 32px; font-weight: bold; color: #007bff;">${isNaN(avgBotResponse) ? 'NaN' : avgBotResponse}</div>
+                                <div style="font-size: 12px; color: #666; text-transform: uppercase;">Bot Response Avg</div>
+                            </div>
+                            <div style="text-align: center;">
+                                <div style="font-size: 32px; font-weight: bold; color: #28a745;">${isNaN(avgRelated) ? 'NaN' : avgRelated}</div>
+                                <div style="font-size: 12px; color: #666; text-transform: uppercase;">Related Avg</div>
+                            </div>
+                        </div>
+                        <div style="text-align: center; padding-top: 10px; border-top: 1px solid #eee;">
+                            <div style="font-size: 14px; color: #333;">
+                                <span style="color: #28a745; font-weight: 600;">${passCount}</span> / 
+                                <span style="color: #dc3545; font-weight: 600;">${failCount}</span>
+                            </div>
+                            <div style="font-size: 12px; color: #666;">Pass / Fail</div>
+                        </div>
+                    `;
+                    masonryContainer.appendChild(categoryTile);
+                });
+                
+                breakdownDiv.appendChild(masonryContainer);
+                return;
+            }
+            
             // Build allResults with deduplication - each question should only appear once with the most recent result
             const allResults = [];
             const questionMap = new Map(); // Use Map to track most recent result per question
@@ -2158,6 +2269,12 @@
             addDebugLog('🔍 DEBUG: updateResultsTable() called');
             const tbody = document.getElementById('resultsBody');
             tbody.innerHTML = '';
+            
+            // Guard: ensure questions are loaded
+            if (!questionsLoaded || testQuestions.length === 0) {
+                addDebugLog('🔍 DEBUG: updateResultsTable called before questions loaded');
+                return;
+            }
             
             // Build allResults with deduplication - same logic as updateSummaryStats
             const allResults = [];
