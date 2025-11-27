@@ -2511,6 +2511,12 @@ export default async function handler(req, res) {
     // Reset All Job Statistics (POST /api/admin?action=reset_all_job_stats)
     if (req.method === 'POST' && action === 'reset_all_job_stats') {
       try {
+        // First, get all job IDs to check what's in cron table
+        const { data: allJobs, error: jobsErr } = await supabase.rpc('get_cron_jobs');
+        const allJobIds = (allJobs || [])
+          .map((job) => parseInt(job.jobid, 10))
+          .filter((id) => Number.isFinite(id));
+        
         // Get count before deletion from public.job_run_details
         const { count: beforeCount, error: countError } = await supabase
           .from('job_run_details')
@@ -2536,9 +2542,23 @@ export default async function handler(req, res) {
         
         // Also clear cron.job_run_details (pg_cron system table)
         // The dashboard reads from both tables, so we need to clear both
+        // First, check what's actually in cron table via get_job_run_counts to see current state
+        let cronBeforeCount = 0;
+        try {
+          // Get all job IDs to check cron table contents
+          const { data: cronCheckData, error: cronCheckError } = await supabase
+            .rpc('get_job_run_counts', { p_job_ids: jobIds.length > 0 ? jobIds : [39, 29, 33, 34, 35, 36, 37, 21, 31, 13, 19, 20, 22, 30, 32, 38, 40, 41, 42, 26] });
+          
+          if (!cronCheckError && cronCheckData && Array.isArray(cronCheckData)) {
+            cronBeforeCount = cronCheckData.reduce((sum, row) => sum + (Number(row.run_count) || 0), 0);
+            console.log(`[reset_all_job_stats] Before reset - cron.job_run_details has ${cronBeforeCount} total runs across all jobs`);
+          }
+        } catch (checkErr) {
+          console.warn('[reset_all_job_stats] Could not check cron table before reset:', checkErr);
+        }
+        
         // Use RPC function to delete from cron schema (permission issues with direct deletion)
         let cronDeletedCount = 0;
-        let cronBeforeCount = 0;
         
         console.log(`[reset_all_job_stats] Calling clear_cron_job_run_details RPC...`);
         const { data: cronDeleteResult, error: cronDeleteError } = await supabase
@@ -2549,6 +2569,8 @@ export default async function handler(req, res) {
           dataType: typeof cronDeleteResult,
           isArray: Array.isArray(cronDeleteResult),
           error: cronDeleteError,
+          errorMessage: cronDeleteError?.message,
+          errorCode: cronDeleteError?.code,
           rawResult: JSON.stringify(cronDeleteResult)
         });
         
@@ -2576,13 +2598,19 @@ export default async function handler(req, res) {
           
           // Extract values - the RPC returns {before_count, deleted_count, remaining_count}
           cronDeletedCount = Number(result?.deleted_count) || 0;
-          cronBeforeCount = Number(result?.before_count) || 0;
+          const rpcBeforeCount = Number(result?.before_count) || 0;
           
-          console.log(`[reset_all_job_stats] Cleared cron.job_run_details: ${cronDeletedCount} records (${cronBeforeCount} before)`, { 
+          // Use the RPC's before_count if we couldn't get it from get_job_run_counts
+          if (cronBeforeCount === 0 && rpcBeforeCount > 0) {
+            cronBeforeCount = rpcBeforeCount;
+          }
+          
+          console.log(`[reset_all_job_stats] Cleared cron.job_run_details: ${cronDeletedCount} records (RPC reported ${rpcBeforeCount} before, our check found ${cronBeforeCount})`, { 
             rawResult: cronDeleteResult, 
             parsedResult: result,
             deletedCount: cronDeletedCount,
-            beforeCount: cronBeforeCount
+            rpcBeforeCount: rpcBeforeCount,
+            ourBeforeCount: cronBeforeCount
           });
         } else {
           console.warn('[reset_all_job_stats] clear_cron_job_run_details returned null/undefined');
