@@ -2597,7 +2597,7 @@ export default async function handler(req, res) {
           console.error('[reset_all_job_stats] Failed to clear cron.job_run_details:', cronDeleteError);
           // Don't fail the whole operation, but log the error
         } else if (cronDeleteResult !== null && cronDeleteResult !== undefined) {
-          // RPC function returns jsonb directly, which Supabase client may parse as object or array
+          // RPC function returns jsonb, which Supabase may wrap in function name key
           let result = cronDeleteResult;
           
           // If it's an array, take the first element
@@ -2605,13 +2605,24 @@ export default async function handler(req, res) {
             result = result[0];
           }
           
-          // If result is a jsonb object, it should have the keys directly
-          // Supabase may return it as a string that needs parsing, or as an object
-          if (typeof result === 'string') {
-            try {
-              result = JSON.parse(result);
-            } catch (e) {
-              console.warn('[reset_all_job_stats] Failed to parse cron delete result as JSON:', e);
+          // If result is wrapped in function name key (e.g., {clear_cron_job_run_details: {...}})
+          if (result && typeof result === 'object' && !Array.isArray(result)) {
+            // Check if it's wrapped in function name
+            const functionName = 'clear_cron_job_run_details';
+            if (result[functionName]) {
+              result = result[functionName];
+            }
+            // If it's a string, try to parse it
+            else if (typeof result === 'string') {
+              try {
+                result = JSON.parse(result);
+                // Check again for function name wrapper after parsing
+                if (result[functionName]) {
+                  result = result[functionName];
+                }
+              } catch (e) {
+                console.warn('[reset_all_job_stats] Failed to parse cron delete result as JSON:', e);
+              }
             }
           }
           
