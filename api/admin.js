@@ -2541,16 +2541,37 @@ export default async function handler(req, res) {
         if (cronDeleteError) {
           console.error('Failed to clear cron.job_run_details:', cronDeleteError);
           // Don't fail the whole operation, but log the error
-        } else if (cronDeleteResult) {
-          // Handle both direct result and wrapped result formats
-          const result = Array.isArray(cronDeleteResult) ? cronDeleteResult[0] : cronDeleteResult;
-          // If result is wrapped in function name key, unwrap it
-          const unwrapped = result?.clear_cron_job_run_details || result;
-          cronDeletedCount = unwrapped?.deleted_count || result?.deleted_count || 0;
-          cronBeforeCount = unwrapped?.before_count || result?.before_count || 0;
-          console.log(`Cleared cron.job_run_details: ${cronDeletedCount} records (${cronBeforeCount} before)`, { cronDeleteResult, result, unwrapped });
+        } else if (cronDeleteResult !== null && cronDeleteResult !== undefined) {
+          // RPC function returns jsonb directly, which Supabase client may parse as object or array
+          let result = cronDeleteResult;
+          
+          // If it's an array, take the first element
+          if (Array.isArray(result)) {
+            result = result[0];
+          }
+          
+          // If result is a jsonb object, it should have the keys directly
+          // Supabase may return it as a string that needs parsing, or as an object
+          if (typeof result === 'string') {
+            try {
+              result = JSON.parse(result);
+            } catch (e) {
+              console.warn('Failed to parse cron delete result as JSON:', e);
+            }
+          }
+          
+          // Extract values - the RPC returns {before_count, deleted_count, remaining_count}
+          cronDeletedCount = Number(result?.deleted_count) || 0;
+          cronBeforeCount = Number(result?.before_count) || 0;
+          
+          console.log(`Cleared cron.job_run_details: ${cronDeletedCount} records (${cronBeforeCount} before)`, { 
+            rawResult: cronDeleteResult, 
+            parsedResult: result,
+            deletedCount: cronDeletedCount,
+            beforeCount: cronBeforeCount
+          });
         } else {
-          console.warn('clear_cron_job_run_details returned no data');
+          console.warn('clear_cron_job_run_details returned null/undefined');
         }
         
         // Also clear job_progress to reset progress tracking
