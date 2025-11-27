@@ -136,9 +136,14 @@ All changes have been:
 ## Restore Instructions
 
 To restore to this point:
-1. Checkout commit: `[check git log for latest commit hash]`
+1. Checkout commit: `f9efbea` (or latest on main branch)
 2. Apply all migrations up to `20251127_add_vacuum_table_function`
 3. Ensure master baseline is set to test #973
+
+**Git Commits:**
+- `f9efbea` - Update documentation: Add restore point and update README
+- `9e59002` - Restore Point 2025-11-27: Complete fixes for 64Q testing, reset stats, and baseline system
+- `9b2ecf2` - Remove VACUUM call from reset - cannot run in function/transaction
 
 ---
 
