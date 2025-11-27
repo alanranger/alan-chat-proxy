@@ -3248,9 +3248,9 @@
               `}
             </div>
             ${comparison && detected ? `<div style="margin-top: 8px; font-size: 11px; color: #721c24;"><strong>Action:</strong> ${severity === 'severe' || severity === 'moderate' ? 'ROLLBACK RECOMMENDED' : 'Review recommended'}</div>` : ''}
-            ${!comparison ? `<div style="margin-top: 8px; font-size: 11px; color: #155724;">Comparison analysis pending...</div>` : ''}
+            ${!comparison && baseline && after ? `<div style="margin-top: 8px; font-size: 11px; color: #155724;">Comparison analysis pending...</div>` : ''}
             <div style="margin-top: 10px; display: flex; gap: 8px; flex-wrap: wrap;">
-              ${comparison && detailsJobId ? `<button class="btn btn-primary btn-small" onclick="showRegressionDetails(${detailsJobId})">View Details</button>` : ''}
+              ${baseline && after && detailsJobId ? `<button class="btn btn-primary btn-small" onclick="showRegressionDetails(${detailsJobId})">View Details</button>` : ''}
               ${isFixed 
                 ? `<button class="btn btn-warning btn-small" onclick="unsetFixedBaseline(${baseline.job_id}, ${baseline.id})" title="Unset this as the fixed baseline">🔓 Unset Fixed Baseline</button>`
                 : `<button class="btn btn-success btn-small" onclick="setFixedBaseline(${baseline.job_id}, ${baseline.id})" title="Set this as the fixed baseline to prevent regression creep">🔒 Set as Fixed Baseline</button>`}
@@ -3357,33 +3357,55 @@
         }
         
         const data = await response.json();
-        if (!data.ok || !data.has_results || !data.comparison) {
-          modalContent.innerHTML = '<p>No comparison data available.</p>';
+        if (!data.ok || !data.has_results) {
+          modalContent.innerHTML = '<p>No regression test data available for this job.</p>';
           modal.style.display = 'block';
           return;
         }
         
-        const comparison = data.comparison;
-        const articleChanges = comparison.article_changes || [];
-        const answerQualityChanges = comparison.answer_quality_changes || [];
-        const queryRegressions = comparison.query_regressions || [];
-        const details = comparison.regression_details || {};
+        const baseline = data.baseline || null;
+        const after = data.after || null;
+        const comparison = data.comparison || null;
         
-        let html = `
-          <h2>Regression Test Details - Job ${jobId}</h2>
-          <div class="details-section">
-            <h3>Overall Summary</h3>
-            <p><strong>Regression Detected:</strong> ${comparison.regression_detected ? 'Yes' : 'No'}</p>
-            <p><strong>Severity:</strong> ${comparison.regression_severity || 'none'}</p>
-            <p><strong>Success Rate Change:</strong> ${parseFloat(details.success_rate_diff || 0).toFixed(2)}%</p>
-            <p><strong>Confidence Change:</strong> ${parseFloat(details.confidence_diff || 0).toFixed(3)}</p>
-            <p><strong>Total Article Changes:</strong> ${details.article_change_count || 0} queries</p>
-            <p><strong>Severe Article Changes:</strong> ${details.severe_article_changes || 0}</p>
-            <p><strong>Answer Quality Degradations:</strong> ${details.answer_quality_degradations || 0}</p>
-          </div>
-        `;
+        let html = `<h2>Regression Test Details - Job ${jobId}</h2>`;
         
-        if (queryRegressions.length > 0) {
+        // Show baseline and after test info
+        if (baseline || after) {
+          html += `<div class="details-section">
+            <h3>Test Results</h3>`;
+          
+          if (baseline) {
+            html += `<p><strong>Baseline Test:</strong> ID #${baseline.id} (${baseline.test_phase || 'before'}) - ${baseline.successful_tests || 0}/${baseline.total_questions || 0} successful, avg confidence: ${((baseline.avg_confidence || 0) * 100).toFixed(1)}%</p>`;
+          }
+          
+          if (after) {
+            html += `<p><strong>Latest Test:</strong> ID #${after.id} (${after.test_phase || 'after'}) - ${after.successful_tests || 0}/${after.total_questions || 0} successful, avg confidence: ${((after.avg_confidence || 0) * 100).toFixed(1)}%</p>`;
+          }
+          
+          html += `</div>`;
+        }
+        
+        // Show comparison details if available
+        if (comparison) {
+          const articleChanges = comparison.article_changes || [];
+          const answerQualityChanges = comparison.answer_quality_changes || [];
+          const queryRegressions = comparison.query_regressions || [];
+          const details = comparison.regression_details || {};
+          
+          html += `
+            <div class="details-section">
+              <h3>Comparison Analysis</h3>
+              <p><strong>Regression Detected:</strong> ${comparison.regression_detected ? 'Yes' : 'No'}</p>
+              <p><strong>Severity:</strong> ${comparison.regression_severity || 'none'}</p>
+              <p><strong>Success Rate Change:</strong> ${parseFloat(details.success_rate_diff || 0).toFixed(2)}%</p>
+              <p><strong>Confidence Change:</strong> ${parseFloat(details.confidence_diff || 0).toFixed(3)}</p>
+              <p><strong>Total Article Changes:</strong> ${details.article_change_count || 0} queries</p>
+              <p><strong>Severe Article Changes:</strong> ${details.severe_article_changes || 0}</p>
+              <p><strong>Answer Quality Degradations:</strong> ${details.answer_quality_degradations || 0}</p>
+            </div>
+          `;
+        
+          if (queryRegressions.length > 0) {
           html += `
             <div class="details-section">
               <h3>Query-Specific Regressions (${queryRegressions.length})</h3>
@@ -3402,9 +3424,9 @@
           });
           
           html += `</div>`;
-        }
+          }
         
-        if (articleChanges.length > 0) {
+          if (articleChanges.length > 0) {
           html += `
             <div class="details-section">
               <h3>Article Changes by Query (${articleChanges.length})</h3>
@@ -3441,9 +3463,9 @@
           });
           
           html += `</div>`;
-        }
+          }
         
-        if (answerQualityChanges.length > 0) {
+          if (answerQualityChanges.length > 0) {
           html += `
             <div class="details-section">
               <h3>Answer Quality Changes (${answerQualityChanges.length})</h3>
@@ -3464,6 +3486,14 @@
           });
           
           html += `</div>`;
+          }
+        } else if (baseline || after) {
+          html += `<div class="details-section">
+            <h3>Comparison Analysis</h3>
+            <p>Comparison analysis not yet available. The comparison will be generated when both baseline and after tests are complete.</p>
+            ${!baseline ? '<p><em>Waiting for baseline test...</em></p>' : ''}
+            ${!after ? '<p><em>Waiting for after test...</em></p>' : ''}
+          </div>`;
         }
         
         modalContent.innerHTML = html;
