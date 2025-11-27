@@ -65,12 +65,7 @@ const QUERIES = [
   "what is long exposure photography",
   "what is macro photography",
   "what is portrait photography",
-  "what is shutter speed",
-  "what is the best camera for beginners",
-  "what is the best lens for landscape photography",
-  "what is the best time of day for landscape photography",
-  "what is the rule of thirds",
-  "what settings should I use for landscape photography"
+  "what is shutter speed"
 ];
 
 type RunBody = {
