@@ -479,6 +479,10 @@ export async function ingestSingleUrl(url, supa, options = {}) {
     }
     console.log(`[TIMING] ${url}: store_raw_html took ${Date.now() - storeHtmlStart}ms`);
     
+    // Extract meta description early - this is the primary source for description field
+    const metaDescription = extractMetaDescription(html);
+    console.log(`[TIMING] ${url}: extracted meta_description: ${metaDescription ? `"${metaDescription.substring(0, 50)}..."` : 'null'}`);
+    
     stage = 'extract_jsonld';
     const jsonLdStart = Date.now();
     const jsonLd = extractJSONLD(html);
@@ -753,8 +757,9 @@ export async function ingestSingleUrl(url, supa, options = {}) {
       const bestJsonLd = jsonLd[0]; // First item after prioritization
       const bestIdx = 0;
       
-      // Generate description from HTML content if no description exists
-      let enhancedDescription = enhancedDescriptions[bestIdx] || bestJsonLd.description || null;
+      // PRIORITY: Use meta_description as primary source for description field (for ALL entity types)
+      // Fallback to enhancedDescription from JSON-LD/content extraction if meta_description not available
+      let enhancedDescription = metaDescription || enhancedDescriptions[bestIdx] || bestJsonLd.description || null;
       
       if (!enhancedDescription) {
         // Extract description from HTML content using htmlToText
@@ -883,8 +888,8 @@ export async function ingestSingleUrl(url, supa, options = {}) {
                 page_url: url, // CRITICAL: Set page_url for constraint matching
                 kind: finalKind,
                 title: (meta.title && meta.title.trim()) || chosenTitle || null,
-                description: enhancedDescription,
-                meta_description: extractMetaDescription(html),
+                description: metaDescription || enhancedDescription,
+                meta_description: metaDescription,
                 date_start: dateStart,
                 date_end: dateEnd,
                 location: bestJsonLd.location?.name || bestJsonLd.location?.address || meta.location_name || null,
@@ -937,8 +942,8 @@ export async function ingestSingleUrl(url, supa, options = {}) {
           page_url: url, // CRITICAL: Set page_url for constraint matching
           kind: finalKind,
           title: chosenTitle || null,
-          description: enhancedDescription,
-          meta_description: extractMetaDescription(html),
+          description: metaDescription || enhancedDescription,
+          meta_description: metaDescription,
           date_start: csvMetadata?.start_date && csvMetadata?.start_time 
             ? `${csvMetadata.start_date}T${csvMetadata.start_time}.000Z`
             : (bestJsonLd.datePublished || bestJsonLd.startDate || null),
@@ -1005,8 +1010,8 @@ export async function ingestSingleUrl(url, supa, options = {}) {
             page_url: url, // Set page_url for consistency
             kind: productKind,
             title: productTitle,
-            description: productDescription,
-            meta_description: extractMetaDescription(html),
+            description: metaDescription || productDescription,
+            meta_description: metaDescription,
             date_start: null, // Products don't have dates
             date_end: null,
             location: null, // Products don't have locations
@@ -1379,15 +1384,23 @@ export async function ingestSingleUrl(url, supa, options = {}) {
       }
     } catch (_) {}
 
-    // Final safeguard: ensure meta_description matches on-page meta (prefer og:description)
+    // Final safeguard: ensure meta_description matches on-page meta for ALL entity types
+    // Also update description field to use meta_description when available
     try {
       const finalMetaDesc = extractMetaDescription(html);
       if (finalMetaDesc) {
+        // Update meta_description for all entity types
         await supa
           .from('page_entities')
           .update({ meta_description: finalMetaDesc })
+          .eq('page_url', url);
+        
+        // Update description field to use meta_description when available (for all types)
+        await supa
+          .from('page_entities')
+          .update({ description: finalMetaDesc })
           .eq('page_url', url)
-          .in('kind', ['service','landing']);
+          .is('description', null); // Only update if description is currently null
       }
     } catch (_) {}
 
