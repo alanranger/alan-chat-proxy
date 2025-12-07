@@ -26,6 +26,37 @@ const sendJSON = (res, status, obj) => {
   res.status(status).send(JSON.stringify(obj));
 };
 
+/* ========== Helper: Identify automated/test sessions ========== */
+/**
+ * Determines if a session ID represents an automated test or cron job session.
+ * Filters out:
+ * - Regression test sessions (starts with "regression-")
+ * - Test sessions (starts with "test-", "analytics-test-")
+ * - Interactive test sessions (contains "interactive-test", "baseline-test", "regression-test")
+ * - Sessions with exactly 40 interactions (40q regression test pattern)
+ */
+const AUTOMATED_PREFIXES = ['regression-', 'test-', 'analytics-test-'];
+const AUTOMATED_PATTERNS = ['interactive-test', 'baseline-test', 'regression-test', 'batch1-test', 'test-recency-', 'restore-point-test'];
+
+const isAutomatedSession = (sessionId, interactionCount = null) => {
+  if (!sessionId || typeof sessionId !== 'string') return false;
+  
+  const lowerSessionId = sessionId.toLowerCase();
+  
+  // Check prefixes
+  for (const prefix of AUTOMATED_PREFIXES) {
+    if (lowerSessionId.startsWith(prefix)) return true;
+  }
+  
+  // Check patterns
+  for (const pattern of AUTOMATED_PATTERNS) {
+    if (lowerSessionId.includes(pattern)) return true;
+  }
+  
+  // Check for 40q regression test pattern (exactly 40 interactions)
+  return interactionCount !== null && interactionCount === 40;
+};
+
 /* ========== handler ========== */
 export default async function handler(req, res) {
   if (req.method !== 'GET') return sendJSON(res, 405, { error: 'method_not_allowed' });
@@ -59,44 +90,67 @@ export default async function handler(req, res) {
 
           if (dailyError) console.warn('Daily data failed:', dailyError.message);
 
-          // Live totals from base tables so they always reflect reality
-          const [sessionsCountRes, answeredCountRes] = await Promise.all([
-            supa.from('chat_sessions').select('session_id', { count: 'exact', head: true }).gte('started_at', sinceIso),
-            supa.from('chat_interactions').select('id', { count: 'exact', head: true }).not('answer', 'is', null).gte('created_at', sinceIso)
-          ]);
-          const sessionsCount = sessionsCountRes?.count || 0;
-          const answeredCount = answeredCountRes?.count || 0;
+          // Get all sessions and interactions to filter out automated ones
+          const { data: allSessions = [], error: sessionsError } = await supa
+            .from('chat_sessions')
+            .select('session_id')
+            .gte('started_at', sinceIso);
+          
+          if (sessionsError) throw new Error(`Sessions fetch failed: ${sessionsError.message}`);
 
-          // Live averages from answered interactions for accuracy
-          const { data: answeredRows = [], error: answeredRowsError } = await supa
+          // Get interaction counts per session to identify 40q test pattern
+          const { data: allInteractions = [], error: interactionsError } = await supa
             .from('chat_interactions')
-            .select('confidence,response_time_ms')
+            .select('session_id, confidence, response_time_ms')
             .not('answer', 'is', null)
             .gte('created_at', sinceIso);
-          if (answeredRowsError) console.warn('Answered rows fetch failed:', answeredRowsError.message);
+          
+          if (interactionsError) throw new Error(`Interactions fetch failed: ${interactionsError.message}`);
 
+          // Count interactions per session to identify 40q pattern
+          const sessionInteractionCounts = {};
+          allInteractions.forEach(interaction => {
+            sessionInteractionCounts[interaction.session_id] = (sessionInteractionCounts[interaction.session_id] || 0) + 1;
+          });
+
+          // Filter out automated sessions
+          const realUserSessions = allSessions.filter(s => 
+            !isAutomatedSession(s.session_id, sessionInteractionCounts[s.session_id])
+          );
+
+          // Filter out interactions from automated sessions
+          const realUserInteractions = allInteractions.filter(interaction =>
+            !isAutomatedSession(interaction.session_id, sessionInteractionCounts[interaction.session_id])
+          );
+
+          // Calculate metrics from real user data only
           let confSum = 0, confN = 0, rtSum = 0, rtN = 0;
-          for (const r of answeredRows) {
+          for (const r of realUserInteractions) {
             if (typeof r.confidence === 'number') { confSum += r.confidence; confN += 1; }
             if (typeof r.response_time_ms === 'number') { rtSum += r.response_time_ms; rtN += 1; }
           }
 
           const totals = {
-            sessions: sessionsCount || 0,
-            questions: answeredCount || 0,
-            interactions: answeredCount || 0,
+            sessions: realUserSessions.length || 0,
+            questions: realUserInteractions.length || 0,
+            interactions: realUserInteractions.length || 0,
             avgConfidence: confN ? (confSum / confN) : 0,
             avgResponseTime: rtN ? (rtSum / rtN) : 0
           };
 
-          // Get recent sessions
-          const { data: recentSessions, error: sessionsError } = await supa
+          // Get recent real user sessions only
+          const { data: recentSessionsAll, error: recentSessionsError } = await supa
             .from('chat_sessions')
             .select('*')
             .order('started_at', { ascending: false })
-            .limit(10);
+            .limit(50); // Get more to filter down to 10 real sessions
 
-          if (sessionsError) throw new Error(`Recent sessions failed: ${sessionsError.message}`);
+          if (recentSessionsError) throw new Error(`Recent sessions failed: ${recentSessionsError.message}`);
+
+          // Filter to real user sessions and limit to 10
+          const recentSessions = (recentSessionsAll || [])
+            .filter(s => !isAutomatedSession(s.session_id, sessionInteractionCounts[s.session_id]))
+            .slice(0, 10);
 
           return sendJSON(res, 200, {
             ok: true,
@@ -122,26 +176,15 @@ export default async function handler(req, res) {
 
           if (interactionsError) throw new Error(`Top questions failed: ${interactionsError.message}`);
 
-          // Filter out regression test sessions:
-          // 1. Sessions starting with "test-" or "analytics-test-" (regression test patterns)
-          // 2. Sessions with exactly 40 interactions (40q regression test pattern)
+          // Count interactions per session to identify 40q test pattern
           const sessionCounts = {};
           (allInteractions || []).forEach(r => {
             sessionCounts[r.session_id] = (sessionCounts[r.session_id] || 0) + 1;
           });
-          const regressionTestSessions = new Set(
-            Object.entries(sessionCounts)
-              .filter(([sessionId, count]) => 
-                sessionId.startsWith('test-') || 
-                sessionId.startsWith('analytics-test-') ||
-                count === 40
-              )
-              .map(([sessionId, _]) => sessionId)
-          );
 
-          // Filter out regression test sessions
+          // Filter out automated/test sessions using helper function
           const filteredInteractions = (allInteractions || []).filter(
-            r => !regressionTestSessions.has(r.session_id)
+            r => !isAutomatedSession(r.session_id, sessionCounts[r.session_id])
           );
 
           // Aggregate question frequency and calculate averages
@@ -215,55 +258,86 @@ export default async function handler(req, res) {
           const { page = 1, limit = 20, search } = req.query || {};
           const offset = (page - 1) * limit;
 
+          // Get more sessions than needed to account for filtering
           let query = supa
             .from('chat_sessions')
             .select('*')
             .order('started_at', { ascending: false })
-            .range(offset, offset + limit - 1);
+            .range(0, offset + limit * 3 - 1); // Get 3x limit to account for filtering
 
           if (search) {
             query = query.ilike('session_id', `%${search}%`);
           }
 
-          const { data: sessions, error: sessionsError } = await query;
+          const { data: allSessions, error: sessionsError } = await query;
 
           if (sessionsError) throw new Error(`Sessions failed: ${sessionsError.message}`);
 
-          // Recompute per-session answered question counts to avoid stale totals
-          if (sessions && sessions.length) {
-            const sessionIds = sessions.map(s => s.session_id);
-            const { data: perSessionCounts, error: perSessionError } = await supa
-              .from('chat_interactions')
-              .select('session_id', { count: 'exact' })
-              .not('answer', 'is', null)
-              .in('session_id', sessionIds);
-            if (!perSessionError && Array.isArray(perSessionCounts)) {
-              const countsBySession = {};
-              perSessionCounts.forEach(r => {
-                countsBySession[r.session_id] = (countsBySession[r.session_id] || 0) + 1;
-              });
-              sessions.forEach(s => {
-                s.total_questions = countsBySession[s.session_id] || 0;
-              });
-            }
+          // Get interaction counts for all sessions to identify 40q pattern
+          const sessionIds = (allSessions || []).map(s => s.session_id);
+          const { data: perSessionCounts, error: perSessionError } = await supa
+            .from('chat_interactions')
+            .select('session_id', { count: 'exact' })
+            .not('answer', 'is', null)
+            .in('session_id', sessionIds.length > 0 ? sessionIds : ['dummy']);
+          
+          const countsBySession = {};
+          if (!perSessionError && Array.isArray(perSessionCounts)) {
+            perSessionCounts.forEach(r => {
+              countsBySession[r.session_id] = (countsBySession[r.session_id] || 0) + 1;
+            });
           }
 
-          // Get total count
-          const { count, error: countError } = await supa
+          // Filter out automated sessions
+          const realUserSessions = (allSessions || []).filter(s => 
+            !isAutomatedSession(s.session_id, countsBySession[s.session_id])
+          );
+
+          // Apply pagination to filtered results
+          const paginatedSessions = realUserSessions.slice(offset, offset + limit);
+
+          // Set total_questions for each session
+          paginatedSessions.forEach(s => {
+            s.total_questions = countsBySession[s.session_id] || 0;
+          });
+
+          // Get total count of real user sessions (for pagination)
+          const { data: allSessionsForCount, error: countError } = await supa
             .from('chat_sessions')
-            .select('*', { count: 'exact', head: true });
+            .select('session_id')
+            .order('started_at', { ascending: false })
+            .limit(10000); // Reasonable limit for counting
 
           if (countError) throw new Error(`Count failed: ${countError.message}`);
+
+          // Count interactions for all sessions to filter properly
+          const allSessionIdsForCount = (allSessionsForCount || []).map(s => s.session_id);
+          const { data: allCounts, error: allCountsError } = await supa
+            .from('chat_interactions')
+            .select('session_id', { count: 'exact' })
+            .not('answer', 'is', null)
+            .in('session_id', allSessionIdsForCount.length > 0 ? allSessionIdsForCount : ['dummy']);
+
+          const allCountsBySession = {};
+          if (!allCountsError && Array.isArray(allCounts)) {
+            allCounts.forEach(r => {
+              allCountsBySession[r.session_id] = (allCountsBySession[r.session_id] || 0) + 1;
+            });
+          }
+
+          const totalRealUserSessions = (allSessionsForCount || []).filter(s =>
+            !isAutomatedSession(s.session_id, allCountsBySession[s.session_id])
+          ).length;
 
           return sendJSON(res, 200, {
             ok: true,
             sessions: {
-              data: sessions || [],
+              data: paginatedSessions || [],
               pagination: {
                 page: parseInt(page),
                 limit: parseInt(limit),
-                total: count || 0,
-                pages: Math.ceil((count || 0) / limit)
+                total: totalRealUserSessions || 0,
+                pages: Math.ceil((totalRealUserSessions || 0) / limit)
               }
             }
           });
@@ -316,14 +390,25 @@ export default async function handler(req, res) {
           // Build performance metrics from answered interactions (live, not stale aggregates)
           const sinceIso = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
 
-          const { data: interactions, error: interactionsError } = await supa
+          const { data: allInteractions, error: interactionsError } = await supa
             .from('chat_interactions')
-            .select('created_at, confidence, response_time_ms')
+            .select('created_at, confidence, response_time_ms, session_id')
             .not('answer', 'is', null)
             .gte('created_at', sinceIso)
             .order('created_at', { ascending: true });
 
           if (interactionsError) throw new Error(`Performance data failed: ${interactionsError.message}`);
+
+          // Count interactions per session to identify 40q test pattern
+          const sessionCounts = {};
+          (allInteractions || []).forEach(r => {
+            sessionCounts[r.session_id] = (sessionCounts[r.session_id] || 0) + 1;
+          });
+
+          // Filter out automated/test sessions
+          const interactions = (allInteractions || []).filter(
+            r => !isAutomatedSession(r.session_id, sessionCounts[r.session_id])
+          );
 
           // Aggregate by day (local date string YYYY-MM-DD)
           const byDay = {};
@@ -357,24 +442,15 @@ export default async function handler(req, res) {
 
           if (interactionsError) throw new Error(`Insights data failed: ${interactionsError.message}`);
 
-          // Filter out regression test sessions:
-          // 1. Sessions starting with "test-" or "analytics-test-" (regression test patterns)
-          // 2. Sessions with exactly 40 interactions (40q regression test pattern)
+          // Count interactions per session to identify 40q test pattern
           const sessionCounts = {};
           (allInteractions || []).forEach(r => {
             sessionCounts[r.session_id] = (sessionCounts[r.session_id] || 0) + 1;
           });
-          const regressionTestSessions = new Set(
-            Object.entries(sessionCounts)
-              .filter(([sessionId, count]) => 
-                sessionId.startsWith('test-') || 
-                sessionId.startsWith('analytics-test-') ||
-                count === 40
-              )
-              .map(([sessionId, _]) => sessionId)
-          );
+
+          // Filter out automated/test sessions using helper function
           const filteredInteractions = (allInteractions || []).filter(
-            r => !regressionTestSessions.has(r.session_id)
+            r => !isAutomatedSession(r.session_id, sessionCounts[r.session_id])
           );
 
           // Aggregate question frequency and confidence
@@ -509,21 +585,42 @@ export default async function handler(req, res) {
 
       case 'admin_counts':
         {
-          // Use the same definitions as Overview: questions == answered interactions
-          const [sessionsRes, answeredRes] = await Promise.all([
-            supa.from('chat_sessions').select('session_id', { count: 'exact', head: true }),
-            supa.from('chat_interactions').select('id', { count: 'exact', head: true }).not('answer', 'is', null)
-          ]);
-          if (sessionsRes.error) throw new Error(`Count sessions failed: ${sessionsRes.error.message}`);
-          if (answeredRes.error) throw new Error(`Count answered interactions failed: ${answeredRes.error.message}`);
-          const sessions = sessionsRes.count || 0;
-          const answered = answeredRes.count || 0;
+          // Get all sessions and interactions to filter out automated ones
+          const { data: allSessions = [], error: sessionsError } = await supa
+            .from('chat_sessions')
+            .select('session_id');
+          
+          if (sessionsError) throw new Error(`Count sessions failed: ${sessionsError.message}`);
+
+          const { data: allInteractions = [], error: interactionsError } = await supa
+            .from('chat_interactions')
+            .select('session_id')
+            .not('answer', 'is', null);
+          
+          if (interactionsError) throw new Error(`Count answered interactions failed: ${interactionsError.message}`);
+
+          // Count interactions per session to identify 40q test pattern
+          const sessionCounts = {};
+          allInteractions.forEach(interaction => {
+            sessionCounts[interaction.session_id] = (sessionCounts[interaction.session_id] || 0) + 1;
+          });
+
+          // Filter out automated sessions
+          const realUserSessions = allSessions.filter(s => 
+            !isAutomatedSession(s.session_id, sessionCounts[s.session_id])
+          );
+
+          // Filter out interactions from automated sessions
+          const realUserInteractions = allInteractions.filter(interaction =>
+            !isAutomatedSession(interaction.session_id, sessionCounts[interaction.session_id])
+          );
+
           return sendJSON(res, 200, {
             ok: true,
             counts: {
-              interactions: answered,
-              sessions,
-              questions: answered
+              interactions: realUserInteractions.length || 0,
+              sessions: realUserSessions.length || 0,
+              questions: realUserInteractions.length || 0
             }
           });
         }
