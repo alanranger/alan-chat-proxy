@@ -1322,6 +1322,12 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
         const tbody = document.getElementById('questions-table');
         tbody.innerHTML = '';
         
+      // Ensure currentQuestionsData is an array
+      if (!Array.isArray(currentQuestionsData) || currentQuestionsData.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px; color: var(--text-muted);">No questions found</td></tr>';
+        return;
+      }
+        
       // Sort the data
       const sortedData = [...currentQuestionsData].sort((a, b) => {
         let aVal, bVal;
@@ -1428,10 +1434,13 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
         document.getElementById('questions-content').style.display = 'none';
         
         const data = await apiCall('questions');
-        const { topQuestions } = data.questions;
+        console.log('Questions API response:', data);
+        const { topQuestions } = data.questions || {};
+        console.log('topQuestions:', topQuestions);
         
-        // Store data globally for sorting
-        currentQuestionsData = topQuestions;
+        // Store data globally for sorting (ensure it's an array)
+        currentQuestionsData = Array.isArray(topQuestions) ? topQuestions : [];
+        console.log('currentQuestionsData length:', currentQuestionsData.length);
         
         // Render the table with current sort settings
         renderQuestionsTable();
@@ -1440,7 +1449,10 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
         document.getElementById('questions-content').style.display = 'block';
         
       } catch (error) {
+        console.error('Failed to load questions data:', error);
         showError('Failed to load questions data: ' + error.message);
+        document.getElementById('questions-loading').style.display = 'none';
+        document.getElementById('questions-content').style.display = 'block';
       }
     }
 
