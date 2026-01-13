@@ -488,14 +488,14 @@
         </div>
       </div>
 
-      <!-- Current Issues -->
+      <!-- Current System Status -->
       <div class="section">
-        <h3>⚠️ Current System Issues</h3>
-        <div style="background: #2a1a1a; padding: 20px; border-radius: 8px; border-left: 4px solid #f44336;">
-          <div style="color: #f44336; font-weight: bold; margin-bottom: 10px;">PROBLEMS IDENTIFIED:</div>
+        <h3>✅ Current System Status</h3>
+        <div style="background: #1a2a1a; padding: 20px; border-radius: 8px; border-left: 4px solid #4CAF50;">
+          <div style="color: #4CAF50; font-weight: bold; margin-bottom: 10px;">SYSTEM FEATURES:</div>
           <div style="color: #fff; margin-left: 20px;">
-            • <strong>URL-Pattern Based Enrichment:</strong> v_workshop_enrichment only processes workshop URLs, ignores courses<br>
-            • <strong>CSV Metadata Integration:</strong> Rich metadata from 8 CSV types now integrated<br>
+            • <strong>Separate Enrichment Views:</strong> System uses dedicated views for workshops (<code>v_workshop_event_enrichment</code>, <code>v_workshop_product_enrichment</code>) and courses (<code>v_course_event_enrichment</code>, <code>v_course_product_enrichment</code>)<br>
+            • <strong>CSV Metadata Integration:</strong> Rich metadata from 8 CSV types integrated<br>
             • <strong>Enhanced Data Flow:</strong> Import → Enhanced Ingest → Structured Data Extraction<br>
             • <strong>Unified Views:</strong> Consistent enrichment logic across all content types<br>
             • <strong>Structured Data Extraction:</strong> 10 new fields extracted from page content
