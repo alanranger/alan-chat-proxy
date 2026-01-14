@@ -1,4 +1,4 @@
-﻿// /api/chat.js – deploy bump: conversational sharpness + debug logs
+// /api/chat.js – deploy bump: conversational sharpness + debug logs
 // FIX: 2025-10-06 04:15 - Fixed fitness level extraction from description field
 // This extracts fitness level information from product chunks description field
 // Now parses patterns like "Fitness: 1. Easy" and "Experience - Level: Beginner"
@@ -2112,7 +2112,7 @@ const TOPIC_KEYWORDS = [
  "cost",
 ];
 
-function extractKeywords(q) {
+export function extractKeywords(q) {
  let lc = normalizeQuery(q);
  lc = applySynonymExpansion(lc);
  lc = applySpecialCases(lc);
@@ -3762,7 +3762,7 @@ async function handleRegularSearch(client, enhancedKeywords, limit) {
  return mapEventsData(data);
 }
 
-async function findEvents(client, { keywords, limit = 50, pageContext = null }) {
+export async function findEvents(client, { keywords, limit = 50, pageContext = null }) {
  // Enhance keywords with page context
  const enhancedKeywords = enhanceKeywordsWithPageContext(keywords, pageContext);
  
@@ -4383,7 +4383,7 @@ function computeServiceRecencyScore(lastSeen, now) {
   return 0;
 }
 
-async function findServices(client, { keywords, limit = 50 }) {
+export async function findServices(client, { keywords, limit = 50 }) {
   console.log(`🔧 findServices called with keywords: ${keywords?.join(', ') || 'none'}`);
   const genericServiceIntent = Array.isArray(keywords) && keywords.length > 0 && 
     keywords.every(k => /^(service|services|type|types|offer|offers|photography|photographic|what|do|you)$/i.test(String(k||'').trim()));
@@ -4789,7 +4789,7 @@ function filterArticleKeywords(keywords){
   return Array.from(new Set([...allowedSingles, ...phraseMatches]));
 }
 
-async function findArticles(client, { keywords, limit = 12, pageContext = null }) {
+export async function findArticles(client, { keywords, limit = 12, pageContext = null }) {
   const enhancedKeywords = handlePageContext(pageContext, keywords);
   const searchTerms = filterArticleKeywords(enhancedKeywords);
   const requestedLimit = typeof limit === 'number' && !Number.isNaN(limit) ? limit : 12;
@@ -5155,7 +5155,7 @@ function getEventStructuredFields(e) {
  };
 }
 
-function formatEventsForUi(events) {
+export function formatEventsForUi(events) {
  console.log('ðŸ” formatEventsForUi input:', {
  inputLength: events?.length || 0,
  inputSample: events?.slice(0, 2) || []
@@ -5454,7 +5454,7 @@ function calculateEventConfidence(query, events, product) {
  return finalizeConfidence(query, context);
 }
 
-function initializeConfidenceContext(query) {
+export function initializeConfidenceContext(query) {
  const context = {
  baseConfidence: 0.3, // Start with reasonable baseline for events
  confidenceFactors: [],
@@ -5477,7 +5477,7 @@ function initializeConfidenceContext(query) {
  return context;
 }
 
-function analyzeDataAttributes(events, product, context) {
+export function analyzeDataAttributes(events, product, context) {
  const responseAttributes = initializeResponseAttributes();
  
  // Analyze events for response attributes and quality indicators
@@ -5926,7 +5926,7 @@ function applyAllScoringFactors(context) {
  applyRelevanceScoring(context.queryLower, events, context.addFactor);
 }
 
-function finalizeConfidence(query, context) {
+export function finalizeConfidence(query, context) {
  // Ensure quality indicators exist
  if (!context.qualityIndicators) {
  context.qualityIndicators = {
