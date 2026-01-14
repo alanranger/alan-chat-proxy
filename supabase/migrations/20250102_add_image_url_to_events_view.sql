@@ -26,7 +26,16 @@ WITH events AS (
     pe.image_url
   FROM page_entities pe
   WHERE pe.kind = 'event'
-    AND pe.image_url IS NOT NULL
+    AND (pe.url ILIKE 'https://www.alanranger.com/photographic-workshops-near-me/%'
+      OR pe.url ILIKE 'https://www.alanranger.com/beginners-photography-lessons/%')
+), event_times AS (
+  SELECT
+    pe.url AS event_url,
+    -- Extract start_time and end_time from page_entities if available
+    null AS start_time,
+    null AS end_time
+  FROM page_entities pe
+  WHERE pe.kind = 'event'
     AND (pe.url ILIKE 'https://www.alanranger.com/photographic-workshops-near-me/%'
       OR pe.url ILIKE 'https://www.alanranger.com/beginners-photography-lessons/%')
 )
@@ -39,6 +48,8 @@ SELECT
   p.availability,
   e.date_start,
   e.date_end,
+  et.start_time,
+  et.end_time,
   coalesce(e.location_name, e.location_city, e.location_region, e.location_country) AS event_location,
   b.link_source AS map_method,
   b.confidence,
@@ -60,4 +71,6 @@ LEFT JOIN best b
 LEFT JOIN prod p
   ON b.product_url = p.product_url
 LEFT JOIN event_images ei
-  ON e.canonical_event_url = ei.event_url;
+  ON e.canonical_event_url = ei.event_url
+LEFT JOIN event_times et
+  ON e.canonical_event_url = et.event_url;
