@@ -3944,7 +3944,7 @@ async function fetchEventsFromDatabase(client) {
  
  const { data: allEvents, error: e1 } = await client
  .from("v_events_for_chat")
- .select("event_url, subtype, product_url, product_title, price_gbp, availability, date_start, date_end, start_time, end_time, event_location, map_method, confidence, participants, fitness_level, event_title, json_price, json_availability, price_currency, categories, product_description, experience_level, equipment_needed")
+ .select("event_url, subtype, product_url, product_title, price_gbp, availability, date_start, date_end, start_time, end_time, event_location, map_method, confidence, participants, fitness_level, event_title, json_price, json_availability, price_currency, categories, product_description, experience_level, equipment_needed, image_url, event_image_url")
  .gte("date_start", `${todayIso}T00:00:00.000Z`)
  .order("date_start", { ascending: true })
  .limit(200);
@@ -4001,7 +4001,7 @@ async function findEventsByDuration(client, categoryType, limit = 100) {
 function buildEventsBaseQuery(client, limit) {
  return client
  .from("v_events_for_chat")
- .select("event_url, subtype, product_url, product_title, price_gbp, availability, date_start, date_end, start_time, end_time, event_location, map_method, confidence, participants, fitness_level, event_title, json_price, json_availability, price_currency, experience_level, equipment_needed")
+ .select("event_url, subtype, product_url, product_title, price_gbp, availability, date_start, date_end, start_time, end_time, event_location, map_method, confidence, participants, fitness_level, event_title, json_price, json_availability, price_currency, experience_level, equipment_needed, image_url, event_image_url")
  .gte("date_start", new Date().toISOString()) // Only future events
  .order("date_start", { ascending: true }) // Sort by date ascending (earliest first)
  .limit(limit);
@@ -4112,16 +4112,25 @@ function mapEventsData(data) {
  csv_type: event.subtype, // Map subtype to csv_type for frontend
  date: event.date_start, // Map date_start to date for frontend
  _csv_start_time: event.start_time, // Preserve CSV times for frontend
- _csv_end_time: event.end_time
+ _csv_end_time: event.end_time,
+ // Image URL: prefer image_url, fallback to event_image_url
+ image_url: event.image_url || event.event_image_url || null
  }));
  
  // Remove duplicates by event_url + date_start to allow same event on different dates
  const dedupedData = dedupeEventsByKey(mappedData, 'event_url', 'date_start');
+
+ // Dev assertion: log if events have images (for "devon workshop" query)
+ const hasImages = dedupedData.filter(e => e.image_url).length;
+ if (dedupedData.length > 0) {
+   console.log(`[SEARCH] Event images check: ${hasImages}/${dedupedData.length} events have image_url`);
+ }
  
  console.log('ðŸ” findEvents mapped data:', {
  mappedDataCount: mappedData?.length || 0,
  dedupedDataCount: dedupedData?.length || 0,
- originalDataCount: data?.length || 0
+ originalDataCount: data?.length || 0,
+ eventsWithImages: hasImages
  });
  
  return dedupedData;
@@ -5118,6 +5127,7 @@ function getEventBasicFields(e) {
  categories: e.categories || null,
  tags: e.tags || null,
  raw: e.raw || null,
+ image_url: e.image_url || e.event_image_url || null, // Include image URL for UI rendering
  };
 }
 
