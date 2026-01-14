@@ -36,7 +36,6 @@ export async function runSearch({ q, limit = 24, pageContext = null, supa = null
       confidence: 0.1,
       structured: {
         intent: 'empty',
-        topic: '',
         events: [],
         services: [],
         articles: [],
@@ -107,13 +106,13 @@ export async function runSearch({ q, limit = 24, pageContext = null, supa = null
   };
 
   // Return structured results in the format expected by the endpoint
+  // Contract: { ok: true, q, confidence, structured: { intent, events, services, articles, products, landing } }
   return {
     ok: true,
     q: query,
     confidence,
     structured: {
       intent,
-      topic: keywords.join(', '),
       events: formattedEvents,
       services: services || [],
       articles: (articles || []).map(a => ({
