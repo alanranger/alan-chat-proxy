@@ -214,6 +214,7 @@
       font-weight:700;
       white-space:nowrap;
       cursor:default;
+      -webkit-user-select:none;
       user-select:none;
     }
     .ar-pill.price{
@@ -334,29 +335,36 @@
        * 1) Robust image resolver with prioritized fallbacks
        */
       function resolveImageUrl(item, type){
-        // Priority order
+        // Priority order: direct fields
         if (item.image_url) return String(item.image_url).trim();
         if (item.image) return String(item.image).trim();
         if (item.raw && item.raw.image_url) return String(item.raw.image_url).trim();
-        if (item.json_ld_data){
-          const jld = item.json_ld_data;
-          if (jld.image){
-            if (typeof jld.image === 'string') return jld.image.trim();
-            if (Array.isArray(jld.image) && jld.image.length > 0){
-              const first = jld.image[0];
-              return typeof first === 'string' ? first.trim() : (first.url || first).trim();
-            }
-            if (typeof jld.image === 'object' && jld.image.url){
-              return String(jld.image.url).trim();
-            }
-          }
-        }
+        
+        // json_ld_data.image handling
+        const jldImage = extractJsonLdImage(item.json_ld_data);
+        if (jldImage) return jldImage;
+        
+        // Other fields
         if (item.og_image) return String(item.og_image).trim();
         if (item.product_image_url) return String(item.product_image_url).trim();
         if (item.event_image_url) return String(item.event_image_url).trim();
 
         // Type-based fallback
         return FALLBACKS[type] || FALLBACKS.event;
+      }
+
+      function extractJsonLdImage(jsonLd){
+        if (!jsonLd || !jsonLd.image) return null;
+        const img = jsonLd.image;
+        if (typeof img === 'string') return img.trim();
+        if (Array.isArray(img) && img.length > 0){
+          const first = img[0];
+          return typeof first === 'string' ? first.trim() : String(first.url || first).trim();
+        }
+        if (typeof img === 'object' && img.url){
+          return String(img.url).trim();
+        }
+        return null;
       }
 
       /**
@@ -373,23 +381,33 @@
         }
 
         // Generated fallback
-        const parts = [];
-        if (type === "event"){
-          const loc = item.location || item.event_location || item.location_name || "";
-          const dr = fmtDateRange(item);
-          const exp = item.experience_level || "";
-          if (loc) parts.push(loc);
-          if (dr) parts.push(dr);
-          if (exp) parts.push(exp);
-          if (parts.length > 0) return "Workshop in " + parts.join(" • ");
-        } else if (type === "guide" || type === "service"){
-          const tags = (item.tags || []).concat(item.categories || []);
-          if (tags.length > 0){
-            return "Guide covering " + tags.slice(0, 3).join(", ");
-          }
-        }
+        return generateSummaryFallback(item, type);
+      }
 
+      function generateSummaryFallback(item, type){
+        if (type === "event"){
+          return generateEventSummary(item);
+        }
+        if (type === "guide" || type === "service"){
+          return generateGuideSummary(item);
+        }
         return "";
+      }
+
+      function generateEventSummary(item){
+        const parts = [];
+        const loc = item.location || item.event_location || item.location_name || "";
+        const dr = fmtDateRange(item);
+        const exp = item.experience_level || "";
+        if (loc) parts.push(loc);
+        if (dr) parts.push(dr);
+        if (exp) parts.push(exp);
+        return parts.length > 0 ? "Workshop in " + parts.join(" • ") : "";
+      }
+
+      function generateGuideSummary(item){
+        const tags = (item.tags || []).concat(item.categories || []);
+        return tags.length > 0 ? "Guide covering " + tags.slice(0, 3).join(", ") : "";
       }
 
       /**
@@ -461,43 +479,17 @@
         }
 
         // Subtitle
-        const subBits = [];
-        const dr = fmtDateRange(item);
-        const loc = item.location || item.event_location || item.location_name || "";
-        const price = item.price_gbp ? ("£" + item.price_gbp) : (item.price ? ("£" + item.price) : "");
-
-        if (dr) subBits.push(dr);
-        if (loc) subBits.push(loc);
-        if (price && kind === "event") subBits.push(price);
-
-        const subtitle = subBits.join(" · ");
+        const subtitle = buildSubtitle(item, kind);
 
         // Description with fallback
         const desc = getCardSummary(item, kind);
 
         // Pills (normalized, deduped, capped at 4)
-        const pillCandidates = [];
-        pillCandidates.push(kind === "event" ? "event" : (kind === "service" ? "service" : "guide"));
-        if (loc && kind === "event") pillCandidates.push(loc);
-        if (price && kind === "event") pillCandidates.push(price);
-        if (item.participants) pillCandidates.push(item.participants + " people");
-        if (item.fitness_level) pillCandidates.push(item.fitness_level);
-        if (item.experience_level) pillCandidates.push(item.experience_level);
-        if (kind === "service" || kind === "guide"){
-          (item.tags || []).forEach(t => pillCandidates.push(t));
-          (item.categories || []).forEach(c => pillCandidates.push(c));
-        }
-
+        const pillCandidates = collectPillCandidates(item, kind);
         const pillsHtml = renderPills(pillCandidates, 4);
 
         // Actions
-        const actions = [];
-        actions.push('<a class="ar-btn more" href="' + esc(href) + '">More info →</a>');
-
-        // Book now only if product_url exists
-        if (kind === "event" && item.product_url){
-          actions.push('<a class="ar-btn book" href="' + esc(item.product_url) + '">Book now</a>');
-        }
+        const actions = buildActions(item, kind, href);
 
         return (
           '<div class="ar-card">' +
@@ -511,6 +503,52 @@
             '</div>' +
           '</div>'
         );
+      }
+
+      function buildSubtitle(item, kind){
+        const subBits = [];
+        const dr = fmtDateRange(item);
+        const loc = item.location || item.event_location || item.location_name || "";
+        const price = item.price_gbp ? ("£" + item.price_gbp) : (item.price ? ("£" + item.price) : "");
+
+        if (dr) subBits.push(dr);
+        if (loc) subBits.push(loc);
+        if (price && kind === "event") subBits.push(price);
+
+        return subBits.join(" · ");
+      }
+
+      function collectPillCandidates(item, kind){
+        const candidates = [];
+        const kindLabel = kind === "event" ? "event" : (kind === "service" ? "service" : "guide");
+        candidates.push(kindLabel);
+
+        if (kind === "event"){
+          const loc = item.location || item.event_location || item.location_name || "";
+          const price = item.price_gbp ? ("£" + item.price_gbp) : (item.price ? ("£" + item.price) : "");
+          if (loc) candidates.push(loc);
+          if (price) candidates.push(price);
+          if (item.participants) candidates.push(item.participants + " people");
+          if (item.fitness_level) candidates.push(item.fitness_level);
+          if (item.experience_level) candidates.push(item.experience_level);
+        } else {
+          (item.tags || []).forEach(t => candidates.push(t));
+          (item.categories || []).forEach(c => candidates.push(c));
+        }
+
+        return candidates;
+      }
+
+      function buildActions(item, kind, href){
+        const actions = [];
+        actions.push('<a class="ar-btn more" href="' + esc(href) + '">More info →</a>');
+
+        // Book now only if product_url exists
+        if (kind === "event" && item.product_url){
+          actions.push('<a class="ar-btn book" href="' + esc(item.product_url) + '">Book now</a>');
+        }
+
+        return actions;
       }
 
       function renderSection(label, items, kind, keyFn){
