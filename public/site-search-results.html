@@ -499,10 +499,11 @@
        */
       function renderThumb(item, type, title){
         const imageUrl = pickImage(item);
+        const placeholder = PLACEHOLDER_IMAGE;
 
         if (!imageUrl || imageUrl === ""){
-          // No URL - render "AR" placeholder (not fallback image)
-          return '<div class="ar-thumb">AR</div>';
+          // No URL - render placeholder image (Option B: consistent placeholder)
+          return '<div class="ar-thumb"><img src="' + esc(placeholder) + '" alt="' + esc(title) + '" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="this.onerror=null; this.style.display=\'none\'; this.parentElement.textContent=\'AR\';"></div>';
         }
 
         // Has URL - render with onerror fallback (prevents infinite loop by setting onerror to null)
