@@ -195,6 +195,7 @@ async function fetchImageUrls(client, eventUrls, productUrls) {
 
 /**
  * Fetch images for a specific kind (event or product) in batches
+ * Uses 'url' field in page_entities (not 'page_url')
  */
 async function fetchImagesByKind(client, urlArray, kind, imageMap) {
   const batchSize = 100;
@@ -202,15 +203,15 @@ async function fetchImagesByKind(client, urlArray, kind, imageMap) {
     const batch = urlArray.slice(i, i + batchSize);
     const { data: entities, error } = await client
       .from('page_entities')
-      .select('page_url, image_url')
-      .in('page_url', batch)
+      .select('url, image_url')
+      .in('url', batch)
       .eq('kind', kind)
       .not('image_url', 'is', null);
     
     if (!error && entities) {
       entities.forEach(entity => {
-        if (entity.image_url && (kind === 'event' || !imageMap.has(entity.page_url))) {
-          imageMap.set(entity.page_url, entity.image_url);
+        if (entity.image_url && (kind === 'event' || !imageMap.has(entity.url))) {
+          imageMap.set(entity.url, entity.image_url);
         }
       });
     }
