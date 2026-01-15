@@ -529,11 +529,10 @@
       /**
        * Render thumbnail with fallback image handling
        * Uses pickImage() to get URL, falls back to "AR" placeholder if empty
-       * Includes onerror handler to swap to fallback if image fails to load
+       * Includes onerror handler to swap to "AR" if image fails to load
        */
       function renderThumb(item, type, title){
         const imageUrl = pickImage(item);
-        const fallback = FALLBACKS[type] || FALLBACKS.event;
 
         if (!imageUrl || imageUrl === ""){
           // No URL - render "AR" placeholder (not fallback image)
