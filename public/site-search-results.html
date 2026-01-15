@@ -346,57 +346,23 @@
       }
 
       /**
-       * 1) Robust image resolver - pickImage() with prioritized fallbacks
-       * Checks all possible image fields and validates URLs
+       * 1) Image resolver - uses server-normalized image_url
+       * Server already normalizes all image fields to image_url, so we just use that
        * Returns empty string if no valid URL found (fallback handled in renderThumb)
        */
       function pickImage(item){
-        // Priority order: check all possible image fields
-        const candidates = [
-          item.image_url,
-          item.imageUrl,
-          item.image,
-          item.og_image,
-          item.ogImage,
-          item.featured_image,
-          item.featuredImage,
-          item.thumbnail,
-          item.raw?.image_url,
-          item.event_image_url,
-          item.product_image_url
-        ];
-
-        // Also check json_ld_data.image
-        if (item.json_ld_data?.image) {
-          const jldImage = extractJsonLdImage(item.json_ld_data);
-          if (jldImage) candidates.push(jldImage);
+        // Server normalizes all image fields to image_url
+        const url = item.image_url;
+        
+        if (!url || typeof url !== 'string') return "";
+        
+        const trimmed = url.trim();
+        if (!trimmed || (!trimmed.startsWith('http://') && !trimmed.startsWith('https://'))) {
+          return "";
         }
-
-        // Find first valid URL
-        for (const candidate of candidates) {
-          if (!candidate) continue;
-          
-          let url = null;
-          if (typeof candidate === 'string') {
-            url = candidate.trim();
-          } else if (Array.isArray(candidate) && candidate.length > 0) {
-            url = typeof candidate[0] === 'string' ? candidate[0].trim() : String(candidate[0]).trim();
-          } else if (typeof candidate === 'object' && candidate.url) {
-            url = String(candidate.url).trim();
-          }
-
-          // Validate URL: must be http:// or https://
-          if (url && (url.startsWith('http://') || url.startsWith('https://'))) {
-            // Convert HTTP to HTTPS (prevent mixed content)
-            if (url.startsWith('http://')) {
-              url = 'https://' + url.substring(7);
-            }
-            return url;
-          }
-        }
-
-        // No valid URL found
-        return "";
+        
+        // Convert HTTP to HTTPS (defensive, server should already do this)
+        return trimmed.startsWith('http://') ? 'https://' + trimmed.substring(7) : trimmed;
       }
 
       function extractJsonLdImage(jsonLd){
@@ -414,29 +380,25 @@
       }
 
       /**
-       * 2) Robust description picker - pickDescription() with prioritized fallbacks
+       * 2) Description picker - uses server-normalized excerpt
+       * Server normalizes all description fields to excerpt, so we use that with fallback
        * Always returns a string (never null/undefined) - generates fallback if needed
        */
       function pickDescription(item, type){
-        // Priority order: meta_description first, then standard fields
-        const candidates = [
-          item.meta_description,
-          item.metaDescription,
-          item.description,
-          item.excerpt,
-          item.summary,
-          item.product_description,
-          item.raw?.description,
-          item.json_ld_data?.description,
-          item.seo?.description
-        ];
-
-        // Find first non-empty string
-        for (const candidate of candidates) {
-          if (candidate && typeof candidate === 'string') {
-            const trimmed = candidate.trim();
-            if (trimmed) return trimmed;
-          }
+        // Server normalizes to excerpt, but keep fallbacks for backward compatibility
+        if (item.excerpt && typeof item.excerpt === 'string') {
+          const trimmed = item.excerpt.trim();
+          if (trimmed) return trimmed;
+        }
+        
+        // Fallback to other fields if excerpt not available
+        if (item.meta_description && typeof item.meta_description === 'string') {
+          const trimmed = item.meta_description.trim();
+          if (trimmed) return trimmed;
+        }
+        if (item.description && typeof item.description === 'string') {
+          const trimmed = item.description.trim();
+          if (trimmed) return trimmed;
         }
 
         // Generate fallback (especially for events)

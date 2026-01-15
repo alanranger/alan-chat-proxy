@@ -4113,11 +4113,12 @@ function mapEventsData(data) {
   date: event.date_start, // Map date_start to date for frontend
   _csv_start_time: event.start_time, // Preserve CSV times for frontend
   _csv_end_time: event.end_time,
-  // Image URL: prefer image_url, fallback to event_image_url, convert HTTP to HTTPS
-  image_url: event.image_url || event.event_image_url || null,
-  // Description: use product_description as fallback (view doesn't have description column)
-  description: event.description || event.product_description || null,
-  excerpt: event.excerpt || event.product_description || null
+  // Normalized image URL (handles HTTP→HTTPS and Squarespace sizing)
+  image_url: normalizeImageUrl(event),
+  // Normalized excerpt
+  excerpt: normalizeExcerpt(event),
+  // Keep description for backward compatibility
+  description: event.description || event.product_description || null
  }));
  
  // Remove duplicates by event_url + date_start to allow same event on different dates
@@ -4346,8 +4347,14 @@ function processAndReturnServices(data, genericServiceIntent, limitCap = MAX_SER
   const normalized = data.map(normalizeServiceTitle);
   const deduped = genericServiceIntent ? deduplicateServices(normalized) : normalized;
   const ranked = rankServicesByKeywords(deduped, keywords);
-  logServicesResults(ranked);
-  return ranked.slice(0, limitCap);
+  // Normalize image_url and excerpt for all services
+  const withNormalizedFields = ranked.map(service => ({
+    ...service,
+    image_url: normalizeImageUrl(service),
+    excerpt: normalizeExcerpt(service)
+  }));
+  logServicesResults(withNormalizedFields);
+  return withNormalizedFields.slice(0, limitCap);
 }
 
 function rankServicesByKeywords(services, keywords) {
@@ -4754,7 +4761,12 @@ const hasEquipmentKeyword = queryEquipmentKeywords.size > 0;
    }
  }
  
- return filtered.slice(0, limit).map(x => x.r);
+ // Normalize image_url and excerpt for all articles
+ return filtered.slice(0, limit).map(x => ({
+   ...x.r,
+   image_url: normalizeImageUrl(x.r),
+   excerpt: normalizeExcerpt(x.r)
+ }));
 }
 
 function escapeRegex(value) {
@@ -5121,6 +5133,92 @@ function transformEventForUI(e) {
  };
 }
 
+/**
+ * Normalize image URL from various possible fields
+ * Also adds Squarespace size parameter if needed
+ */
+function normalizeImageUrl(item) {
+ let url = null;
+ 
+ // Priority order: check all possible image fields
+ if (item.image_url) url = item.image_url;
+ else if (item.image) {
+   if (typeof item.image === 'string') url = item.image;
+   else if (Array.isArray(item.image) && item.image.length > 0) {
+     url = typeof item.image[0] === 'string' ? item.image[0] : (item.image[0]?.url || null);
+   } else if (item.image.url) url = item.image.url;
+ }
+ else if (item.images && Array.isArray(item.images) && item.images.length > 0) {
+   url = item.images[0]?.url || null;
+ }
+ else if (item.thumbnail) url = item.thumbnail;
+ else if (item.hero_image) url = item.hero_image;
+ else if (item.event_image_url) url = item.event_image_url;
+ else if (item.product_image_url) url = item.product_image_url;
+ else if (item.raw?.image_url) url = item.raw.image_url;
+ else if (item.json_ld_data?.image) {
+   const img = item.json_ld_data.image;
+   if (typeof img === 'string') url = img;
+   else if (Array.isArray(img) && img.length > 0) {
+     url = typeof img[0] === 'string' ? img[0] : (img[0]?.url || null);
+   } else if (img.url) url = img.url;
+ }
+ 
+ // Validate URL
+ if (!url || typeof url !== 'string') return null;
+ url = url.trim();
+ if (!url.startsWith('http://') && !url.startsWith('https://')) return null;
+ 
+ // Convert HTTP to HTTPS
+ if (url.startsWith('http://')) {
+   url = 'https://' + url.substring(7);
+ }
+ 
+ // Add Squarespace size parameter if it's a Squarespace image URL and doesn't have one
+ if (url.includes('squarespace-cdn.com') && !url.includes('format=')) {
+   url += (url.includes('?') ? '&' : '?') + 'format=300w';
+ }
+ 
+ return url;
+}
+
+/**
+ * Normalize excerpt/description from various possible fields
+ */
+function normalizeExcerpt(item) {
+ // Priority order
+ if (item.excerpt && typeof item.excerpt === 'string') {
+   const trimmed = item.excerpt.trim();
+   if (trimmed) return trimmed;
+ }
+ if (item.meta_description && typeof item.meta_description === 'string') {
+   const trimmed = item.meta_description.trim();
+   if (trimmed) return trimmed;
+ }
+ if (item.description && typeof item.description === 'string') {
+   const trimmed = item.description.trim();
+   if (trimmed) return trimmed;
+ }
+ if (item.summary && typeof item.summary === 'string') {
+   const trimmed = item.summary.trim();
+   if (trimmed) return trimmed;
+ }
+ if (item.product_description && typeof item.product_description === 'string') {
+   const trimmed = item.product_description.trim();
+   if (trimmed) return trimmed;
+ }
+ if (item.raw?.description && typeof item.raw.description === 'string') {
+   const trimmed = item.raw.description.trim();
+   if (trimmed) return trimmed;
+ }
+ if (item.json_ld_data?.description && typeof item.json_ld_data.description === 'string') {
+   const trimmed = item.json_ld_data.description.trim();
+   if (trimmed) return trimmed;
+ }
+ 
+ return null;
+}
+
 function getEventBasicFields(e) {
  return {
  title: e.title || e.event_title,
@@ -5130,8 +5228,10 @@ function getEventBasicFields(e) {
  categories: e.categories || null,
  tags: e.tags || null,
  raw: e.raw || null,
- // Image URL: prefer image_url, fallback to event_image_url
- image_url: e.image_url || e.event_image_url || null
+ // Normalized image URL
+ image_url: normalizeImageUrl(e),
+ // Normalized excerpt
+ excerpt: normalizeExcerpt(e)
  };
 }
 
