@@ -36,6 +36,37 @@
     #ar-site-search{
       color:var(--ar-text);
     }
+    #ar-search-modal{
+      width: min(980px, 96vw);
+      border: none;
+      padding: 0;
+      background: transparent;
+    }
+    #ar-search-modal::backdrop{
+      background: rgba(15,23,42,.45);
+    }
+    #ar-search-modal .ar-modal-panel{
+      background: #fff;
+      border-radius: 18px;
+      box-shadow: 0 20px 60px rgba(2,6,23,.25);
+      position: relative;
+      max-height: 90vh;
+      overflow: auto;
+    }
+    #ar-search-modal .ar-modal-close{
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      width: 36px;
+      height: 36px;
+      border-radius: 999px;
+      border: 1px solid var(--ar-border);
+      background: #fff;
+      color: var(--ar-text);
+      font-size: 18px;
+      font-weight: 700;
+      cursor: pointer;
+    }
     .ar-ss-wrap{
       max-width: 1020px;
       margin: 0 auto;
@@ -288,6 +319,9 @@
 
   <script>
     (function(){
+      if (window.__AR_SITE_SEARCH_LOADED__) return;
+      window.__AR_SITE_SEARCH_LOADED__ = true;
+
       const API_BASE = "https://alan-chat-proxy.vercel.app";
       const ENDPOINT = API_BASE + "/api/search/query";
 
@@ -297,29 +331,9 @@
       // Set to "no-referrer" only if you see 403 hotlink failures
       const IMAGE_REFERRER_POLICY = "";
 
-      const $q = document.getElementById("ar-ss-q");
-      const $btn = document.getElementById("ar-ss-btn");
-      const $results = document.getElementById("ar-ss-results");
-      const $statusText = document.getElementById("ar-ss-status-text");
-      const $confidence = document.getElementById("ar-ss-confidence");
-
-
-      function qs(key){
-        const p = new URLSearchParams(window.location.search);
+      function qs(key, search){
+        const p = new URLSearchParams(search || window.location.search);
         return p.get(key) || "";
-      }
-
-      function setStatus(msg){
-        $statusText.textContent = msg;
-      }
-
-      function setConfidence(val){
-        if (typeof val === "number" && isFinite(val)){
-          const pct = Math.round(val * 100);
-          $confidence.textContent = "Confidence: " + pct + "%";
-        } else {
-          $confidence.textContent = "Confidence: —";
-        }
       }
 
       function esc(s){
@@ -517,8 +531,8 @@
       /**
        * Attach error handler before setting src (prevents broken image tiles).
        */
-      function initThumbImages(){
-        const imgs = document.querySelectorAll('#ar-site-search .ar-thumb-img');
+      function initThumbImages(rootEl){
+        const imgs = rootEl.querySelectorAll('.ar-thumb-img');
         imgs.forEach((img) => {
           const dataSrc = (img.getAttribute('data-src') || '').trim();
           const resolvedUrl = (dataSrc && dataSrc !== 'null' && dataSrc !== 'undefined')
@@ -663,92 +677,231 @@
         return html;
       }
 
-      function renderAll(structured){
-        const events = structured && structured.events ? structured.events : [];
-        const services = structured && structured.services ? structured.services : [];
-        const articles = structured && structured.articles ? structured.articles : [];
-
-        let html = "";
-        html += renderSection(
-          "Workshops",
-          events,
-          "event",
-          (e) => ( (e.event_url || e.page_url || e.href || "") + "|" + (e.date_start || e.date || "") )
-        );
-        html += renderSection(
-          "Services",
-          services,
-          "service",
-          (s) => (s.page_url || s.href || "")
-        );
-        html += renderSection(
-          "Guides",
-          articles,
-          "guide",
-          (a) => (a.page_url || a.href || "")
-        );
-
-        $results.innerHTML = html;
-        initThumbImages();
+      function ensureRootMarkup(rootEl){
+        if (rootEl.children.length > 0) return;
+        rootEl.innerHTML = '' +
+          '<div class="ar-ss-wrap">' +
+            '<div class="ar-ss-searchcard">' +
+              '<div class="ar-ss-row">' +
+                '<input id="ar-ss-q" class="ar-ss-input" type="text" inputmode="search" placeholder="Search workshops, guides, services, landing pages…" />' +
+                '<button id="ar-ss-btn" class="ar-ss-btn" type="button">Search</button>' +
+              '</div>' +
+              '<div class="ar-ss-meta">' +
+                '<div id="ar-ss-status" class="ar-ss-chip">' +
+                  '<span class="ar-ss-dot"></span>' +
+                  '<span id="ar-ss-status-text">Type a query and press Enter.</span>' +
+                '</div>' +
+                '<div id="ar-ss-confidence" class="ar-ss-chip ar-ss-chip-muted">Confidence: —</div>' +
+              '</div>' +
+            '</div>' +
+            '<div id="ar-ss-results" class="ar-ss-results"></div>' +
+          '</div>';
       }
 
-      async function runSearch(q){
-        const query = (q || "").trim();
-        if (!query){
-          setStatus("Type a query and press Enter.");
-          setConfidence(null);
-          $results.innerHTML = "";
-          return;
+      function createInstance(rootEl){
+        ensureRootMarkup(rootEl);
+        const $q = rootEl.querySelector("#ar-ss-q");
+        const $btn = rootEl.querySelector("#ar-ss-btn");
+        const $results = rootEl.querySelector("#ar-ss-results");
+        const $statusText = rootEl.querySelector("#ar-ss-status-text");
+        const $confidence = rootEl.querySelector("#ar-ss-confidence");
+
+        function setStatus(msg){
+          $statusText.textContent = msg;
         }
 
-        setStatus('Searching for "' + query + '"…');
-        setConfidence(null);
+        function setConfidence(val){
+          if (typeof val === "number" && isFinite(val)){
+            const pct = Math.round(val * 100);
+            $confidence.textContent = "Confidence: " + pct + "%";
+          } else {
+            $confidence.textContent = "Confidence: —";
+          }
+        }
 
-        // Keep the URL shareable
-        const url = new URL(window.location.href);
-        url.searchParams.set("q", query);
-        window.history.replaceState({}, "", url.toString());
+        function renderAll(structured){
+          const events = structured && structured.events ? structured.events : [];
+          const services = structured && structured.services ? structured.services : [];
+          const articles = structured && structured.articles ? structured.articles : [];
 
-        try{
-          const r = await fetch(ENDPOINT + "?q=" + encodeURIComponent(query) + "&limit=24", {
-            method: "GET",
-            headers: { "Content-Type": "application/json" }
-          });
+          let html = "";
+          html += renderSection(
+            "Workshops",
+            events,
+            "event",
+            (e) => ( (e.event_url || e.page_url || e.href || "") + "|" + (e.date_start || e.date || "") )
+          );
+          html += renderSection(
+            "Services",
+            services,
+            "service",
+            (s) => (s.page_url || s.href || "")
+          );
+          html += renderSection(
+            "Guides",
+            articles,
+            "guide",
+            (a) => (a.page_url || a.href || "")
+          );
 
-          const data = await r.json();
+          $results.innerHTML = html;
+          initThumbImages(rootEl);
+        }
 
-          if (!data || data.ok !== true){
-            setStatus("Search failed. Please try again.");
+        async function runSearch(q){
+          const query = (q || "").trim();
+          if (!query){
+            setStatus("Type a query and press Enter.");
             setConfidence(null);
             $results.innerHTML = "";
             return;
           }
 
-          setStatus('Results for "' + query + '"');
-          setConfidence(data.confidence);
-
-          renderAll(data.structured || {});
-        }catch(err){
-          setStatus("Search failed. Please try again.");
+          $q.value = query;
+          setStatus('Searching for "' + query + '"…');
           setConfidence(null);
-          $results.innerHTML = "";
+
+          const url = new URL(window.location.href);
+          url.searchParams.set("q", query);
+          window.history.replaceState({}, "", url.toString());
+
+          try{
+            const r = await fetch(ENDPOINT + "?q=" + encodeURIComponent(query) + "&limit=24", {
+              method: "GET",
+              headers: { "Content-Type": "application/json" }
+            });
+
+            const data = await r.json();
+
+            if (!data || data.ok !== true){
+              setStatus("Search failed. Please try again.");
+              setConfidence(null);
+              $results.innerHTML = "";
+              return;
+            }
+
+            setStatus('Results for "' + query + '"');
+            setConfidence(data.confidence);
+
+            renderAll(data.structured || {});
+          }catch(err){
+            setStatus("Search failed. Please try again.");
+            setConfidence(null);
+            $results.innerHTML = "";
+          }
+        }
+
+        function onSubmit(){
+          runSearch($q.value);
+        }
+
+        function bind(){
+          $btn.addEventListener("click", onSubmit);
+          $q.addEventListener("keydown", function(e){
+            if (e.key === "Enter") onSubmit();
+          });
+        }
+
+        return { bind, runSearch };
+      }
+
+      function mount({ rootEl, q } = {}){
+        if (!rootEl) return null;
+        let instance = rootEl.__arInstance;
+        if (!instance) {
+          instance = createInstance(rootEl);
+          rootEl.__arInstance = instance;
+          instance.bind();
+        }
+        if (typeof q === "string" && q.trim()) {
+          instance.runSearch(q);
+        }
+        return instance;
+      }
+
+      function ensureModal(){
+        let dialog = document.getElementById("ar-search-modal");
+        if (dialog) return dialog;
+
+        dialog = document.createElement("dialog");
+        dialog.id = "ar-search-modal";
+        dialog.innerHTML = '' +
+          '<div class="ar-modal-panel">' +
+            '<button type="button" class="ar-modal-close" aria-label="Close">×</button>' +
+            '<div class="ar-modal-content"></div>' +
+          '</div>';
+
+        document.body.appendChild(dialog);
+
+        dialog.addEventListener("click", (e) => {
+          if (e.target === dialog) closeModal();
+        });
+        dialog.addEventListener("cancel", (e) => {
+          e.preventDefault();
+          closeModal();
+        });
+        dialog.querySelector(".ar-modal-close").addEventListener("click", closeModal);
+
+        return dialog;
+      }
+
+      function openModal({ q } = {}){
+        const dialog = ensureModal();
+        const modalContent = dialog.querySelector(".ar-modal-content");
+        let rootEl = document.getElementById("ar-site-search");
+
+        if (rootEl && !dialog.contains(rootEl)) {
+          dialog.__arReturn = {
+            rootEl,
+            parent: rootEl.parentNode,
+            nextSibling: rootEl.nextSibling,
+            created: false
+          };
+          modalContent.appendChild(rootEl);
+        } else if (!rootEl) {
+          rootEl = document.createElement("div");
+          rootEl.id = "ar-site-search";
+          modalContent.appendChild(rootEl);
+          dialog.__arReturn = { rootEl, created: true };
+        }
+
+        mount({ rootEl, q });
+
+        if (!dialog.open) {
+          dialog.showModal();
         }
       }
 
-      function onSubmit(){
-        runSearch($q.value);
+      function closeModal(){
+        const dialog = document.getElementById("ar-search-modal");
+        if (!dialog) return;
+        if (dialog.open) dialog.close();
+
+        if (dialog.__arReturn && dialog.__arReturn.rootEl) {
+          const { rootEl, parent, nextSibling, created } = dialog.__arReturn;
+          if (created) {
+            rootEl.remove();
+          } else if (parent) {
+            if (nextSibling) parent.insertBefore(rootEl, nextSibling);
+            else parent.appendChild(rootEl);
+          }
+          dialog.__arReturn = null;
+        }
       }
 
-      $btn.addEventListener("click", onSubmit);
-      $q.addEventListener("keydown", function(e){
-        if (e.key === "Enter") onSubmit();
-      });
+      window.ARSiteSearch = {
+        mount,
+        openModal,
+        closeModal
+      };
 
-      // Boot from URL
+      const pageRoot = document.getElementById("ar-site-search");
       const q0 = qs("q");
-      if (q0){
-        $q.value = q0;
-        runSearch(q0);
+      const modal = qs("modal");
+      if (modal === "1") {
+        openModal({ q: q0 });
+      } else if (pageRoot) {
+        mount({ rootEl: pageRoot, q: q0 });
       }
     })();
   </script>
