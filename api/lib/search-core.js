@@ -54,6 +54,13 @@ export async function runSearch({ q, limit = 24, pageContext = null, supa = null
   // Extract keywords from query
   const keywords = extractKeywords(query);
   
+  // Step A: Filter stopwords for events only (don't affect chat.js behavior)
+  // These temporal/availability words can kill event matches but are useful for other content types
+  const EVENT_STOPWORDS = new Set(["next", "upcoming", "soon", "nearest", "closest", "near", "available", "availability", "dates"]);
+  const eventKeywords = keywords.filter(k => k && !EVENT_STOPWORDS.has(String(k).toLowerCase()));
+  // Use filtered keywords for events if non-empty, otherwise fall back to original
+  const finalEventKeywords = eventKeywords.length > 0 ? eventKeywords : keywords;
+  
   // Detect intent (simplified - chat.js has more complex logic)
   const queryLower = query?.toLowerCase() || '';
   let intent = 'advice';
@@ -69,13 +76,18 @@ export async function runSearch({ q, limit = 24, pageContext = null, supa = null
 
   // Search all content types in parallel
   const [events, services, articles] = await Promise.all([
-    findEvents(client, { keywords, limit: Math.min(limit, 80), pageContext }),
+    findEvents(client, { keywords: finalEventKeywords, limit: Math.min(limit, 80), pageContext }),
     findServices(client, { keywords, limit: Math.min(limit, 24), pageContext }),
     findArticles(client, { keywords, limit: Math.min(limit, 12), pageContext })
   ]);
 
   // Format events for UI
-  const formattedEvents = formatEventsForUi(events || []);
+  let formattedEvents = formatEventsForUi(events || []);
+
+  // Step B: Post-process events to merge image_url from page_entities
+  if (formattedEvents && formattedEvents.length > 0) {
+    formattedEvents = await enrichEventsWithImages(client, formattedEvents);
+  }
 
   // Calculate confidence using the same logic as chat
   const confidenceContext = initializeConfidenceContext(query);
@@ -123,4 +135,100 @@ export async function runSearch({ q, limit = 24, pageContext = null, supa = null
       landing: []
     }
   };
+}
+
+/**
+ * Step B: Enrich events with image_url from page_entities
+ * Queries page_entities for event and product pages to get image URLs
+ * 
+ * @param {Object} client - Supabase client
+ * @param {Array} events - Array of event objects
+ * @returns {Promise<Array>} Events with image_url merged in
+ */
+async function enrichEventsWithImages(client, events) {
+  if (!events || events.length === 0) return events;
+
+  try {
+    // Collect unique URLs
+    const eventUrls = new Set();
+    const productUrls = new Set();
+
+    events.forEach(event => {
+      const eventUrl = event.event_url || event.href || event.page_url;
+      if (eventUrl) eventUrls.add(eventUrl);
+      
+      const productUrl = event.product_url;
+      if (productUrl) productUrls.add(productUrl);
+    });
+
+    // Query page_entities for event images
+    const imageMap = new Map();
+    
+    if (eventUrls.size > 0) {
+      const eventUrlArray = Array.from(eventUrls);
+      // Supabase .in() has a limit, so batch if needed
+      const batchSize = 100;
+      for (let i = 0; i < eventUrlArray.length; i += batchSize) {
+        const batch = eventUrlArray.slice(i, i + batchSize);
+        const { data: eventEntities, error: eErr } = await client
+          .from('page_entities')
+          .select('page_url, image_url')
+          .in('page_url', batch)
+          .eq('kind', 'event')
+          .not('image_url', 'is', null);
+        
+        if (!eErr && eventEntities) {
+          eventEntities.forEach(entity => {
+            if (entity.image_url) {
+              imageMap.set(entity.page_url, entity.image_url);
+            }
+          });
+        }
+      }
+    }
+
+    // Query page_entities for product images (fallback)
+    if (productUrls.size > 0) {
+      const productUrlArray = Array.from(productUrls);
+      const batchSize = 100;
+      for (let i = 0; i < productUrlArray.length; i += batchSize) {
+        const batch = productUrlArray.slice(i, i + batchSize);
+        const { data: productEntities, error: pErr } = await client
+          .from('page_entities')
+          .select('page_url, image_url')
+          .in('page_url', batch)
+          .eq('kind', 'product')
+          .not('image_url', 'is', null);
+        
+        if (!pErr && productEntities) {
+          productEntities.forEach(entity => {
+            if (entity.image_url && !imageMap.has(entity.page_url)) {
+              imageMap.set(entity.page_url, entity.image_url);
+            }
+          });
+        }
+      }
+    }
+
+    // Merge image_url into events
+    return events.map(event => {
+      const eventUrl = event.event_url || event.href || event.page_url;
+      const productUrl = event.product_url;
+      
+      // Prefer existing image_url, then event image, then product image
+      const imageUrl = event.image_url || 
+                      (eventUrl ? imageMap.get(eventUrl) : null) ||
+                      (productUrl ? imageMap.get(productUrl) : null) ||
+                      '';
+      
+      return {
+        ...event,
+        image_url: imageUrl
+      };
+    });
+  } catch (error) {
+    console.error('[search-core] Error enriching events with images:', error);
+    // Return events unchanged on error
+    return events;
+  }
 }
