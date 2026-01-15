@@ -5127,7 +5127,8 @@ function getEventBasicFields(e) {
  categories: e.categories || null,
  tags: e.tags || null,
  raw: e.raw || null,
- image_url: e.image_url || e.event_image_url || null, // Include image URL for UI rendering
+ // Image URL: prefer image_url, fallback to event_image_url
+ image_url: e.image_url || e.event_image_url || null
  };
 }
 
