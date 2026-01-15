@@ -1,0 +1,519 @@
+<!-- AR | Site Search Results (AI) | v1.0 | page: /site-search-results -->
+<div id="ar-site-search">
+  <div class="ar-ss-shell">
+    <div class="ar-ss-searchbar">
+      <input id="ar-ss-q" type="text" placeholder="Search workshops, guides, services, landing pages..." autocomplete="off" />
+      <button id="ar-ss-btn" type="button">Search</button>
+    </div>
+
+    <div class="ar-ss-meta">
+      <span id="ar-ss-status" class="ar-ss-chip"><span class="ar-ss-dot"></span> Type a query and press Enter.</span>
+      <span id="ar-ss-confidence" class="ar-ss-chip">Confidence: —</span>
+    </div>
+
+    <div id="ar-ss-results" class="ar-ss-results">
+      <!-- Sections injected here -->
+    </div>
+  </div>
+
+  <style>
+    :root{
+      --ar-orange:#E57200;
+      --ar-blue:#2563EB;          /* price pill */
+      --ar-blue-dark:#1D4ED8;
+      --ar-ink:#111827;
+      --ar-muted:#6B7280;
+      --ar-border:rgba(17,24,39,.12);
+      --ar-card:#ffffff;
+      --ar-bg:#ffffff;
+      --ar-chip:#F3F4F6;
+      --ar-shadow:0 10px 26px rgba(17,24,39,.08);
+      --ar-radius:14px;
+    }
+
+    #ar-site-search{ background:var(--ar-bg); }
+    #ar-site-search .ar-ss-shell{
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 38px 18px 26px;
+      color: var(--ar-ink);
+      font-family: system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+    }
+
+    /* Search bar */
+    #ar-site-search .ar-ss-searchbar{
+      display:flex;
+      gap:12px;
+      align-items:center;
+      border:1px solid var(--ar-border);
+      border-radius: 16px;
+      padding: 14px 14px;
+      background:#fff;
+      box-shadow: var(--ar-shadow);
+    }
+    #ar-site-search #ar-ss-q{
+      flex:1;
+      border:0;
+      outline:none;
+      font-size:16px;
+      padding: 10px 10px;
+      background:transparent;
+      color:var(--ar-ink);
+    }
+    #ar-site-search #ar-ss-btn{
+      border:0;
+      background: var(--ar-orange);
+      color:#fff;
+      padding: 12px 18px;
+      border-radius: 12px;
+      font-weight: 700;
+      cursor:pointer;
+    }
+    #ar-site-search #ar-ss-btn:hover{ filter: brightness(0.96); }
+
+    /* Status chips */
+    #ar-site-search .ar-ss-meta{
+      display:flex;
+      gap:10px;
+      margin: 12px 2px 16px;
+      flex-wrap: wrap;
+    }
+    #ar-site-search .ar-ss-chip{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      border:1px solid var(--ar-border);
+      background:#fff;
+      border-radius: 999px;
+      padding: 8px 12px;
+      font-size: 13px;
+      color: var(--ar-muted);
+    }
+    #ar-site-search .ar-ss-dot{
+      width:8px;height:8px;border-radius:99px;
+      background: var(--ar-orange);
+      display:inline-block;
+    }
+
+    /* Sections */
+    #ar-site-search .ar-ss-section{
+      margin-top: 16px;
+      border:1px solid var(--ar-border);
+      border-radius: 16px;
+      background:#fff;
+      overflow:hidden;
+    }
+    #ar-site-search .ar-ss-section-h{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      padding: 12px 14px;
+      border-bottom:1px solid var(--ar-border);
+      background: #F9FAFB;
+    }
+    #ar-site-search .ar-ss-section-title{
+      font-weight:800;
+      font-size: 14px;
+      letter-spacing: .2px;
+    }
+    #ar-site-search .ar-ss-section-count{
+      color: var(--ar-muted);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    #ar-site-search .ar-ss-grid{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      padding: 12px;
+    }
+    @media (max-width: 860px){
+      #ar-site-search .ar-ss-grid{ grid-template-columns: 1fr; }
+    }
+
+    /* Cards */
+    #ar-site-search .ar-ss-card{
+      border:1px solid var(--ar-border);
+      border-radius: var(--ar-radius);
+      background: var(--ar-card);
+      padding: 12px;
+      display:flex;
+      gap: 12px;
+      box-shadow: 0 6px 16px rgba(17,24,39,.06);
+    }
+
+    #ar-site-search .ar-ss-img{
+      width: 86px;
+      height: 64px;
+      border-radius: 10px;
+      overflow:hidden;
+      flex: 0 0 auto;
+      border:1px solid var(--ar-border);
+      background: #EEF2F7;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      color:#94A3B8;
+      font-weight:800;
+      letter-spacing:.5px;
+    }
+    #ar-site-search .ar-ss-img img{
+      width:100%;
+      height:100%;
+      object-fit:cover;
+      display:block;
+    }
+
+    #ar-site-search .ar-ss-body{ flex:1; min-width:0; }
+    #ar-site-search .ar-ss-title{
+      font-weight: 850;
+      font-size: 14px;
+      line-height: 1.25;
+      margin: 0 0 4px;
+      color: var(--ar-ink);
+    }
+    #ar-site-search .ar-ss-sub{
+      font-size: 12px;
+      color: var(--ar-muted);
+      margin: 0 0 8px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    #ar-site-search .ar-ss-desc{
+      font-size: 12px;
+      color: var(--ar-muted);
+      margin: 0 0 10px;
+      line-height: 1.35;
+      display:-webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow:hidden;
+    }
+
+    /* Pills */
+    #ar-site-search .ar-ss-pills{
+      display:flex;
+      flex-wrap:wrap;
+      gap: 8px;
+      margin: 0 0 10px;
+    }
+    #ar-site-search .ar-pill{
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      border:1px solid rgba(229,114,0,.35);
+      background: #FFF7ED;
+      color: #8A4B00;
+      user-select:none;
+      cursor: default; /* NOT clickable */
+      font-weight: 700;
+    }
+
+    /* Price pill: BLUE so it doesn't look like the orange CTA */
+    #ar-site-search .ar-pill--price{
+      border-color: rgba(37,99,235,.35);
+      background: rgba(37,99,235,.12);
+      color: var(--ar-blue-dark);
+      font-weight: 900;
+    }
+
+    /* CTA row */
+    #ar-site-search .ar-ss-actions{
+      display:flex;
+      gap: 10px;
+      margin-top: 6px;
+      flex-wrap: wrap;
+    }
+    #ar-site-search .ar-btn{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      gap:8px;
+      padding: 10px 14px;
+      border-radius: 10px;
+      font-weight: 800;
+      font-size: 13px;
+      text-decoration:none;
+      border:1px solid var(--ar-border);
+      background:#fff;
+      color: var(--ar-ink);
+    }
+    #ar-site-search .ar-btn--primary{
+      background: var(--ar-orange);
+      color: #fff;
+      border-color: rgba(229,114,0,.6);
+    }
+    #ar-site-search .ar-btn--primary:hover{ filter: brightness(0.96); }
+    #ar-site-search .ar-btn:hover{ filter: brightness(0.98); }
+
+    #ar-site-search .ar-ss-empty{
+      padding: 14px;
+      color: var(--ar-muted);
+      font-size: 13px;
+    }
+  </style>
+
+  <script>
+    (function(){
+      const API_BASE = "https://alan-chat-proxy.vercel.app";
+      const ENDPOINT = API_BASE + "/api/search/query";
+
+      const qEl = document.getElementById("ar-ss-q");
+      const btnEl = document.getElementById("ar-ss-btn");
+      const statusEl = document.getElementById("ar-ss-status");
+      const confEl = document.getElementById("ar-ss-confidence");
+      const resultsEl = document.getElementById("ar-ss-results");
+
+      function setStatus(msg){
+        if (statusEl) statusEl.textContent = msg;
+      }
+      function setConfidence(val){
+        if (!confEl) return;
+        confEl.textContent = (typeof val === "number")
+          ? ("Confidence: " + Math.round(val * 100) + "%")
+          : "Confidence: —";
+      }
+
+      function getQueryFromUrl(){
+        try{
+          const u = new URL(window.location.href);
+          return (u.searchParams.get("q") || "").trim();
+        }catch(e){ return ""; }
+      }
+      function setQueryInUrl(q){
+        try{
+          const u = new URL(window.location.href);
+          if (q) u.searchParams.set("q", q);
+          else u.searchParams.delete("q");
+          window.history.replaceState({}, "", u.toString());
+        }catch(e){}
+      }
+
+      function uniqPills(list){
+        const seen = new Set();
+        const out = [];
+        (list || []).forEach(v => {
+          const s = String(v || "").trim();
+          if (!s) return;
+          const key = s.toLowerCase();
+          if (seen.has(key)) return;
+          seen.add(key);
+          out.push(s);
+        });
+        return out;
+      }
+
+      function el(tag, attrs, children){
+        const n = document.createElement(tag);
+        if (attrs){
+          Object.keys(attrs).forEach(k => {
+            if (k === "class") n.className = attrs[k];
+            else if (k === "html") n.innerHTML = attrs[k];
+            else n.setAttribute(k, attrs[k]);
+          });
+        }
+        (children || []).forEach(c => n.appendChild(c));
+        return n;
+      }
+
+      function renderSection(title, items, renderer){
+        const section = el("div", { class: "ar-ss-section" });
+        const head = el("div", { class: "ar-ss-section-h" }, [
+          el("div", { class: "ar-ss-section-title", html: title }),
+          el("div", { class: "ar-ss-section-count", html: (items.length + " matches") })
+        ]);
+        section.appendChild(head);
+
+        if (!items.length){
+          section.appendChild(el("div", { class: "ar-ss-empty", html: "No matches." }));
+          return section;
+        }
+
+        const grid = el("div", { class: "ar-ss-grid" });
+        items.forEach(item => grid.appendChild(renderer(item)));
+        section.appendChild(grid);
+        return section;
+      }
+
+      function imgNode(imageUrl, fallbackText){
+        const box = el("div", { class: "ar-ss-img" });
+        const url = (imageUrl || "").trim();
+
+        if (url){
+          const img = new Image();
+          img.loading = "lazy";
+          img.alt = "";
+          img.src = url;
+          img.onerror = function(){
+            box.textContent = fallbackText || "AR";
+          };
+          box.appendChild(img);
+          return box;
+        }
+
+        // clean fallback: no hyphen placeholder
+        box.textContent = fallbackText || "AR";
+        return box;
+      }
+
+      function renderEventCard(e){
+        const title = e.title || e.event_title || "Workshop";
+        const href = e.href || e.page_url || e.event_url || "#";
+        const when = e.when || "";
+        const loc = e.location || e.location_name || e.event_location || "";
+        const price = (e.price_gbp != null && e.price_gbp !== "") ? ("£" + e.price_gbp) : (e.price ? ("£" + e.price) : "");
+        const people = e.participants ? (e.participants + " people") : "";
+        const fitness = e.fitness_level ? ("Fitness " + e.fitness_level) : "";
+        const exp = e.experience_level || "";
+        const productUrl = e.product_url || "";
+
+        const pills = uniqPills([
+          "event",
+          loc,
+          price,
+          people,
+          fitness,
+          exp
+        ]);
+
+        const pillNodes = pills.map(p => {
+          const isPrice = /^£/.test(p);
+          return el("span", { class: "ar-pill" + (isPrice ? " ar-pill--price" : "") , html: p });
+        });
+
+        const actions = el("div", { class: "ar-ss-actions" }, [
+          el("a", { class: "ar-btn ar-btn--primary", href: href, target: "_self", html: "More info →" })
+        ]);
+
+        if (productUrl){
+          actions.appendChild(el("a", { class: "ar-btn", href: productUrl, target: "_self", html: "Book now" }));
+        }
+
+        const card = el("div", { class: "ar-ss-card" }, [
+          imgNode(e.image_url, "AR"),
+          el("div", { class: "ar-ss-body" }, [
+            el("div", { class: "ar-ss-title", html: title }),
+            el("div", { class: "ar-ss-sub", html: [when, loc].filter(Boolean).join(" · ") }),
+            el("div", { class: "ar-ss-pills" }, pillNodes),
+            actions
+          ])
+        ]);
+
+        return card;
+      }
+
+      function renderServiceCard(s){
+        const title = s.title || "Service";
+        const href = s.page_url || s.href || "#";
+        const desc = s.description || "";
+        const tags = uniqPills([ "service" ].concat(s.tags || []).concat(s.categories || []));
+        const pillNodes = tags.slice(0, 6).map(p => el("span", { class:"ar-pill", html: p }));
+
+        return el("div", { class:"ar-ss-card" }, [
+          imgNode(s.image_url, "AR"),
+          el("div", { class:"ar-ss-body" }, [
+            el("div", { class:"ar-ss-title", html: title }),
+            el("div", { class:"ar-ss-desc", html: desc }),
+            el("div", { class:"ar-ss-pills" }, pillNodes),
+            el("div", { class:"ar-ss-actions" }, [
+              el("a", { class:"ar-btn ar-btn--primary", href: href, target:"_self", html:"More info →" })
+            ])
+          ])
+        ]);
+      }
+
+      function renderArticleCard(a){
+        const title = a.title || "Guide";
+        const href = a.page_url || a.href || "#";
+        const desc = a.description || "";
+        const tags = uniqPills([ "guide" ].concat(a.tags || []).concat(a.categories || []));
+        const pillNodes = tags.slice(0, 6).map(p => el("span", { class:"ar-pill", html: p }));
+
+        return el("div", { class:"ar-ss-card" }, [
+          imgNode(a.image_url, "AR"),
+          el("div", { class:"ar-ss-body" }, [
+            el("div", { class:"ar-ss-title", html: title }),
+            el("div", { class:"ar-ss-desc", html: desc }),
+            el("div", { class:"ar-ss-pills" }, pillNodes),
+            el("div", { class:"ar-ss-actions" }, [
+              el("a", { class:"ar-btn ar-btn--primary", href: href, target:"_self", html:"Read →" })
+            ])
+          ])
+        ]);
+      }
+
+      let activeController = null;
+
+      async function runSearch(q){
+        const query = (q || "").trim();
+        if (!query){
+          resultsEl.innerHTML = "";
+          setStatus("Type a query and press Enter.");
+          setConfidence(null);
+          return;
+        }
+
+        setStatus('Searching for "' + query + '"…');
+        setConfidence(null);
+        resultsEl.innerHTML = "";
+
+        if (activeController) activeController.abort();
+        activeController = new AbortController();
+
+        const url = ENDPOINT + "?q=" + encodeURIComponent(query) + "&limit=24";
+
+        let res, data;
+        try{
+          res = await fetch(url, { method: "GET", signal: activeController.signal });
+          data = await res.json();
+        }catch(e){
+          setStatus("Search failed. Please try again.");
+          return;
+        }
+
+        if (!res.ok || !data || data.ok !== true){
+          setStatus("Search failed. Please try again.");
+          return;
+        }
+
+        setStatus('Results for "' + query + '"');
+        setConfidence(typeof data.confidence === "number" ? data.confidence : null);
+
+        const structured = data.structured || {};
+        const events = (structured.events || []).slice(0, 24);
+        const services = (structured.services || []).slice(0, 24);
+        const articles = (structured.articles || []).slice(0, 24);
+
+        const frag = document.createDocumentFragment();
+        frag.appendChild(renderSection("Workshops", events, renderEventCard));
+        frag.appendChild(renderSection("Services", services, renderServiceCard));
+        frag.appendChild(renderSection("Guides", articles, renderArticleCard));
+        resultsEl.appendChild(frag);
+      }
+
+      function submit(){
+        const q = (qEl.value || "").trim();
+        setQueryInUrl(q);
+        runSearch(q);
+      }
+
+      // Wire events
+      btnEl.addEventListener("click", submit);
+      qEl.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") submit();
+      });
+
+      // Boot from URL
+      const initialQ = getQueryFromUrl();
+      if (initialQ){
+        qEl.value = initialQ;
+        runSearch(initialQ);
+      }
+    })();
+  </script>
+</div>
