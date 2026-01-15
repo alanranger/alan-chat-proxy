@@ -157,13 +157,13 @@
       min-height: 120px;
     }
     .ar-thumb{
-      width:104px;
-      height:104px;
+      width:112px;
+      height:112px;
       border-radius:12px;
       border:1px solid var(--ar-border);
       background:#eef2f7;
       overflow:hidden;
-      flex:0 0 auto;
+      flex:0 0 112px;
       display:flex;
       align-items:center;
       justify-content:center;
@@ -196,6 +196,10 @@
       color:rgba(15,23,42,.78);
       font-size:12.5px;
       line-height:1.4;
+      display:-webkit-box;
+      -webkit-line-clamp:3;
+      -webkit-box-orient:vertical;
+      overflow:hidden;
     }
 
     .ar-pills{
@@ -208,8 +212,8 @@
       border:1px solid rgba(229,114,0,.35);
       background: rgba(229,114,0,.08);
       color: rgba(124,45,18,.95);
-      padding:3px 7px;
-      border-radius:999px;
+      padding:4px 8px;
+      border-radius:8px;
       font-size:11px;
       font-weight:700;
       white-space:nowrap;
@@ -222,6 +226,11 @@
       background: var(--ar-blue);
       color: #fff;
       font-weight:800;
+      pointer-events:none;
+    }
+    .ar-pill.price:hover{
+      background: var(--ar-blue);
+      filter:none;
     }
 
     .ar-actions{
@@ -333,24 +342,35 @@
 
       /**
        * 1) Robust image resolver with prioritized fallbacks
+       * Also converts HTTP to HTTPS to prevent mixed content issues
        */
       function resolveImageUrl(item, type){
+        let url = null;
+        
         // Priority order: direct fields
-        if (item.image_url) return String(item.image_url).trim();
-        if (item.image) return String(item.image).trim();
-        if (item.raw && item.raw.image_url) return String(item.raw.image_url).trim();
+        if (item.image_url) url = String(item.image_url).trim();
+        else if (item.image) url = String(item.image).trim();
+        else if (item.raw && item.raw.image_url) url = String(item.raw.image_url).trim();
+        else {
+          // json_ld_data.image handling
+          const jldImage = extractJsonLdImage(item.json_ld_data);
+          if (jldImage) url = jldImage;
+        }
         
-        // json_ld_data.image handling
-        const jldImage = extractJsonLdImage(item.json_ld_data);
-        if (jldImage) return jldImage;
-        
-        // Other fields
-        if (item.og_image) return String(item.og_image).trim();
-        if (item.product_image_url) return String(item.product_image_url).trim();
-        if (item.event_image_url) return String(item.event_image_url).trim();
+        // Other fields (only if still no URL)
+        if (!url) {
+          if (item.og_image) url = String(item.og_image).trim();
+          else if (item.product_image_url) url = String(item.product_image_url).trim();
+          else if (item.event_image_url) url = String(item.event_image_url).trim();
+        }
 
-        // Type-based fallback
-        return FALLBACKS[type] || FALLBACKS.event;
+        // Convert HTTP to HTTPS (prevent mixed content)
+        if (url && url.startsWith('http://')) {
+          url = 'https://' + url.substring(7);
+        }
+
+        // Return URL or type-based fallback
+        return url || (FALLBACKS[type] || FALLBACKS.event);
       }
 
       function extractJsonLdImage(jsonLd){
@@ -371,10 +391,11 @@
        * 2) Get card summary with fallback generation
        */
       function getCardSummary(item, type){
-        // Preferred order
+        // Preferred order (product_description is included from API)
         if (item.description) return String(item.description).trim();
         if (item.excerpt) return String(item.excerpt).trim();
         if (item.summary) return String(item.summary).trim();
+        if (item.product_description) return String(item.product_description).trim();
         if (item.raw && item.raw.description) return String(item.raw.description).trim();
         if (item.json_ld_data && item.json_ld_data.description){
           return String(item.json_ld_data.description).trim();
@@ -449,6 +470,7 @@
 
       /**
        * Render thumbnail with fallback image handling
+       * Includes onerror handler to swap to fallback if image fails to load
        */
       function renderThumb(imageUrl, fallbackUrl, type, title){
         const url = (imageUrl || "").trim();
@@ -459,8 +481,10 @@
           return '<div class="ar-thumb"><img src="' + esc(fallback) + '" alt="' + esc(title) + '" onerror="this.onerror=null; this.src=\'' + esc(fallback) + '\';"></div>';
         }
 
-        // Has URL - render with onerror fallback
-        return '<div class="ar-thumb"><img src="' + esc(url) + '" alt="' + esc(title) + '" loading="lazy" onerror="this.onerror=null; this.src=\'' + esc(fallback) + '\';"></div>';
+        // Has URL - render with onerror fallback (prevents infinite loop by setting onerror to null)
+        // Also ensure HTTPS (resolveImageUrl already handles this, but double-check)
+        const safeUrl = url.startsWith('http://') ? 'https://' + url.substring(7) : url;
+        return '<div class="ar-thumb"><img src="' + esc(safeUrl) + '" alt="' + esc(title) + '" loading="lazy" onerror="this.onerror=null; this.src=\'' + esc(fallback) + '\';"></div>';
       }
 
       function renderCard(item, kind){

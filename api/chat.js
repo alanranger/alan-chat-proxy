@@ -4001,7 +4001,7 @@ async function findEventsByDuration(client, categoryType, limit = 100) {
 function buildEventsBaseQuery(client, limit) {
  return client
  .from("v_events_for_chat")
- .select("event_url, subtype, product_url, product_title, price_gbp, availability, date_start, date_end, start_time, end_time, event_location, map_method, confidence, participants, fitness_level, event_title, json_price, json_availability, price_currency, experience_level, equipment_needed, image_url, event_image_url")
+ .select("event_url, subtype, product_url, product_title, price_gbp, availability, date_start, date_end, start_time, end_time, event_location, map_method, confidence, participants, fitness_level, event_title, json_price, json_availability, price_currency, experience_level, equipment_needed, image_url, event_image_url, product_description")
  .gte("date_start", new Date().toISOString()) // Only future events
  .order("date_start", { ascending: true }) // Sort by date ascending (earliest first)
  .limit(limit);
@@ -4103,18 +4103,21 @@ function logEventsQueryResults(data, q) {
 function mapEventsData(data) {
  // Map v_events_for_chat fields to frontend expected fields
  const mappedData = (data || []).map(event => ({
- ...event,
- title: event.event_title, // Map event_title to title for frontend
- page_url: event.event_url, // Map event_url to page_url for frontend
- href: event.event_url, // Add href alias for frontend
- location: event.event_location, // Map event_location to location for frontend
- price: event.price_gbp, // Map price_gbp to price for frontend
- csv_type: event.subtype, // Map subtype to csv_type for frontend
- date: event.date_start, // Map date_start to date for frontend
- _csv_start_time: event.start_time, // Preserve CSV times for frontend
- _csv_end_time: event.end_time,
- // Image URL: prefer image_url, fallback to event_image_url
- image_url: event.image_url || event.event_image_url || null
+  ...event,
+  title: event.event_title, // Map event_title to title for frontend
+  page_url: event.event_url, // Map event_url to page_url for frontend
+  href: event.event_url, // Add href alias for frontend
+  location: event.event_location, // Map event_location to location for frontend
+  price: event.price_gbp, // Map price_gbp to price for frontend
+  csv_type: event.subtype, // Map subtype to csv_type for frontend
+  date: event.date_start, // Map date_start to date for frontend
+  _csv_start_time: event.start_time, // Preserve CSV times for frontend
+  _csv_end_time: event.end_time,
+  // Image URL: prefer image_url, fallback to event_image_url, convert HTTP to HTTPS
+  image_url: event.image_url || event.event_image_url || null,
+  // Description: use product_description as fallback (view doesn't have description column)
+  description: event.description || event.product_description || null,
+  excerpt: event.excerpt || event.product_description || null
  }));
  
  // Remove duplicates by event_url + date_start to allow same event on different dates
