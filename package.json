@@ -12,6 +12,7 @@
     "dev": "node local-dev-server.js",
     "call:fn": "node call-fn.cjs",
     "live-sweep": "node scripts/live-sweep.js",
+    "backfill:images": "node scripts/backfill-page-entities-images.js",
     "validate:event": "ajv validate --spec=draft2020 -c ajv-formats --allow-union-types -s schemas/event.schema.json -r schemas/jsonld-shared.defs.json -d \"generated/*.event.json\"",
     "validate:itemlist": "ajv validate --spec=draft2020 -c ajv-formats --allow-union-types -s schemas/itemlist.schema.json -r schemas/jsonld-shared.defs.json -d \"generated/*.itemlist.json\"",
     "validate:all": "npm run validate:event && npm run validate:itemlist",
