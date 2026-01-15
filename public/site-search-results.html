@@ -156,33 +156,33 @@
       padding:12px;
       min-height: 120px;
     }
-    .ar-thumb{
-      width:140px;
-      height:140px;
-      border-radius:12px;
-      border:1px solid var(--ar-border);
-      background:#eef2f7;
-      overflow:hidden;
-      flex:0 0 140px;
-      display:flex;
-      align-items:center;
-      justify-content:center;
+    #ar-site-search .ar-thumb{
+      width:140px !important;
+      height:140px !important;
+      border-radius:12px !important;
+      border:1px solid var(--ar-border) !important;
+      background:#eef2f7 !important;
+      overflow:hidden !important;
+      flex:0 0 140px !important;
+      display:flex !important;
+      align-items:center !important;
+      justify-content:center !important;
       color:#94a3b8;
       font-weight:800;
       letter-spacing:.02em;
     }
     @media (max-width: 820px){
-      .ar-thumb{
-        width:120px;
-        height:120px;
-        flex:0 0 120px;
+      #ar-site-search .ar-thumb{
+        width:120px !important;
+        height:120px !important;
+        flex:0 0 120px !important;
       }
     }
-    .ar-thumb img{
-      width:100%;
-      height:100%;
-      object-fit:cover;
-      display:block;
+    #ar-site-search .ar-thumb img{
+      width:100% !important;
+      height:100% !important;
+      object-fit:cover !important;
+      display:block !important;
     }
 
     .ar-body{ min-width:0; flex:1; }
@@ -211,40 +211,40 @@
       min-height:2.4em;
     }
 
-    .ar-pills{
+    #ar-site-search .ar-pills{
       display:flex;
       flex-wrap:wrap;
-      gap:4px;
-      margin: 6px 0 0;
-      max-height:2.5em;
-      overflow:hidden;
+      gap:3px !important;
+      margin: 6px 0 0 !important;
+      max-height:2.2em !important;
+      overflow:hidden !important;
     }
-    .ar-pill{
-      border:1px solid rgba(229,114,0,.35);
-      background: rgba(229,114,0,.08);
-      color: rgba(124,45,18,.95);
-      padding:2px 6px;
-      border-radius:5px;
-      font-size:9.5px;
-      font-weight:700;
-      line-height:1.2;
-      white-space:nowrap;
-      cursor:default;
+    #ar-site-search .ar-pill{
+      border:1px solid rgba(229,114,0,.35) !important;
+      background: rgba(229,114,0,.08) !important;
+      color: rgba(124,45,18,.95) !important;
+      padding:2px 5px !important;
+      border-radius:5px !important;
+      font-size:9px !important;
+      font-weight:700 !important;
+      line-height:1.15 !important;
+      white-space:nowrap !important;
+      cursor:default !important;
       -webkit-user-select:none;
       user-select:none;
     }
-    .ar-pill.price{
-      border-color: rgba(37,99,235,.35);
-      background: var(--ar-blue);
-      color: #fff;
-      font-weight:800;
-      pointer-events:none;
-      cursor:default;
+    #ar-site-search .ar-pill.price{
+      border-color: rgba(37,99,235,.35) !important;
+      background: var(--ar-blue) !important;
+      color: #fff !important;
+      font-weight:800 !important;
+      pointer-events:none !important;
+      cursor:default !important;
     }
-    .ar-pill.price:hover{
-      background: var(--ar-blue);
-      filter:none;
-      cursor:default;
+    #ar-site-search .ar-pill.price:hover{
+      background: var(--ar-blue) !important;
+      filter:none !important;
+      cursor:default !important;
     }
 
     .ar-actions{
@@ -294,6 +294,8 @@
       // Placeholder image URL (Option B: consistent placeholder when image_url is null)
       // TODO: Replace with actual hosted placeholder image URL from Squarespace assets
       const PLACEHOLDER_IMAGE = "https://www.alanranger.com/s/default-image.jpg";
+      // Set to "no-referrer" only if you see 403 hotlink failures
+      const IMAGE_REFERRER_POLICY = "";
 
       const $q = document.getElementById("ar-ss-q");
       const $btn = document.getElementById("ar-ss-btn");
@@ -301,8 +303,6 @@
       const $statusText = document.getElementById("ar-ss-status-text");
       const $confidence = document.getElementById("ar-ss-confidence");
 
-      // Debug counters (remove after verification)
-      let debugStats = { noUrl: 0, broken: 0 };
 
       function qs(key){
         const p = new URLSearchParams(window.location.search);
@@ -497,18 +497,51 @@
       }
 
       /**
-       * Render thumbnail with fallback image handling
-       * Uses pickImage() to get URL, falls back to "AR" placeholder if empty
-       * Includes onerror handler to swap to "AR" if image fails to load
+       * Render thumbnail wrapper with data-src so we can attach onerror first.
+       * Always returns an <img> tag (no text fallback).
        */
       function renderThumb(item, type, title){
-        // Always render an <img> tag - use placeholder if image_url is null
-        const imageUrl = pickImage(item) || PLACEHOLDER_IMAGE;
-        const safeUrl = imageUrl.startsWith('http://') ? 'https://' + imageUrl.substring(7) : imageUrl;
-        
-        // Render with strict onerror handler (prevents infinite loops)
-        // Add referrerpolicy="no-referrer" to prevent hotlink blocking on some hosts
-        return '<div class="ar-thumb"><img src="' + esc(safeUrl) + '" alt="' + esc(title) + '" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="this.onerror=null; if(this.src!==\'' + esc(PLACEHOLDER_IMAGE) + '\'){this.src=\'' + esc(PLACEHOLDER_IMAGE) + '\';}"></div>';
+        const resolvedUrl = pickImage(item);
+        const safeUrl = resolvedUrl && resolvedUrl.startsWith('http://')
+          ? 'https://' + resolvedUrl.substring(7)
+          : resolvedUrl;
+
+        const dataSrc = (safeUrl && safeUrl.trim() && safeUrl !== 'null' && safeUrl !== 'undefined')
+          ? safeUrl
+          : PLACEHOLDER_IMAGE;
+
+        const pageUrl = item.page_url || item.event_url || item.href || item.url || '';
+        return '<div class="ar-thumb"><img class="ar-thumb-img" data-src="' + esc(dataSrc) + '" data-page-url="' + esc(pageUrl) + '" alt="' + esc(title) + '" loading="lazy" decoding="async"></div>';
+      }
+
+      /**
+       * Attach error handler before setting src (prevents broken image tiles).
+       */
+      function initThumbImages(){
+        const imgs = document.querySelectorAll('#ar-site-search .ar-thumb-img');
+        imgs.forEach((img) => {
+          const dataSrc = (img.getAttribute('data-src') || '').trim();
+          const resolvedUrl = (dataSrc && dataSrc !== 'null' && dataSrc !== 'undefined')
+            ? dataSrc
+            : PLACEHOLDER_IMAGE;
+          const pageUrl = img.getAttribute('data-page-url') || '';
+
+          if (IMAGE_REFERRER_POLICY) {
+            img.referrerPolicy = IMAGE_REFERRER_POLICY;
+          }
+
+          img.onerror = () => {
+            console.warn('[IMG ERROR]', {
+              src: resolvedUrl,
+              title: img.getAttribute('alt') || '',
+              page_url: pageUrl
+            });
+            img.onerror = null;
+            img.src = PLACEHOLDER_IMAGE;
+          };
+
+          img.src = resolvedUrl;
+        });
       }
 
       function renderCard(item, kind){
@@ -518,12 +551,6 @@
         // Resolve image using pickImage()
         const thumb = renderThumb(item, kind, title);
 
-        // Debug tracking
-        const imageUrl = pickImage(item);
-        if (!imageUrl || imageUrl === ""){
-          debugStats.noUrl++;
-          console.log('[DEBUG] No image URL:', { type: kind, title: title });
-        }
 
         // Subtitle
         const subtitle = buildSubtitle(item, kind);
@@ -636,59 +663,10 @@
         return html;
       }
 
-      /**
-       * Console audit: log data availability for each section
-       * Temporary - remove after backfill is complete
-       */
-      function auditDataAvailability(structured){
-        const events = structured && structured.events ? structured.events : [];
-        const services = structured && structured.services ? structured.services : [];
-        const articles = structured && structured.articles ? structured.articles : [];
-
-        function auditSection(name, items){
-          const count = items.length;
-          const withImage = items.filter(i => i.image_url && String(i.image_url).trim()).length;
-          const withExcerpt = items.filter(i => i.excerpt && String(i.excerpt).trim()).length;
-          const pctImage = count > 0 ? Math.round((withImage / count) * 100) : 0;
-          const pctExcerpt = count > 0 ? Math.round((withExcerpt / count) * 100) : 0;
-          
-          // Find URLs missing image_url
-          const missingImage = items
-            .filter(i => !i.image_url || !String(i.image_url).trim())
-            .slice(0, 3)
-            .map(i => i.page_url || i.event_url || i.href || i.url || "");
-          
-          const samples = items.slice(0, 3).map(i => ({
-            title: i.title || i.event_title || i.product_title || "Untitled",
-            url: i.page_url || i.event_url || i.href || i.url || "",
-            image_url: i.image_url || null,
-            excerpt: i.excerpt || null
-          }));
-
-          console.log(`[AUDIT] ${name}:`, {
-            count,
-            withImage: `${withImage}/${count} (${pctImage}%)`,
-            withExcerpt: `${withExcerpt}/${count} (${pctExcerpt}%)`,
-            missingImageUrls: missingImage,
-            samples
-          });
-        }
-
-        auditSection("Events/Workshops", events);
-        auditSection("Services", services);
-        auditSection("Guides/Articles", articles);
-      }
-
       function renderAll(structured){
-        // Reset debug stats
-        debugStats = { noUrl: 0, broken: 0 };
-
         const events = structured && structured.events ? structured.events : [];
         const services = structured && structured.services ? structured.services : [];
         const articles = structured && structured.articles ? structured.articles : [];
-
-        // Console audit (temporary - remove after verification)
-        auditDataAvailability(structured);
 
         let html = "";
         html += renderSection(
@@ -711,11 +689,7 @@
         );
 
         $results.innerHTML = html;
-
-        // Debug log (remove after verification)
-        if (debugStats.noUrl > 0 || debugStats.broken > 0){
-          console.log('[DEBUG] Image stats:', debugStats);
-        }
+        initThumbImages();
       }
 
       async function runSearch(q){
