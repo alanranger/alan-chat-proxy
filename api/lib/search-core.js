@@ -149,86 +149,90 @@ async function enrichEventsWithImages(client, events) {
   if (!events || events.length === 0) return events;
 
   try {
-    // Collect unique URLs
-    const eventUrls = new Set();
-    const productUrls = new Set();
-
-    events.forEach(event => {
-      const eventUrl = event.event_url || event.href || event.page_url;
-      if (eventUrl) eventUrls.add(eventUrl);
-      
-      const productUrl = event.product_url;
-      if (productUrl) productUrls.add(productUrl);
-    });
-
-    // Query page_entities for event images
-    const imageMap = new Map();
-    
-    if (eventUrls.size > 0) {
-      const eventUrlArray = Array.from(eventUrls);
-      // Supabase .in() has a limit, so batch if needed
-      const batchSize = 100;
-      for (let i = 0; i < eventUrlArray.length; i += batchSize) {
-        const batch = eventUrlArray.slice(i, i + batchSize);
-        const { data: eventEntities, error: eErr } = await client
-          .from('page_entities')
-          .select('page_url, image_url')
-          .in('page_url', batch)
-          .eq('kind', 'event')
-          .not('image_url', 'is', null);
-        
-        if (!eErr && eventEntities) {
-          eventEntities.forEach(entity => {
-            if (entity.image_url) {
-              imageMap.set(entity.page_url, entity.image_url);
-            }
-          });
-        }
-      }
-    }
-
-    // Query page_entities for product images (fallback)
-    if (productUrls.size > 0) {
-      const productUrlArray = Array.from(productUrls);
-      const batchSize = 100;
-      for (let i = 0; i < productUrlArray.length; i += batchSize) {
-        const batch = productUrlArray.slice(i, i + batchSize);
-        const { data: productEntities, error: pErr } = await client
-          .from('page_entities')
-          .select('page_url, image_url')
-          .in('page_url', batch)
-          .eq('kind', 'product')
-          .not('image_url', 'is', null);
-        
-        if (!pErr && productEntities) {
-          productEntities.forEach(entity => {
-            if (entity.image_url && !imageMap.has(entity.page_url)) {
-              imageMap.set(entity.page_url, entity.image_url);
-            }
-          });
-        }
-      }
-    }
-
-    // Merge image_url into events
-    return events.map(event => {
-      const eventUrl = event.event_url || event.href || event.page_url;
-      const productUrl = event.product_url;
-      
-      // Prefer existing image_url, then event image, then product image
-      const imageUrl = event.image_url || 
-                      (eventUrl ? imageMap.get(eventUrl) : null) ||
-                      (productUrl ? imageMap.get(productUrl) : null) ||
-                      '';
-      
-      return {
-        ...event,
-        image_url: imageUrl
-      };
-    });
+    const { eventUrls, productUrls } = collectEventUrls(events);
+    const imageMap = await fetchImageUrls(client, eventUrls, productUrls);
+    return mergeImageUrls(events, imageMap);
   } catch (error) {
     console.error('[search-core] Error enriching events with images:', error);
-    // Return events unchanged on error
     return events;
   }
+}
+
+/**
+ * Collect unique event and product URLs from events array
+ */
+function collectEventUrls(events) {
+  const eventUrls = new Set();
+  const productUrls = new Set();
+
+  events.forEach(event => {
+    const eventUrl = event.event_url || event.href || event.page_url;
+    if (eventUrl) eventUrls.add(eventUrl);
+    
+    const productUrl = event.product_url;
+    if (productUrl) productUrls.add(productUrl);
+  });
+
+  return { eventUrls, productUrls };
+}
+
+/**
+ * Fetch image URLs from page_entities in batches
+ */
+async function fetchImageUrls(client, eventUrls, productUrls) {
+  const imageMap = new Map();
+  
+  if (eventUrls.size > 0) {
+    await fetchImagesByKind(client, Array.from(eventUrls), 'event', imageMap);
+  }
+  
+  if (productUrls.size > 0) {
+    await fetchImagesByKind(client, Array.from(productUrls), 'product', imageMap);
+  }
+  
+  return imageMap;
+}
+
+/**
+ * Fetch images for a specific kind (event or product) in batches
+ */
+async function fetchImagesByKind(client, urlArray, kind, imageMap) {
+  const batchSize = 100;
+  for (let i = 0; i < urlArray.length; i += batchSize) {
+    const batch = urlArray.slice(i, i + batchSize);
+    const { data: entities, error } = await client
+      .from('page_entities')
+      .select('page_url, image_url')
+      .in('page_url', batch)
+      .eq('kind', kind)
+      .not('image_url', 'is', null);
+    
+    if (!error && entities) {
+      entities.forEach(entity => {
+        if (entity.image_url && (kind === 'event' || !imageMap.has(entity.page_url))) {
+          imageMap.set(entity.page_url, entity.image_url);
+        }
+      });
+    }
+  }
+}
+
+/**
+ * Merge image URLs into event objects
+ */
+function mergeImageUrls(events, imageMap) {
+  return events.map(event => {
+    const eventUrl = event.event_url || event.href || event.page_url;
+    const productUrl = event.product_url;
+    
+    const imageUrl = event.image_url || 
+                    (eventUrl ? imageMap.get(eventUrl) : null) ||
+                    (productUrl ? imageMap.get(productUrl) : null) ||
+                    '';
+    
+    return {
+      ...event,
+      image_url: imageUrl
+    };
+  });
 }
