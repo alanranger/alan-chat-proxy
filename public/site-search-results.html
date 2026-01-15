@@ -157,13 +157,13 @@
       min-height: 120px;
     }
     .ar-thumb{
-      width:112px;
-      height:112px;
+      width:120px;
+      aspect-ratio:4/3;
       border-radius:12px;
       border:1px solid var(--ar-border);
       background:#eef2f7;
       overflow:hidden;
-      flex:0 0 112px;
+      flex:0 0 120px;
       display:flex;
       align-items:center;
       justify-content:center;
@@ -197,26 +197,28 @@
       font-size:12.5px;
       line-height:1.4;
       display:-webkit-box;
-      -webkit-line-clamp:3;
-      line-clamp:3;
+      -webkit-line-clamp:2;
+      line-clamp:2;
       -webkit-box-orient:vertical;
       overflow:hidden;
+      min-height:2.8em;
     }
 
     .ar-pills{
       display:flex;
       flex-wrap:wrap;
-      gap:5px;
+      gap:4px;
       margin: 8px 0 0;
     }
     .ar-pill{
       border:1px solid rgba(229,114,0,.35);
       background: rgba(229,114,0,.08);
       color: rgba(124,45,18,.95);
-      padding:4px 8px;
-      border-radius:8px;
-      font-size:11px;
+      padding:3px 6px;
+      border-radius:6px;
+      font-size:10px;
       font-weight:700;
+      line-height:1.2;
       white-space:nowrap;
       cursor:default;
       -webkit-user-select:none;
@@ -228,10 +230,12 @@
       color: #fff;
       font-weight:800;
       pointer-events:none;
+      cursor:default;
     }
     .ar-pill.price:hover{
       background: var(--ar-blue);
       filter:none;
+      cursor:default;
     }
 
     .ar-actions{
@@ -342,36 +346,57 @@
       }
 
       /**
-       * 1) Robust image resolver with prioritized fallbacks
-       * Also converts HTTP to HTTPS to prevent mixed content issues
+       * 1) Robust image resolver - pickImage() with prioritized fallbacks
+       * Checks all possible image fields and validates URLs
+       * Returns empty string if no valid URL found (fallback handled in renderThumb)
        */
-      function resolveImageUrl(item, type){
-        let url = null;
-        
-        // Priority order: direct fields
-        if (item.image_url) url = String(item.image_url).trim();
-        else if (item.image) url = String(item.image).trim();
-        else if (item.raw && item.raw.image_url) url = String(item.raw.image_url).trim();
-        else {
-          // json_ld_data.image handling
+      function pickImage(item){
+        // Priority order: check all possible image fields
+        const candidates = [
+          item.image_url,
+          item.imageUrl,
+          item.image,
+          item.og_image,
+          item.ogImage,
+          item.featured_image,
+          item.featuredImage,
+          item.thumbnail,
+          item.raw?.image_url,
+          item.event_image_url,
+          item.product_image_url
+        ];
+
+        // Also check json_ld_data.image
+        if (item.json_ld_data?.image) {
           const jldImage = extractJsonLdImage(item.json_ld_data);
-          if (jldImage) url = jldImage;
-        }
-        
-        // Other fields (only if still no URL)
-        if (!url) {
-          if (item.og_image) url = String(item.og_image).trim();
-          else if (item.product_image_url) url = String(item.product_image_url).trim();
-          else if (item.event_image_url) url = String(item.event_image_url).trim();
+          if (jldImage) candidates.push(jldImage);
         }
 
-        // Convert HTTP to HTTPS (prevent mixed content)
-        if (url && url.startsWith('http://')) {
-          url = 'https://' + url.substring(7);
+        // Find first valid URL
+        for (const candidate of candidates) {
+          if (!candidate) continue;
+          
+          let url = null;
+          if (typeof candidate === 'string') {
+            url = candidate.trim();
+          } else if (Array.isArray(candidate) && candidate.length > 0) {
+            url = typeof candidate[0] === 'string' ? candidate[0].trim() : String(candidate[0]).trim();
+          } else if (typeof candidate === 'object' && candidate.url) {
+            url = String(candidate.url).trim();
+          }
+
+          // Validate URL: must be http:// or https://
+          if (url && (url.startsWith('http://') || url.startsWith('https://'))) {
+            // Convert HTTP to HTTPS (prevent mixed content)
+            if (url.startsWith('http://')) {
+              url = 'https://' + url.substring(7);
+            }
+            return url;
+          }
         }
 
-        // Return URL or type-based fallback
-        return url || (FALLBACKS[type] || FALLBACKS.event);
+        // No valid URL found
+        return "";
       }
 
       function extractJsonLdImage(jsonLd){
@@ -389,20 +414,32 @@
       }
 
       /**
-       * 2) Get card summary with fallback generation
+       * 2) Robust description picker - pickDescription() with prioritized fallbacks
+       * Always returns a string (never null/undefined) - generates fallback if needed
        */
-      function getCardSummary(item, type){
-        // Preferred order (product_description is included from API)
-        if (item.description) return String(item.description).trim();
-        if (item.excerpt) return String(item.excerpt).trim();
-        if (item.summary) return String(item.summary).trim();
-        if (item.product_description) return String(item.product_description).trim();
-        if (item.raw && item.raw.description) return String(item.raw.description).trim();
-        if (item.json_ld_data && item.json_ld_data.description){
-          return String(item.json_ld_data.description).trim();
+      function pickDescription(item, type){
+        // Priority order: meta_description first, then standard fields
+        const candidates = [
+          item.meta_description,
+          item.metaDescription,
+          item.description,
+          item.excerpt,
+          item.summary,
+          item.product_description,
+          item.raw?.description,
+          item.json_ld_data?.description,
+          item.seo?.description
+        ];
+
+        // Find first non-empty string
+        for (const candidate of candidates) {
+          if (candidate && typeof candidate === 'string') {
+            const trimmed = candidate.trim();
+            if (trimmed) return trimmed;
+          }
         }
 
-        // Generated fallback
+        // Generate fallback (especially for events)
         return generateSummaryFallback(item, type);
       }
 
@@ -452,17 +489,37 @@
 
       /**
        * 4) Render pills HTML (max 4, with +N if more)
+       * Price pill is always visible (pinned) even if it would be pushed out
        */
       function renderPills(pills, maxCount = 4){
         const normalized = normalizePills(pills);
-        const toShow = normalized.slice(0, maxCount);
-        const remaining = normalized.length - maxCount;
+        
+        // Separate price pill from other pills
+        const pricePills = [];
+        const otherPills = [];
+        for (const p of normalized) {
+          if (/^£/.test(p)) {
+            pricePills.push(p);
+          } else {
+            otherPills.push(p);
+          }
+        }
+
+        // Show up to maxCount-1 other pills (reserve 1 slot for price if needed)
+        const slotsForOthers = pricePills.length > 0 ? maxCount - 1 : maxCount;
+        const toShow = otherPills.slice(0, slotsForOthers);
+        const remaining = otherPills.length - slotsForOthers;
 
         let html = "";
+        // Render other pills first
         for (const p of toShow){
-          const isPrice = /^£/.test(p);
-          html += '<span class="ar-pill' + (isPrice ? ' price' : '') + '">' + esc(p) + '</span>';
+          html += '<span class="ar-pill">' + esc(p) + '</span>';
         }
+        // Always show price pill(s) if present
+        for (const p of pricePills){
+          html += '<span class="ar-pill price">' + esc(p) + '</span>';
+        }
+        // Show overflow if there are remaining other pills
         if (remaining > 0){
           html += '<span class="ar-pill">+' + remaining + '</span>';
         }
@@ -471,34 +528,34 @@
 
       /**
        * Render thumbnail with fallback image handling
+       * Uses pickImage() to get URL, falls back to "AR" placeholder if empty
        * Includes onerror handler to swap to fallback if image fails to load
        */
-      function renderThumb(imageUrl, fallbackUrl, type, title){
-        const url = (imageUrl || "").trim();
-        const fallback = fallbackUrl || FALLBACKS[type] || FALLBACKS.event;
+      function renderThumb(item, type, title){
+        const imageUrl = pickImage(item);
+        const fallback = FALLBACKS[type] || FALLBACKS.event;
 
-        if (!url || url === fallback){
-          // No URL or already fallback - render fallback directly
-          return '<div class="ar-thumb"><img src="' + esc(fallback) + '" alt="' + esc(title) + '" onerror="this.onerror=null; this.src=\'' + esc(fallback) + '\';"></div>';
+        if (!imageUrl || imageUrl === ""){
+          // No URL - render "AR" placeholder (not fallback image)
+          return '<div class="ar-thumb">AR</div>';
         }
 
         // Has URL - render with onerror fallback (prevents infinite loop by setting onerror to null)
-        // Also ensure HTTPS (resolveImageUrl already handles this, but double-check)
-        const safeUrl = url.startsWith('http://') ? 'https://' + url.substring(7) : url;
-        return '<div class="ar-thumb"><img src="' + esc(safeUrl) + '" alt="' + esc(title) + '" loading="lazy" onerror="this.onerror=null; this.src=\'' + esc(fallback) + '\';"></div>';
+        // pickImage already converts HTTP to HTTPS, but double-check
+        const safeUrl = imageUrl.startsWith('http://') ? 'https://' + imageUrl.substring(7) : imageUrl;
+        return '<div class="ar-thumb"><img src="' + esc(safeUrl) + '" alt="' + esc(title) + '" loading="lazy" onerror="this.onerror=null; this.parentElement.textContent=\'AR\';"></div>';
       }
 
       function renderCard(item, kind){
         const title = item.title || item.event_title || item.product_title || "Untitled";
         const href = item.href || item.page_url || item.event_url || "#";
 
-        // Resolve image with fallback
-        const imageUrl = resolveImageUrl(item, kind);
-        const fallbackUrl = FALLBACKS[kind] || FALLBACKS.event;
-        const thumb = renderThumb(imageUrl, fallbackUrl, kind, title);
+        // Resolve image using pickImage()
+        const thumb = renderThumb(item, kind, title);
 
         // Debug tracking
-        if (!imageUrl || imageUrl === fallbackUrl){
+        const imageUrl = pickImage(item);
+        if (!imageUrl || imageUrl === ""){
           debugStats.noUrl++;
           console.log('[DEBUG] No image URL:', { type: kind, title: title });
         }
@@ -506,10 +563,12 @@
         // Subtitle
         const subtitle = buildSubtitle(item, kind);
 
-        // Description with fallback
-        const desc = getCardSummary(item, kind);
+        // Description with pickDescription() - always show for workshops
+        const desc = pickDescription(item, kind);
+        // For events, always render description (even if empty, fallback was generated)
+        const showDesc = kind === "event" ? true : (desc && desc.length > 0);
 
-        // Pills (normalized, deduped, capped at 4)
+        // Pills (normalized, deduped, capped at 4, price pinned)
         const pillCandidates = collectPillCandidates(item, kind);
         const pillsHtml = renderPills(pillCandidates, 4);
 
@@ -522,7 +581,7 @@
             '<div class="ar-body">' +
               '<div class="ar-title">' + esc(title) + '</div>' +
               (subtitle ? '<div class="ar-sub">' + esc(subtitle) + '</div>' : '') +
-              (desc ? '<div class="ar-desc">' + esc(desc) + '</div>' : '') +
+              (showDesc ? '<div class="ar-desc">' + esc(desc) + '</div>' : '') +
               (pillsHtml ? '<div class="ar-pills">' + pillsHtml + '</div>' : '') +
               (actions.length ? '<div class="ar-actions">' + actions.join("") + '</div>' : '') +
             '</div>' +
