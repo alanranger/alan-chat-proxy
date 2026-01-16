@@ -60,19 +60,18 @@ if (!window.ARSiteSearch) {
     return "";
   }
 
+  function pickImage(item) {
+    return ensureHttpUrl(item.image_url);
+  }
+
+  function isSquarespaceImage(url) {
+    return /squarespace-cdn\.com|static1\.squarespace\.com/i.test(url);
+  }
+
   function addSquarespaceFormat(url) {
-    if (!url || !url.includes("squarespace") || url.includes("format=")) return url;
+    if (!url || !isSquarespaceImage(url) || url.includes("format=")) return url;
     const joiner = url.includes("?") ? "&" : "?";
     return `${url}${joiner}format=300w`;
-  }
-
-  function normalizeImageUrl(value) {
-    const url = ensureHttpUrl(value);
-    return addSquarespaceFormat(url);
-  }
-
-  function pickImage(item) {
-    return normalizeImageUrl(item.image_url);
   }
 
   function pickDescription(item, type) {
