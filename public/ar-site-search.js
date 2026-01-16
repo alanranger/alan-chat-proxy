@@ -386,7 +386,7 @@ if (!window.ARSiteSearch) {
     const articles = structured && structured.articles ? structured.articles : [];
     let html = "";
     html += renderSection({
-      label: "Workshops",
+      label: "Events",
       items: events,
       kind: "event",
       keyFn: (e) => ((e.event_url || e.page_url || e.href || "") + "|" + (e.date_start || e.date || ""))
