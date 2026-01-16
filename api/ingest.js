@@ -1166,6 +1166,7 @@ export async function ingestSingleUrl(url, supa, options = {}) {
             if (fetchAllErr) {
               console.error('Error fetching all existing events:', fetchAllErr);
             } else if (allExistingEvents && allExistingEvents.length > 0) {
+              const safeExistingEvents = allExistingEvents.filter(Boolean);
               // Extract start_date values from new entities (normalize to date-only for comparison)
               const newEventDates = new Set();
               validEntities.filter(e => e.kind === 'event').forEach(e => {
@@ -1177,7 +1178,7 @@ export async function ingestSingleUrl(url, supa, options = {}) {
               });
               
               // Find old event dates that are no longer in the source data
-              const oldEventsToDelete = allExistingEvents.filter(ex => {
+              const oldEventsToDelete = safeExistingEvents.filter(ex => {
                 const exStartDate = ex.start_date || (ex.date_start ? ex.date_start.split('T')[0] : null);
                 return exStartDate && !newEventDates.has(exStartDate);
               });
@@ -1208,7 +1209,7 @@ export async function ingestSingleUrl(url, supa, options = {}) {
                   .in('date_start', eventDates);
                 
                 if (matchingEvents) {
-                  matchingEvents.forEach(ex => {
+                  matchingEvents.filter(Boolean).forEach(ex => {
                     const key = `${ex.url}|${ex.kind}|${ex.date_start}`;
                     existingEntitiesMap.set(key, ex);
                   });
@@ -1227,7 +1228,7 @@ export async function ingestSingleUrl(url, supa, options = {}) {
               .in('kind', kinds);
             
             if (nonEventData) {
-              nonEventData.forEach(ex => {
+              nonEventData.filter(Boolean).forEach(ex => {
                 const key = `${ex.url}|${ex.kind}`;
                 existingEntitiesMap.set(key, ex);
               });
