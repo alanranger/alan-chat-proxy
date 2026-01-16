@@ -1049,28 +1049,46 @@
       const token = getToken();
       if (!token) {
         addResult('❌ No token found. Please save your token first.', 'error');
-        return null;
+        return { ok: false, error: 'missing_token' };
       }
 
+      let timeoutId = null;
+      let hardTimeoutId = null;
+      let timeoutMs = 0;
       try {
         const controller = new AbortController();
-        const timeoutMs = opts.timeoutMs || 0;
-        let timeoutId = null;
+        timeoutMs = opts.timeoutMs || 0;
         if (timeoutMs > 0) {
           timeoutId = setTimeout(() => controller.abort(), timeoutMs);
         }
-        const response = await fetch(endpoint, {
-          method: data ? 'POST' : 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: data ? JSON.stringify(data) : undefined,
-          signal: controller.signal
-        });
-        if (timeoutId) clearTimeout(timeoutId);
-        const text = await response.text();
-        try { return JSON.parse(text); } catch { return { ok: response.ok, status: response.status, text }; }
+        const fetchPromise = (async () => {
+          const response = await fetch(endpoint, {
+            method: data ? 'POST' : 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: data ? JSON.stringify(data) : undefined,
+            signal: controller.signal
+          });
+          const text = await response.text();
+          try { return JSON.parse(text); } catch { return { ok: response.ok, status: response.status, text }; }
+        })();
+
+        if (timeoutMs > 0) {
+          const timeoutPromise = new Promise(resolve => {
+            hardTimeoutId = setTimeout(() => resolve({ __timeout: true }), timeoutMs + 2000);
+          });
+          const result = await Promise.race([fetchPromise, timeoutPromise]);
+          if (result && result.__timeout) {
+            controller.abort();
+            addResult(`❌ API Error: Request timeout after ${Math.ceil((timeoutMs + 2000) / 1000)}s`, 'error');
+            return { ok: false, error: 'timeout', detail: 'Request timeout (frontend watchdog)' };
+          }
+          return result;
+        }
+
+        return await fetchPromise;
       } catch (error) {
         // Provide better error messages for abort/timeout
         let errorMsg = error.message;
@@ -1080,7 +1098,10 @@
           errorMsg = 'Request timeout (aborted)';
         }
         addResult(`❌ API Error: ${errorMsg}`, 'error');
-        return null;
+        return { ok: false, error: errorMsg };
+      } finally {
+        if (timeoutId) clearTimeout(timeoutId);
+        if (hardTimeoutId) clearTimeout(hardTimeoutId);
       }
     }
 
