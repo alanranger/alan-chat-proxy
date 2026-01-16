@@ -315,7 +315,7 @@ if (!window.ARSiteSearch) {
       '<div class="ar-ss-wrap">' +
         '<div class="ar-ss-searchcard">' +
           '<div class="ar-ss-row">' +
-            '<input class="ar-ss-input" type="text" inputmode="search" placeholder="Search workshops, guides, services, landing pages…" />' +
+            '<input class="ar-ss-input" type="text" inputmode="search" placeholder="Search Courses, Workshops, Private Lessons and Other Services or Articles & Topics for Advice on Gear and Photography" />' +
             '<button class="ar-ss-btn" type="button">Search</button>' +
           "</div>" +
           '<div class="ar-ss-meta">' +
