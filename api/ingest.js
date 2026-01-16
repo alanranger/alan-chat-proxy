@@ -131,7 +131,7 @@ function extractMetaImage(html, pageUrl) {
   }
 }
 
-const INGEST_VERSION = "2025-12-05-guard-v3";
+const INGEST_VERSION = "2025-12-05-guard-v4";
 const SELF_BASE = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : `http://localhost:3000`;
 const EXPECTED_TOKEN = process.env.INGEST_TOKEN || "";
 
@@ -775,7 +775,9 @@ export async function ingestSingleUrl(url, supa, options = {}) {
     
     stage = 'store_entities';
     const storeEntitiesStart = Date.now();
+    let storeEntitiesError = null;
     if (jsonLd) {
+      try {
       // Log JSON-LD objects found directly to database (fire and forget - don't block)
       supa.from('debug_logs').insert({
         url: url,
@@ -1467,6 +1469,10 @@ export async function ingestSingleUrl(url, supa, options = {}) {
       
       // Sync pricing to display table after entity updates (fire and forget - don't block)
       supa.rpc('upsert_display_price_all').then(() => {}).catch(() => {});
+      } catch (err) {
+        storeEntitiesError = err;
+        console.error(`store_entities failed for ${url}:`, err);
+      }
     }
     
     // Final safeguard: ensure service/landing titles are set to meta/HTML title when generic
@@ -1517,6 +1523,7 @@ export async function ingestSingleUrl(url, supa, options = {}) {
       entities: jsonLd ? jsonLd.length : 0,
       jsonLdFound: !!jsonLd,
       meta_description: metaDesc,
+      store_entities_error: storeEntitiesError ? asString(storeEntitiesError) : null,
       ingest_version: INGEST_VERSION
     };
     
