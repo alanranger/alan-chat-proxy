@@ -63,6 +63,74 @@ function extractMetaTitle(html) {
   }
 }
 
+function toAbsoluteUrl(rawUrl, pageUrl) {
+  const url = (rawUrl || '').trim();
+  if (!url) return null;
+  if (url.startsWith('//')) return `https:${url}`;
+  if (url.startsWith('http://') || url.startsWith('https://')) return url;
+  try {
+    const baseUrl = new URL(pageUrl);
+    if (url.startsWith('/')) return baseUrl.origin + url;
+    return new URL(url, baseUrl).href;
+  } catch {
+    return null;
+  }
+}
+
+function ensureHttps(url) {
+  if (!url) return null;
+  return url.startsWith('http://') ? `https://${url.substring(7)}` : url;
+}
+
+function addSquarespaceFormat(url) {
+  if (!url || !url.includes('squarespace-cdn.com') || url.includes('format=')) {
+    return url;
+  }
+  const joiner = url.includes('?') ? '&' : '?';
+  return `${url}${joiner}format=300w`;
+}
+
+function normalizeImageUrl(imageUrl, pageUrl) {
+  const absolute = toAbsoluteUrl(imageUrl, pageUrl);
+  const httpsUrl = ensureHttps(absolute);
+  return addSquarespaceFormat(httpsUrl);
+}
+
+function getJsonLdImage(jsonLd) {
+  if (!jsonLd || typeof jsonLd !== 'object') return null;
+  const image = jsonLd.image || jsonLd.thumbnailUrl || jsonLd.logo || null;
+  if (Array.isArray(image)) return image[0];
+  if (typeof image === 'object' && image.url) return image.url;
+  return image;
+}
+
+function pickImageUrl(pageUrl, candidates) {
+  for (const candidate of candidates) {
+    const normalized = normalizeImageUrl(candidate, pageUrl);
+    if (normalized) return normalized;
+  }
+  return null;
+}
+
+function extractMetaImage(html, pageUrl) {
+  if (!html || typeof html !== 'string') return null;
+  try {
+    const dom = new JSDOM(html);
+    const document = dom.window.document;
+    const ogImage = document.querySelector('meta[property="og:image"], meta[property="og:image:secure_url"]');
+    const twImage = document.querySelector('meta[name="twitter:image"]');
+    const raw = (ogImage && ogImage.content) || (twImage && twImage.content) || '';
+    const metaImage = normalizeImageUrl(raw, pageUrl);
+    if (metaImage) return metaImage;
+    const imgEl = document.querySelector('main img, article img, img');
+    const src = imgEl ? (imgEl.getAttribute('src') || imgEl.getAttribute('data-src')) : '';
+    return normalizeImageUrl(src, pageUrl);
+  } catch (e) {
+    console.error('Error extracting meta image:', e);
+    return null;
+  }
+}
+
 const SELF_BASE = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : `http://localhost:3000`;
 const EXPECTED_TOKEN = process.env.INGEST_TOKEN || "";
 
@@ -482,6 +550,8 @@ export async function ingestSingleUrl(url, supa, options = {}) {
     // Extract meta description early - this is the primary source for description field
     const metaDescription = extractMetaDescription(html);
     console.log(`[TIMING] ${url}: extracted meta_description: ${metaDescription ? `"${metaDescription.substring(0, 50)}..."` : 'null'}`);
+    const metaImage = extractMetaImage(html, url);
+    console.log(`[TIMING] ${url}: extracted meta_image: ${metaImage ? `"${metaImage.substring(0, 50)}..."` : 'null'}`);
     
     stage = 'extract_jsonld';
     const jsonLdStart = Date.now();
@@ -755,6 +825,7 @@ export async function ingestSingleUrl(url, supa, options = {}) {
       
       // Select the best JSON-LD object for this URL (prioritized by the sort above)
       const bestJsonLd = jsonLd[0]; // First item after prioritization
+      const bestJsonLdImage = getJsonLdImage(bestJsonLd);
       const bestIdx = 0;
       
       // PRIORITY: Use meta_description as primary source for description field (for ALL entity types)
@@ -883,6 +954,7 @@ export async function ingestSingleUrl(url, supa, options = {}) {
                 ? `${meta.end_date}T${meta.end_time}.000Z`
                 : (bestJsonLd.endDate || null);
               
+              const imageUrl = pickImageUrl(url, [meta.image_url, bestJsonLdImage, metaImage]);
               entities.push({
                 url: url,
                 page_url: url, // CRITICAL: Set page_url for constraint matching
@@ -916,7 +988,7 @@ export async function ingestSingleUrl(url, supa, options = {}) {
                 location_address: meta.location_address ? cleanHTMLText(meta.location_address) : null,
                 location_city_state_zip: meta.location_city_state_zip ? cleanHTMLText(meta.location_city_state_zip) : null,
                 excerpt: meta.excerpt ? cleanHTMLText(meta.excerpt) : null,
-                image_url: meta.image_url ? cleanHTMLText(meta.image_url) : null,
+                image_url: imageUrl,
                 json_ld_data: meta.json_ld_data || null,
                 workflow_state: meta.workflow_state ? cleanHTMLText(meta.workflow_state) : null,
                 // NEW STRUCTURED DATA FIELDS - Extract from page content
@@ -937,6 +1009,7 @@ export async function ingestSingleUrl(url, supa, options = {}) {
       
       // If no multi-date entities were created, use the original single-entity logic
       if (entities.length === 0) {
+        const imageUrl = pickImageUrl(url, [csvMetadata?.image_url, bestJsonLdImage, metaImage]);
         entities = [{
           url: url,
           page_url: url, // CRITICAL: Set page_url for constraint matching
@@ -974,7 +1047,7 @@ export async function ingestSingleUrl(url, supa, options = {}) {
             location_address: csvMetadata?.location_address ? cleanHTMLText(csvMetadata.location_address) : null,
             location_city_state_zip: csvMetadata?.location_city_state_zip ? cleanHTMLText(csvMetadata.location_city_state_zip) : null,
             excerpt: csvMetadata?.excerpt ? cleanHTMLText(csvMetadata.excerpt) : null,
-            image_url: csvMetadata?.image_url ? cleanHTMLText(csvMetadata.image_url) : null,
+            image_url: imageUrl,
             json_ld_data: csvMetadata?.json_ld_data || null,
             workflow_state: csvMetadata?.workflow_state ? cleanHTMLText(csvMetadata.workflow_state) : null,
             // NEW STRUCTURED DATA FIELDS - Extract from page content
@@ -1003,6 +1076,11 @@ export async function ingestSingleUrl(url, supa, options = {}) {
         const productTitle = productJsonLd.headline || productJsonLd.title || productJsonLd.name || chosenTitle || null;
         const productDescription = enhancedDescriptions[productIdx] || productJsonLd.description || enhancedDescription || null;
         const productEntityHash = sha1(url + JSON.stringify(productJsonLd) + productIdx);
+        const productImageUrl = pickImageUrl(url, [
+          getJsonLdImage(productJsonLd),
+          csvMetadata?.image_url,
+          metaImage
+        ]);
         
         // Always add Product entity to entities array - the later code will handle update vs insert
         entities.push({
@@ -1038,7 +1116,7 @@ export async function ingestSingleUrl(url, supa, options = {}) {
             location_address: null,
             location_city_state_zip: null,
             excerpt: csvMetadata?.excerpt ? cleanHTMLText(csvMetadata.excerpt) : null,
-            image_url: (Array.isArray(productJsonLd.image) ? productJsonLd.image[0] : productJsonLd.image) || (csvMetadata?.image_url ? cleanHTMLText(csvMetadata.image_url) : null),
+            image_url: productImageUrl,
             json_ld_data: csvMetadata?.json_ld_data || null,
             workflow_state: csvMetadata?.workflow_state ? cleanHTMLText(csvMetadata.workflow_state) : null,
             // Structured data fields
@@ -1179,6 +1257,9 @@ export async function ingestSingleUrl(url, supa, options = {}) {
               merged.image_url = e.image_url ?? merged.image_url;
               merged.json_ld_data = e.json_ld_data ?? merged.json_ld_data;
               merged.workflow_state = e.workflow_state ?? merged.workflow_state;
+            }
+            if (e.image_url) {
+              merged.image_url = e.image_url;
             }
             
             // Always update structured data fields if available
