@@ -190,12 +190,7 @@
   color:rgba(15,23,42,.78);
   font-size:12.5px;
   line-height:1.4;
-  display:-webkit-box;
-  -webkit-line-clamp:2;
-  line-clamp:2;
-  -webkit-box-orient:vertical;
-  overflow:hidden;
-  min-height:2.4em;
+  white-space:normal;
 }
 
 :where(#ar-site-search, .ar-site-search) .ar-pills{
