@@ -14,7 +14,7 @@ if (!window.ARSiteSearch) {
     if (existing) return;
     const link = document.createElement("link");
     link.rel = "stylesheet";
-    link.href = "/ar-site-search.css";
+    link.href = "https://alan-chat-proxy.vercel.app/ar-site-search.css";
     document.head.appendChild(link);
   }
 
