@@ -1133,18 +1133,26 @@ export async function ingestSingleUrl(url, supa, options = {}) {
           });
       }
       
-      if (!options.dryRun) {
+      const validEntities = entities.filter(e => e && e.url && e.kind);
+      if (entities.length !== validEntities.length) {
+        console.warn(`⚠️ Skipping ${entities.length - validEntities.length} invalid entity records for ${url}`);
+      }
+      if (validEntities.length === 0) {
+        console.warn(`⚠️ No valid entities built for ${url}; skipping entity storage.`);
+      }
+      
+      if (!options.dryRun && validEntities.length > 0) {
         // BATCH: Fetch only the specific entities we need (by URL, kind, and date_start for events)
         const existingEntitiesMap = new Map();
         try {
           // For events with dates, fetch only matching date_start values to avoid fetching all historical entities
-          const eventDates = entities.filter(e => e.kind === 'event' && e.date_start).map(e => e.date_start);
-          const nonEventEntities = entities.filter(e => e.kind !== 'event' || !e.date_start);
+          const eventDates = validEntities.filter(e => e.kind === 'event' && e.date_start).map(e => e.date_start);
+          const nonEventEntities = validEntities.filter(e => e.kind !== 'event' || !e.date_start);
           
           // CRITICAL: For events, we need to fetch ALL existing event dates for this URL to clean up old dates
           // that are no longer in the source data (e.g., when an event is rescheduled)
-          const url = entities[0].url; // All entities have same URL
-          const hasEventEntities = entities.some(e => e.kind === 'event' && e.date_start);
+          const url = validEntities[0].url; // All entities have same URL
+          const hasEventEntities = validEntities.some(e => e.kind === 'event' && e.date_start);
           
           if (hasEventEntities) {
             // Fetch ALL existing event entities for this URL to identify old dates to delete
@@ -1159,7 +1167,7 @@ export async function ingestSingleUrl(url, supa, options = {}) {
             } else if (allExistingEvents && allExistingEvents.length > 0) {
               // Extract start_date values from new entities (normalize to date-only for comparison)
               const newEventDates = new Set();
-              entities.filter(e => e.kind === 'event').forEach(e => {
+              validEntities.filter(e => e.kind === 'event').forEach(e => {
                 // Use start_date (date-only) if available, otherwise extract from date_start
                 const newStartDate = e.start_date || (e.date_start ? e.date_start.split('T')[0] : null);
                 if (newStartDate) {
@@ -1229,7 +1237,7 @@ export async function ingestSingleUrl(url, supa, options = {}) {
         }
         
         // Process entities - now we can do this in parallel since we have all existing data
-        const entityPromises = entities.map(async (e) => {
+        const entityPromises = validEntities.map(async (e) => {
           // For events, check by (url, kind, date_start) to allow multiple events per URL
           const key = (e.kind === 'event' && e.date_start)
             ? `${e.url}|${e.kind}|${e.date_start}`
