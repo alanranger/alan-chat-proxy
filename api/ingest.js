@@ -131,7 +131,7 @@ function extractMetaImage(html, pageUrl) {
   }
 }
 
-const INGEST_VERSION = "2025-12-05-guard-v1";
+const INGEST_VERSION = "2025-12-05-guard-v2";
 const SELF_BASE = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : `http://localhost:3000`;
 const EXPECTED_TOKEN = process.env.INGEST_TOKEN || "";
 
