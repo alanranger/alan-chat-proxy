@@ -131,6 +131,7 @@ function extractMetaImage(html, pageUrl) {
   }
 }
 
+const INGEST_VERSION = "2025-12-05-guard-v1";
 const SELF_BASE = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : `http://localhost:3000`;
 const EXPECTED_TOKEN = process.env.INGEST_TOKEN || "";
 
@@ -502,7 +503,7 @@ export async function ingestSingleUrl(url, supa, options = {}) {
     const fetchStart = Date.now();
     const res = await fetchPage(url);
     const html = await res.text();
-    console.log(`[TIMING] ${url}: fetch took ${Date.now() - fetchStart}ms`);
+    console.log(`[INGEST] ${INGEST_VERSION} ${url}: fetch took ${Date.now() - fetchStart}ms`);
     
     stage = 'extract_text';
     const extractStart = Date.now();
@@ -1508,12 +1509,13 @@ export async function ingestSingleUrl(url, supa, options = {}) {
       chunks: chunkInserts.length,
       entities: jsonLd ? jsonLd.length : 0,
       jsonLdFound: !!jsonLd,
-      meta_description: metaDesc
+      meta_description: metaDesc,
+      ingest_version: INGEST_VERSION
     };
     
   } catch (err) {
     const diag = (err && err.attempts) ? ` attempts=${JSON.stringify(err.attempts)}` : '';
-    throw new Error(`${stage}: ${err.message}${diag}`);
+    throw new Error(`${stage}: ${err.message} (ingest:${INGEST_VERSION})${diag}`);
   }
 }
 
