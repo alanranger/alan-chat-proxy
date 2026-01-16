@@ -89,6 +89,18 @@ export async function runSearch({ q, limit = 24, pageContext = null, supa = null
     formattedEvents = await enrichEventsWithImages(client, formattedEvents);
   }
 
+  // Step C: Post-process services to merge image_url from page_entities
+  let enrichedServices = services || [];
+  if (enrichedServices.length > 0) {
+    enrichedServices = await enrichItemsWithImages(client, enrichedServices);
+  }
+
+  // Step D: Post-process articles to merge image_url from page_entities
+  let enrichedArticles = articles || [];
+  if (enrichedArticles.length > 0) {
+    enrichedArticles = await enrichItemsWithImages(client, enrichedArticles);
+  }
+
   // Calculate confidence using the same logic as chat
   const confidenceContext = initializeConfidenceContext(query);
   analyzeDataAttributes(formattedEvents, null, confidenceContext);
@@ -126,8 +138,8 @@ export async function runSearch({ q, limit = 24, pageContext = null, supa = null
     structured: {
       intent,
       events: formattedEvents,
-      services: services || [],
-      articles: (articles || []).map(a => ({
+      services: enrichedServices || [],
+      articles: (enrichedArticles || []).map(a => ({
         ...a,
         display_date: extractPublishDate(a)
       })),
@@ -212,6 +224,54 @@ async function fetchImagesByKind(client, urlArray, kind, imageMap) {
       entities.forEach(entity => {
         if (entity.image_url && (kind === 'event' || !imageMap.has(entity.url))) {
           imageMap.set(entity.url, entity.image_url);
+        }
+      });
+    }
+  }
+}
+
+/**
+ * Enrich items with image_url from page_entities using page_url/url/href
+ */
+async function enrichItemsWithImages(client, items) {
+  const urlSet = new Set();
+  items.forEach(item => {
+    const url = item.page_url || item.url || item.href;
+    if (url) urlSet.add(url);
+  });
+
+  const imageMap = new Map();
+  const urlArray = Array.from(urlSet);
+  if (urlArray.length === 0) return items;
+
+  await fetchImagesByFieldAnyKind(client, urlArray, 'page_url', imageMap);
+  await fetchImagesByFieldAnyKind(client, urlArray, 'url', imageMap);
+
+  return items.map(item => {
+    const url = item.page_url || item.url || item.href;
+    const imageUrl = item.image_url || (url ? imageMap.get(url) : null) || '';
+    return { ...item, image_url: imageUrl };
+  });
+}
+
+/**
+ * Fetch images by a specific field (url or page_url), any kind
+ */
+async function fetchImagesByFieldAnyKind(client, urlArray, field, imageMap) {
+  const batchSize = 100;
+  for (let i = 0; i < urlArray.length; i += batchSize) {
+    const batch = urlArray.slice(i, i + batchSize);
+    const { data: entities, error } = await client
+      .from('page_entities')
+      .select(`${field}, image_url`)
+      .in(field, batch)
+      .not('image_url', 'is', null);
+
+    if (!error && entities) {
+      entities.forEach(entity => {
+        const key = entity[field];
+        if (key && entity.image_url && !imageMap.has(key)) {
+          imageMap.set(key, entity.image_url);
         }
       });
     }
