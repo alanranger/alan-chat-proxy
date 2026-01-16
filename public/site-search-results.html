@@ -7,21 +7,27 @@
     function getParam(key){
       return new URLSearchParams(window.location.search).get(key) || "";
     }
-    function mountWithRetry(attempt){
+    function waitForARSiteSearch(maxWaitMs, intervalMs, onReady){
+      var start = Date.now();
+      (function poll(){
+        if (window.ARSiteSearch && typeof window.ARSiteSearch.mount === "function"){
+          onReady();
+          return;
+        }
+        if (Date.now() - start >= maxWaitMs) return;
+        setTimeout(poll, intervalMs);
+      })();
+    }
+    function mountSearch(){
       var root = document.getElementById("ar-site-search");
       if (!root) return;
-      if (window.ARSiteSearch) {
-        var q = getParam("q");
-        window.ARSiteSearch.mount(root, {
-          initialQuery: q,
-          autoSearch: true,
-          autoFocus: !q
-        });
-        return;
-      }
-      if (attempt >= 10) return;
-      setTimeout(function(){ mountWithRetry(attempt + 1); }, 100);
+      var q = getParam("q");
+      window.ARSiteSearch.mount(root, {
+        initialQuery: q,
+        autoSearch: true,
+        autoFocus: !q
+      });
     }
-    mountWithRetry(0);
+    waitForARSiteSearch(6000, 150, mountSearch);
   })();
 </script>
