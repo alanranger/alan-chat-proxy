@@ -283,7 +283,8 @@ if (!window.ARSiteSearch) {
     const arr = dedupe(config.items || [], config.keyFn);
     const count = arr.length;
     let html = '<div class="ar-ss-section">';
-    html += '<div class="ar-ss-section-head"><h3>' + esc(config.label) + "</h3>" +
+    const headClass = config.headClass ? ` ${config.headClass}` : "";
+    html += '<div class="ar-ss-section-head' + headClass + '"><h3>' + esc(config.label) + "</h3>" +
       '<div class="ar-ss-count">' + count + " matches</div></div>";
     if (!count) {
       html += '<div class="ar-empty">No matches.</div></div>';
@@ -389,18 +390,21 @@ if (!window.ARSiteSearch) {
       label: "Events",
       items: events,
       kind: "event",
+      headClass: "ar-ss-head-events",
       keyFn: (e) => ((e.event_url || e.page_url || e.href || "") + "|" + (e.date_start || e.date || ""))
     });
     html += renderSection({
       label: "Services",
       items: services,
       kind: "service",
+      headClass: "ar-ss-head-services",
       keyFn: (s) => (s.page_url || s.href || "")
     });
     html += renderSection({
       label: "Guides",
       items: articles,
       kind: "guide",
+      headClass: "ar-ss-head-guides",
       keyFn: (a) => (a.page_url || a.href || "")
     });
     elements.results.innerHTML = html;

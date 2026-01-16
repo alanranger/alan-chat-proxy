@@ -100,11 +100,21 @@
   background: #f5f1ea;
   border-bottom:1px solid var(--ar-border);
 }
+:where(#ar-site-search, .ar-site-search) .ar-ss-section-head.ar-ss-head-events{
+  background:#EEC170;
+}
+:where(#ar-site-search, .ar-site-search) .ar-ss-section-head.ar-ss-head-services{
+  background:#F2A65A;
+}
+:where(#ar-site-search, .ar-site-search) .ar-ss-section-head.ar-ss-head-guides{
+  background:#F58549;
+}
 :where(#ar-site-search, .ar-site-search) .ar-ss-section-head h3{
   margin:0;
-  font-size:14px;
+  font-size:16px;
   letter-spacing:.02em;
   text-transform:none;
+  font-weight:800;
 }
 :where(#ar-site-search, .ar-site-search) .ar-ss-count{
   color:#1f2937;
