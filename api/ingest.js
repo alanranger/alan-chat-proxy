@@ -131,7 +131,7 @@ function extractMetaImage(html, pageUrl) {
   }
 }
 
-const INGEST_VERSION = "2025-12-05-guard-v2";
+const INGEST_VERSION = "2025-12-05-guard-v3";
 const SELF_BASE = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : `http://localhost:3000`;
 const EXPECTED_TOKEN = process.env.INGEST_TOKEN || "";
 
@@ -1152,7 +1152,7 @@ export async function ingestSingleUrl(url, supa, options = {}) {
           
           // CRITICAL: For events, we need to fetch ALL existing event dates for this URL to clean up old dates
           // that are no longer in the source data (e.g., when an event is rescheduled)
-          const url = validEntities[0].url; // All entities have same URL
+          const primaryUrl = (validEntities[0] && validEntities[0].url) ? validEntities[0].url : url;
           const hasEventEntities = validEntities.some(e => e.kind === 'event' && e.date_start);
           
           if (hasEventEntities) {
@@ -1160,7 +1160,7 @@ export async function ingestSingleUrl(url, supa, options = {}) {
             const { data: allExistingEvents, error: fetchAllErr } = await supa
               .from('page_entities')
               .select('*')
-              .eq('url', url)
+              .eq('url', primaryUrl)
               .eq('kind', 'event');
             
             if (fetchAllErr) {
@@ -1179,6 +1179,7 @@ export async function ingestSingleUrl(url, supa, options = {}) {
               
               // Find old event dates that are no longer in the source data
               const oldEventsToDelete = safeExistingEvents.filter(ex => {
+                if (!ex || !ex.url) return false;
                 const exStartDate = ex.start_date || (ex.date_start ? ex.date_start.split('T')[0] : null);
                 return exStartDate && !newEventDates.has(exStartDate);
               });
@@ -1204,12 +1205,13 @@ export async function ingestSingleUrl(url, supa, options = {}) {
                 const { data: matchingEvents } = await supa
                   .from('page_entities')
                   .select('*')
-                  .eq('url', url)
+                  .eq('url', primaryUrl)
                   .eq('kind', 'event')
                   .in('date_start', eventDates);
                 
                 if (matchingEvents) {
                   matchingEvents.filter(Boolean).forEach(ex => {
+                    if (!ex || !ex.url) return;
                     const key = `${ex.url}|${ex.kind}|${ex.date_start}`;
                     existingEntitiesMap.set(key, ex);
                   });
@@ -1224,11 +1226,12 @@ export async function ingestSingleUrl(url, supa, options = {}) {
             const { data: nonEventData } = await supa
               .from('page_entities')
               .select('*')
-              .eq('url', url)
+              .eq('url', primaryUrl)
               .in('kind', kinds);
             
             if (nonEventData) {
               nonEventData.filter(Boolean).forEach(ex => {
+                if (!ex || !ex.url) return;
                 const key = `${ex.url}|${ex.kind}`;
                 existingEntitiesMap.set(key, ex);
               });
@@ -1240,6 +1243,9 @@ export async function ingestSingleUrl(url, supa, options = {}) {
         
         // Process entities - now we can do this in parallel since we have all existing data
         const entityPromises = validEntities.map(async (e) => {
+          if (!e || !e.url || !e.kind) {
+            return { success: false, action: 'skipped', reason: 'invalid_entity' };
+          }
           // For events, check by (url, kind, date_start) to allow multiple events per URL
           const key = (e.kind === 'event' && e.date_start)
             ? `${e.url}|${e.kind}|${e.date_start}`
