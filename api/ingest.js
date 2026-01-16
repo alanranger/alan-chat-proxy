@@ -104,7 +104,19 @@ function getJsonLdImage(jsonLd) {
   return image;
 }
 
+function isLogoImageUrl(url) {
+  if (!url) return false;
+  return String(url).toLowerCase().includes('logo');
+}
+
 function pickImageUrl(pageUrl, candidates) {
+  // Pass 1: prefer non-logo images
+  for (const candidate of candidates) {
+    if (!candidate || isLogoImageUrl(candidate)) continue;
+    const normalized = normalizeImageUrl(candidate, pageUrl);
+    if (normalized) return normalized;
+  }
+  // Pass 2: accept logos if that's all we have
   for (const candidate of candidates) {
     const normalized = normalizeImageUrl(candidate, pageUrl);
     if (normalized) return normalized;

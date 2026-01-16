@@ -49,7 +49,8 @@ console.log(`🔒 Targeting Supabase project: ${PROJECT_REF}`);
 function getMetaImage(doc, selector, pageUrl) {
   const el = doc.querySelector(selector);
   const content = el && el.content ? el.content : '';
-  return content ? normalizeImageUrl(content, pageUrl) : null;
+  const normalized = content ? normalizeImageUrl(content, pageUrl) : null;
+  return normalized && !isLogoImageUrl(normalized) ? normalized : null;
 }
 
 function getFirstContentImage(doc, pageUrl) {
@@ -57,7 +58,8 @@ function getFirstContentImage(doc, pageUrl) {
   if (!main) return null;
   const img = main.querySelector('img');
   const src = img ? img.getAttribute('src') : '';
-  return src ? normalizeImageUrl(src, pageUrl) : null;
+  const normalized = src ? normalizeImageUrl(src, pageUrl) : null;
+  return normalized && !isLogoImageUrl(normalized) ? normalized : null;
 }
 
 /**
@@ -112,6 +114,11 @@ function normalizeImageUrl(imageUrl, pageUrl) {
   const absolute = toAbsoluteUrl(imageUrl, pageUrl);
   const httpsUrl = ensureHttps(absolute);
   return addSquarespaceFormat(httpsUrl);
+}
+
+function isLogoImageUrl(url) {
+  if (!url) return false;
+  return String(url).toLowerCase().includes('logo');
 }
 
 /**
@@ -201,19 +208,37 @@ function getKindsFromEnv() {
 }
 
 async function fetchRowsForBackfill(kinds) {
-  const { data: rows, error } = await supabase
+  const { data: nullRows, error: nullError } = await supabase
     .from('page_entities')
     .select('id, url, title, image_url, kind')
     .in('kind', kinds)
     .is('image_url', null)
     .limit(200);
 
-  if (error) {
-    console.error('❌ Query failed:', error);
+  if (nullError) {
+    console.error('❌ Query failed:', nullError);
     process.exit(1);
   }
 
-  return rows || [];
+  const { data: logoRows, error: logoError } = await supabase
+    .from('page_entities')
+    .select('id, url, title, image_url, kind')
+    .in('kind', kinds)
+    .ilike('image_url', '%logo%')
+    .limit(200);
+
+  if (logoError) {
+    console.error('❌ Query failed:', logoError);
+    process.exit(1);
+  }
+
+  const rows = [...(nullRows || []), ...(logoRows || [])];
+  const deduped = new Map();
+  rows.forEach(row => {
+    if (!row || !row.id) return;
+    deduped.set(row.id, row);
+  });
+  return Array.from(deduped.values());
 }
 
 function shouldCountAsFailure(reason) {
