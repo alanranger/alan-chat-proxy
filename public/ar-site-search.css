@@ -97,7 +97,7 @@
   justify-content:space-between;
   align-items:center;
   padding:12px 14px;
-  background: #f9fafb;
+  background: #f5f1ea;
   border-bottom:1px solid var(--ar-border);
 }
 :where(#ar-site-search, .ar-site-search) .ar-ss-section-head h3{
@@ -107,7 +107,7 @@
   text-transform:none;
 }
 :where(#ar-site-search, .ar-site-search) .ar-ss-count{
-  color:var(--ar-muted);
+  color:#1f2937;
   font-size:12px;
   font-weight:600;
 }
