@@ -179,6 +179,11 @@ if (!window.ARSiteSearch) {
     return fallback && fallback !== url ? fallback : "";
   }
 
+  function buildProxyImageUrl(url) {
+    if (!url) return "";
+    return `${API_BASE}/api/image-proxy?url=${encodeURIComponent(url)}`;
+  }
+
   function initThumbImages(rootEl) {
     const imgs = rootEl.querySelectorAll(".ar-thumb-img");
     imgs.forEach((img) => {
@@ -195,6 +200,14 @@ if (!window.ARSiteSearch) {
           if (fallback) {
             img.dataset.triedFallback = "1";
             img.src = fallback;
+            return;
+          }
+        }
+        if (!img.dataset.triedProxy) {
+          const proxyUrl = buildProxyImageUrl(dataSrc);
+          if (proxyUrl) {
+            img.dataset.triedProxy = "1";
+            img.src = proxyUrl;
             return;
           }
         }
