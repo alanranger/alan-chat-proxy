@@ -60,8 +60,19 @@ if (!window.ARSiteSearch) {
     return "";
   }
 
+  function addSquarespaceFormat(url) {
+    if (!url || !url.includes("squarespace") || url.includes("format=")) return url;
+    const joiner = url.includes("?") ? "&" : "?";
+    return `${url}${joiner}format=300w`;
+  }
+
+  function normalizeImageUrl(value) {
+    const url = ensureHttpUrl(value);
+    return addSquarespaceFormat(url);
+  }
+
   function pickImage(item) {
-    return ensureHttpUrl(item.image_url);
+    return normalizeImageUrl(item.image_url);
   }
 
   function pickDescription(item, type) {
@@ -163,6 +174,12 @@ if (!window.ARSiteSearch) {
     );
   }
 
+  function buildFallbackImageUrl(url) {
+    if (!url) return "";
+    const fallback = addSquarespaceFormat(url);
+    return fallback && fallback !== url ? fallback : "";
+  }
+
   function initThumbImages(rootEl) {
     const imgs = rootEl.querySelectorAll(".ar-thumb-img");
     imgs.forEach((img) => {
@@ -174,6 +191,14 @@ if (!window.ARSiteSearch) {
         img.referrerPolicy = IMAGE_REFERRER_POLICY;
       }
       img.onerror = () => {
+        if (!img.dataset.triedFallback) {
+          const fallback = buildFallbackImageUrl(dataSrc);
+          if (fallback) {
+            img.dataset.triedFallback = "1";
+            img.src = fallback;
+            return;
+          }
+        }
         img.onerror = null;
         img.src = PLACEHOLDER_IMAGE;
       };
