@@ -124,6 +124,21 @@ function pickImageUrl(pageUrl, candidates) {
   return null;
 }
 
+function extractContentImage(html, pageUrl) {
+  if (!html || typeof html !== 'string') return null;
+  try {
+    const dom = new JSDOM(html);
+    const document = dom.window.document;
+    const imgEl = document.querySelector('main img, article img, img');
+    const src = imgEl ? (imgEl.getAttribute('src') || imgEl.getAttribute('data-src')) : '';
+    const normalized = normalizeImageUrl(src, pageUrl);
+    return normalized && !isLogoImageUrl(normalized) ? normalized : null;
+  } catch (e) {
+    console.error('Error extracting content image:', e);
+    return null;
+  }
+}
+
 function extractMetaImage(html, pageUrl) {
   if (!html || typeof html !== 'string') return null;
   try {
@@ -133,10 +148,10 @@ function extractMetaImage(html, pageUrl) {
     const twImage = document.querySelector('meta[name="twitter:image"]');
     const raw = (ogImage && ogImage.content) || (twImage && twImage.content) || '';
     const metaImage = normalizeImageUrl(raw, pageUrl);
-    if (metaImage) return metaImage;
-    const imgEl = document.querySelector('main img, article img, img');
-    const src = imgEl ? (imgEl.getAttribute('src') || imgEl.getAttribute('data-src')) : '';
-    return normalizeImageUrl(src, pageUrl);
+    if (metaImage && !isLogoImageUrl(metaImage)) return metaImage;
+    const contentImage = extractContentImage(html, pageUrl);
+    if (contentImage) return contentImage;
+    return metaImage;
   } catch (e) {
     console.error('Error extracting meta image:', e);
     return null;
