@@ -3,7 +3,7 @@ if (!window.ARSiteSearch) {
   const API_BASE = "https://alan-chat-proxy.vercel.app";
   const ENDPOINT = `${API_BASE}/api/search/query`;
   const PLACEHOLDER_IMAGE = "https://www.alanranger.com/s/default-image.jpg";
-  const IMAGE_REFERRER_POLICY = "";
+  const IMAGE_REFERRER_POLICY = "no-referrer";
 
   const instances = new Map();
   let lastInstance = null;
