@@ -78,7 +78,7 @@ export async function runSearch({ q, limit = 24, pageContext = null, supa = null
   const [events, services, articles] = await Promise.all([
     findEvents(client, { keywords: finalEventKeywords, limit: Math.min(limit, 80), pageContext }),
     findServices(client, { keywords, limit: Math.min(limit, 24), pageContext }),
-    findArticles(client, { keywords, limit: Math.min(limit, 12), pageContext })
+    findArticles(client, { keywords, limit: Math.min(limit, 24), pageContext, maxResultsOverride: limit })
   ]);
 
   // Format events for UI

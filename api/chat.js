@@ -4813,12 +4813,15 @@ function filterArticleKeywords(keywords){
   return Array.from(new Set([...allowedSingles, ...phraseMatches]));
 }
 
-export async function findArticles(client, { keywords, limit = 12, pageContext = null }) {
+export async function findArticles(client, { keywords, limit = 12, pageContext = null, maxResultsOverride = null }) {
   const enhancedKeywords = handlePageContext(pageContext, keywords);
   const searchTerms = filterArticleKeywords(enhancedKeywords);
   const requestedLimit = typeof limit === 'number' && !Number.isNaN(limit) ? limit : 12;
-  const queryLimit = Math.max(requestedLimit, MAX_ARTICLE_RESULTS);
-  const displayLimit = Math.min(requestedLimit, MAX_ARTICLE_RESULTS);
+  const maxResults = typeof maxResultsOverride === 'number' && Number.isFinite(maxResultsOverride)
+    ? maxResultsOverride
+    : MAX_ARTICLE_RESULTS;
+  const queryLimit = Math.max(requestedLimit, maxResults);
+  const displayLimit = Math.min(requestedLimit, maxResults);
   
   // Primary search
   const primaryResults = await executePrimarySearch(client, searchTerms, enhancedKeywords, queryLimit);
