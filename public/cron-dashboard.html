@@ -62,6 +62,10 @@
       background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
     }
 
+    .job-section-header.ai-geo {
+      background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+    }
+
     .job-section-header.db-health {
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     }
@@ -539,6 +543,28 @@
       flex-wrap: wrap;
     }
 
+    .ai-geo-config {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-left: auto;
+      flex-wrap: wrap;
+    }
+
+    .ai-geo-config label {
+      font-size: 12px;
+      font-weight: 600;
+      color: #555;
+    }
+
+    .ai-geo-config input {
+      min-width: 260px;
+      padding: 8px 10px;
+      border: 1px solid #d0d4dc;
+      border-radius: 4px;
+      font-size: 13px;
+    }
+
     .btn {
       padding: 10px 20px;
       border: none;
@@ -686,6 +712,51 @@
     .status-failed {
       background: #e74c3c;
       color: white;
+    }
+
+    .status-warning {
+      background: #f39c12;
+      color: white;
+    }
+
+    .status-unknown {
+      background: #7f8c8d;
+      color: white;
+    }
+
+    .health-reason {
+      padding: 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      line-height: 1.4;
+    }
+
+    .health-reason-error {
+      background: #fee;
+      color: #c62828;
+      border-left: 3px solid #d32f2f;
+    }
+
+    .health-reason-warning {
+      background: #fff8e1;
+      color: #e65100;
+      border-left: 3px solid #f57c00;
+    }
+
+    .ai-geo-grid {
+      grid-template-columns: repeat(3, 1fr);
+    }
+
+    .ai-geo-stat-value {
+      font-size: 12px;
+    }
+
+    .ai-geo-warning {
+      margin-bottom: 12px;
+    }
+
+    .ai-geo-error {
+      margin-top: 10px;
     }
 
     .badge-success {
@@ -1482,6 +1553,11 @@
       <div class="controls">
         <button class="btn btn-primary" onclick="loadJobs()">Refresh Jobs</button>
         <button class="btn btn-secondary" onclick="clearAuth()">Logout</button>
+        <div class="ai-geo-config">
+          <label for="aiGeoBase">AI GEO API</label>
+          <input id="aiGeoBase" type="text" placeholder="https://ai-geo-audit.vercel.app" />
+          <button class="btn btn-secondary btn-small" onclick="saveAiGeoBase()">Save</button>
+        </div>
       </div>
 
       <div id="message"></div>
@@ -1529,11 +1605,14 @@
      */
 
     const API_BASE = window.location.origin;
+    const AI_GEO_BASE_KEY = 'aigeo_cron_base_url';
+    const DEFAULT_AI_GEO_BASE = 'https://ai-geo-audit.vercel.app';
     
     // Default admin token (INGEST_TOKEN)
     const DEFAULT_TOKEN = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlnenZ3YnZndm16dnZ6b2NsdWZ4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NzY3NzkyOCwiZXhwIjoyMDczMjUzOTI4fQ.W9tkTSYu6Wml0mUr-gJD6hcLMZDcbaYYaOsyDXuwd8M';
     
     let authToken = localStorage.getItem('cron_dashboard_token') || DEFAULT_TOKEN;
+    let aiGeoState = { jobs: [], error: null, baseUrl: DEFAULT_AI_GEO_BASE, configured: true };
 
     // State for inline log viewer
     let activeLogJobId = null;
@@ -1600,6 +1679,27 @@
       27: 'Website Pages Refresh Batch 1',
       28: 'Website Pages Refresh Batch 2'
     };
+
+    const AI_GEO_JOB_META = {
+      gsc_backlinks: {
+        name: 'GSC + Backlinks Audit',
+        description: 'Runs the full GSC + Backlinks audit pipeline (search, schema, local signals, backlinks, money pages).'
+      },
+      ranking_ai: {
+        name: 'Keyword Ranking & AI Audit',
+        description: 'Runs the keyword ranking and AI SERP audit, saving keyword rows and audit summary.'
+      },
+      global_run: {
+        name: 'Global Dashboard Run',
+        description: 'Runs the full global refresh (GSC + Backlinks, Ranking & AI, Domain Strength, Optimisation tasks).'
+      },
+      gsc_cleanup: {
+        name: 'GSC Data Cleanup',
+        description: 'Deletes GSC data older than 18.5 months and vacuums the GSC tables.'
+      }
+    };
+
+    const AI_GEO_JOB_KEYS = Object.keys(AI_GEO_JOB_META);
 
     function formatDuration(seconds = 0) {
       if (!seconds || seconds < 1) return '<1s';
@@ -1893,6 +1993,7 @@
         if (tokenInput) {
           tokenInput.value = DEFAULT_TOKEN;
         }
+        seedAiGeoBaseInput();
         
         // Always use DEFAULT_TOKEN for auto-auth
         if (DEFAULT_TOKEN) {
@@ -1935,6 +2036,37 @@
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${authToken}`
     });
+
+    const normalizeAiGeoBase = (value) => {
+      if (!value) return '';
+      return value.trim().replace(/\/+$/, '');
+    };
+
+    const getAiGeoBase = () => {
+      const stored = localStorage.getItem(AI_GEO_BASE_KEY);
+      const base = stored || DEFAULT_AI_GEO_BASE || '';
+      return normalizeAiGeoBase(base);
+    };
+
+    function saveAiGeoBase() {
+      const input = document.getElementById('aiGeoBase');
+      if (!input) return;
+      const nextValue = normalizeAiGeoBase(input.value);
+      if (nextValue) {
+        localStorage.setItem(AI_GEO_BASE_KEY, nextValue);
+      } else {
+        localStorage.removeItem(AI_GEO_BASE_KEY);
+      }
+      aiGeoState.baseUrl = nextValue || DEFAULT_AI_GEO_BASE;
+      loadJobs();
+    }
+
+    function seedAiGeoBaseInput() {
+      const input = document.getElementById('aiGeoBase');
+      if (!input) return;
+      const base = getAiGeoBase();
+      input.value = base || '';
+    }
 
     /**
      * Normalize API job data to JobSummary shape
@@ -2265,6 +2397,80 @@
       return html;
     }
 
+    const normalizeAiGeoStatus = (value) => {
+      const status = String(value || '').toLowerCase();
+      if (['ok', 'success', 'succeeded'].includes(status)) return 'success';
+      if (['failed', 'failure', 'error'].includes(status)) return 'failed';
+      if (['skipped', 'warning', 'partial'].includes(status)) return 'warning';
+      return 'unknown';
+    };
+
+    const getAiGeoStatusBadge = (value) => {
+      const normalized = normalizeAiGeoStatus(value);
+      if (normalized === 'success') return { label: 'Success', className: 'status-success' };
+      if (normalized === 'failed') return { label: 'Failed', className: 'status-failed' };
+      if (normalized === 'warning') return { label: 'Warning', className: 'status-warning' };
+      return { label: 'Unknown', className: 'status-unknown' };
+    };
+
+    const buildAiGeoJobs = (scheduleJobs = {}) => {
+      return AI_GEO_JOB_KEYS.map((key) => {
+        const meta = AI_GEO_JOB_META[key] || {};
+        const schedule = scheduleJobs[key] || {};
+        return {
+          key,
+          name: meta.name || key,
+          description: meta.description || '',
+          lastStatus: schedule.lastStatus || 'unknown',
+          lastRunAt: schedule.lastRunAt || null,
+          nextRunAt: schedule.nextRunAt || null,
+          lastError: schedule.lastError || null,
+          frequency: schedule.frequency || null,
+          timeOfDay: schedule.timeOfDay || null
+        };
+      });
+    };
+
+    async function loadAiGeoJobs() {
+      const baseUrl = getAiGeoBase();
+      if (!baseUrl) {
+        aiGeoState = {
+          jobs: buildAiGeoJobs({}),
+          error: 'AI GEO API base not configured',
+          baseUrl: '',
+          configured: false
+        };
+        return aiGeoState;
+      }
+
+      try {
+        const response = await fetch(`${baseUrl}/api/supabase/get-cron-schedule?t=${Date.now()}`, {
+          cache: 'no-store'
+        });
+        if (!response.ok) {
+          const text = await response.text().catch(() => '');
+          throw new Error(text || `HTTP ${response.status}`);
+        }
+        const json = await response.json();
+        const scheduleJobs = json?.data?.jobs || {};
+        aiGeoState = {
+          jobs: buildAiGeoJobs(scheduleJobs),
+          error: null,
+          baseUrl,
+          configured: true
+        };
+        return aiGeoState;
+      } catch (error) {
+        aiGeoState = {
+          jobs: buildAiGeoJobs({}),
+          error: error.message || 'Failed to load AI GEO schedule',
+          baseUrl,
+          configured: true
+        };
+        return aiGeoState;
+      }
+    }
+
     async function loadJobs() {
       addDebugLog('Loading jobs...', 'info');
       const container = document.getElementById('jobsContainer');
@@ -2371,7 +2577,8 @@
           addDebugLog('Warning: Database health data not available', 'warning');
         }
         
-        await renderJobs(jobs);
+        await loadAiGeoJobs();
+        await renderJobs(jobs, aiGeoState);
         renderActiveJobsBanner();
         // Start polling progress for any active jobs that support progress tracking
         startPollingForActiveJobs();
@@ -2387,7 +2594,24 @@
      * @param {Array<JobSummary>} jobs
      * @returns {string}
      */
-    function renderSummaryDashboard(jobs) {
+    function renderSummaryDashboard(jobs, aiGeoJobs = []) {
+      const getAiGeoSummaryHealth = (job) => {
+        const normalized = normalizeAiGeoStatus(job.lastStatus);
+        if (normalized === 'failed') {
+          return { level: 'error', reason: 'Last run failed' };
+        }
+        if (normalized === 'warning') {
+          return { level: 'warning', reason: 'Last run skipped or warning' };
+        }
+        if (!job.lastRunAt) {
+          return { level: 'warning', reason: 'No runs recorded yet' };
+        }
+        if (normalized === 'success') {
+          return { level: 'ok', reason: 'Last run succeeded' };
+        }
+        return { level: 'warning', reason: 'Status unknown' };
+      };
+
       // Define job groups with icons
       const groups = [
         {
@@ -2431,6 +2655,14 @@
           icon: '🛡️',
           jobIds: [36, 37],
           color: '#fa709a'
+        },
+        {
+          id: 'ai-geo',
+          name: 'AI GEO Audits',
+          icon: '🛰️',
+          jobs: aiGeoJobs,
+          external: true,
+          color: '#6a11cb'
         }
       ];
 
@@ -2444,7 +2676,7 @@
 
       // Calculate group health and stats
       groups.forEach(group => {
-        const groupJobs = jobs.filter(j => group.jobIds.includes(j.jobid));
+        const groupJobs = group.external ? (group.jobs || []) : jobs.filter(j => group.jobIds.includes(j.jobid));
         
         if (groupJobs.length === 0) return;
 
@@ -2456,8 +2688,12 @@
         let totalFailed = 0;
 
         groupJobs.forEach(job => {
-          const nextRunInMinutes = job.next_run_minutes || calculateNextRunInMinutes(job);
-          const health = getJobHealth(job, nextRunInMinutes);
+          const nextRunInMinutes = group.external
+            ? null
+            : (job.next_run_minutes || calculateNextRunInMinutes(job));
+          const health = group.external
+            ? getAiGeoSummaryHealth(job)
+            : getJobHealth(job, nextRunInMinutes);
           
           if (health.level === 'error') {
             groupHealth = 'red';
@@ -2469,9 +2705,15 @@
             healthCounts.ok++;
           }
 
-          totalRuns += job.total_runs || 0;
-          totalSuccess += job.success_count || 0;
-          totalFailed += job.failed_count || 0;
+          if (group.external) {
+            totalRuns += job.lastRunAt ? 1 : 0;
+            if (normalizeAiGeoStatus(job.lastStatus) === 'success') totalSuccess += 1;
+            if (normalizeAiGeoStatus(job.lastStatus) === 'failed') totalFailed += 1;
+          } else {
+            totalRuns += job.total_runs || 0;
+            totalSuccess += job.success_count || 0;
+            totalFailed += job.failed_count || 0;
+          }
         });
 
         const successRate = totalRuns > 0 ? ((totalSuccess / totalRuns) * 100).toFixed(1) : 0;
@@ -2502,10 +2744,14 @@
 
         html += '<div class="summary-group-jobs">';
         groupJobs.forEach(job => {
-          const nextRunInMinutes = job.next_run_minutes || calculateNextRunInMinutes(job);
-          const health = getJobHealth(job, nextRunInMinutes);
+          const nextRunInMinutes = group.external
+            ? null
+            : (job.next_run_minutes || calculateNextRunInMinutes(job));
+          const health = group.external
+            ? getAiGeoSummaryHealth(job)
+            : getJobHealth(job, nextRunInMinutes);
           const healthClass = health.level === 'error' ? 'red' : health.level === 'warning' ? 'amber' : 'green';
-          const displayName = jobDisplayNames[job.jobid] || `Job ${job.jobid}`;
+          const displayName = group.external ? job.name : (jobDisplayNames[job.jobid] || `Job ${job.jobid}`);
           
           html += `<div class="summary-job-indicator ${healthClass}" title="${health.reason}">`;
           html += `<span class="summary-job-indicator-dot ${healthClass}"></span>`;
@@ -2546,6 +2792,67 @@
       return html;
     }
 
+    function renderAiGeoJobCard(job) {
+      const statusBadge = getAiGeoStatusBadge(job.lastStatus);
+      const lastRun = job.lastRunAt ? formatDateTime(job.lastRunAt) : 'Never';
+      const nextRun = job.nextRunAt ? formatDateTime(job.nextRunAt) : 'Unknown';
+      const scheduleTime = job.timeOfDay ? ` @ ${job.timeOfDay}` : '';
+      const scheduleText = job.frequency ? `${job.frequency}${scheduleTime}` : 'Not set';
+      const safeError = job.lastError ? escapeHtml(job.lastError) : '';
+
+      return `
+        <div class="job-card" data-job-card-id="ai-geo-${job.key}">
+          <div class="job-header">
+            <div>
+              <div class="job-title">${job.name}</div>
+              <div class="job-id">Key: ${job.key}</div>
+            </div>
+            <span class="status-badge ${statusBadge.className}">${statusBadge.label}</span>
+          </div>
+          ${job.description ? `<div class="job-description">${job.description}</div>` : ''}
+          <div class="job-schedule">Schedule: ${scheduleText}</div>
+          <div class="job-stats">
+            <div class="stat-item">
+              <div class="stat-label">Last Run</div>
+              <div class="stat-value ai-geo-stat-value">${lastRun}</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-label">Next Run</div>
+              <div class="stat-value ai-geo-stat-value">${nextRun}</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-label">Last Status</div>
+              <div class="stat-value">${statusBadge.label}</div>
+            </div>
+          </div>
+          ${safeError ? `<div class="health-reason health-reason-error ai-geo-error">Last error: ${safeError}</div>` : ''}
+        </div>
+      `;
+    }
+
+    function renderAiGeoSection(state) {
+      const jobs = state?.jobs || [];
+      if (!jobs.length) return '';
+
+      let html = '<div class="job-section">';
+      html += '<div class="job-section-header ai-geo">🛰️ AI GEO Audit Cron Jobs</div>';
+      html += '<div class="job-section-content">';
+
+      if (state?.error) {
+        html += `<div class="health-reason health-reason-warning ai-geo-warning">
+          AI GEO schedule warning: ${escapeHtml(state.error)}
+        </div>`;
+      }
+
+      html += '<div class="jobs-grid ai-geo-grid">';
+      jobs.forEach((job) => {
+        html += renderAiGeoJobCard(job);
+      });
+      html += '</div></div></div>';
+
+      return html;
+    }
+
     function scrollToGroup(groupId) {
       const groupElement = document.querySelector(`.job-section-header.${groupId}`);
       if (groupElement) {
@@ -2565,8 +2872,9 @@
       }
     }
 
-    async function renderJobs(jobs) {
+    async function renderJobs(jobs, aiGeoStateArg = null) {
       const container = document.getElementById('jobsContainer');
+      const aiGeo = aiGeoStateArg || aiGeoState || { jobs: [] };
       
       if (jobs.length === 0) {
         container.innerHTML = '<div class="loading">No cron jobs found.</div>';
@@ -2574,7 +2882,7 @@
       }
 
       // Render summary dashboard first
-      let html = renderSummaryDashboard(jobs);
+      let html = renderSummaryDashboard(jobs, aiGeoState?.jobs || []);
 
       // Build a set of all linked job IDs
       const linkedJobSet = new Set();
@@ -2647,6 +2955,10 @@
         
         html += '</div>'; // End right column
         html += '</div></div></div>'; // End grid and section
+      }
+
+      if (aiGeo?.jobs?.length) {
+        html += renderAiGeoSection(aiGeo);
       }
 
       // Render Analytics Jobs Section
