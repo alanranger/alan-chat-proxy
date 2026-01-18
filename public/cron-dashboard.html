@@ -1682,18 +1682,22 @@
 
     const AI_GEO_JOB_META = {
       gsc_backlinks: {
+        id: 'A1',
         name: 'GSC + Backlinks Audit',
         description: 'Runs the full GSC + Backlinks audit pipeline (search, schema, local signals, backlinks, money pages).'
       },
       ranking_ai: {
+        id: 'A2',
         name: 'Keyword Ranking & AI Audit',
         description: 'Runs the keyword ranking and AI SERP audit, saving keyword rows and audit summary.'
       },
       global_run: {
+        id: 'A3',
         name: 'Global Dashboard Run',
         description: 'Runs the full global refresh (GSC + Backlinks, Ranking & AI, Domain Strength, Optimisation tasks).'
       },
       gsc_cleanup: {
+        id: 'A4',
         name: 'GSC Data Cleanup',
         description: 'Deletes GSC data older than 18.5 months and vacuums the GSC tables.'
       }
@@ -2785,6 +2789,17 @@
         html += `</div>`;
       });
 
+      if (aiGeoJobs && aiGeoJobs.length) {
+        aiGeoJobs.forEach((job) => {
+          const health = getAiGeoSummaryHealth(job);
+          const healthClass = health.level === 'error' ? 'red' : health.level === 'warning' ? 'amber' : 'green';
+          const label = job.id || job.key || 'AI';
+          html += `<div class="summary-heatmap-cell ${healthClass}" title="AI GEO ${label}: ${job.name} - ${health.reason}" onclick="scrollToGroup('ai-geo')">`;
+          html += `<span>${label}</span>`;
+          html += `</div>`;
+        });
+      }
+
       html += '</div>'; // summary-heatmap-grid
       html += '</div>'; // summary-heatmap
       html += '</div>'; // summary-dashboard
@@ -2800,12 +2815,13 @@
       const scheduleText = job.frequency ? `${job.frequency}${scheduleTime}` : 'Not set';
       const safeError = job.lastError ? escapeHtml(job.lastError) : '';
 
+      const aiGeoId = job.id ? `ID: ${job.id}` : `Key: ${job.key}`;
       return `
         <div class="job-card" data-job-card-id="ai-geo-${job.key}">
           <div class="job-header">
             <div>
               <div class="job-title">${job.name}</div>
-              <div class="job-id">Key: ${job.key}</div>
+              <div class="job-id">${aiGeoId}</div>
             </div>
             <span class="status-badge ${statusBadge.className}">${statusBadge.label}</span>
           </div>
