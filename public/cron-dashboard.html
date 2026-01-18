@@ -759,6 +759,19 @@
       margin-top: 10px;
     }
 
+    .ai-geo-placeholder {
+      margin-top: 8px;
+      font-size: 12px;
+      color: #7f8c8d;
+    }
+
+    .btn-disabled,
+    .btn:disabled {
+      background: #d0d5dd;
+      color: #7a7f87;
+      cursor: not-allowed;
+    }
+
     .badge-success {
       background-color: #4CAF50;
       color: white;
@@ -2423,6 +2436,7 @@
         const schedule = scheduleJobs[key] || {};
         return {
           key,
+          id: meta.id || null,
           name: meta.name || key,
           description: meta.description || '',
           lastStatus: schedule.lastStatus || 'unknown',
@@ -2816,6 +2830,8 @@
       const safeError = job.lastError ? escapeHtml(job.lastError) : '';
 
       const aiGeoId = job.id ? `ID: ${job.id}` : `Key: ${job.key}`;
+      const baseUrl = aiGeoState?.baseUrl || getAiGeoBase();
+      const dashboardUrl = baseUrl ? `${baseUrl}/audit-dashboard.html` : null;
       return `
         <div class="job-card" data-job-card-id="ai-geo-${job.key}">
           <div class="job-header">
@@ -2841,7 +2857,39 @@
               <div class="stat-value">${statusBadge.label}</div>
             </div>
           </div>
+          <div class="job-stats">
+            <div class="stat-item">
+              <div class="stat-label">Total Runs</div>
+              <div class="stat-value">—</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-label">Success Rate</div>
+              <div class="stat-value">—</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-label">Failure Rate</div>
+              <div class="stat-value">—</div>
+            </div>
+          </div>
           ${safeError ? `<div class="health-reason health-reason-error ai-geo-error">Last error: ${safeError}</div>` : ''}
+          <div class="job-progress" id="progress-ai-geo-${job.key}" style="display:none;">
+            <div class="progress-bar-container">
+              <div class="progress-bar"></div>
+            </div>
+            <span class="progress-message"></span>
+          </div>
+          <div class="sparkline-section">
+            <div style="font-size: 12px; font-weight: 600; margin-bottom: 5px; color: #666;">Last runs</div>
+            <div class="ai-geo-placeholder">Run history is available in AI GEO logs.</div>
+          </div>
+          <button class="view-logs-btn btn-disabled" disabled>View Logs</button>
+          <div class="job-actions">
+            <button class="btn btn-primary btn-small btn-disabled" disabled title="Use AI GEO dashboard to run this job">▶ Run Now</button>
+            <button class="btn btn-secondary btn-small btn-disabled" disabled title="Use AI GEO scheduler to edit">Edit Schedule</button>
+            <button class="btn btn-secondary btn-small btn-disabled" disabled title="Reset stats in AI GEO">🔄 Reset Stats</button>
+            <button class="btn btn-warning btn-small btn-disabled" disabled title="Pause in AI GEO scheduler">⏸ Pause</button>
+            ${dashboardUrl ? `<a class="btn btn-success btn-small" href="${dashboardUrl}" target="_blank" rel="noopener">Open AI GEO</a>` : ''}
+          </div>
         </div>
       `;
     }
