@@ -1737,7 +1737,7 @@
       gsc_cleanup: {
         id: '104',
         name: 'GSC Data Cleanup',
-        description: 'Deletes GSC data older than 18.5 months and vacuums the GSC tables.',
+        description: 'Deletes GSC data older than 18.5 months to prevent table bloat (retention cleanup only).',
         defaultSchedule: { frequency: 'monthly', timeOfDay: '02:30' }
       }
     };
