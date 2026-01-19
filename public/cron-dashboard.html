@@ -1675,7 +1675,7 @@
       27: 'AUTO-CHAINED: This batch runs automatically after Batch 0 completes. Handles the second third of URLs. Do not schedule this job separately - it is triggered automatically by Batch 0.',
       28: 'AUTO-CHAINED: This batch runs automatically after Batch 1 completes. Handles the final third of URLs. Do not schedule this job separately - it is triggered automatically by Batch 1.',
       29: 'Deletes old chat data (sessions, interactions, events) older than 90 days to prevent database bloat and maintain performance. Keeps the database size manageable while preserving recent chat history for analytics.',
-      30: 'Removes debug logs older than 30 days from the debug_logs table. Prevents the debug logs table from growing indefinitely and consuming excessive storage space.',
+      30: 'Removes debug logs older than 30 days from both the chat bot debug_logs and AI GEO audit_debug_logs tables. Prevents debug log storage from growing indefinitely.',
       31: 'Identifies and removes orphaned records in the database. Deletes page_chunks that reference non-existent page_entities, and page_entities that reference non-existent csv_metadata records. Maintains data integrity and prevents referential inconsistencies.',
       32: 'Runs VACUUM and ANALYZE on key database tables to reclaim storage space, update query statistics, and optimize query performance. Processes high-traffic tables including chat tables, page entities, events, and products.',
       33: 'Checks the health of all URLs in the system. Identifies broken URLs (HTTP 4xx/5xx errors), stale URLs (not updated in 90+ days), and healthy URLs. Helps maintain content quality and identify pages that need attention.',
