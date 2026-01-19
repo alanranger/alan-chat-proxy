@@ -372,6 +372,7 @@
     .db-health-table th.db-health-sortable {
       cursor: pointer;
       user-select: none;
+      -webkit-user-select: none;
     }
 
     .db-health-sort-indicator {
@@ -2257,6 +2258,75 @@
       }
     }
 
+    function showAiGeoExecutionModal(title, bodyHtml) {
+      const modal = document.getElementById('jobExecutionModal');
+      const modalContent = document.getElementById('jobExecutionContent');
+      if (!modal || !modalContent) return;
+      modalContent.innerHTML = `
+        <h2>${title}</h2>
+        ${bodyHtml || ''}
+      `;
+      modal.style.display = 'block';
+    }
+
+    function pollAiGeoRunResult({ jobKey, jobName, startedAt, baseUrl, headers, attempt = 0 }) {
+      const maxAttempts = 8;
+      if (attempt >= maxAttempts) {
+        showAiGeoExecutionModal(
+          `AI GEO Job: ${jobName}`,
+          `<div style="padding: 20px;">
+            <div style="margin-bottom: 12px;">⏳ Still running. Check logs for updates.</div>
+            <div class="job-actions">
+              <button class="btn btn-secondary" onclick="toggleAiGeoLogDrawer('${jobKey}')">View Logs</button>
+              <button class="btn btn-primary" onclick="closeJobExecutionModal()">Close</button>
+            </div>
+          </div>`
+        );
+        clearAiGeoProgress(jobKey);
+        return;
+      }
+
+      setTimeout(async () => {
+        try {
+          const response = await fetch(`${baseUrl}/api/cron/job-history?jobKey=${encodeURIComponent(jobKey)}&limit=10&t=${Date.now()}`, {
+            headers,
+            cache: 'no-store'
+          });
+          const payload = await response.json().catch(() => null);
+          const logs = payload?.logs || [];
+          const latest = logs.find((entry) => {
+            const ts = entry.timestamp ? new Date(entry.timestamp).getTime() : 0;
+            return ts >= startedAt;
+          });
+
+          if (latest) {
+            const statusLabel = latest.status || 'unknown';
+            const durationText = latest.durationMs ? `${Math.round(latest.durationMs / 1000)}s` : 'n/a';
+            const detailsText = latest.details ? `<div style="margin-top:6px;color:#7f8c8d;">${escapeHtml(latest.details)}</div>` : '';
+            showAiGeoExecutionModal(
+              `AI GEO Job: ${jobName}`,
+              `<div style="padding: 20px;">
+                <div style="margin-bottom: 8px;">✅ Completed with status: <strong>${escapeHtml(statusLabel)}</strong></div>
+                <div style="margin-bottom: 12px;">Duration: ${durationText}</div>
+                ${detailsText}
+                <div class="job-actions" style="margin-top: 16px;">
+                  <button class="btn btn-secondary" onclick="toggleAiGeoLogDrawer('${jobKey}')">View Logs</button>
+                  <button class="btn btn-primary" onclick="closeJobExecutionModal()">Close</button>
+                </div>
+              </div>`
+            );
+            clearAiGeoProgress(jobKey);
+            loadJobs();
+            return;
+          }
+        } catch (err) {
+          console.warn('Failed to poll AI GEO run result:', err);
+        }
+
+        pollAiGeoRunResult({ jobKey, jobName, startedAt, baseUrl, headers, attempt: attempt + 1 });
+      }, 5000);
+    }
+
     async function aiGeoRunNow(jobKey) {
       const baseUrl = getAiGeoBase();
       if (!baseUrl) {
@@ -2268,6 +2338,16 @@
         showMessage('AI GEO admin key is required.', 'error');
         return;
       }
+      const job = getAiGeoJob(jobKey);
+      const jobName = job?.name || jobKey;
+      const jobId = job?.id || jobKey;
+      showAiGeoExecutionModal(
+        `AI GEO Job: ${jobName} (ID: ${jobId})`,
+        `<div style="text-align: center; padding: 40px;">
+          <div style="font-size: 18px; margin-bottom: 20px;">⏳ Starting job...</div>
+          <div style="color: #7f8c8d;">This may take a few moments</div>
+        </div>`
+      );
       setAiGeoProgress(jobKey, 'Starting run...');
       try {
         const response = await fetch(`${baseUrl}/api/cron/run-job?jobKey=${encodeURIComponent(jobKey)}&t=${Date.now()}`, {
@@ -2278,12 +2358,32 @@
         if (!response.ok) {
           throw new Error(payload?.message || `HTTP ${response.status}`);
         }
-        showMessage(`AI GEO job "${jobKey}" started.`, 'success');
-        await loadJobs();
+        showAiGeoExecutionModal(
+          `AI GEO Job: ${jobName} (ID: ${jobId})`,
+          `<div style="padding: 20px;">
+            <div style="margin-bottom: 12px;">✅ Job started. Waiting for results...</div>
+            <div class="job-actions">
+              <button class="btn btn-secondary" onclick="toggleAiGeoLogDrawer('${jobKey}')">View Logs</button>
+              <button class="btn btn-primary" onclick="closeJobExecutionModal()">Close</button>
+            </div>
+          </div>`
+        );
+        const startedAt = Date.now() - 1000;
+        pollAiGeoRunResult({ jobKey, jobName, startedAt, baseUrl, headers });
       } catch (err) {
         showMessage(`AI GEO run failed: ${err.message}`, 'error');
-      } finally {
+        showAiGeoExecutionModal(
+          `AI GEO Job: ${jobName} (ID: ${jobId})`,
+          `<div style="padding: 20px;">
+            <div style="margin-bottom: 12px;">❌ Failed to start: ${escapeHtml(err.message)}</div>
+            <div class="job-actions">
+              <button class="btn btn-primary" onclick="closeJobExecutionModal()">Close</button>
+            </div>
+          </div>`
+        );
         clearAiGeoProgress(jobKey);
+      } finally {
+        // Keep progress visible until we get a result or timeout.
       }
     }
 
