@@ -1541,9 +1541,13 @@
     // Immediate auto-auth script - runs before DOMContentLoaded
     (function() {
       const DEFAULT_TOKEN = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlnenZ3YnZndm16dnZ6b2NsdWZ4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NzY3NzkyOCwiZXhwIjoyMDczMjUzOTI4fQ.W9tkTSYu6Wml0mUr-gJD6hcLMZDcbaYYaOsyDXuwd8M';
+      const DEFAULT_AI_GEO_ADMIN_KEY = 'abc123xyz456def789ghi012jkl345mno678pqr901stu234vwx567';
       try {
         if (DEFAULT_TOKEN) {
           localStorage.setItem('cron_dashboard_token', DEFAULT_TOKEN);
+        }
+        if (DEFAULT_AI_GEO_ADMIN_KEY) {
+          localStorage.setItem('aigeo_admin_key', DEFAULT_AI_GEO_ADMIN_KEY);
         }
       } catch(e) {
         console.warn('Could not set token in localStorage:', e);
@@ -1570,6 +1574,11 @@
           <label for="aiGeoBase">AI GEO API</label>
           <input id="aiGeoBase" type="text" placeholder="https://ai-geo-audit.vercel.app" />
           <button class="btn btn-secondary btn-small" onclick="saveAiGeoBase()">Save</button>
+        </div>
+        <div class="ai-geo-config">
+          <label for="aiGeoAdminKey">AI GEO Admin Key</label>
+          <input id="aiGeoAdminKey" type="password" placeholder="x-arp-admin-key" />
+          <button class="btn btn-secondary btn-small" onclick="saveAiGeoAdminKey()">Save</button>
         </div>
       </div>
 
@@ -1600,6 +1609,17 @@
     </div>
   </div>
 
+  <!-- AI GEO Schedule Modal -->
+  <div class="modal" id="aiGeoScheduleModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div class="modal-title">Update AI GEO Schedule</div>
+        <button class="close-btn" onclick="closeAiGeoScheduleModal()">&times;</button>
+      </div>
+      <div id="aiGeoScheduleModalContent"></div>
+    </div>
+  </div>
+
   <script>
     /**
      * @typedef {Object} JobSummary
@@ -1619,13 +1639,15 @@
 
     const API_BASE = window.location.origin;
     const AI_GEO_BASE_KEY = 'aigeo_cron_base_url';
+    const AI_GEO_ADMIN_KEY = 'aigeo_admin_key';
     const DEFAULT_AI_GEO_BASE = 'https://ai-geo-audit.vercel.app';
+    const DEFAULT_AI_GEO_ADMIN_KEY = 'abc123xyz456def789ghi012jkl345mno678pqr901stu234vwx567';
     
     // Default admin token (INGEST_TOKEN)
     const DEFAULT_TOKEN = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlnenZ3YnZndm16dnZ6b2NsdWZ4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NzY3NzkyOCwiZXhwIjoyMDczMjUzOTI4fQ.W9tkTSYu6Wml0mUr-gJD6hcLMZDcbaYYaOsyDXuwd8M';
     
     let authToken = localStorage.getItem('cron_dashboard_token') || DEFAULT_TOKEN;
-    let aiGeoState = { jobs: [], error: null, baseUrl: DEFAULT_AI_GEO_BASE, configured: true };
+    let aiGeoState = { jobs: [], error: null, baseUrl: DEFAULT_AI_GEO_BASE, configured: true, adminConfigured: true };
 
     // State for inline log viewer
     let activeLogJobId = null;
@@ -1697,22 +1719,26 @@
       gsc_backlinks: {
         id: '101',
         name: 'GSC + Backlinks Audit',
-        description: 'Runs the full GSC + Backlinks audit pipeline (search, schema, local signals, backlinks, money pages).'
+        description: 'Runs the full GSC + Backlinks audit pipeline (search, schema, local signals, backlinks, money pages).',
+        defaultSchedule: { frequency: 'daily', timeOfDay: '11:00' }
       },
       ranking_ai: {
         id: '102',
         name: 'Keyword Ranking & AI Audit',
-        description: 'Runs the keyword ranking and AI SERP audit, saving keyword rows and audit summary.'
+        description: 'Runs the keyword ranking and AI SERP audit, saving keyword rows and audit summary.',
+        defaultSchedule: { frequency: 'daily', timeOfDay: '11:10' }
       },
       global_run: {
         id: '103',
         name: 'Global Dashboard Run',
-        description: 'Runs the full global refresh (GSC + Backlinks, Ranking & AI, Domain Strength, Optimisation tasks).'
+        description: 'Runs the full global refresh (GSC + Backlinks, Ranking & AI, Domain Strength, Optimisation tasks).',
+        defaultSchedule: { frequency: 'weekly', timeOfDay: '11:20' }
       },
       gsc_cleanup: {
         id: '104',
         name: 'GSC Data Cleanup',
-        description: 'Deletes GSC data older than 18.5 months and vacuums the GSC tables.'
+        description: 'Deletes GSC data older than 18.5 months and vacuums the GSC tables.',
+        defaultSchedule: { frequency: 'monthly', timeOfDay: '02:30' }
       }
     };
 
@@ -2011,6 +2037,7 @@
           tokenInput.value = DEFAULT_TOKEN;
         }
         seedAiGeoBaseInput();
+        seedAiGeoAdminKeyInput();
         
         // Always use DEFAULT_TOKEN for auto-auth
         if (DEFAULT_TOKEN) {
@@ -2065,6 +2092,10 @@
       return normalizeAiGeoBase(base);
     };
 
+    const getAiGeoAdminKey = () => {
+      return localStorage.getItem(AI_GEO_ADMIN_KEY) || DEFAULT_AI_GEO_ADMIN_KEY || '';
+    };
+
     function saveAiGeoBase() {
       const input = document.getElementById('aiGeoBase');
       if (!input) return;
@@ -2083,6 +2114,307 @@
       if (!input) return;
       const base = getAiGeoBase();
       input.value = base || '';
+    }
+
+    function saveAiGeoAdminKey() {
+      const input = document.getElementById('aiGeoAdminKey');
+      if (!input) return;
+      const nextValue = String(input.value || '').trim();
+      if (nextValue) {
+        localStorage.setItem(AI_GEO_ADMIN_KEY, nextValue);
+      } else {
+        localStorage.removeItem(AI_GEO_ADMIN_KEY);
+      }
+      loadJobs();
+    }
+
+    function seedAiGeoAdminKeyInput() {
+      const input = document.getElementById('aiGeoAdminKey');
+      if (!input) return;
+      input.value = getAiGeoAdminKey();
+    }
+
+    const buildAiGeoHeaders = () => {
+      const adminKey = getAiGeoAdminKey();
+      const headers = {};
+      if (adminKey) headers['x-arp-admin-key'] = adminKey;
+      return headers;
+    };
+
+    const aiGeoLogsCache = new Map();
+    let activeAiGeoLogKey = null;
+
+    const getAiGeoJob = (jobKey) => {
+      return (aiGeoState?.jobs || []).find((job) => job.key === jobKey) || null;
+    };
+
+    const aiGeoIsPaused = (job) => {
+      const freq = String(job?.frequency || '').toLowerCase();
+      return freq === 'off' || freq === 'disabled' || !freq;
+    };
+
+    const setAiGeoProgress = (jobKey, message) => {
+      const container = document.getElementById(`progress-ai-geo-${jobKey}`);
+      if (!container) return;
+      const msg = container.querySelector('.progress-message');
+      if (msg) msg.textContent = message || 'Working...';
+      container.style.display = 'block';
+    };
+
+    const clearAiGeoProgress = (jobKey) => {
+      const container = document.getElementById(`progress-ai-geo-${jobKey}`);
+      if (!container) return;
+      container.style.display = 'none';
+      const msg = container.querySelector('.progress-message');
+      if (msg) msg.textContent = '';
+    };
+
+    const renderAiGeoLogDrawer = (jobKey, jobName, logs) => {
+      const drawer = document.getElementById(`log-drawer-ai-geo-${jobKey}`);
+      if (!drawer) return;
+      if (!logs || logs.length === 0) {
+        drawer.innerHTML = '<div class="log-empty">No logs found for this job.</div>';
+        return;
+      }
+      const logsHtml = logs.map((entry) => {
+        const timestamp = entry.timestamp ? new Date(entry.timestamp).toLocaleString() : 'Unknown time';
+        const status = entry.status || entry.type || 'unknown';
+        const details = entry.details ? `<div style="margin-top:4px;color:#777;">${escapeHtml(entry.details)}</div>` : '';
+        return `
+          <div class="log-entry log-entry-${status}">
+            <div class="log-header">
+              <span class="log-timestamp">${timestamp}</span>
+              <span class="log-status">${escapeHtml(status)}</span>
+            </div>
+            <div class="log-message">${escapeHtml(entry.message || '')}</div>
+            ${details}
+          </div>
+        `;
+      }).join('');
+      drawer.innerHTML = `
+        <div class="log-drawer-header">Recent logs for: ${jobName}</div>
+        <div class="log-drawer-content">${logsHtml}</div>
+      `;
+    };
+
+    async function toggleAiGeoLogDrawer(jobKey) {
+      const drawer = document.getElementById(`log-drawer-ai-geo-${jobKey}`);
+      const btn = document.querySelector(`.ai-geo-logs-btn[data-ai-geo-key="${jobKey}"]`);
+      if (!drawer || !btn) return;
+
+      if (activeAiGeoLogKey === jobKey) {
+        activeAiGeoLogKey = null;
+        drawer.style.display = 'none';
+        btn.textContent = 'View Logs';
+        return;
+      }
+
+      if (activeAiGeoLogKey) {
+        const prevDrawer = document.getElementById(`log-drawer-ai-geo-${activeAiGeoLogKey}`);
+        const prevBtn = document.querySelector(`.ai-geo-logs-btn[data-ai-geo-key="${activeAiGeoLogKey}"]`);
+        if (prevDrawer) prevDrawer.style.display = 'none';
+        if (prevBtn) prevBtn.textContent = 'View Logs';
+      }
+
+      activeAiGeoLogKey = jobKey;
+      drawer.style.display = 'block';
+      btn.textContent = 'Hide Logs';
+
+      const cached = aiGeoLogsCache.get(jobKey);
+      if (cached && cached.entries) {
+        renderAiGeoLogDrawer(jobKey, cached.jobName, cached.entries);
+        return;
+      }
+
+      const job = getAiGeoJob(jobKey);
+      if (!job) return;
+      drawer.innerHTML = '<div class="log-loading">Loading logs...</div>';
+
+      try {
+        const headers = buildAiGeoHeaders();
+        const baseUrl = getAiGeoBase();
+        const response = await fetch(`${baseUrl}/api/cron/job-history?jobKey=${encodeURIComponent(jobKey)}&limit=25&t=${Date.now()}`, {
+          headers,
+          cache: 'no-store'
+        });
+        const payload = await response.json().catch(() => null);
+        const entries = payload?.logs || [];
+        aiGeoLogsCache.set(jobKey, { entries, jobName: job.name });
+        renderAiGeoLogDrawer(jobKey, job.name, entries);
+      } catch (err) {
+        drawer.innerHTML = `<div class="log-error">Failed to load logs: ${escapeHtml(err.message)}</div>`;
+      }
+    }
+
+    async function aiGeoRunNow(jobKey) {
+      const baseUrl = getAiGeoBase();
+      if (!baseUrl) {
+        showMessage('AI GEO base URL not configured.', 'error');
+        return;
+      }
+      const headers = buildAiGeoHeaders();
+      if (!headers['x-arp-admin-key']) {
+        showMessage('AI GEO admin key is required.', 'error');
+        return;
+      }
+      setAiGeoProgress(jobKey, 'Starting run...');
+      try {
+        const response = await fetch(`${baseUrl}/api/cron/run-job?jobKey=${encodeURIComponent(jobKey)}&t=${Date.now()}`, {
+          method: 'GET',
+          headers
+        });
+        const payload = await response.json().catch(() => null);
+        if (!response.ok) {
+          throw new Error(payload?.message || `HTTP ${response.status}`);
+        }
+        showMessage(`AI GEO job "${jobKey}" started.`, 'success');
+        await loadJobs();
+      } catch (err) {
+        showMessage(`AI GEO run failed: ${err.message}`, 'error');
+      } finally {
+        clearAiGeoProgress(jobKey);
+      }
+    }
+
+    function openAiGeoScheduleModal(job, mode = 'edit') {
+      const modal = document.getElementById('aiGeoScheduleModal');
+      const content = document.getElementById('aiGeoScheduleModalContent');
+      if (!modal || !content || !job) return;
+
+      const frequency = job.frequency || job.defaultSchedule?.frequency || 'daily';
+      const timeOfDay = job.timeOfDay || job.defaultSchedule?.timeOfDay || '00:00';
+
+      content.innerHTML = `
+        <h3>${job.name}</h3>
+        <div class="form-group">
+          <label>Frequency</label>
+          <select id="aiGeoFrequency">
+            <option value="daily" ${frequency === 'daily' ? 'selected' : ''}>Daily</option>
+            <option value="weekly" ${frequency === 'weekly' ? 'selected' : ''}>Weekly</option>
+            <option value="monthly" ${frequency === 'monthly' ? 'selected' : ''}>Monthly</option>
+            <option value="off" ${aiGeoIsPaused(job) ? 'selected' : ''}>Off</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Time of Day (UTC)</label>
+          <input type="text" id="aiGeoTimeOfDay" value="${timeOfDay}" placeholder="HH:MM" />
+        </div>
+        <div class="job-actions">
+          <button class="btn btn-primary" onclick="updateAiGeoSchedule('${job.key}', '${mode}')">Update Schedule</button>
+          <button class="btn btn-secondary" onclick="closeAiGeoScheduleModal()">Cancel</button>
+        </div>
+      `;
+
+      modal.classList.add('active');
+    }
+
+    function closeAiGeoScheduleModal() {
+      const modal = document.getElementById('aiGeoScheduleModal');
+      if (modal) modal.classList.remove('active');
+    }
+
+    async function updateAiGeoSchedule(jobKey, mode = 'edit') {
+      const baseUrl = getAiGeoBase();
+      const headers = buildAiGeoHeaders();
+      if (!headers['x-arp-admin-key']) {
+        showMessage('AI GEO admin key is required.', 'error');
+        return;
+      }
+      const frequencyInput = document.getElementById('aiGeoFrequency');
+      const timeInput = document.getElementById('aiGeoTimeOfDay');
+      const frequency = frequencyInput ? frequencyInput.value : 'daily';
+      const timeOfDay = timeInput ? timeInput.value : '00:00';
+
+      try {
+        setAiGeoProgress(jobKey, 'Updating schedule...');
+        const response = await fetch(`${baseUrl}/api/cron/update-schedule`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...headers },
+          body: JSON.stringify({
+            jobKey,
+            frequency,
+            timeOfDay,
+            resetStats: mode === 'reset'
+          })
+        });
+        const payload = await response.json().catch(() => null);
+        if (!response.ok) {
+          throw new Error(payload?.message || `HTTP ${response.status}`);
+        }
+        closeAiGeoScheduleModal();
+        showMessage('AI GEO schedule updated.', 'success');
+        await loadJobs();
+      } catch (err) {
+        showMessage(`Failed to update AI GEO schedule: ${err.message}`, 'error');
+      } finally {
+        clearAiGeoProgress(jobKey);
+      }
+    }
+
+    async function resetAiGeoStats(jobKey) {
+      const job = getAiGeoJob(jobKey);
+      if (!job) return;
+      const baseUrl = getAiGeoBase();
+      const headers = buildAiGeoHeaders();
+      if (!headers['x-arp-admin-key']) {
+        showMessage('AI GEO admin key is required.', 'error');
+        return;
+      }
+      try {
+        setAiGeoProgress(jobKey, 'Resetting stats...');
+        const response = await fetch(`${baseUrl}/api/cron/update-schedule`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...headers },
+          body: JSON.stringify({
+            jobKey,
+            frequency: job.frequency || job.defaultSchedule?.frequency || 'daily',
+            timeOfDay: job.timeOfDay || job.defaultSchedule?.timeOfDay || '00:00',
+            resetStats: true
+          })
+        });
+        const payload = await response.json().catch(() => null);
+        if (!response.ok) {
+          throw new Error(payload?.message || `HTTP ${response.status}`);
+        }
+        showMessage('AI GEO stats reset.', 'success');
+        await loadJobs();
+      } catch (err) {
+        showMessage(`Failed to reset stats: ${err.message}`, 'error');
+      } finally {
+        clearAiGeoProgress(jobKey);
+      }
+    }
+
+    async function toggleAiGeoPause(jobKey, shouldPause) {
+      const job = getAiGeoJob(jobKey);
+      if (!job) return;
+      const baseUrl = getAiGeoBase();
+      const headers = buildAiGeoHeaders();
+      if (!headers['x-arp-admin-key']) {
+        showMessage('AI GEO admin key is required.', 'error');
+        return;
+      }
+      const frequency = shouldPause ? 'off' : (job.defaultSchedule?.frequency || 'daily');
+      const timeOfDay = job.defaultSchedule?.timeOfDay || job.timeOfDay || '00:00';
+
+      try {
+        setAiGeoProgress(jobKey, shouldPause ? 'Pausing...' : 'Resuming...');
+        const response = await fetch(`${baseUrl}/api/cron/update-schedule`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...headers },
+          body: JSON.stringify({ jobKey, frequency, timeOfDay })
+        });
+        const payload = await response.json().catch(() => null);
+        if (!response.ok) {
+          throw new Error(payload?.message || `HTTP ${response.status}`);
+        }
+        showMessage(`AI GEO job ${shouldPause ? 'paused' : 'resumed'}.`, 'success');
+        await loadJobs();
+      } catch (err) {
+        showMessage(`Failed to update AI GEO job: ${err.message}`, 'error');
+      } finally {
+        clearAiGeoProgress(jobKey);
+      }
     }
 
     /**
@@ -2434,6 +2766,7 @@
       return AI_GEO_JOB_KEYS.map((key) => {
         const meta = AI_GEO_JOB_META[key] || {};
         const schedule = scheduleJobs[key] || {};
+        const defaultSchedule = meta.defaultSchedule || {};
         return {
           key,
           id: meta.id || null,
@@ -2443,20 +2776,27 @@
           lastRunAt: schedule.lastRunAt || null,
           nextRunAt: schedule.nextRunAt || null,
           lastError: schedule.lastError || null,
-          frequency: schedule.frequency || null,
-          timeOfDay: schedule.timeOfDay || null
+          frequency: schedule.frequency || defaultSchedule.frequency || null,
+          timeOfDay: schedule.timeOfDay || defaultSchedule.timeOfDay || null,
+          defaultSchedule,
+          runHistory: [],
+          logs: []
         };
       });
     };
 
     async function loadAiGeoJobs() {
       const baseUrl = getAiGeoBase();
+      const adminKey = getAiGeoAdminKey();
+      const adminConfigured = Boolean(adminKey && adminKey.trim());
+
       if (!baseUrl) {
         aiGeoState = {
           jobs: buildAiGeoJobs({}),
           error: 'AI GEO API base not configured',
           baseUrl: '',
-          configured: false
+          configured: false,
+          adminConfigured
         };
         return aiGeoState;
       }
@@ -2471,11 +2811,36 @@
         }
         const json = await response.json();
         const scheduleJobs = json?.data?.jobs || {};
+        const jobs = buildAiGeoJobs(scheduleJobs);
+
+        if (adminConfigured) {
+          const headers = buildAiGeoHeaders();
+          await Promise.all(jobs.map(async (job) => {
+            try {
+              const resp = await fetch(
+                `${baseUrl}/api/cron/job-history?jobKey=${encodeURIComponent(job.key)}&limit=25&t=${Date.now()}`,
+                { headers, cache: 'no-store' }
+              );
+              if (!resp.ok) {
+                return;
+              }
+              const payload = await resp.json().catch(() => null);
+              job.logs = payload?.logs || [];
+              job.runHistory = payload?.runHistory || [];
+              aiGeoLogsCache.set(job.key, { entries: job.logs, jobName: job.name });
+            } catch (err) {
+              job.logs = [];
+              job.runHistory = [];
+            }
+          }));
+        }
+
         aiGeoState = {
-          jobs: buildAiGeoJobs(scheduleJobs),
-          error: null,
+          jobs,
+          error: adminConfigured ? null : 'AI GEO admin key not set. Actions and logs are disabled.',
           baseUrl,
-          configured: true
+          configured: true,
+          adminConfigured
         };
         return aiGeoState;
       } catch (error) {
@@ -2483,7 +2848,8 @@
           jobs: buildAiGeoJobs({}),
           error: error.message || 'Failed to load AI GEO schedule',
           baseUrl,
-          configured: true
+          configured: true,
+          adminConfigured
         };
         return aiGeoState;
       }
@@ -2826,12 +3192,25 @@
       const lastRun = job.lastRunAt ? formatDateTime(job.lastRunAt) : 'Never';
       const nextRun = job.nextRunAt ? formatDateTime(job.nextRunAt) : 'Unknown';
       const scheduleTime = job.timeOfDay ? ` @ ${job.timeOfDay}` : '';
-      const scheduleText = job.frequency ? `${job.frequency}${scheduleTime}` : 'Not set';
+      const isPaused = aiGeoIsPaused(job);
+      const scheduleText = isPaused
+        ? 'Paused'
+        : (job.frequency ? `${job.frequency}${scheduleTime}` : 'Not set');
       const safeError = job.lastError ? escapeHtml(job.lastError) : '';
+      const runCount = Array.isArray(job.runHistory) ? job.runHistory.length : 0;
+      const successCount = Array.isArray(job.runHistory)
+        ? job.runHistory.filter((run) => run.success).length
+        : 0;
+      const failureCount = runCount - successCount;
+      const successRate = runCount > 0 ? ((successCount / runCount) * 100).toFixed(1) : null;
+      const failureRate = runCount > 0 ? ((failureCount / runCount) * 100).toFixed(1) : null;
 
       const aiGeoId = job.id ? `ID: ${job.id}` : `Key: ${job.key}`;
       const baseUrl = aiGeoState?.baseUrl || getAiGeoBase();
       const dashboardUrl = baseUrl ? `${baseUrl}/audit-dashboard.html` : null;
+      const adminReady = Boolean(aiGeoState?.adminConfigured && getAiGeoAdminKey());
+      const actionDisabled = adminReady ? '' : 'disabled';
+      const actionClass = adminReady ? '' : 'btn-disabled';
       return `
         <div class="job-card" data-job-card-id="ai-geo-${job.key}">
           <div class="job-header">
@@ -2860,15 +3239,15 @@
           <div class="job-stats">
             <div class="stat-item">
               <div class="stat-label">Total Runs</div>
-              <div class="stat-value">—</div>
+              <div class="stat-value">${runCount}</div>
             </div>
             <div class="stat-item">
               <div class="stat-label">Success Rate</div>
-              <div class="stat-value">—</div>
+              <div class="stat-value">${successRate !== null ? `${successRate}%` : '—'}</div>
             </div>
             <div class="stat-item">
               <div class="stat-label">Failure Rate</div>
-              <div class="stat-value">—</div>
+              <div class="stat-value">${failureRate !== null ? `${failureRate}%` : '—'}</div>
             </div>
           </div>
           ${safeError ? `<div class="health-reason health-reason-error ai-geo-error">Last error: ${safeError}</div>` : ''}
@@ -2880,14 +3259,17 @@
           </div>
           <div class="sparkline-section">
             <div style="font-size: 12px; font-weight: 600; margin-bottom: 5px; color: #666;">Last runs</div>
-            <div class="ai-geo-placeholder">Run history is available in AI GEO logs.</div>
+            <div class="sparkline-container" id="sparkline-ai-geo-${job.key}"></div>
           </div>
-          <button class="view-logs-btn btn-disabled" disabled>View Logs</button>
+          <button class="view-logs-btn ai-geo-logs-btn ${actionClass}" data-ai-geo-key="${job.key}" ${actionDisabled}>View Logs</button>
+          <div id="log-drawer-ai-geo-${job.key}" class="log-drawer" style="display:none;"></div>
           <div class="job-actions">
-            <button class="btn btn-primary btn-small btn-disabled" disabled title="Use AI GEO dashboard to run this job">▶ Run Now</button>
-            <button class="btn btn-secondary btn-small btn-disabled" disabled title="Use AI GEO scheduler to edit">Edit Schedule</button>
-            <button class="btn btn-secondary btn-small btn-disabled" disabled title="Reset stats in AI GEO">🔄 Reset Stats</button>
-            <button class="btn btn-warning btn-small btn-disabled" disabled title="Pause in AI GEO scheduler">⏸ Pause</button>
+            <button class="btn btn-primary btn-small ${actionClass}" ${actionDisabled} onclick="aiGeoRunNow('${job.key}')">▶ Run Now</button>
+            <button class="btn btn-secondary btn-small ${actionClass}" ${actionDisabled} onclick="openAiGeoScheduleModal(getAiGeoJob('${job.key}'))">Edit Schedule</button>
+            <button class="btn btn-secondary btn-small ${actionClass}" ${actionDisabled} onclick="resetAiGeoStats('${job.key}')" title="Reset success/fail counts">🔄 Reset Stats</button>
+            <button class="btn ${isPaused ? 'btn-success' : 'btn-warning'} btn-small ${actionClass}" ${actionDisabled} onclick="toggleAiGeoPause('${job.key}', ${!isPaused})">
+              ${isPaused ? '▶ Resume' : '⏸ Pause'}
+            </button>
             ${dashboardUrl ? `<a class="btn btn-success btn-small" href="${dashboardUrl}" target="_blank" rel="noopener">Open AI GEO</a>` : ''}
           </div>
         </div>
@@ -2905,6 +3287,12 @@
       if (state?.error) {
         html += `<div class="health-reason health-reason-warning ai-geo-warning">
           AI GEO schedule warning: ${escapeHtml(state.error)}
+        </div>`;
+      }
+
+      if (state?.configured && state?.adminConfigured === false) {
+        html += `<div class="health-reason health-reason-warning ai-geo-warning">
+          AI GEO admin key missing. Actions and logs are disabled until it is set.
         </div>`;
       }
 
@@ -3151,7 +3539,24 @@
       document.querySelectorAll('.view-logs-btn').forEach(btn => {
         btn.addEventListener('click', async function() {
           const jobid = parseInt(this.dataset.jobid);
+          if (!Number.isFinite(jobid)) return;
           await toggleLogDrawer(jobid);
+        });
+      });
+
+      if (aiGeo?.jobs?.length) {
+        aiGeo.jobs.forEach((job) => {
+          if (job.runHistory && job.runHistory.length > 0) {
+            renderSparkline(`ai-geo-${job.key}`, job.runHistory);
+          }
+        });
+      }
+
+      document.querySelectorAll('.ai-geo-logs-btn').forEach(btn => {
+        btn.addEventListener('click', async function() {
+          const jobKey = this.dataset.aiGeoKey;
+          if (!jobKey) return;
+          await toggleAiGeoLogDrawer(jobKey);
         });
       });
       
@@ -3169,6 +3574,19 @@
             if (cached.entries) {
               renderLogDrawer(activeLogJobId, cached.entries);
             }
+          }
+        }
+      }
+
+      if (activeAiGeoLogKey) {
+        const drawer = document.getElementById(`log-drawer-ai-geo-${activeAiGeoLogKey}`);
+        const btn = document.querySelector(`.ai-geo-logs-btn[data-ai-geo-key="${activeAiGeoLogKey}"]`);
+        if (drawer && btn) {
+          drawer.style.display = 'block';
+          btn.textContent = 'Hide Logs';
+          const cached = aiGeoLogsCache.get(activeAiGeoLogKey);
+          if (cached && cached.entries) {
+            renderAiGeoLogDrawer(activeAiGeoLogKey, cached.jobName, cached.entries);
           }
         }
       }
