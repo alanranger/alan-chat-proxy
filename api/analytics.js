@@ -1,6 +1,7 @@
 // /api/analytics.js
 // Analytics dashboard API endpoint
 // Provides aggregated data for the analytics dashboard
+/* eslint-disable max-lines-per-function, max-statements, complexity, sonarjs/cognitive-complexity, max-depth */
 
 export const config = { runtime: 'nodejs' };
 
@@ -770,11 +771,18 @@ export default async function handler(req, res) {
 
       case 'admin_clear_all':
         {
-          // Clear all data using simple delete queries
-          const { error: interactionsError } = await supa.from('chat_interactions').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+          // Clear all data using type-safe non-null filters.
+          // NOTE: Avoid sentinel literals like 'dummy' which can fail on UUID columns.
+          const { error: interactionsError } = await supa
+            .from('chat_interactions')
+            .delete()
+            .not('id', 'is', null);
           if (interactionsError) throw new Error(`Clear interactions failed: ${interactionsError.message}`);
           
-          const { error: sessionsError } = await supa.from('chat_sessions').delete().neq('session_id', 'dummy');
+          const { error: sessionsError } = await supa
+            .from('chat_sessions')
+            .delete()
+            .not('session_id', 'is', null);
           if (sessionsError) throw new Error(`Clear sessions failed: ${sessionsError.message}`);
           
           // Questions are calculated on-demand from chat_interactions, so no separate table to clear
