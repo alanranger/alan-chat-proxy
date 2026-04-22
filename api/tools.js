@@ -152,22 +152,37 @@ export default async function handler(req, res) {
         // --- counts: comprehensive counts including CSV metadata ---
         if (req.method === 'GET' && action === 'counts') {
           const counts = {};
-          
-          // Get CSV metadata counts by type
+
+          // Get CSV metadata counts by type.
+          // PostgREST hard-caps per-request rows (default 1000), which silently
+          // under-counted the newest csv_types once csv_metadata exceeded 1000
+          // rows. Paginate explicitly until exhausted so all rows are counted.
           try {
-            const { data: csvMetadata, error: csvError } = await supa
-              .from('csv_metadata')
-              .select('csv_type')
-              .range(0, 9999); // Ensure we get all rows (Supabase default limit is 1000)
-            
-            if (!csvError && csvMetadata) {
-              const csvCounts = {};
-              csvMetadata.forEach(row => {
+            const csvCounts = {};
+            const pageSize = 1000;
+            let from = 0;
+            let lastErr = null;
+            let totalSeen = 0;
+            while (true) {
+              const { data: page, error: pageErr } = await supa
+                .from('csv_metadata')
+                .select('csv_type')
+                .range(from, from + pageSize - 1);
+              if (pageErr) { lastErr = pageErr; break; }
+              if (!page || page.length === 0) break;
+              for (const row of page) {
+                if (!row.csv_type) continue;
                 csvCounts[row.csv_type] = (csvCounts[row.csv_type] || 0) + 1;
-              });
+              }
+              totalSeen += page.length;
+              if (page.length < pageSize) break;
+              from += pageSize;
+            }
+            if (lastErr) {
+              console.warn('Failed to get CSV metadata counts:', lastErr.message);
+            } else {
               counts.csv_metadata = csvCounts;
-            } else if (csvError) {
-              console.warn('Failed to get CSV metadata counts:', csvError.message);
+              counts.csv_metadata_total = totalSeen;
             }
           } catch (e) {
             console.warn('Failed to get CSV metadata counts:', e.message);
