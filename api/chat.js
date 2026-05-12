@@ -1520,18 +1520,18 @@ function getMacroPhotographyAnswer(lc) {
 
 function getLandscapeBestTimeAnswer(lc) {
   if (!(/\bbest\s+time\b/.test(lc) && /\blandscape\b/.test(lc))) return null;
-  return `**Best time for landscape photography**\n**Golden hour** shortly after sunrise and before sunset renders warm angled light forgiving dynamic range.**Blue hour** frames cool reflective calm around dawn or dusk skylines mirrored water. Bright midday contrasts harsh yet suits graphic monochrome purposeful minimalism scout beforehand tripod filters respecting polarisers reflection bias.\n\n`;
+  return `For most landscape subjects, the hour after sunrise and the hour before sunset — known as the golden hour — give the most flattering light: warm, low-angled and easy on the camera's dynamic range. Either side of that, the blue hour (roughly 20–30 minutes before sunrise or after sunset) suits calm, reflective scenes and long exposures. Overcast days are underrated for woodland and intimate scenes because the soft, even light removes the harsh shadows that midday sun creates. Bright midday only really works for graphic, high-contrast or monochrome subjects where strong shadows are part of the composition. Plan around the weather and atmosphere as much as the clock.\n\n`;
 }
 
 function getLandscapeSettingsStarterAnswer(lc) {
   if (!(lc.includes('landscape') && (/\bwhat\s+settings\b/.test(lc) || /\bsettings\s+should\b/.test(lc)))) return null;
-  return `**Landscape settings starters**\nAperture Priority or manual mastery ISO minimal native low.\nTypical anchors f/8-f/11 depth sharpness moderated diffraction tripod enabling slower shutter purposeful motion smoothing sky water optional ND restraint highlight clipping vigilant histogram anchored foreground scale composition guidance.\n\n`;
+  return `A solid starting point for landscape photography is aperture-priority mode at f/8 to f/11 for sharp front-to-back depth of field, ISO 100 to keep noise low, and the camera on a tripod so the shutter speed can be whatever the meter calls for. Move to manual mode once you're comfortable — it's the same numbers, but you control them directly rather than letting the camera choose. Always check the histogram on the back of the camera rather than judging exposure from the rear screen, which can be misleading in bright light. Shoot in RAW for editing flexibility, and use a polariser or graduated ND filter when conditions call for it.\n\n`;
 }
 
 function getBestBeginnerCameraAnswer(lc) {
   if (!(lc.includes('camera') && /\bbeginners?\b/.test(lc))) return null;
   if (!(/\bbest\b|\bneed\b|\bwhich\b|\bwhat\b|\bbuy\b|\bchoose\b|\brecommend\b/.test(lc))) return null;
-  return `**Cameras beginners thrive with**\nSeek manual aperture shutter ISO control sturdy ergonomics reliable battery RAW versatility modest ISO cleanliness near 6400 learning noise discipline tripod companion optional interchangeable lenses widen creative branching later speciality clarity portraits macro emerge gradually.\n\n`;
+  return `The best beginner camera is one with full manual control over aperture, shutter speed and ISO, plus interchangeable lenses. That points to a mid-range mirrorless or DSLR body in the £400–£800 range with a kit lens. Sony, Canon, Nikon and Fujifilm all make reliable starter bodies — the brand matters less than committing to a lens system you can grow into. The body itself matters less than learning to use the controls properly, so don't overspend on a first camera. Used gear from a reputable dealer is excellent value at this stage and lets you put more of your budget into a decent lens.\n\n`;
 }
 
 // Helper function for editing RAW files
