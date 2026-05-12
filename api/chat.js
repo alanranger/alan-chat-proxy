@@ -8,6 +8,10 @@ export const config = { runtime: "nodejs" };
 
 import { createClient } from "@supabase/supabase-js";
 import { createHash } from 'crypto';
+import {
+  stripKnownSquarespaceNavNoise as stripCollapsedNavSnippet,
+  chunkLooksLikeCollapsedSiteNav
+} from '../helpers/squarespace-nav.js';
 
 // Global error handlers to prevent server crashes from unhandled promise rejections
 process.on('unhandledRejection', (reason, promise) => {
@@ -261,7 +265,7 @@ function generateEquipmentAdviceResponse(query, articles, contentChunks) {
   // Special-case low confidence for memory card queries: avoid wrong-topic advice
   if (equipmentType === 'memory card') {
     console.log('🔧 generateEquipmentAdviceResponse: memory card query with no relevant articles – using low-confidence fallback');
-    return getLowConfidenceFallback();
+    return getLowConfidenceFallback({ forMemoryCards: true });
   }
   return generateBasicEquipmentAdvice(equipmentType);
  }
@@ -719,7 +723,7 @@ function generateBasicEquipmentAdvice(equipmentType) {
   // For memory card questions with no strong content signals, prefer a human handover
   if (equipmentType === 'memory card') {
     console.log('🔧 generateBasicEquipmentAdvice: memory card type – using low-confidence fallback');
-    return getLowConfidenceFallback();
+    return getLowConfidenceFallback({ forMemoryCards: true });
   }
 
   const equipmentName = equipmentNames[equipmentType] || equipmentType;
@@ -733,7 +737,14 @@ function generateBasicEquipmentAdvice(equipmentType) {
 }
 
 // Generic low-confidence fallback when we can’t confidently answer a gear question
-function getLowConfidenceFallback() {
+function getLowConfidenceFallback(options = {}) {
+  const forMemoryCards = !!options.forMemoryCards;
+  if (forMemoryCards) {
+    return (
+      "**Memory cards**: buy two reputable-brand cards from dependable retailers. For stills, match capacity you need for a full day outdoors, **format in-camera** after confirming copies, and prioritise endurance over bargain pricing. Videographers normally need sustained throughput (often **V60/V90‑rated**) that matches camera bitrate. Paste your camera model on WhatsApp and Alan can tighten the exact spec.\n\n"
+      + "*If WhatsApp isn't convenient, please use the contact form linked in this chat header.*"
+    );
+  }
   return "I can’t find anything that confidently matches your question right now. Please contact Alan directly using the contact form or WhatsApp if you’d like to chat with him about this.";
 }
 // Helper function to clean response text and remove junk characters
@@ -1028,21 +1039,16 @@ function hasWord(text, term) {
  }
 }
  
-function isMalformedChunk(text) {
- // Check basic length requirement
- if (text.length < 50) return true;
- 
- // Check for URL encoding issues
- if (text.includes('%3A%2F%2F')) return true;
- 
- // Check for navigation elements
- if (text.includes('] 0 Likes') || text.includes('Sign In') || 
- text.includes('My Account') || text.includes('Cart 0')) {
- return true;
- }
- 
- // Check for navigation-heavy content
- return text.includes('Back ') && text.includes('[/') && text.length < 200;
+function isMalformedChunk(rawText) {
+ const text = String(rawText || '');
+ if (text.length < 50 || text.includes('%3A%2F%2F')) return true;
+ if (chunkLooksLikeCollapsedSiteNav(text)) return true;
+
+ const low = text.toLowerCase();
+ const inlineNavHits = ['] 0 likes', 'sign in', 'my account', 'cart 0'].some((token) => low.includes(token));
+ if (inlineNavHits) return true;
+
+ return low.includes('back ') && low.includes('[/') && text.length < 200;
 }
 
 function hasRelevantContent(chunk, exactTerm, slug) {
@@ -1067,13 +1073,12 @@ function checkWhatIsPatterns(context) {
 }
 
 function filterContentChunk(chunk, exactTerm, slug) {
- const text = String(chunk.chunk_text||chunk.content||"").toLowerCase();
- 
- // Skip malformed chunks (URL-encoded text, very short text, or navigation elements)
- if (isMalformedChunk(text)) {
+ const raw = String(chunk.chunk_text||chunk.content||"");
+
+ if (isMalformedChunk(raw)) {
  return false;
  }
- 
+
  return hasRelevantContent(chunk, exactTerm, slug);
 }
 
@@ -1141,6 +1146,7 @@ function findRelevantChunk(exactTerm, contentChunks, queryWords) {
 function prepareChunkText(relevantChunk) {
  let chunkText = relevantChunk.chunk_text || relevantChunk.content || "";
  chunkText = cleanResponseText(chunkText);
+ chunkText = stripCollapsedNavSnippet(chunkText);
  chunkText = chunkText.replace(/^\[ARTICLE\].*?URL:.*?\n\n/, '');
  chunkText = chunkText.replace(/^\[.*?\].*?Published:.*?\n\n/, '');
  return chunkText;
@@ -1729,10 +1735,26 @@ const SERVICE_PATTERNS = [
  matcher: (lc) => lc.includes("commercial photography") || lc.includes("do you do commercial"),
  answer: `**Commercial Photography**: Alan Ranger offers commercial photography services in addition to photography education. He provides workshops, courses, private lessons, and commercial photography services. To discuss your commercial photography needs, please contact Alan directly using the contact form or WhatsApp in the header section of this chat.\n\n`
  },
-         {
-           matcher: (lc) => lc.includes("portrait photography") || lc.includes("do you do portrait"),
-           answer: `**Portrait Photography**: Alan focuses on photography education rather than portrait photography services. His expertise is in teaching photography through courses, workshops, and private lessons. For portrait photography needs, he can recommend other professional photographers in his network.\n\n`
-         },
+ {
+   matcher: (lc) =>
+     /\bwhat\s+is\s+portrait\s+photography\b/.test(lc) ||
+     (/\bwhat\s+is\s+portrait\b/.test(lc) && !lc.includes('course')),
+   answer:
+     "**Portrait photography** is about photographing people: rapport, directing, and shaping light so expressions read clearly. Alan teaches practical portrait foundations on his **Beginners Portrait Photography Course** alongside wider photography programmes.\n\n" +
+     "**Beginners Portrait Photography Course:** https://www.alanranger.com/beginners-portrait-photography-course\n\n" +
+     "If you intended a commercial portrait shoot rather than tuition, WhatsApp Alan via the chat header and he can advise what is realistic for your brief.\n\n"
+ },
+ {
+   matcher: (lc) =>
+     (/\b(do\s+you\s+do|do\s+you\s+offer|offer|provide)\b/.test(lc) &&
+       /\bportrait\b/.test(lc) &&
+       /\b(commission|shoot|session|commercial|professional|wedding|headshot)\b/.test(lc)) ||
+     (/\bhire\b/.test(lc) && /\bportrait\b/.test(lc)),
+   answer:
+     "**Portrait enquiries:** Alan’s main focus is structured photography education; select portrait commissions may be possible once he understands your timeline and usage.\n\n" +
+     "**Beginners tuition route:** https://www.alanranger.com/beginners-portrait-photography-course\n\n" +
+     "WhatsApp Alan from this chat header so he can confirm availability and next steps.\n\n"
+ },
          {
            matcher: (lc) => (lc.includes("hire") || lc.includes("can i hire")) && (lc.includes("photographer") || lc.includes("professional")) && lc.includes("coventry"),
            answer: `**Hiring a Professional Photographer in Coventry**: Alan Ranger offers professional photography services in Coventry and the surrounding areas, in addition to his photography education services. He provides workshops, courses, and private lessons, as well as commercial photography services. To discuss your photography needs, please contact Alan directly using the contact form or WhatsApp in the header section of this chat.\n\n`
@@ -5021,7 +5043,14 @@ async function findContentChunks(client, { keywords, limit = 5, articleUrls = []
  "raw", "jpeg", "hdr", "focal length", "long exposure"
  ];
  
- const sortedData = (data || []).sort((a, b) => {
+ const cleaned = (data || []).filter((row) => {
+   const blob = row.chunk_text || row.content || "";
+   if (!blob) return false;
+   if (chunkLooksLikeCollapsedSiteNav(blob)) return false;
+   return !isMalformedChunk(blob);
+ });
+ 
+ const sortedData = cleaned.sort((a, b) => {
  const aScore = calculateContentScore(a, keywords, coreConcepts);
  const bScore = calculateContentScore(b, keywords, coreConcepts);
  return bScore - aScore; // Higher score first
@@ -7502,9 +7531,36 @@ function tryUseArticleDescriptionAsFallback(bestArticle, query) {
 }
 
 // Helper: Generate generic fallback answer (Complexity: Low)
-function generateGenericArticleFallback(bestArticle) {
+function generateGenericArticleFallback(bestArticle, query) {
   console.log(`[FALLBACK] No extractable content found, using generic response`);
-  return `You can find more detailed information in my guides on this topic.\n\n`;
+
+  const url =
+    bestArticle?.page_url ||
+    bestArticle?.url ||
+    bestArticle?.href;
+
+  const titleSuffix =
+    typeof bestArticle?.title === 'string' && bestArticle.title.trim()
+      ? ` (${bestArticle.title.trim()})`
+      : '';
+
+  const specificity =
+    typeof query === 'string' && query.trim()
+      ? '\nLong-form explanations live on Alan’s articles; skim the headline link rather than trusting a brittle paraphrase from a short snippet.'
+      : '';
+
+  if (url) {
+    return (
+      `I haven’t indexed enough contiguous body copy here to summarise that cleanly yet.${specificity}` +
+      `\nPlease read Alan’s page${titleSuffix}: ${url}\n\n` +
+      `For tailored coaching in British English phrasing (“colour”, shutter choices, tripod discipline), WhatsApp Alan from this chat header.\n\n`
+    );
+  }
+
+  return (
+    `I haven’t indexed enough contiguous body copy to summarise that safely yet.${specificity}\n\n` +
+    `Browse Alan’s guides on https://www.alanranger.com/ or WhatsApp him from this chat header.\n\n`
+  );
 }
 
 function generateArticleAnswer(articles, query = '') {
@@ -7529,7 +7585,7 @@ function generateArticleAnswer(articles, query = '') {
   const descriptionAnswer = tryUseArticleDescriptionAsFallback(bestArticle, query);
   if (descriptionAnswer) return descriptionAnswer;
   
-  return generateGenericArticleFallback(bestArticle);
+  return generateGenericArticleFallback(bestArticle, query);
 }
 
 // Helper function to generate equipment service answer
@@ -7571,7 +7627,7 @@ function generateEvidenceBasedAnswer(context) {
  if (context.articles.length > 0) {
  answer = generateArticleAnswer(context.articles, context.query);
  } else if (context.services.length > 0) {
- answer = generateServiceAnswer(context.query, context.services);
+ answer = generateServiceAnswer(context.services, context.query);
  } else if (context.events.length > 0) {
  const bestEvent = context.events[0];
  answer = `Here's information about the workshops and events available.\n\n*View details: ${bestEvent.page_url}*`;
@@ -9925,7 +9981,7 @@ function handleRagExtraction(articles, query) {
 function generateEquipmentFallback(qlc, isRecommendationQuery) {
   // Special-case: memory card queries with no good match should use low-confidence fallback
   if (qlc.includes('memory card') || qlc.includes('memory card should i buy')) {
-    const fallback = getLowConfidenceFallback();
+    const fallback = getLowConfidenceFallback({ forMemoryCards: true });
     return {
       success: true,
       confidence: 0.3, // Low confidence for no-match fallback
@@ -10019,6 +10075,8 @@ function isTechnicalQueryType(qlc, businessCategory, technicalResponse, isFreeCo
     qlc.includes('aperture') || qlc.includes('shutter') ||
     qlc.includes('raw') || qlc.includes('white balance') ||
     qlc.includes('depth of field') || qlc.includes('hdr') ||
+    qlc.includes('macro') ||
+    qlc.includes('rule of thirds') ||
     qlc.includes('long exposure') || qlc.includes('flash') ||
     qlc.includes('composition') || qlc.includes('edit raw')
   )) {
@@ -10049,34 +10107,109 @@ function isTechnicalQueryType(qlc, businessCategory, technicalResponse, isFreeCo
   return false;
 }
 
+function hasSchedulingOrBookingCue(rawQuery) {
+  const qlc = String(rawQuery || '').toLowerCase().replace(/\s+/g, ' ').trim();
+  const mentionsOfferings = /\b(workshops?|courses?|lessons?|classes?|events?)\b/i.test(qlc);
+  if (!mentionsOfferings) return false;
+
+  return (
+    /\b(when|next|schedule|upcoming|available|dates?\b|how\s+long|how\s+many\s+weeks|near\s+me)\b/i.test(qlc) ||
+    /\b(book|booking)\b/i.test(qlc) ||
+    /\b(do\s+you\s+have|are\s+your)\b[\s\S]{0,90}\b(workshops?|courses?)\b/i.test(qlc)
+  );
+}
+
+function prefersEducationOverEventShortcut(rawQuery) {
+  const qlc = String(rawQuery || '').toLowerCase().replace(/\s+/g, ' ').trim();
+  if (!qlc) return false;
+
+  const educationCue =
+    /\b(how\s+do\s+i|how\s+to|tips\b|guide\s+to|advice\s+on)\b/.test(qlc) ||
+    /\bwhat\s+is\b/.test(qlc) ||
+    /\bwhat(?:'|’|ʼ)s\s+the\s+best\b/i.test(qlc) ||
+    /\bwhat\s+settings\s+should\b/i.test(qlc) ||
+    /\bwhat\s+sort\s+of\s+camera\b/i.test(qlc);
+
+  const photoCue =
+    /\b(photograph(?:y|ing)?|photos?\b|shoot|tripod|lens(?:es)?|camera|composition|dslr|mirrorless|settings|macro|wildlife|seascapes?|sunsets?|waterfalls?|flowers?|bluebells?|\bautumn\b|colou?rs?)\b/i.test(qlc);
+
+  return Boolean(educationCue && photoCue);
+}
+
+function inferEventRoutingSignals(query, equipmentFlag) {
+  const normalized = query || '';
+
+  const isBeginnersGearRanking =
+    /\bbeginners?\b/i.test(normalized) &&
+    /\b(best|better|camera|lens|buy|equipment|gear|dslr|mirrorless)\b/i.test(normalized);
+
+  const courseLogistics =
+    !equipmentFlag &&
+    !isBeginnersGearRanking &&
+    /\b(course|courses|class|classes|lesson|workshop|workshops)\b/i.test(normalized) &&
+    /\b(beginners\b|lightroom|weeks|how\s+many\s+weeks|syllabus|schedule\b|equipment|bring|included|needs?|requirements?|prerequisite|camera\s+course|lightroom\s+course|how\s+do\s+i\s+prepare)\b/i.test(normalized);
+
+  const seasonalWorkshopCue =
+    /\b(autumn|spring|summer|winter|bluebell)s?\s+(?:photography\s+)?(workshops?|courses?|lessons?|classes?)\b/i.test(normalized) ||
+    /\b(autumn\s+workshops?|spring\s+workshops?|devon\s+workshops?|bluebell\s+workshops?)/i.test(normalized);
+
+  const eventCues =
+    /\b(workshops?|events?|photowalk)\b/i.test(normalized) ||
+    /\b(next|when)\b[\s\S]{0,70}\b(workshops?|courses?)\b/i.test(normalized) ||
+    /\bwhere\b[\s\S]{0,50}\bworkshops?\b/i.test(normalized) ||
+    /\bhow\s+long\b[\s\S]{0,30}\bworkshops?\b/i.test(normalized) ||
+    seasonalWorkshopCue;
+
+  return { courseLogistics, eventCues };
+}
+
+function explainEventShortcutBlocker(query, equipmentQuestion) {
+  const safeQuery = query || '';
+  const qlcEvent = safeQuery.toLowerCase();
+  const paymentPlanCue =
+    /(pick.*n.*mix|payment.*plan|instalment.*plan|installment.*plan|pay.*instalment|pay.*installment|pay.*in.*instalment|pay.*in.*installment|instalment|installment|instalments|installments)/i.test(safeQuery);
+
+  if (
+    qlcEvent.includes('free online photography course') ||
+    (qlcEvent.includes('free course') && qlcEvent.includes('photography')) ||
+    (qlcEvent.includes('photography academy') && qlcEvent.includes('free')) ||
+    (qlcEvent.includes('subscribe') && qlcEvent.includes('free')) ||
+    (qlcEvent.includes('really free') && qlcEvent.includes('online photography course'))
+  ) {
+    return 'Skipping event routing for free course query';
+  }
+
+  if (paymentPlanCue) {
+    return 'Skipping event routing for payment plan query';
+  }
+
+  if (prefersEducationOverEventShortcut(safeQuery) && !hasSchedulingOrBookingCue(safeQuery)) {
+    return 'Educational photography query skips event shortcut routing';
+  }
+
+  const businessCategory = detectBusinessCategory(safeQuery);
+  const { courseLogistics, eventCues } = inferEventRoutingSignals(safeQuery, equipmentQuestion);
+
+  if (equipmentQuestion || (businessCategory !== 'Event Queries' && !courseLogistics && !eventCues)) {
+    return null;
+  }
+
+  return '__ALLOW__';
+}
+
 // Helper: Handle event routing queries (Complexity: Low)
 async function handleEventRoutingQuery(client, query, isEquipmentQuestion) {
-  // Skip event routing for free course queries - these should be handled by service patterns
-  const qlcEvent = query.toLowerCase();
-  if (qlcEvent.includes('free online photography course') || 
-      (qlcEvent.includes('free course') && qlcEvent.includes('photography')) ||
-      (qlcEvent.includes('photography academy') && qlcEvent.includes('free')) ||
-      (qlcEvent.includes('subscribe') && qlcEvent.includes('free')) ||
-      (qlcEvent.includes('really free') && qlcEvent.includes('online photography course'))) {
-    console.log(`[SKIP] Skipping event routing for free course query: "${query}"`);
+  const blockerMessage = explainEventShortcutBlocker(query || '', isEquipmentQuestion);
+
+  if (blockerMessage && blockerMessage !== '__ALLOW__') {
+    console.log(`[SKIP] ${blockerMessage}: "${query}"`);
     return null;
   }
-  
-  // Skip event routing for payment plan queries - these should route to services
-  const isPaymentPlanQuery = /(pick.*n.*mix|payment.*plan|instalment.*plan|installment.*plan|pay.*instalment|pay.*installment|pay.*in.*instalment|pay.*in.*installment|instalment|installment|instalments|installments)/i.test(query || '');
-  if (isPaymentPlanQuery) {
-    console.log(`[SKIP] Skipping event routing for payment plan query: "${query}"`);
+
+  if (!blockerMessage) {
     return null;
   }
-  
-  const businessCategory = detectBusinessCategory(query || '');
-  const courseLogistics = !isEquipmentQuestion && /\b(course|beginners|lightroom|camera\s+course|weeks|how\s+many\s+weeks|syllabus|schedule)\b/i.test(query || '');
-  const eventCues = /\b(workshop|workshops|event|photowalk|next\s+.*workshop|where\s+.*workshop|when\s+.*workshop|autumn\s+workshops|devon\s+workshop|bluebell\s+workshop|how\s+long.*workshop|bluebell|autumn|spring|summer|winter)\b/i.test(query || '');
-  
-  if (isEquipmentQuestion || (businessCategory !== 'Event Queries' && !courseLogistics && !eventCues)) {
-    return null;
-  }
-  
+
   console.log(`✅ Event query detected in tryRagFirst, routing to events: "${query}"`);
   const keywords = extractKeywords(query);
   const events = await findEvents(client, { keywords, limit: 40 });
@@ -10095,9 +10228,16 @@ async function handleEventRoutingQuery(client, query, isEquipmentQuestion) {
 
 // Helper: Check if query should route to events instead of services (Complexity: Low)
 function shouldRouteToEvents(query, qlcService, isFreeCourseQuery, isEquipmentQuestion, isPaymentPlanQuery) {
+  if (
+    prefersEducationOverEventShortcut(query || '') &&
+    !hasSchedulingOrBookingCue(query || '')
+  ) {
+    console.log('[SKIP] Educational framing detected – withholding broad event shortcuts');
+    return false;
+  }
+
   const businessCategory = detectBusinessCategory(query || '');
-  const courseLogistics = !isEquipmentQuestion && /\b(course|beginners|lightroom|camera\s+course|weeks|how\s+many\s+weeks|syllabus|schedule)\b/i.test(query || '');
-  const eventCues = /\b(workshop|workshops|event|photowalk|next\s+.*workshop|where\s+.*workshop|when\s+.*workshop|autumn\s+workshops|devon\s+workshop|bluebell\s+workshop|how\s+long.*workshop|bluebell|autumn|spring|summer|winter)\b/i.test(query || '');
+  const { courseLogistics, eventCues } = inferEventRoutingSignals(query || '', isEquipmentQuestion);
   
   const isWhatCoursesQuery = /\b(what\s+courses|what\s+photography\s+courses|courses\s+do\s+you\s+offer|courses\s+do\s+you\s+have)\b/i.test(query || '');
   if (isWhatCoursesQuery && !isFreeCourseQuery) return true;
@@ -12307,7 +12447,9 @@ function isTechnicalPhotographyConcept(lc) {
     lc.includes('shutter') || lc.includes('raw') || lc.includes('white balance') ||
     lc.includes('depth of field') || lc.includes('histogram') || lc.includes('composition') ||
     lc.includes('metering') || lc.includes('focal length') || lc.includes('hdr') ||
-    lc.includes('long exposure') || (lc.includes('flash') && lc.includes('photography'))
+    lc.includes('macro') || lc.includes('rule of thirds') ||
+    lc.includes('long exposure') || (lc.includes('flash') && lc.includes('photography')) ||
+    /\bportrait\s+photography\b/.test(lc)
   );
 }
 
@@ -12328,12 +12470,13 @@ function isPersonQuery(lc) {
 
 // Helper: Check if query is event query (Complexity: Low)
 function isEventQuery(lc) {
-  return (lc.includes('when') || lc.includes('next') || lc.includes('do you have') || 
+  return (lc.includes('when') || lc.includes('next') || lc.includes('do you have') ||
           lc.includes('are your') || lc.includes('schedule') || lc.includes('how long')) && (
-    lc.includes('workshop') || lc.includes('course') || lc.includes('class') || 
+    lc.includes('workshop') || lc.includes('course') || lc.includes('class') ||
     lc.includes('lesson') || lc.includes('training') || lc.includes('event') ||
-    lc.includes('devon') || lc.includes('bluebell') || lc.includes('autumn') ||
-    lc.includes('spring') || lc.includes('summer') || lc.includes('winter')
+    /\b(devon\b.*workshop|workshop\b.*devon)/.test(lc) ||
+    /\bbluebell\s+(workshop|photography\s+workshop)/.test(lc) ||
+    /\b(autumn|spring|summer|winter)\s+(workshop|workshops|course|courses)/.test(lc)
   );
 }
 
@@ -12470,7 +12613,7 @@ function enhanceTechnicalConceptsResponse(answer, query, response) {
     // Last resort: provide a helpful message
     const concept = query.toLowerCase().replace(/["""]/g, '').replace('what is', '').trim();
     return { 
-      answer: `I'd be happy to explain ${concept}! This is a fundamental photography concept that's important to understand. Let me know if you'd like specific guidance on how to apply this in your photography.`, 
+      answer: `I’d happily unpack **${concept}** with field examples—this idea underpins reliable exposure and intentional composition.`, 
       confidenceBoost: 0.7 
     };
   }
@@ -12837,6 +12980,14 @@ function enhanceGeneralResponse(answer, query, response) {
   return { answer, confidenceBoost: 0.6 };
 }
 
+function fallbackLensRecommendation(query = '') {
+  const qlcGear = query.toLowerCase();
+  if (qlcGear.includes('landscape')) {
+    return 'For landscapes, pack **a dependable tripod** plus a **zoom that spans ultra-wide angles through a short telephoto**. Wider apertures buy flexibility at dawn or dusk without leaning too hard on ISO, while modest **f/4 zoom kits** trim weight during long hikes. Add a sharper mid-telephoto when foreground detail really matters.';
+  }
+  return 'Lens choice boils down to **focal length habits**: versatile zooms for learning, brighter primes where you crave shallow depth-of-field or faster shutter speeds. Match your kit to recurring subjects rather than hypothetical “might need” extremes.';
+}
+
 // Generate direct equipment recommendations from articles
 function generateDirectEquipmentRecommendation(equipmentType, articles, query) {
   console.log(`🎭 Generating direct ${equipmentType} recommendations from ${articles.length} articles`);
@@ -12847,9 +12998,12 @@ function generateDirectEquipmentRecommendation(equipmentType, articles, query) {
   if (relevantArticles.length === 0) {
     // Special-case: memory card queries with no good match should use low-confidence fallback
     if (equipmentType === 'memory card') {
-      return getLowConfidenceFallback();
+      return getLowConfidenceFallback({ forMemoryCards: true });
     }
-    return `I'd be happy to help you choose ${equipmentType} equipment! Based on your photography needs, I can provide personalized recommendations.`;
+    if (equipmentType === 'lens') {
+      return fallbackLensRecommendation(query);
+    }
+    return `I'd be happy to help you choose ${equipmentType} equipment! Based on your photography needs, I can provide personalised recommendations.`;
   }
   
   // Generate contextual recommendations based on query intent

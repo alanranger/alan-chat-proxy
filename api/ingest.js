@@ -19,6 +19,7 @@ import { htmlToText } from 'html-to-text';
 import { createClient } from '@supabase/supabase-js';
 import { JSDOM } from 'jsdom';
 import { extractStructuredDataFromHTML, enhanceDescriptionWithStructuredData, generateContentHash, cleanHTMLText } from '../lib/htmlExtractor.js';
+import { stripKnownSquarespaceNavNoise } from '../helpers/squarespace-nav.js';
 
 // Extract meta description from HTML - updated for deployment
 function extractMetaDescription(html) {
@@ -662,7 +663,7 @@ export async function ingestSingleUrl(url, supa, options = {}) {
     
     stage = 'chunk_text';
     const chunkStart = Date.now();
-    const chunks = chunkText(text);
+    const chunks = chunkText(stripKnownSquarespaceNavNoise(text));
     console.log(`[TIMING] ${url}: chunk_text took ${Date.now() - chunkStart}ms (created ${chunks.length} chunks)`);
     
     // Find and merge CSV metadata for this URL (handle multiple records intelligently)

@@ -19,6 +19,7 @@
     "test:regression": "node regression-test-suite.js",
     "test:baseline": "node capture-baseline.js",
     "test:compare": "node compare-against-baseline.js",
+    "test:nav-strip": "node testing-scripts/nav-strip.test.mjs",
     "test:safety": "node deployment-safety-check.js",
     "test:all": "npm run test:safety && npm run test:regression",
     "lint": "eslint . --ext .js --format compact",
