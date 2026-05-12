@@ -2,7 +2,7 @@
   "version": "1.0",
   "created": "2025-11-27",
   "description": "Canonical 64-question test set combining Interactive Testing and Regression Test questions",
-  "total_questions": 64,
+  "total_questions": 68,
   "questions": [
     {
       "id": 1,
@@ -451,6 +451,34 @@
       "category": "Equipment Recommendations",
       "focus": "Equipment advice and recommendations",
       "source": "regression"
+    },
+    {
+      "id": 65,
+      "question": "what is the best lens for landscape photography",
+      "category": "Equipment Recommendations",
+      "focus": "Equipment advice aligned with improvement tracking baseline",
+      "source": "regression-tracking"
+    },
+    {
+      "id": 66,
+      "question": "what is the best time of day for landscape photography",
+      "category": "Technical Photography Concepts",
+      "focus": "Light and timing for landscapes",
+      "source": "regression-tracking"
+    },
+    {
+      "id": 67,
+      "question": "what is the rule of thirds",
+      "category": "Technical Photography Concepts",
+      "focus": "Composition definition",
+      "source": "regression-tracking"
+    },
+    {
+      "id": 68,
+      "question": "what settings should i use for landscape photography",
+      "category": "Technical Advice",
+      "focus": "Landscape camera settings starter framework",
+      "source": "regression-tracking"
     }
   ]
 }

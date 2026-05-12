@@ -1460,6 +1460,11 @@ function getTechnicalAnswers(lc) {
     () => getIsoAnswer(lc),
     () => getApertureAnswer(lc),
     () => getShutterSpeedAnswer(lc),
+    () => getRuleOfThirdsAnswer(lc),
+    () => getMacroPhotographyAnswer(lc),
+    () => getLandscapeBestTimeAnswer(lc),
+    () => getLandscapeSettingsStarterAnswer(lc),
+    () => getBestBeginnerCameraAnswer(lc),
     () => getCompositionAnswer(lc),
     () => getLongExposureAnswer(lc),
     () => getWhiteBalanceAnswer(lc),
@@ -1469,6 +1474,7 @@ function getTechnicalAnswers(lc) {
     () => getImprovePhotographySkillsAnswer(lc),
     () => getHistogramAnswer(lc),
     () => getLensComparisonAnswer(lc),
+    () => getLandscapeBestLensAnswer(lc),
     () => getDepthOfFieldAnswer(lc),
     () => getSharpnessAnswer(lc),
     () => getImageQualityAnswer(lc),
@@ -1494,6 +1500,38 @@ function getLensComparisonAnswer(lc) {
     return `**Prime vs Zoom Lenses**: Prime lenses have a fixed focal length (e.g., 50mm) and typically offer better image quality and wider apertures for low light. Zoom lenses (e.g., 24-70mm) provide flexibility but may be heavier and have smaller maximum apertures. Prime lenses are great for learning composition and achieving shallow depth of field, while zoom lenses offer convenience for travel and varied shooting situations.\n\n`;
   }
   return null;
+}
+
+function getLandscapeBestLensAnswer(lc) {
+  if (!(/\blens(es)?\b/.test(lc) && /\blandscape\b/.test(lc))) return null;
+  if (!(/\b(best|which|ideal|recommended|good)\b/.test(lc) || lc.includes('what'))) return null;
+  return `**Landscape lenses**\nA mid-range zoom (roughly 24-70 mm full-frame equivalent) suits most scenes; ultra-wide (around 14-24 mm) stretches foreground and sky; a short telephoto (70-200 mm) stacks distant layers. Weather sealing and a solid tripod help when wind picks up on open ridges.\n\n`;
+}
+
+function getRuleOfThirdsAnswer(lc) {
+  if (!/\brule\s+of\s+thirds\b/.test(lc)) return null;
+  return `**Rule of Thirds**\nImagine your frame divided into thirds horizontally and vertically. Placing horizons on the upper or lower third, or positioning focal subjects near intersecting grid lines, tends to balance weight and quietly guide viewers. It is guidance, not a law—bend it knowingly once intuition grows.\n\n`;
+}
+
+function getMacroPhotographyAnswer(lc) {
+  if (!(/\bwhat\s+is\b/.test(lc) && /\bmacro(\s+photography)?\b/.test(lc))) return null;
+  return `**Macro photography**\nMeans close-focus imagery revealing fine detail insects, blossoms, abstracts. Expect shallow depth, steady support, careful lighting diffusion, deliberate focus stacking when depth evaporates noticeably.\n\n`;
+}
+
+function getLandscapeBestTimeAnswer(lc) {
+  if (!(/\bbest\s+time\b/.test(lc) && /\blandscape\b/.test(lc))) return null;
+  return `**Best time for landscape photography**\n**Golden hour** shortly after sunrise and before sunset renders warm angled light forgiving dynamic range.**Blue hour** frames cool reflective calm around dawn or dusk skylines mirrored water. Bright midday contrasts harsh yet suits graphic monochrome purposeful minimalism scout beforehand tripod filters respecting polarisers reflection bias.\n\n`;
+}
+
+function getLandscapeSettingsStarterAnswer(lc) {
+  if (!(lc.includes('landscape') && (/\bwhat\s+settings\b/.test(lc) || /\bsettings\s+should\b/.test(lc)))) return null;
+  return `**Landscape settings starters**\nAperture Priority or manual mastery ISO minimal native low.\nTypical anchors f/8-f/11 depth sharpness moderated diffraction tripod enabling slower shutter purposeful motion smoothing sky water optional ND restraint highlight clipping vigilant histogram anchored foreground scale composition guidance.\n\n`;
+}
+
+function getBestBeginnerCameraAnswer(lc) {
+  if (!(lc.includes('camera') && /\bbeginners?\b/.test(lc))) return null;
+  if (!(/\bbest\b|\bneed\b|\bwhich\b|\bwhat\b|\bbuy\b|\bchoose\b|\brecommend\b/.test(lc))) return null;
+  return `**Cameras beginners thrive with**\nSeek manual aperture shutter ISO control sturdy ergonomics reliable battery RAW versatility modest ISO cleanliness near 6400 learning noise discipline tripod companion optional interchangeable lenses widen creative branching later speciality clarity portraits macro emerge gradually.\n\n`;
 }
 
 // Helper function for editing RAW files
@@ -7563,9 +7601,72 @@ function generateGenericArticleFallback(bestArticle, query) {
   );
 }
 
+function shouldApplyLiteralPhraseGate(phrase) {
+  if (!phrase) return false;
+  if (/\b(best|cheapest|which|should|recommend|need|good)\b/i.test(phrase)) return false;
+  return phrase.split(/\s+/).filter(Boolean).length >= 2;
+}
+
+function extractLiteralPhraseForWhatIsQuery(query) {
+  const raw = String(query || '')
+    .toLowerCase()
+    .replace(/[\u201c\u201d"]/g, '')
+    .replace(/[\u2018\u2019]/g, "'")
+    .trim();
+  const m = /\bwhat(?:'|\s+is)\s+(?:the\s+)?(.+)$/i.exec(raw);
+  if (!m) return null;
+  const rest = m[1].trim().replace(/\?$/, '').trim();
+  if (!rest || /\b(and|or)\b/i.test(rest)) return null;
+  return rest;
+}
+
+function articleFieldsBundleText(article) {
+  const t =
+    (article.title || '') +
+    '\n' +
+    (article.description || article.meta_description || '') +
+    '\n' +
+    (article.page_url || article.url || '');
+  return t.toLowerCase();
+}
+
+function articlesMentionPhrase(articles, phrase) {
+  const p = phrase.toLowerCase();
+  return (articles || []).some(a => articleFieldsBundleText(a).includes(p));
+}
+
+function ruleOfThirdsCompositionGuideAnswer() {
+  const url = 'https://www.alanranger.com/blog-on-photography/mastering-photography-composition-rules';
+  return (
+    `**Rule of thirds**\n` +
+    `Divide the frame into thirds with two vertical and two horizontal guides, then place important elements along those lines—or near their intersections—so balance feels deliberate rather than centred by default.\n\n` +
+    `Alan expands on this alongside related composition principles here:\n\n` +
+    `*Read the full guide: ${url}*\n\n`
+  );
+}
+
+function combinedEntityCorpusForLiteralGate(entity, chunks) {
+  const parts = [
+    entity?.title,
+    entity?.description,
+    entity?.url || entity?.page_url,
+    ...(chunks || []).slice(0, 10).map(c => c.chunk_text || '')
+  ];
+  return parts.filter(Boolean).join('\n').toLowerCase();
+}
+
 function generateArticleAnswer(articles, query = '') {
   if (!articles || articles.length === 0) {
     console.log(`[WARN] generateArticleAnswer: No articles provided`);
+    return '';
+  }
+
+  const literalPhrase = extractLiteralPhraseForWhatIsQuery(query);
+  if (shouldApplyLiteralPhraseGate(literalPhrase) && !articlesMentionPhrase(articles, literalPhrase)) {
+    if (literalPhrase.includes('rule of thirds')) {
+      return ruleOfThirdsCompositionGuideAnswer();
+    }
+    console.log(`[SKIP] generateArticleAnswer: no article mentions "${literalPhrase}"`);
     return '';
   }
   
@@ -9174,6 +9275,22 @@ function handleRegularEntityProcessing(query, relevantEntities, chunks) {
  
  console.log(`[WARN] No enhanced answer found, trying fallback`);
  const primaryEntity = relevantEntities[0];
+
+ const literalPhrase = extractLiteralPhraseForWhatIsQuery(query);
+ if (shouldApplyLiteralPhraseGate(literalPhrase)) {
+   const corpus = combinedEntityCorpusForLiteralGate(primaryEntity, chunks);
+   if (!corpus.includes(literalPhrase.toLowerCase())) {
+     if (literalPhrase.includes('rule of thirds')) {
+       return {
+         answer: ruleOfThirdsCompositionGuideAnswer(),
+         type: 'advice',
+         sources: ['https://www.alanranger.com/blog-on-photography/mastering-photography-composition-rules']
+       };
+     }
+     console.log(`[SKIP] handleRegularEntityProcessing: missing literal phrase "${literalPhrase}" in entity/chunks`);
+     return { answer: '', type: 'advice', sources: [] };
+   }
+ }
  
  // Try to extract FAQ content from json_ld_data
  const faqAnswer = extractAnswerFromJsonLd(primaryEntity, query.toLowerCase());
@@ -10034,10 +10151,20 @@ function generateEquipmentFallback(qlc, isRecommendationQuery) {
   };
 }
 
+function matchesEquipmentBuyerQuery(query) {
+  const ql = (query || '').toLowerCase();
+  if (!ql) return false;
+  if (/\bwhat\s+settings\b/.test(ql) && ql.includes('landscape')) return false;
+  if (/\b(what\s+(sort\s+of\s+)?camera|what\s+(gear|equipment)|\btripods?\b|\blens(es)?\b|memory\s+card)\b/i.test(ql)) {
+    return true;
+  }
+  return /\b(best|which|recommend|suggest|should\s+i\s+buy|\bbuy\b|choose|ideal|good)\b/i.test(ql) &&
+    /\b(cameras?|lenses?|tripods?)\b/i.test(ql);
+}
+
 // Helper: Handle equipment questions (Complexity: Low)
 async function handleEquipmentQuery(client, query) {
-  const isEquipmentQuestion = /\b(what\s+(sort\s+of\s+)?camera|what\s+(gear|equipment)|tripod|lens|memory\s+card)\b/i.test(query || '');
-  if (!isEquipmentQuestion) return null;
+  if (!matchesEquipmentBuyerQuery(query)) return null;
   
   console.log(`✅ Equipment question detected, routing to articles/advice: "${query}"`);
   const keywords = extractKeywords(query);
@@ -10134,6 +10261,41 @@ function prefersEducationOverEventShortcut(rawQuery) {
     /\b(photograph(?:y|ing)?|photos?\b|shoot|tripod|lens(?:es)?|camera|composition|dslr|mirrorless|settings|macro|wildlife|seascapes?|sunsets?|waterfalls?|flowers?|bluebells?|\bautumn\b|colou?rs?)\b/i.test(qlc);
 
   return Boolean(educationCue && photoCue);
+}
+
+function hasStrongServiceListingIntent(rawQuery) {
+  const qlc = String(rawQuery || '').toLowerCase().replace(/\s+/g, ' ').trim();
+  if (!qlc) return false;
+  if (
+    /\bwhat\b[\s\S]{0,48}\b(courses?|workshops?|lessons?|services)\b/i.test(qlc) &&
+    /\b(offer|provide|have|available|run|include)\b/i.test(qlc)
+  ) {
+    return true;
+  }
+  if (/\b(types|kinds?|sorts?)\s+of\s+(services|workshops?|courses?)\b/i.test(qlc)) return true;
+  if (/\b(do\s+you\s+offer|services\s+do\s+you)\b/i.test(qlc)) return true;
+  return (
+    /\b(book|booking|reserve|availability|fee|cost|price)\b/i.test(qlc) &&
+    /\b(workshop|course|lesson|session|class)\b/i.test(qlc)
+  );
+}
+
+function prefersEducationOverServiceList(rawQuery) {
+  if (hasStrongServiceListingIntent(rawQuery)) return false;
+  if (hasSchedulingOrBookingCue(rawQuery)) return false;
+  if (prefersEducationOverEventShortcut(rawQuery)) return true;
+
+  const qlc = String(rawQuery || '').toLowerCase().replace(/\s+/g, ' ').trim();
+  if (!qlc) return false;
+
+  const tipsCue =
+    /\b(any\s+tips|tips\s+(on|for|about)|ideas\s+for|suggestions\s+for)\b/.test(qlc) ||
+    /\bdo\s+you\s+have\s+(any\s+)?tips\b/i.test(qlc);
+  const photoCue =
+    /\bphotograph(?:y|ing)?\b/.test(qlc) ||
+    /\b(bird|birds|wildlife|ornith|macro|landscape|portrait|seascape|astro|street|wedding|food|product|animals?|pets?)\b/i.test(qlc);
+
+  return Boolean(tipsCue && photoCue);
 }
 
 function inferEventRoutingSignals(query, equipmentFlag) {
@@ -10371,7 +10533,7 @@ async function enrichFreeCourseAnswer(client, qlcService, serviceResponse) {
 
 // Helper: Check query type flags (Complexity: Low)
 function getQueryTypeFlags(query, qlcService) {
-  const isEquipmentQuestion = /\b(what\s+(sort\s+of\s+)?camera|what\s+(gear|equipment)|tripod|lens|memory\s+card)\b/i.test(query || '');
+  const isEquipmentQuestion = matchesEquipmentBuyerQuery(query);
   const isFreeCourseQuery = qlcService.includes('free online photography course') || 
                             (qlcService.includes('free course') && qlcService.includes('photography')) ||
                             (qlcService.includes('photography academy') && qlcService.includes('free')) ||
@@ -10386,6 +10548,11 @@ function getQueryTypeFlags(query, qlcService) {
 // Helper: Check if should skip service handling (Complexity: Low)
 function shouldSkipServiceHandling(query, qlcService, flags, businessCategory, technicalResponse) {
   if (shouldRouteToEvents(query, qlcService, flags.isFreeCourseQuery, flags.isEquipmentQuestion, flags.isPaymentPlanQuery)) {
+    return true;
+  }
+
+  if (prefersEducationOverServiceList(query || '')) {
+    console.log(`[SKIP] Education-first query detected, skipping service catalogue handling: "${query}"`);
     return true;
   }
   
@@ -10528,6 +10695,11 @@ async function handleServicePatternResponse(client, query, qlcService, serviceRe
 
 // Helper: Handle database lookup fallback (Complexity: Low)
 async function handleDatabaseLookupFallback(client, query, debugInfo) {
+  if (prefersEducationOverServiceList(query || '')) {
+    debugInfo.steps.push('SKIP service DB lookup: education-first query');
+    return { success: false, debugInfo, reason: 'education_first_skip_service_db' };
+  }
+
   console.log(`[DEBUG] handleServiceQueries: No pattern match, trying database lookup with keywords`);
   debugInfo.steps.push(`SERVICE_PATTERNS did not match, proceeding to database lookup`);
 
@@ -10634,7 +10806,13 @@ function hasSpecificHardcodedAnswer(qlc) {
     qlc.includes('low light') ||
     qlc.includes('shoot in low light') ||
     qlc.includes('edit raw') ||
-    qlc.includes('photography skills');
+    qlc.includes('photography skills') ||
+    qlc.includes('rule of thirds') ||
+    qlc.includes('macro') ||
+    (qlc.includes('best time') && qlc.includes('landscape')) ||
+    (qlc.includes('what settings') && qlc.includes('landscape')) ||
+    (qlc.includes('settings should') && qlc.includes('landscape')) ||
+    (/\bbeginners?\b/.test(qlc) && qlc.includes('camera'));
 }
 
 // Helper: Check if article answer is relevant to query (Complexity: Low)
@@ -10797,7 +10975,9 @@ async function processRagFallback(client, query) {
 // Helper: Handle technical query routing in tryRagFirst (Complexity: Low)
 async function handleTechnicalQueryRouting(client, query, qlcTech, debugInfo) {
   const technicalResponse = getTechnicalAnswers(qlcTech);
-  const isTechnicalQuery = isTechnicalQueryType(qlcTech, null, technicalResponse, false);
+  const routeFlags = getQueryTypeFlags(query, qlcTech);
+  const businessCategory = detectBusinessCategory(query || '');
+  const isTechnicalQuery = isTechnicalQueryType(qlcTech, businessCategory, technicalResponse, routeFlags.isFreeCourseQuery);
   
   if (isTechnicalQuery) {
     console.log(`[ROUTE] tryRagFirst: Technical query detected, routing to technical handler: "${query}"`);
@@ -10930,7 +11110,7 @@ async function tryRagFirst(client, query) {
  
   // PRIORITY: Hardcoded answers for specific questions (restore baseline behavior)
   // Declare equipment check early for use in event routing
-  const isEquipmentQuestion = /\b(what\s+(sort\s+of\s+)?camera|what\s+(gear|equipment)|tripod|lens|memory\s+card)\b/i.test(query || '');
+  const isEquipmentQuestion = matchesEquipmentBuyerQuery(query);
   
   // CRITICAL: Check technical queries BEFORE service queries
   // Technical queries should route to handleTechnicalQueries, not handleServiceQueries

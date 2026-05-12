@@ -26,9 +26,9 @@ async function loadCanonical64Q() {
       throw new Error(`Failed to load canonical 64Q: ${response.status} ${response.statusText}`);
     }
     const data = await response.json();
-    
-    if (data.questions.length !== 64) {
-      console.warn(`⚠️ WARNING: Canonical file has ${data.questions.length} questions, expected 64`);
+    const expectedCount = typeof data.total_questions === 'number' ? data.total_questions : data.questions?.length;
+    if (expectedCount != null && data.questions.length !== expectedCount) {
+      console.warn(`⚠️ WARNING: Canonical file has ${data.questions.length} questions, expected ${expectedCount}`);
     }
     
     CANONICAL_64Q_QUESTIONS = data.questions;

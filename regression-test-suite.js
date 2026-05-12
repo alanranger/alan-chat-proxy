@@ -237,8 +237,9 @@ async function run() {
   const raw = fs.readFileSync(canonPath, 'utf8');
   const data = JSON.parse(raw);
   const questions = data.questions || [];
-  if (questions.length !== 64) {
-    console.warn(`Expected 64 questions, got ${questions.length}`);
+  const expectedCount = typeof data.total_questions === 'number' ? data.total_questions : questions.length;
+  if (questions.length !== expectedCount) {
+    console.warn(`Expected ${expectedCount} questions (total_questions), got ${questions.length}`);
   }
 
   const runTs = Date.now();
@@ -261,7 +262,8 @@ async function run() {
   console.log(`Wrote ${outFile}`);
 
   const passed = results.filter((r) => r.evaluation.pass).length;
-  console.log(`\nHeuristic pass (all 64): ${passed}/64`);
+  const totalQ = questions.length;
+  console.log(`\nHeuristic pass (all ${totalQ}): ${passed}/${totalQ}`);
 
   const url = process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
