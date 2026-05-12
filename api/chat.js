@@ -12009,6 +12009,51 @@ function initializeStructuredObject(ragResult) {
   if (!Array.isArray(ragResult.structured.products)) ragResult.structured.products = [];
 }
 
+function articleLookupPathKey(u) {
+  try {
+    return new URL(String(u).trim()).pathname.replace(/\/$/, '').toLowerCase();
+  } catch (_) {
+    return '';
+  }
+}
+
+function expandAlanrangerPageUrlVariants(url) {
+  const trimmed = String(url || '').trim();
+  const out = [];
+  const add = (v) => {
+    if (v && typeof v === 'string' && !out.includes(v)) out.push(v);
+  };
+  add(trimmed);
+  const pk = articleLookupPathKey(trimmed);
+  if (!pk || !trimmed.includes('alanranger.com')) return out.slice(0, 24);
+  const bases = ['https://www.alanranger.com', 'https://alanranger.com'];
+  bases.forEach((origin) => {
+    add(`${origin}${pk}`);
+    add(`${origin}${pk}/`);
+  });
+  return out.slice(0, 24);
+}
+
+function mergeArticlesDeduped(primary, secondary) {
+  const merged = [...(primary || []), ...(secondary || [])];
+  const out = [];
+  const seen = new Set();
+  for (const row of merged) {
+    const pk = articleLookupPathKey(row.page_url || row.url || '');
+    const k = pk || `${(row.page_url || row.url || '').replace(/\/$/, '').toLowerCase()}`;
+    if (!k || seen.has(k)) continue;
+    seen.add(k);
+    out.push(row);
+  }
+  return out;
+}
+
+function isLikelyBlogOrGuideCitationUrl(url) {
+  const lc = String(url || '').toLowerCase();
+  if (!lc.includes('alanranger.com')) return false;
+  return /\/blog-|\/blog\/|blog-on-|photography-guide|-guide\b|\/guides?\b/i.test(lc);
+}
+
 // Helper: Convert sources URLs to article objects
 async function convertSourcesUrlsToArticles(client, sourcesUrls) {
   if (!Array.isArray(sourcesUrls) || sourcesUrls.length === 0) {
@@ -12016,33 +12061,40 @@ async function convertSourcesUrlsToArticles(client, sourcesUrls) {
   }
   
   try {
-    // Extract URLs from sources array
     const urls = sourcesUrls
       .filter(url => typeof url === 'string' && url.includes('alanranger.com'))
-      .slice(0, 12); // Limit to 12 articles
+      .slice(0, 12);
     
-    if (urls.length === 0) {
-      return [];
-    }
-    
-    // Query articles by URLs
+    if (urls.length === 0) return [];
+
+    const candidates = [...new Set(urls.flatMap(expandAlanrangerPageUrlVariants))].slice(0, 40);
+
     const { data, error } = await client
       .from('v_articles_unified')
       .select('id, title, page_url, categories, tags, image_url, publish_date, description, json_ld_data, last_seen, kind, source_type')
-      .in('page_url', urls)
-      .limit(12);
+      .in('page_url', candidates)
+      .limit(24);
     
     if (error) {
       console.warn(`[ENRICH] Error fetching articles by URL: ${error.message}`);
-      return [];
+      return urls.map(u => normalizeArticle({ page_url: u, kind: 'article', source_type: 'rag_citation' })).slice(0, 12);
     }
-    
-    if (data && data.length > 0) {
-      console.log(`[ENRICH] Converted ${data.length} URLs to article objects`);
-      return data.map(article => normalizeArticle(article));
+
+    const byPath = new Map();
+    for (const row of data || []) {
+      const pk = articleLookupPathKey(row.page_url || '');
+      if (pk) byPath.set(pk, row);
     }
-    
-    return [];
+
+    const ordered = [];
+    for (const src of urls) {
+      const pk = articleLookupPathKey(src);
+      const hit = pk ? byPath.get(pk) : null;
+      ordered.push(hit ? normalizeArticle(hit) : normalizeArticle({ page_url: src, kind: 'article', source_type: 'rag_citation' }));
+    }
+
+    console.log(`[ENRICH] Converted ${urls.length} source URL(s) to article objects (${(data || []).length} matched in DB)`);
+    return ordered;
   } catch (e) {
     console.warn(`[ENRICH] Error converting URLs to articles: ${e.message}`);
     return [];
@@ -12051,31 +12103,34 @@ async function convertSourcesUrlsToArticles(client, sourcesUrls) {
 
 // Helper: Handle sources conversion for enrichment
 async function handleSourcesConversion(ragResult, client) {
-  if (Array.isArray(ragResult.sources) && ragResult.sources.length > 0 && ragResult.structured.articles.length === 0) {
-    try {
-      console.log(`[ENRICH] Found ${ragResult.sources.length} source URLs, converting to article objects`);
-      const items = await convertSourcesUrlsToArticles(client, ragResult.sources);
-      if (items && items.length > 0) {
-        // Separate products from articles based on kind field
-        let articles = items.filter(item => item.kind !== 'product');
-        const products = items.filter(item => item.kind === 'product');
-        
-        // For HDR queries, filter articles to only HDR-relevant ones
-        // Note: We need to check the query from context, but we don't have it here
-        // So we'll filter in enrichAdviceWithRelatedInfo instead
-        
-        if (articles.length > 0) {
-          ragResult.structured.articles = articles;
-          console.log(`[ENRICH] Added ${articles.length} articles from sources URLs`);
-        }
-        if (products.length > 0) {
-          ragResult.structured.products = products;
-          console.log(`[ENRICH] Added ${products.length} products from sources URLs`);
-        }
-      }
-    } catch (e) {
-      console.warn(`[ENRICH] Could not convert sources: ${e.message}`);
+  if (!Array.isArray(ragResult.sources) || ragResult.sources.length === 0) return;
+  try {
+    const raw = ragResult.sources
+      .filter((u) => typeof u === 'string' && u.includes('alanranger.com'))
+      .slice(0, 12);
+
+    const citeUrls = raw.filter(isLikelyBlogOrGuideCitationUrl);
+    const toFetch = citeUrls.length ? citeUrls : ragResult.structured.articles.length === 0 ? raw : [];
+
+    if (!toFetch.length) return;
+
+    console.log(`[ENRICH] Merging ${toFetch.length} source URL(s) into structured articles (from ${ragResult.sources.length} raw sources)`);
+    const items = await convertSourcesUrlsToArticles(client, toFetch);
+    if (!items || items.length === 0) return;
+
+    let articles = items.filter(item => item.kind !== 'product');
+    const products = items.filter(item => item.kind === 'product');
+
+    ragResult.structured.articles = mergeArticlesDeduped(articles, ragResult.structured.articles);
+    console.log(`[ENRICH] Structured articles count after merge: ${ragResult.structured.articles.length}`);
+
+    if (products.length > 0) {
+      ragResult.structured.products = mergeArticlesDeduped(products, ragResult.structured.products).filter(
+        (i) => i.kind === 'product'
+      );
     }
+  } catch (e) {
+    console.warn(`[ENRICH] Could not convert sources: ${e.message}`);
   }
 }
 

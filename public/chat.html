@@ -1414,6 +1414,12 @@ function eventHeaderLabel(structured){
 // Helper function to check if query is a simple follow-up
 function isSimpleFollowUpQuery(query) {
   if (!query) return false;
+
+  const q = String(query);
+  const wantsEducationGuides =
+    /\b(any\s+)?tips\b|\badvice\b|\bideas\b|\bsuggestions\b/i.test(q);
+
+  if (wantsEducationGuides) return false;
   
   const isFollowUpPattern = /^(how many|when|where|how much|how long|can i|do you|is there)/i.test(query);
   const hasEventKeywords = query.includes('book') || query.includes('buy') || query.includes('price') || 
@@ -1903,15 +1909,17 @@ function pickArticles(structured, query, topic){
   return shouldShowAllArticles ? result : result.slice(0,6);
 }
 function renderArticlesBlock(structured, query){
-  // Skip articles block for simple follow-up questions (but not for legitimate technical/advice queries)
-  const isSimpleFollowUp = query && (
+  const wantsEducationGuides =
+    /\b(any\s+)?tips\b|\badvice\b|\bideas\b|\bsuggestions\b/i.test(String(query || ''));
+  // Skip articles block for simple follow-up questions (tips/advice always keep guides visible)
+  const isSimpleFollowUp =
+    !!query &&
+    !wantsEducationGuides &&
     /^(how many|what|when|where|how much|how long|can i|do you|is there)/i.test(query) &&
     !query.includes('book') && !query.includes('buy') && !query.includes('price') && !query.includes('cost') &&
     !query.includes('workshop') && !query.includes('course') && !query.includes('event') && !query.includes('class') &&
     !query.includes('recommend') && !query.includes('equipment') && !query.includes('tripod') &&
-    // Don't skip "what is" queries - these are technical questions that deserve articles
-    !/^what is/i.test(query)
-  );
+    !/^what is/i.test(query);
   if (isSimpleFollowUp) return '';
   
   const topic = structured?.topic || '';
