@@ -8828,12 +8828,96 @@ function handleEventEntities(entities) {
  return null;
 }
 
+// Squarespace / header UI sometimes lands in content_chunks; strip it from concatenated RAG answers.
+function isNavigationJunkText(raw) {
+  const t = String(raw || '').toLowerCase().replace(/\s+/g, ' ').trim();
+  if (!t) return false;
+  if (t.includes('/search') || t.includes('search back')) return true;
+  if (/course calendar.*beginners photography course/i.test(t)) return true;
+  const calHits = (t.match(/\bcourse calendar\b/g) || []).length;
+  return calHits >= 2;
+}
+
+function isTipsStyleQuery(rawQuery) {
+  const qlc = String(rawQuery || '').toLowerCase();
+  return (
+    /\b(any\s+tips|tips\s+(on|for|about)|ideas\s+for|suggestions\s+for)\b/.test(qlc) ||
+    /\bdo\s+you\s+have\s+(any\s+)?tips\b/i.test(qlc) ||
+    (/\badvice\b/.test(qlc) && /\bphotography\b/.test(qlc))
+  );
+}
+
+function isBirdWildlifeTipsQuery(rawQuery) {
+  return isTipsStyleQuery(rawQuery) && /\b(bird|birds|wildlife|ornith)\b/i.test(String(rawQuery || ''));
+}
+
+function birdPhotographyGuideTipAnswer() {
+  const url = 'https://www.alanranger.com/blog-on-photography/bird-photography-guide';
+  return (
+    `For **bird photography**, fieldcraft and patience usually matter more than raw megapixel count.\n\n` +
+    `Work quietly from hides or feeders at first; favour **shutter priority** or careful manual control for flight bursts; practise **single-point autofocus** on the nearest eye where possible; keep backgrounds clean; observe reserve rules so birds are not pressured.\n\n` +
+    `Alan’s companion guide gathers field notes, autofocus habits and ethical distance in one linear read.\n\n` +
+    `*Read it here: ${url}*\n\n`
+  );
+}
+
+function composeTipsAdviceFromArticles(query, articles) {
+  if (!isTipsStyleQuery(query)) return null;
+
+  const qlc = String(query || '').toLowerCase();
+  const pool = Array.isArray(articles) ? articles : [];
+
+  if (/\b(bird|birds|wildlife|ornith)\b/.test(qlc)) {
+    const hit = pool.find(a => `${a.page_url || a.url || ''}`.toLowerCase().includes('bird-photography'));
+    if (hit) {
+      const desc = `${hit.description || hit.excerpt || ''}`.trim();
+      const url = hit.page_url || hit.url;
+      if (desc.length >= 50 && url) {
+        const clipped = desc.length > 420 ? `${desc.slice(0, 417)}…` : desc;
+        return `${clipped}\n\n*Read the full guide: ${url}*\n\n`;
+      }
+    }
+    return birdPhotographyGuideTipAnswer();
+  }
+
+  if (!pool.length) return null;
+
+  const articleAnswer = generateArticleAnswer(pool.slice(0, 10), query);
+  if (!articleAnswer || articleAnswer.trim().length < 80 || isNavigationJunkText(articleAnswer)) return null;
+
+  return articleAnswer;
+}
+
+function pickTipsAdviceSources(query, articles) {
+  const qlc = String(query || '').toLowerCase();
+  const pool = Array.isArray(articles) ? articles : [];
+  const guide = 'https://www.alanranger.com/blog-on-photography/bird-photography-guide';
+  if (/\b(bird|birds|wildlife|ornith)\b/.test(qlc)) {
+    const hit = pool.find(a => `${a.page_url || a.url || ''}`.toLowerCase().includes('bird-photography'));
+    return [(hit?.page_url || hit?.url || guide)].filter(Boolean);
+  }
+
+  return pool.map(a => a.page_url || a.url).filter(Boolean).slice(0, 6);
+}
+
 // Helper function to handle chunk processing
 function handleChunkProcessing(query, entities, chunks) {
   console.log(`[DEBUG] Using generateDirectAnswer for ${chunks.length} chunks`);
   
   const debugLogs = [];
   debugLogs.push(`Processing ${chunks.length} chunks for query: "${query}"`);
+
+  if (isBirdWildlifeTipsQuery(query)) {
+    const birdTips = composeTipsAdviceFromArticles(query, entities);
+    if (birdTips) {
+      return {
+        answer: formatResponse(birdTips, 720),
+        type: 'advice',
+        sources: pickTipsAdviceSources(query, entities),
+        debugLogs: [...debugLogs, 'Bird/wildlife tips: routed to bird guide/article short-circuit (avoid UI chunk concatenate).']
+      };
+    }
+  }
   
   // Try technical direct answer FIRST (priority for technical questions)
   const technicalAnswer = generateTechnicalDirectAnswer(query, chunks);
@@ -8872,8 +8956,23 @@ function handleChunkProcessing(query, entities, chunks) {
     return { answer: formattedAnswer, type: "advice", sources: chunks.map(c => c.url), debugLogs };
   }
   
-  // Fallback to chunk processing
+  // Fallback to chunk processing (drop navigation junk from Squarespace/chrome)
   const fallbackResult = processChunkFallback(chunks, query);
+
+  let answerBody = fallbackResult.answer;
+  if (!String(answerBody || '').trim() || isNavigationJunkText(answerBody)) {
+    const tipsRecovery = composeTipsAdviceFromArticles(query, entities);
+    if (tipsRecovery) {
+      answerBody = formatResponse(tipsRecovery, 720);
+      return {
+        answer: answerBody,
+        type: 'advice',
+        sources: pickTipsAdviceSources(query, entities),
+        debugLogs: [...debugLogs, 'Recovered from junk chunk concatenate via tips/article path']
+      };
+    }
+  }
+
   return { ...fallbackResult, debugLogs };
 }
 
@@ -8887,10 +8986,15 @@ function processChunkFallback(chunks, query = '') {
  return cleanedText;
  })
  .filter(Boolean)
- .filter(content => true); // Temporarily disable relevance filtering to debug
+ .filter(content => content && !isNavigationJunkText(content));
 
  console.log(`[SUCCESS] ${cleaned.length} chunks passed cleaning and relevance filter`);
  let answer = cleaned.join("\n\n");
+
+ if (isNavigationJunkText(answer)) {
+   console.warn('[SKIP] Concatenated chunk answer still resembles navigation/UI chrome');
+   answer = '';
+ }
  
  // Format response with length limits and concise formatting
  const formattedAnswer = formatResponse(answer, 500);
