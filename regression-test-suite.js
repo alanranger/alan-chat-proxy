@@ -16,8 +16,9 @@ import dotenv from 'dotenv';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-dotenv.config({ path: path.join(__dirname, '.env.local') });
-dotenv.config({ path: path.join(__dirname, '.env') });
+// .env.local must win over a stale machine-level SUPABASE_SERVICE_ROLE_KEY (e.g. Academy ref).
+dotenv.config({ path: path.join(__dirname, '.env.local'), override: true });
+dotenv.config({ path: path.join(__dirname, '.env'), override: false });
 
 const API_URL =
   process.env.CHAT_REGRESSION_API_URL || 'https://alan-chat-proxy.vercel.app/api/chat';
