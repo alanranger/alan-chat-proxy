@@ -1,0 +1,40 @@
+---
+description: Use GitKraken MCP for git commit/push (no Shell git for writes)
+alwaysApply: true
+---
+
+# Git operations — GitKraken MCP only
+
+Alan has GitKraken MCP enabled. **Do not use Shell for git writes** (add, commit, push, branch, checkout).
+
+## Use GitKraken MCP (`user-GitKraken`)
+
+| Task | Tool | Example |
+|------|------|---------|
+| Stage | `git_add_or_commit` action `add` | `directory`: repo root, `files`: `["lib/foo.js"]` |
+| Commit | `git_add_or_commit` action `commit` | `message` required; optional `files` for partial commit |
+| Push | `git_push` | `directory`: repo root |
+| Status / log / diff | `git_status`, `git_log_or_diff` | Read-only; prefer MCP over Shell |
+
+**Repo paths (common):**
+
+- Academy: `G:\Dropbox\alan ranger photography\Website Code\Academy\alanranger-academy-assesment`
+- Chat AI Bot: `G:\Dropbox\alan ranger photography\Website Code\Chat AI Bot`
+- AI GEO Audit: `G:\Dropbox\alan ranger photography\Website Code\AI GEO Audit`
+
+## Shell git — read-only only
+
+Shell is OK for **inspection** when MCP is awkward: `git status`, `git log`, `git diff`. Never `git commit`, `git push`, `git add` via Shell.
+
+## check claude BUILD questions
+
+When a handoff question requests commit + push:
+
+1. Make code changes
+2. `git_add_or_commit` → add + commit via MCP
+3. `git_push` via MCP
+4. Record commit hash in `RESPONSE-*-LATEST.md`
+
+## Approval
+
+`~/.cursor/permissions.json` allowlists GitKraken MCP so commit/push should not prompt Run approval.

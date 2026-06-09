@@ -94,6 +94,31 @@ export default [
     }
   },
 
+  // --- ESM scripts (.mjs) and scripts/ tree ---
+  {
+    files: ["**/*.mjs", "scripts/**/*.{js,mjs,cjs}"],
+    languageOptions: {
+      ecmaVersion: "latest",
+      sourceType: "module",
+      globals: {
+        process: "readonly",
+        __dirname: "readonly",
+        console: "readonly",
+        Buffer: "readonly",
+        setTimeout: "readonly",
+        clearTimeout: "readonly",
+      },
+    },
+    rules: {
+      complexity: ["warn", 15],
+      "max-statements": ["warn", 40],
+      "max-lines-per-function": [
+        "warn",
+        { max: 200, skipBlankLines: true, skipComments: true },
+      ],
+    },
+  },
+
   // --- Optional: tools/ scripts (slightly relaxed). Remove if you want strict.
   {
     files: ["tools/**/*.{js,cjs}"],

@@ -1,0 +1,43 @@
+---
+description: Default Google Drive folder for exports and handoffs to Claude
+alwaysApply: true
+---
+
+# Claude / Google Drive handoff (Alan)
+
+## Outbox (Cursor → Claude)
+
+When Alan says **export for Claude**, **export to google**, **share with Claude**, **put on Google Drive**, or similar — save deliverables here by default:
+
+`C:\Users\alan\Google Drive\Claude shared resources\Cursor Outputs for Claude\`
+
+- Read and write freely (Google Drive Desktop sync).
+- Use clear filenames; add `*-LATEST` for recurring artifacts when useful.
+- Answers to Claude questions: `RESPONSE-<id>-LATEST.md` in the outbox.
+
+## Inbox (Claude → Cursor)
+
+`C:\Users\alan\Google Drive\Claude shared resources\Claude Questions for Cursor\`
+
+When Alan says **check claude**, **process Claude inbox**, **check Claude questions**, **answer Claude handoff**, or similar:
+
+1. Read `HANDOFF-RESPONSE-INDEX-LATEST.md` (canonical) or `CURSOR-HANDOFF-STATUS-LATEST.md`
+2. Process each `QUESTION-*.md` with YAML `status: pending` (see inbox `README.md`)
+3. Write `RESPONSE-<id>-LATEST.md` to outbox; move question to `processed\`
+4. **Always** run `node scripts/claude-cursor-handoff/update-handoff-manifest.mjs` after processing (refreshes status + index for Claude)
+5. **BUILD** questions: commit + push via **GitKraken MCP** (`git_add_or_commit`, `git_push`) — not Shell git (see `gitkraken-git-ops.mdc`)
+
+Full agent prompt: `Chat AI Bot/scripts/claude-cursor-handoff/CURSOR-PROCESS-INBOX-PROMPT.md`
+
+Hands-off cycle (every 15 min): Task `ClaudeCursorHandoff15Min` → `Run-HandoffCycle.ps1`
+
+Claude instructions: `Claude shared resources/CLAUDE-HANDOFF-INSTRUCTIONS-LATEST.md`
+
+## Rules
+
+- Do not put secrets (.env, API keys, credentials) in Drive handoff folders.
+- Repo source of truth stays in git/Dropbox; Drive is **handoff copies** only.
+
+## Exception
+
+AI GEO Audit `npm run export:claude` dashboard HTML may still target the parent folder (`Claude shared resources\LIVE-DASHBOARD-SNAPSHOT-revenue-truth-LATEST.html`) unless the user asks to change that script.
