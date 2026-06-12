@@ -31,3 +31,19 @@ export function chunkLooksLikeCollapsedSiteNav(text) {
   const lotsOfSlashes = (raw.match(/\//g) || []).length > 20;
   return hits >= 2 || lotsOfSlashes;
 }
+
+/** html-to-text selectors — skip SS mobile drawer + share blocks (2026-06-12). */
+export const HTML_TO_TEXT_SKIP_SELECTORS = [
+  { selector: "script", format: "skip" },
+  { selector: "style", format: "skip" },
+  { selector: "nav", format: "skip" },
+  { selector: "footer", format: "skip" },
+  { selector: "header", format: "skip" },
+  { selector: "img", format: "skip" },
+  { selector: ".navigation", format: "skip" },
+  { selector: ".menu", format: "skip" },
+  { selector: ".social", format: "skip" },
+  { selector: ".Mobile", format: "skip" },
+  { selector: ".ProductItem-details-share", format: "skip" },
+  { selector: ".Share-buttons", format: "skip" },
+];

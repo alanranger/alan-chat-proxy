@@ -19,7 +19,10 @@ import { htmlToText } from 'html-to-text';
 import { createClient } from '@supabase/supabase-js';
 import { JSDOM } from 'jsdom';
 import { extractStructuredDataFromHTML, enhanceDescriptionWithStructuredData, generateContentHash, cleanHTMLText } from '../lib/htmlExtractor.js';
-import { stripKnownSquarespaceNavNoise } from '../helpers/squarespace-nav.js';
+import {
+  HTML_TO_TEXT_SKIP_SELECTORS,
+  stripKnownSquarespaceNavNoise,
+} from '../helpers/squarespace-nav.js';
 
 // Extract meta description from HTML - updated for deployment
 function extractMetaDescription(html) {
@@ -159,7 +162,7 @@ function extractMetaImage(html, pageUrl) {
   }
 }
 
-const INGEST_VERSION = "2025-12-05-guard-v4";
+const INGEST_VERSION = "2026-06-12-mobile-menu-strip-v1";
 const SELF_BASE = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : `http://localhost:3000`;
 const EXPECTED_TOKEN = process.env.INGEST_TOKEN || "";
 
@@ -537,17 +540,7 @@ export async function ingestSingleUrl(url, supa, options = {}) {
     const extractStart = Date.now();
     const text = htmlToText(html, {
       wordwrap: false,
-      selectors: [
-        { selector: 'script', format: 'skip' },
-        { selector: 'style', format: 'skip' },
-        { selector: 'nav', format: 'skip' },
-        { selector: 'footer', format: 'skip' },
-        { selector: 'header', format: 'skip' },
-        { selector: 'img', format: 'skip' },
-        { selector: '.navigation', format: 'skip' },
-        { selector: '.menu', format: 'skip' },
-        { selector: '.social', format: 'skip' }
-      ]
+      selectors: HTML_TO_TEXT_SKIP_SELECTORS
     });
     console.log(`[TIMING] ${url}: extract_text took ${Date.now() - extractStart}ms (html: ${html.length} chars, text: ${text.length} chars)`);
     
@@ -868,17 +861,7 @@ export async function ingestSingleUrl(url, supa, options = {}) {
         try {
           const htmlText = htmlToText(html, {
             wordwrap: false,
-            selectors: [
-              { selector: 'script', format: 'skip' },
-              { selector: 'style', format: 'skip' },
-              { selector: 'nav', format: 'skip' },
-              { selector: 'header', format: 'skip' },
-              { selector: 'footer', format: 'skip' },
-              { selector: '.navigation', format: 'skip' },
-              { selector: '.menu', format: 'skip' },
-              { selector: 'img', format: 'skip' },
-              { selector: '.social', format: 'skip' }
-            ]
+            selectors: HTML_TO_TEXT_SKIP_SELECTORS
           });
           
           // Clean and extract first meaningful paragraph
