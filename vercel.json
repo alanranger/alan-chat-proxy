@@ -7,6 +7,9 @@
   ],
   "version": 2,
   "functions": {
+    "api/csv-import.js": {
+      "maxDuration": 120
+    },
     "api/ingest.js": {
       "maxDuration": 60
     },

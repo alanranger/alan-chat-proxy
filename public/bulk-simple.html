@@ -1342,7 +1342,7 @@
           
           return { success: true, csvRows: actualRowCount, imported: result.metadata_imported };
         } else {
-          addResult(`❌ ${csvType} metadata import failed: ${result.error || result.detail || 'Unknown error'}`, 'error');
+          addResult(`❌ ${csvType} metadata import failed: ${result.error || 'Unknown error'}${result.detail ? ` — ${result.detail}` : ''}${result.stage ? ` (stage: ${result.stage})` : ''}`, 'error');
           return { success: false, csvRows: actualRowCount, imported: 0 };
         }
       } catch (error) {
