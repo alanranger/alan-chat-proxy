@@ -259,26 +259,36 @@ async function importBlogMetadata(rows, supa) {
   }).filter(item => item.url);
 
   if (metadata.length > 0) {
-    // Complete refresh: Delete ALL existing blog entries first (not just matching URLs)
-    // This ensures a clean refresh with no duplicates or stale data
+    // Complete refresh that is crash-safe: we still purge blog posts removed from the
+    // CSV (the original reason for delete-all-first), but we only delete the stale rows
+    // AFTER a successful insert so a transient failure can never wipe the whole table.
+    const newUrls = [...new Set(metadata.map(m => m.url).filter(Boolean))];
+    const newUrlSet = new Set(newUrls);
+
+    // Snapshot existing blog URLs so we know which posts were removed from the CSV
     const { data: existingBlogs, error: selectError } = await supa
       .from('csv_metadata')
       .select('url')
       .eq('csv_type', 'blog')
       .is('start_date', null);
-    
     if (selectError) throw selectError;
-    
-    // Use batchDeleteMetadata to properly handle foreign key references
-    if (existingBlogs && existingBlogs.length > 0) {
-      const existingUrls = existingBlogs.map(b => b.url).filter(Boolean);
-      await batchDeleteMetadata(supa, 'blog', existingUrls);
+    const existingUrls = (existingBlogs || []).map(b => b.url).filter(Boolean);
+
+    // 1) Clear only the URLs we are about to insert (prevents unique-index conflicts)
+    await batchDeleteMetadata(supa, 'blog', newUrls);
+
+    // 2) Insert fresh rows in batches so a transient error has a small blast radius
+    for (let i = 0; i < metadata.length; i += 100) {
+      const { error } = await supa.from('csv_metadata').insert(metadata.slice(i, i + 100));
+      if (error) throw error;
     }
-    
-    // Insert all new entries
-    const { error } = await supa.from('csv_metadata').insert(metadata);
-    if (error) throw error;
-    
+
+    // 3) Only now (insert succeeded) purge posts that no longer exist in the CSV
+    const staleUrls = existingUrls.filter(u => !newUrlSet.has(u));
+    if (staleUrls.length > 0) {
+      await batchDeleteMetadata(supa, 'blog', staleUrls);
+    }
+
     // Track successful imports
     fieldStats.fields_success = { ...fieldStats.fields_found };
   }
