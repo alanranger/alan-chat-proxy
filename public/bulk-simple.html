@@ -132,7 +132,48 @@
       <h1>🎯 Alan Ranger Photography - Data Pipeline</h1>
       <p>Metadata-Driven Content Pipeline</p>
       <small>v1.0.9 - Metadata-Driven System</small>
+      <p style="font-size: 12px; margin-top: 8px; background: rgba(0,0,0,0.3); padding: 4px 8px; border-radius: 4px; display: inline-block;">
+        <strong>Version: <span id="gitVersion">Loading...</span></strong> | Built: <span id="buildDate">Loading...</span> |
+        <span style="color: #4f4;">Loaded: <span id="loadTimeValue"></span></span>
+      </p>
     </div>
+    <script>
+      // Version/build banner — shows the deployed git commit + build time (mirrors GAIO dashboard)
+      (function () {
+        var loadedEl = document.getElementById('loadTimeValue');
+        if (loadedEl) loadedEl.textContent = new Date().toLocaleTimeString();
+
+        function toGmt(ts) {
+          var d = new Date(ts);
+          if (isNaN(d.getTime())) return null;
+          var iso = d.toISOString();
+          return iso.split('T')[0] + ' ' + iso.split('T')[1].split('.')[0] + ' GMT';
+        }
+
+        async function updateVersionBanner(attempt) {
+          attempt = attempt || 0;
+          var verEl = document.getElementById('gitVersion');
+          var buildEl = document.getElementById('buildDate');
+          try {
+            var resp = await fetch('/api/git/previous-commit', { headers: { 'Content-Type': 'application/json' } });
+            if (!resp.ok) throw new Error('status ' + resp.status);
+            var data = await resp.json();
+            if (verEl) verEl.textContent = data.commitHash || 'unknown';
+            if (buildEl) buildEl.textContent = (data.deploymentTimestamp && toGmt(data.deploymentTimestamp)) || (toGmt(Date.now()) + ' (approx)');
+          } catch (e) {
+            if (attempt < 3) { setTimeout(function () { updateVersionBanner(attempt + 1); }, 1000); return; }
+            if (verEl) verEl.textContent = 'unknown';
+            if (buildEl) buildEl.textContent = toGmt(Date.now()) + ' (approx)';
+          }
+        }
+
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', function () { updateVersionBanner(0); });
+        } else {
+          updateVersionBanner(0);
+        }
+      })();
+    </script>
 
     <!-- Quick Path Reference -->
     <div class="path-reference">
