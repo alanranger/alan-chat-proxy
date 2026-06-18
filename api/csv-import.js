@@ -1,52 +1,21 @@
 // /api/csv-import.js
 
-// Helper function to batch delete operations (PostgREST has limits on .in() clause size)
-// Also handles foreign key references by nullifying them before deletion
+// Helper function to batch delete operations (PostgREST has limits on .in() clause size).
+// The page_chunks / page_entities foreign keys are ON DELETE SET NULL, so deleting a
+// csv_metadata row automatically nulls any references in a single statement. This avoids
+// the old per-batch UPDATE loops that flooded the connection and tripped the 8s
+// statement_timeout (and the FK-violation errors when a nullify pass was incomplete).
 async function batchDeleteMetadata(supa, csvType, urls, batchSize = 100) {
   if (!urls || urls.length === 0) return;
-  
-  // Process in batches
+
   for (let i = 0; i < urls.length; i += batchSize) {
     const batch = urls.slice(i, i + batchSize);
-    
-    // First, get the IDs of rows we want to delete
-    const { data: rowsToDelete, error: selectError } = await supa
-      .from('csv_metadata')
-      .select('id')
-      .eq('csv_type', csvType)
-      .in('url', batch)
-      .is('start_date', null);
-    
-    if (selectError) throw selectError;
-    if (!rowsToDelete || rowsToDelete.length === 0) continue;
-    
-    const idsToDelete = rowsToDelete.map(r => r.id);
-    
-    // Nullify foreign key references in page_entities (batched)
-    for (let j = 0; j < idsToDelete.length; j += batchSize) {
-      const idBatch = idsToDelete.slice(j, j + batchSize);
-      const { error: pageEntitiesError } = await supa
-        .from('page_entities')
-        .update({ csv_metadata_id: null })
-        .in('csv_metadata_id', idBatch);
-      if (pageEntitiesError) throw pageEntitiesError;
-    }
-    
-    // Nullify foreign key references in page_chunks (batched)
-    for (let j = 0; j < idsToDelete.length; j += batchSize) {
-      const idBatch = idsToDelete.slice(j, j + batchSize);
-      const { error: pageChunksError } = await supa
-        .from('page_chunks')
-        .update({ csv_metadata_id: null })
-        .in('csv_metadata_id', idBatch);
-      if (pageChunksError) throw pageChunksError;
-    }
-    
-    // Now delete the rows
     const { error } = await supa
       .from('csv_metadata')
       .delete()
-      .in('id', idsToDelete);
+      .eq('csv_type', csvType)
+      .in('url', batch)
+      .is('start_date', null);
     if (error) throw error;
   }
 }
