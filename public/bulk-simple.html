@@ -664,6 +664,20 @@
             </div>
           </div>
 
+          <!-- Re-ingest specific URLs (recover timeouts without a full re-run) -->
+          <div style="grid-column:1 / -1;border:1px solid #444;border-radius:6px;padding:10px;margin-top:4px;">
+            <h4 style="margin:0 0 6px 0;color:#4CAF50;">♻️ Re‑ingest specific URLs</h4>
+            <div style="font-size:12px;color:#aaa;margin-bottom:6px;">
+              Paste failed / timed‑out URLs (one per line) and re‑run just those — no need to repeat the whole ingest. Runs one at a time with an automatic second attempt per URL, so throttled stragglers recover.
+            </div>
+            <textarea id="reingestUrls" placeholder="https://www.alanranger.com/..." style="width:100%;min-height:90px;background:#111;color:#ddd;border:1px solid #555;border-radius:4px;padding:6px;font-size:12px;font-family:monospace;box-sizing:border-box;"></textarea>
+            <div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap;">
+              <button class="btn" onclick="reingestPastedUrls()" id="reingestBtn" style="font-size:12px;padding:6px 10px;">▶️ Re‑ingest these URLs</button>
+              <button class="btn" onclick="loadLastFailedUrls()" style="font-size:12px;padding:6px 10px;">📋 Load last failed</button>
+              <span id="reingestStatus" style="font-size:12px;color:#888;align-self:center;"></span>
+            </div>
+          </div>
+
           <!-- Step 2.5: Service Reconciliation (Optional) -->
           <div style="display: flex; flex-direction: column; gap: 8px;">
             <button class="btn" onclick="reconcileServices()" id="reconcileBtn" style="background:#FF9800;">
@@ -2162,6 +2176,7 @@
       const TIMEOUT_MS = 65000; // allow longer than backend function timeout (60s + buffer)
       let completed = 0;
       const timedOutEntries = []; // URLs that timed out — re-fetched once in a retry pass at the end
+      const failedUrlSet = new Set(); // every URL still failing — persisted so "Load last failed" can recover them
 
       async function processBatch(batchEntries, batchIndex) {
         addResult(`📦 Processing batch ${batchIndex + 1}: ${batchEntries.length} URLs`, 'info');
@@ -2213,6 +2228,7 @@
               stats.failedCount++;
               window.urlScrapingStats[category].failed++;
               timedOutEntries.push({ url, source }); // queue for the end-of-run retry pass
+              failedUrlSet.add(url);
             } else {
               // Improve diagnostics formatting when backend attaches attempt details
               let extra = '';
@@ -2243,6 +2259,7 @@
                 addResult(`❌ Failed to ingest: ${url}  (source: batch ${batchIndex + 1}) — ${reason}${extra}`, 'error');
               stats.failedCount++;
                 window.urlScrapingStats[category].failed++;
+                failedUrlSet.add(url);
               }
             }
           }
@@ -2298,6 +2315,7 @@
           const okNow = result && (result.ok === true || (result.ok === undefined && result.status >= 200 && result.status < 300));
           if (okNow) {
             // Recovered — move it out of the failed bucket
+            failedUrlSet.delete(url);
             stats.failedCount = Math.max(0, stats.failedCount - 1);
             window.urlScrapingStats[category].failed = Math.max(0, window.urlScrapingStats[category].failed - 1);
             if (result.skipped === true) {
@@ -2318,6 +2336,9 @@
         }
         await updateDebugControlDashboard();
       }
+
+      // Persist whatever is still failing so the "Load last failed" button can recover them later
+      try { localStorage.setItem('lastFailedUrls', JSON.stringify([...failedUrlSet])); } catch {}
 
       if (stopRequested) {
         stats.stoppedCount = entries.length - completed;
@@ -2342,6 +2363,74 @@
 
     function stopScrape() {
       if (typeof window.__stopScrape === 'function') window.__stopScrape();
+    }
+
+    // ---- Re-ingest specific URLs (recover timeouts without repeating the whole run) ----
+    function loadLastFailedUrls() {
+      let list = [];
+      try { list = JSON.parse(localStorage.getItem('lastFailedUrls') || '[]'); } catch {}
+      const ta = document.getElementById('reingestUrls');
+      if (!Array.isArray(list) || !list.length) {
+        addResult('ℹ️ No saved failed URLs from the last run yet.', 'info');
+        return;
+      }
+      if (ta) ta.value = list.join('\n');
+      addResult(`📋 Loaded ${list.length} failed URL(s) from the last run.`, 'info');
+    }
+
+    async function reingestPastedUrls() {
+      const ta = document.getElementById('reingestUrls');
+      const statusEl = document.getElementById('reingestStatus');
+      const btn = document.getElementById('reingestBtn');
+      const urls = (ta ? ta.value : '')
+        .split(/\r?\n/)
+        .map(s => s.trim())
+        .filter(s => /^https?:\/\//i.test(s));
+      if (!urls.length) {
+        addResult('⚠️ Paste at least one full URL (one per line) to re‑ingest.', 'warning');
+        return;
+      }
+      if (!getToken()) { addResult('❌ No token found. Save your token first.', 'error'); return; }
+
+      const TIMEOUT_MS = 65000;
+      const MAX_ATTEMPTS = 2; // these already failed once — give each two tries
+      let ok = 0, failed = 0;
+      const stillFailing = [];
+      if (btn) btn.disabled = true;
+      addResult(`♻️ Re‑ingesting ${urls.length} URL(s), one at a time...`, 'info');
+
+      for (let i = 0; i < urls.length; i++) {
+        const url = urls[i];
+        if (statusEl) statusEl.textContent = `Re‑ingesting ${i + 1}/${urls.length}...`;
+        updateProgress((i / urls.length) * 100, `Re‑ingesting ${url}...`);
+        let result = null, success = false;
+        for (let attempt = 1; attempt <= MAX_ATTEMPTS && !success; attempt++) {
+          result = await apiCall('/api/ingest', { url }, { timeoutMs: TIMEOUT_MS });
+          success = !!(result && (result.ok === true || (result.ok === undefined && result.status >= 200 && result.status < 300)));
+          if (!success && attempt < MAX_ATTEMPTS) {
+            addResult(`… attempt ${attempt} failed for ${url}, retrying once more`, 'warning');
+            await new Promise(r => setTimeout(r, 1500));
+          }
+        }
+        if (success) {
+          ok++;
+          const skipped = result && result.skipped === true;
+          addResult(skipped ? `⏭️ Skipped (hidden): ${url}` : `✅ Re‑ingested: ${url}`, skipped ? 'skipped' : 'success');
+        } else {
+          failed++;
+          stillFailing.push(url);
+          const reason = result && (result.error || result.detail) ? `${result.error || ''} ${result.detail || ''}`.trim() : 'unknown';
+          addResult(`❌ Still failing: ${url} — ${reason}`, 'error');
+        }
+        await new Promise(r => setTimeout(r, 750)); // gentle spacing between requests
+      }
+
+      try { localStorage.setItem('lastFailedUrls', JSON.stringify(stillFailing)); } catch {}
+      updateProgress(100, 'Re‑ingest complete');
+      if (statusEl) statusEl.textContent = `Done: ${ok} recovered, ${failed} still failing`;
+      if (btn) btn.disabled = false;
+      addResult(`🏁 Re‑ingest complete — ${ok} recovered, ${failed} still failing.`, failed === 0 ? 'success' : 'warning');
+      try { await updateDebugControlDashboard(); } catch {}
     }
 
     // Event-Product mapping
