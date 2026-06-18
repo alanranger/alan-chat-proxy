@@ -1338,20 +1338,43 @@
         const token = getToken();
         const baseUrl = 'https://alan-chat-proxy.vercel.app';
         
-        const response = await fetch(`${baseUrl}/api/csv-import`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            csvData: csvText,
-            contentType: 'metadata',
-            csvType: csvType
-          })
-        });
+        // Guard the request with a timeout so a slow/cold backend can't freeze the whole
+        // import at 0/N. On timeout we throw; the caller logs it and moves to the next file.
+        const controller = new AbortController();
+        const IMPORT_TIMEOUT_MS = 115000; // just under the 120s server maxDuration
+        const importTimeoutId = setTimeout(() => controller.abort(), IMPORT_TIMEOUT_MS);
+        let response;
+        try {
+          response = await fetch(`${baseUrl}/api/csv-import`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              csvData: csvText,
+              contentType: 'metadata',
+              csvType: csvType
+            }),
+            signal: controller.signal
+          });
+        } catch (fetchErr) {
+          if (fetchErr.name === 'AbortError') {
+            throw new Error(`Timed out after ${IMPORT_TIMEOUT_MS / 1000}s waiting for the server — skipping so the rest can continue`);
+          }
+          throw fetchErr;
+        } finally {
+          clearTimeout(importTimeoutId);
+        }
 
-        const result = await response.json();
+        // Read as text first so an HTML/error page doesn't throw an opaque JSON parse error
+        const rawBody = await response.text();
+        let result;
+        try {
+          result = JSON.parse(rawBody);
+        } catch {
+          throw new Error(`Server returned a non-JSON response (HTTP ${response.status}): ${rawBody.slice(0, 200)}`);
+        }
         
         if (result.success) {
           // Use the actual csv_type returned from API (may differ from initial detection due to reclassification)
