@@ -765,6 +765,7 @@
           <li><strong>Content Ingestion</strong>: URLs processed in Step 2 with CSV metadata context. Each URL gets enriched with its CSV metadata (categories, tags, dates, locations, excerpts).</li>
           <li><strong>Success / Failed / Stopped / Skipped</strong>: Outcome of Step 2 for this run (Success means HTML stored in <code>page_html</code>, text saved to <code>page_chunks</code> with CSV context, and entities enhanced with CSV metadata).</li>
           <li><strong>CSV Count</strong> (per category): Rows imported from CSVs in Step 1 for that category label.</li>
+          <li><strong>Covered by other type</strong> (per category): The same URL exists under more than one CSV type (e.g. a page that is both <code>product_schema</code> and <code>workshop_products</code>). Each URL is scraped <em>once</em> and credited to a single category, so the others show this count instead of a "Success". These pages are <strong>NOT missing</strong> — the ingest looks up <em>every</em> <code>csv_metadata</code> row for the URL and merges all fields (JSON‑LD/price from <code>product_schema</code>, categories/tags from the product CSV, dates/locations from events, etc.) into <code>page_entities</code>. So <code>Current Session = Success + Failed + Skipped + Covered by other type</code>.</li>
           <li><strong>Duplicates Removed</strong> (per category): <em>Within-source</em> duplicates removed during Step 2 (e.g., the same blog URL listed twice in the blog CSV). Cross‑CSV duplicates are kept to allow metadata enhancement.</li>
         </ul>
         <div style="margin-top:8px;">
@@ -3268,7 +3269,7 @@
         // Clear existing content and rebuild table
         el.innerHTML = '';
         
-        let totalCsvCount = 0, totalSuccess = 0, totalFailed = 0, totalSkipped = 0, totalDuplicatesRemoved = 0;
+        let totalCsvCount = 0, totalSuccess = 0, totalFailed = 0, totalSkipped = 0, totalDuplicatesRemoved = 0, totalCovered = 0;
         
         // Create table rows showing ORIGINAL CSV IMPORT COUNTS
         const rows = categories.map(cat => {
@@ -3283,10 +3284,18 @@
           const skippedCount = liveStats.skipped || 0;
           
           const duplicatesRemoved = 0; // This should always be 0 in the detailed table
+
+          // "Covered by other type": rows of this csv_type whose URL was ingested once and
+          // credited to another csv_type (the same URL exists under multiple CSVs). These are
+          // NOT missing — the ingest merges every CSV's fields per URL. Only show after a run
+          // (success/failed/skipped > 0), otherwise the gap is just "not ingested yet".
+          const accountedFor = successCount + failedCount + skippedCount;
+          const coveredElsewhere = accountedFor > 0 ? Math.max(0, currentSessionCount - accountedFor) : 0;
           
           totalSuccess += successCount;
           totalFailed += failedCount;
           totalSkipped += skippedCount;
+          totalCovered += coveredElsewhere;
         totalDuplicatesRemoved += duplicatesRemoved;
           
           return `
@@ -3296,6 +3305,7 @@
               <td style="padding: 4px 8px; text-align: left; color: #4CAF50;">${successCount}</td>
               <td style="padding: 4px 8px; text-align: left; color: #f44336;">${failedCount}</td>
               <td style="padding: 4px 8px; text-align: left; color: #2196F3;">${skippedCount}</td>
+              <td style="padding: 4px 8px; text-align: left; color: #9C27B0;" title="Same URL ingested under another CSV type — its fields are still merged in. Not missing.">${coveredElsewhere}</td>
               <td style="padding: 4px 8px; text-align: left; color: #FF9800;">${duplicatesRemoved}</td>
             </tr>
           `;
@@ -3309,6 +3319,7 @@
             <td style="padding: 4px 8px; text-align: left; color: #4CAF50;">${totalSuccess}</td>
             <td style="padding: 4px 8px; text-align: left; color: #f44336;">${totalFailed}</td>
             <td style="padding: 4px 8px; text-align: left; color: #2196F3;">${totalSkipped}</td>
+            <td style="padding: 4px 8px; text-align: left; color: #9C27B0;">${totalCovered}</td>
             <td style="padding: 4px 8px; text-align: left; color: #FF9800;">${totalDuplicatesRemoved}</td>
           </tr>
         `;
@@ -3322,6 +3333,7 @@
               <th style="text-align: left; padding: 4px 8px;">Success</th>
               <th style="text-align: left; padding: 4px 8px;">Failed</th>
               <th style="text-align: left; padding: 4px 8px;">Skipped</th>
+              <th style="text-align: left; padding: 4px 8px;" title="Same URL ingested under another CSV type — fields still merged in. Not missing.">Covered by other type</th>
               <th style="text-align: left; padding: 4px 8px;">Duplicates Removed</th>
             </tr>
           </thead>
