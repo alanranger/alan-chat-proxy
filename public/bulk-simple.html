@@ -2161,6 +2161,7 @@
       const BATCH_DELAY = 2000; // keep conservative delay
       const TIMEOUT_MS = 65000; // allow longer than backend function timeout (60s + buffer)
       let completed = 0;
+      const timedOutEntries = []; // URLs that timed out — re-fetched once in a retry pass at the end
 
       async function processBatch(batchEntries, batchIndex) {
         addResult(`📦 Processing batch ${batchIndex + 1}: ${batchEntries.length} URLs`, 'info');
@@ -2211,6 +2212,7 @@
               addResult(`❌ Timeout: ${url}  (source: batch ${batchIndex + 1})`, 'error');
               stats.failedCount++;
               window.urlScrapingStats[category].failed++;
+              timedOutEntries.push({ url, source }); // queue for the end-of-run retry pass
             } else {
               // Improve diagnostics formatting when backend attaches attempt details
               let extra = '';
@@ -2276,6 +2278,45 @@
           addResult(`⏳ Waiting ${BATCH_DELAY/1000}s before next batch...`, 'info');
           await new Promise(resolve => setTimeout(resolve, BATCH_DELAY));
         }
+      }
+
+      // Retry pass: re-fetch URLs that timed out (usually Squarespace throttling under
+      // parallel load). Done once, sequentially and gently, to recover stragglers without
+      // forcing a full re-run.
+      if (!stopRequested && timedOutEntries.length > 0) {
+        const retryList = timedOutEntries.splice(0, timedOutEntries.length);
+        addResult(`🔁 Retry pass: re-fetching ${retryList.length} timed-out URL(s) one at a time...`, 'info');
+        for (const entry of retryList) {
+          if (stopRequested) break;
+          const { url, source } = entry;
+          updateProgress(100, `Retrying ${url}...`);
+          const result = await apiCall('/api/ingest', { url, dryRun }, { timeoutMs: TIMEOUT_MS });
+          const category = categorize(url, result, source);
+          if (!window.urlScrapingStats[category]) {
+            window.urlScrapingStats[category] = { success: 0, failed: 0, skipped: 0 };
+          }
+          const okNow = result && (result.ok === true || (result.ok === undefined && result.status >= 200 && result.status < 300));
+          if (okNow) {
+            // Recovered — move it out of the failed bucket
+            stats.failedCount = Math.max(0, stats.failedCount - 1);
+            window.urlScrapingStats[category].failed = Math.max(0, window.urlScrapingStats[category].failed - 1);
+            if (result.skipped === true) {
+              stats.skippedCount++;
+              window.urlScrapingStats[category].skipped++;
+              addResult(`⏭️ Recovered on retry (skipped): ${url}`, 'skipped');
+            } else {
+              stats.successCount++;
+              window.urlScrapingStats[category].success++;
+              addResult(`✅ Recovered on retry: ${url}`, 'success');
+            }
+          } else {
+            const reason = result && (result.error || result.detail) ? `${result.error || ''} ${result.detail || ''}`.trim() : 'still failing';
+            addResult(`❌ Retry failed (left as failed): ${url} — ${reason}`, 'error');
+          }
+          updateStats();
+          await new Promise(resolve => setTimeout(resolve, 750)); // gentle spacing
+        }
+        await updateDebugControlDashboard();
       }
 
       if (stopRequested) {
