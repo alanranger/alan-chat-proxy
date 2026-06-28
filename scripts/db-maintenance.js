@@ -2,7 +2,6 @@
 // Database maintenance script for purging old data and backup tables
 // Connects to Supabase via service role key and runs cleanup operations
 
-import { createClient } from '@supabase/supabase-js';
 import pg from 'pg';
 import { readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { dirname, join } from 'path';
@@ -46,10 +45,6 @@ if (!SUPABASE_DB_URL) {
   process.exit(1);
 }
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-  db: { schema: 'public' }
-});
-
 // Logging function
 function log(message, level = 'INFO') {
   const timestamp = new Date().toISOString();
@@ -66,6 +61,62 @@ function log(message, level = 'INFO') {
     writeFileSync(logFile, logMessage, { flag: 'a' });
   } catch (e) {
     console.warn('Could not write to log file:', e.message);
+  }
+}
+
+const PURGE_BATCH_SIZE = 5000;
+const PURGE_MAX_BATCHES = 500; // safety cap (5000 * 500 = 2.5M rows/run)
+
+// Delete in small batches so a large backlog cannot exceed any timeout
+// (the old single-shot DELETE silently timed out, letting rows pile up for months).
+async function purgeOldRows(pgClient, table, intervalText) {
+  let totalDeleted = 0;
+  for (let i = 0; i < PURGE_MAX_BATCHES; i++) {
+    const result = await pgClient.query(
+      `DELETE FROM ${table}
+       WHERE ctid IN (
+         SELECT ctid FROM ${table}
+         WHERE created_at < NOW() - INTERVAL '${intervalText}'
+         LIMIT ${PURGE_BATCH_SIZE}
+       )`
+    );
+    const deleted = result.rowCount || 0;
+    totalDeleted += deleted;
+    if (deleted < PURGE_BATCH_SIZE) break;
+  }
+  return totalDeleted;
+}
+
+async function purgeTimeBasedTables(pgClient, results) {
+  const targets = [
+    { table: 'chat_sessions', key: 'chat_sessions_deleted' },
+    { table: 'chat_interactions', key: 'chat_interactions_deleted' },
+    { table: 'page_html', key: 'page_html_deleted' },
+  ];
+  for (const target of targets) {
+    log(`Purging old ${target.table} (older than 30 days)...`);
+    try {
+      results[target.key] = await purgeOldRows(pgClient, target.table, '30 days');
+      log(`Deleted ${results[target.key]} ${target.table} rows`);
+    } catch (e) {
+      const errorMsg = `Error purging ${target.table}: ${e.message}`;
+      log(errorMsg, 'ERROR');
+      results.errors.push(errorMsg);
+    }
+  }
+}
+
+// Plain VACUUM (no FULL = no exclusive lock) reclaims dead-tuple space + refreshes stats.
+async function vacuumPurgedTables(pgClient, results) {
+  log('Vacuuming purged tables...');
+  for (const table of ['chat_sessions', 'chat_interactions', 'page_html']) {
+    try {
+      await pgClient.query(`VACUUM (ANALYZE) ${table}`);
+    } catch (e) {
+      const errorMsg = `Error vacuuming ${table}: ${e.message}`;
+      log(errorMsg, 'ERROR');
+      results.errors.push(errorMsg);
+    }
   }
 }
 
@@ -87,50 +138,8 @@ async function runMaintenance() {
     await pgClient.connect();
     log('Connected to database');
 
-    // 1. Purge old chat_sessions
-    log('Purging old chat_sessions (older than 30 days)...');
-    try {
-      const chatSessionsResult = await pgClient.query(`
-        DELETE FROM chat_sessions 
-        WHERE created_at < NOW() - INTERVAL '30 days'
-      `);
-      results.chat_sessions_deleted = chatSessionsResult.rowCount || 0;
-      log(`Deleted ${results.chat_sessions_deleted} chat_sessions rows`);
-    } catch (e) {
-      const errorMsg = `Error purging chat_sessions: ${e.message}`;
-      log(errorMsg, 'ERROR');
-      results.errors.push(errorMsg);
-    }
-
-    // 2. Purge old chat_interactions
-    log('Purging old chat_interactions (older than 30 days)...');
-    try {
-      const chatInteractionsResult = await pgClient.query(`
-        DELETE FROM chat_interactions 
-        WHERE created_at < NOW() - INTERVAL '30 days'
-      `);
-      results.chat_interactions_deleted = chatInteractionsResult.rowCount || 0;
-      log(`Deleted ${results.chat_interactions_deleted} chat_interactions rows`);
-    } catch (e) {
-      const errorMsg = `Error purging chat_interactions: ${e.message}`;
-      log(errorMsg, 'ERROR');
-      results.errors.push(errorMsg);
-    }
-
-    // 3. Purge old page_html
-    log('Purging old page_html (older than 30 days)...');
-    try {
-      const pageHtmlResult = await pgClient.query(`
-        DELETE FROM page_html 
-        WHERE created_at < NOW() - INTERVAL '30 days'
-      `);
-      results.page_html_deleted = pageHtmlResult.rowCount || 0;
-      log(`Deleted ${results.page_html_deleted} page_html rows`);
-    } catch (e) {
-      const errorMsg = `Error purging page_html: ${e.message}`;
-      log(errorMsg, 'ERROR');
-      results.errors.push(errorMsg);
-    }
+    // 1-3. Purge old chat_sessions / chat_interactions / page_html (batched)
+    await purgeTimeBasedTables(pgClient, results);
 
     // 4. Drop backup tables
     log('Dropping backup tables (page_entities_backup_*)...');
@@ -173,6 +182,9 @@ async function runMaintenance() {
       log(errorMsg, 'ERROR');
       results.errors.push(errorMsg);
     }
+
+    // 5. Reclaim space from the purged tables
+    await vacuumPurgedTables(pgClient, results);
 
     // Summary
     log('Database maintenance completed');
