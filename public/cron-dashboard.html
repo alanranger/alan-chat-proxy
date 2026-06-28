@@ -2721,6 +2721,16 @@
       const chunks = actualData.chunks || {};
       const pageHtml = actualData.page_html || {};
 
+      // Identify the table actually driving the bloat risk (>= 10MB with meaningful
+      // dead tuples), so the headline card and Top Issues report a real percentage
+      // rather than page_html's value (which can be 0.0% while risk is high elsewhere).
+      const worstBloatTable = (tableBloat || [])
+        .filter(t => (t.total_bytes || 0) >= 10485760 && (t.dead_rows || 0) >= 50)
+        .reduce((worst, t) => ((t.dead_row_pct || 0) > (worst?.dead_row_pct || 0) ? t : worst), null);
+      const bloatPctDisplay = worstBloatTable
+        ? (worstBloatTable.dead_row_pct || 0)
+        : (pageHtml.dead_row_pct || 0);
+
       let html = '';
       
       // Risk header (if extended data available) - render outside tile
@@ -2768,8 +2778,8 @@
           <div style="font-size: 12px; color: #666; margin-top: 4px;">Risk: ${debugRisk}</div>
         </div>`;
         html += `<div class="db-health-card ${getRiskColor(bloatRisk)}">
-          <div class="db-health-card-title" title="Bloat % on large tables. >2.5% requires VACUUM FULL.">Table Bloat Health ℹ️</div>
-          <div class="db-health-card-value">${pageHtml.dead_row_pct?.toFixed(1) || 0}%</div>
+          <div class="db-health-card-title" title="Worst dead-row % on large (>=10MB) tables with meaningful dead tuples. >2.5% requires VACUUM.">Table Bloat Health ℹ️</div>
+          <div class="db-health-card-value">${bloatPctDisplay.toFixed(1)}%</div>
           <div style="font-size: 12px; color: #666; margin-top: 4px;">Risk: ${bloatRisk}</div>
         </div>`;
         html += `<div class="db-health-card ${getRiskColor(chunkRisk)}">
@@ -2787,11 +2797,10 @@
           const logMessage = debugRisk > 60 ? 'Ingestion likely looping.' : 'Consider cleanup.';
           issues.push({ level, text: 'Debug logs at ' + logCount + '. ' + logMessage });
         }
-        if (bloatRisk > 30) {
+        if (bloatRisk > 30 && bloatPctDisplay > 2.5) {
           const level = bloatRisk > 60 ? 'critical' : 'warning';
-          const tableName = pageHtml.dead_row_pct ? 'page_html' : 'tables';
-          const bloatPct = (pageHtml.dead_row_pct || 0).toFixed(1);
-          issues.push({ level, text: tableName + ' bloat at ' + bloatPct + '%. Vacuum recommended.' });
+          const tableName = worstBloatTable ? worstBloatTable.table_name : 'tables';
+          issues.push({ level, text: tableName + ' bloat at ' + bloatPctDisplay.toFixed(1) + '%. Vacuum recommended.' });
         }
         if (chunkRisk > 30) {
           const level = chunkRisk > 60 ? 'critical' : 'warning';
@@ -2854,14 +2863,16 @@
         tablesToShow.forEach(table => {
           const deadRowPct = table.dead_row_pct || 0;
           const tableSizeBytes = table.total_bytes || 0;
+          const deadRows = table.dead_rows || 0;
           const scanCount = (table.idx_scan || 0) + (table.seq_scan || 0);
-          const isSignificantTable = tableSizeBytes >= 1048576; // >= 1 MB
-          // Only mark as Critical if table is >= 1 MB AND has high bloat
-          // Small tables with high bloat are not a real concern
-          const bloatClass = (deadRowPct > 20 && isSignificantTable) ? 'bloat-warning' : '';
-          const tableRisk = (deadRowPct > 20 && isSignificantTable) ? 90 : 
-                           (deadRowPct > 10 && isSignificantTable) ? 60 : 
-                           (deadRowPct > 3 && isSignificantTable) ? 30 : 10;
+          // A table is only a real bloat concern when it is physically large AND has a
+          // meaningful number of dead tuples. A handful of dead rows — or stale planner
+          // stats on a low-row-count table — can read as 100% dead but is harmless.
+          const isBloatConcern = tableSizeBytes >= 1048576 && deadRows >= 50;
+          const bloatClass = (deadRowPct > 20 && isBloatConcern) ? 'bloat-warning' : '';
+          const tableRisk = (deadRowPct > 20 && isBloatConcern) ? 90 : 
+                           (deadRowPct > 10 && isBloatConcern) ? 60 : 
+                           (deadRowPct > 3 && isBloatConcern) ? 30 : 10;
           const riskBadge = hasExtended ? `<td><span class="risk-badge ${getRiskColor(tableRisk)}">${getRiskLabel(tableRisk).replace(/[🟢🟠🔴]/g, '').trim()}</span></td>` : '';
           
           // Heatmap color based on bloat percentage
