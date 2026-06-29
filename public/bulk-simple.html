@@ -3289,8 +3289,17 @@
           // credited to another csv_type (the same URL exists under multiple CSVs). These are
           // NOT missing — the ingest merges every CSV's fields per URL. Only show after a run
           // (success/failed/skipped > 0), otherwise the gap is just "not ingested yet".
+          //
+          // product_schema (07) and landing_service_pages (08) are metadata-only enrichment
+          // CSVs: they never own a scraped URL (their pages are scraped under site_urls /
+          // workshop_products etc.), so urlScrapingStats stays 0 for them. Without this they
+          // showed all-zeros and looked like a total failure. Their imported rows are entirely
+          // "covered by other type" (fields merged in via the owning URL), so report them as such.
+          const METADATA_ONLY = new Set(['product_schema', 'landing_service_pages']);
           const accountedFor = successCount + failedCount + skippedCount;
-          const coveredElsewhere = accountedFor > 0 ? Math.max(0, currentSessionCount - accountedFor) : 0;
+          const coveredElsewhere = (METADATA_ONLY.has(cat.key) || accountedFor > 0)
+            ? Math.max(0, currentSessionCount - accountedFor)
+            : 0;
           
           totalSuccess += successCount;
           totalFailed += failedCount;
