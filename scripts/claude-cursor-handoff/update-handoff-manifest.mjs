@@ -28,11 +28,17 @@ function writeUtf8NoBom(filePath, content) {
   fs.writeFileSync(filePath, content, { encoding: "utf8" });
 }
 
+function isInboxWorkItem(f) {
+  if (!f.endsWith(".md") || f === "QUESTION-TEMPLATE.md" || f === "README.md") return false;
+  // Claude files both QUESTION-* and BUILD-BRIEF-* (master signed briefs)
+  return f.startsWith("QUESTION-") || f.startsWith("BUILD-BRIEF-");
+}
+
 function listQuestions(dir) {
   if (!fs.existsSync(dir)) return [];
   return fs
     .readdirSync(dir)
-    .filter((f) => f.startsWith("QUESTION-") && f.endsWith(".md") && f !== "QUESTION-TEMPLATE.md")
+    .filter((f) => isInboxWorkItem(f))
     .map((f) => {
       const full = path.join(dir, f);
       const raw = readUtf8(full);
@@ -40,7 +46,7 @@ function listQuestions(dir) {
       return {
         file: f,
         dir: path.basename(dir),
-        id: yamlField(raw, "id"),
+        id: yamlField(raw, "id") || f.replace(/\.(md)$/i, ""),
         status: yamlField(raw, "status"),
         priority: yamlField(raw, "priority"),
         modified: stat.mtime.toISOString(),
@@ -101,7 +107,7 @@ function listStatusUpdates() {
 const now = new Date().toISOString();
 const inbox = listQuestions(QUESTIONS_DIR);
 const processed = listQuestions(PROCESSED_DIR);
-const pending = inbox.filter((q) => q.status === "pending");
+const pending = inbox.filter((q) => q.status === "pending" || q.status === "open");
 const responses = listResponses();
 const statusUpdates = listStatusUpdates();
 const latestResponse = responses[0] || null;

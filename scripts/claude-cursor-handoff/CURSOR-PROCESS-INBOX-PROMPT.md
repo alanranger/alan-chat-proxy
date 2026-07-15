@@ -10,10 +10,10 @@ Process the Claude ↔ Cursor handoff inbox.
 
 ## Steps
 
-1. List all `QUESTION-*.md` in the inbox with YAML `status: pending`.
-2. For each pending question (highest `priority: high` first, then by file date):
-   - Set frontmatter `status: processing` (save file).
-   - Read the question body and any `repos:` hints.
+1. List all `QUESTION-*.md` **and** `BUILD-BRIEF-*.md` in the inbox with YAML `status: pending`, `status: open`, or `status: processing` (master multi-phase briefs may stay `processing` across phases — do not treat as empty inbox).
+2. For each pending/open item (highest `priority: high` first, then by file date); for `processing` master briefs, continue the next unfinished phase only:
+   - Set frontmatter `status: processing` (save file) if it was pending/open.
+   - Read the question/brief body and any `repos:` hints.
    - Investigate using codebase, Supabase MCP, and tools as needed.
    - Write answer to outbox: `RESPONSE-<id>-LATEST.md` with frontmatter:
      ```yaml
@@ -25,14 +25,14 @@ Process the Claude ↔ Cursor handoff inbox.
      status: complete
      ---
      ```
-   - Move question file to `processed\` and set `status: answered`.
+   - Move **completed** single-shot question files to `processed\` and set `status: answered`. Leave multi-phase `BUILD-BRIEF-*` in the inbox as `processing` until the brief’s final phase is done (or Claude files a superseding brief).
 3. **Always** run handoff manifest refresh after processing (mandatory):
    `node scripts/claude-cursor-handoff/update-handoff-manifest.mjs`
    from Chat AI Bot repo root (or full path). This updates:
    - `CURSOR-HANDOFF-STATUS-LATEST.md`
    - `HANDOFF-RESPONSE-INDEX-LATEST.md`
    - `HANDOFF-RESPONSE-INDEX-LATEST.json`
-   Do not hand-edit status only — the 15-min poll also uses this script; one writer avoids stale manifests.
+   Do not hand-edit status only — the 15-min poll also uses this script; one writer avoids stale manifests. Manifest pending list includes both `QUESTION-*` and `BUILD-BRIEF-*`.
 4. Reply with a short summary: how many answered, response filenames.
 
 ## Rules
