@@ -107,7 +107,9 @@ function listStatusUpdates() {
 const now = new Date().toISOString();
 const inbox = listQuestions(QUESTIONS_DIR);
 const processed = listQuestions(PROCESSED_DIR);
-const pending = inbox.filter((q) => q.status === "pending" || q.status === "open");
+const pending = inbox.filter(
+  (q) => q.status === "pending" || q.status === "open" || q.status === "processing"
+);
 const responses = listResponses();
 const statusUpdates = listStatusUpdates();
 const latestResponse = responses[0] || null;
