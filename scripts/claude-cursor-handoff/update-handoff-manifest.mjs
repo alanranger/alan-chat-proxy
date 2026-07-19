@@ -104,12 +104,32 @@ function listStatusUpdates() {
     .sort((a, b) => b.modified.localeCompare(a.modified));
 }
 
+/** Claude often omits YAML status — treat missing as pending. Never hide inbox work. */
+function isPendingQuestion(q) {
+  const s = String(q.status || "")
+    .trim()
+    .toLowerCase();
+  if (!s) return true;
+  if (s === "answered" || s === "complete" || s === "done" || s === "cancelled") return false;
+  return s === "pending" || s === "open" || s === "processing";
+}
+
+function responseExistsForQuestion(questionFile, responseList) {
+  const base = String(questionFile || "")
+    .replace(/^QUESTION-/i, "")
+    .replace(/^BUILD-BRIEF-/i, "")
+    .replace(/\.md$/i, "");
+  const want = `RESPONSE-${base}.md`;
+  const wantLatest = base.endsWith("-LATEST")
+    ? want
+    : `RESPONSE-${base}-LATEST.md`;
+  return responseList.some((r) => r.file === want || r.file === wantLatest || r.file === `RESPONSE-${base}.md`);
+}
+
 const now = new Date().toISOString();
 const inbox = listQuestions(QUESTIONS_DIR);
 const processed = listQuestions(PROCESSED_DIR);
-const pending = inbox.filter(
-  (q) => q.status === "pending" || q.status === "open" || q.status === "processing"
-);
+const pending = inbox.filter(isPendingQuestion);
 const responses = listResponses();
 const statusUpdates = listStatusUpdates();
 const latestResponse = responses[0] || null;
@@ -234,10 +254,28 @@ if (pending.length === 0) {
 } else {
   statusLines.push("## Pending", "");
   for (const p of pending) {
-    statusLines.push(`- ${p.file} (${p.priority})`);
+    statusLines.push(`- ${p.file} (${p.priority || "n/a"})`);
+  }
+}
+
+// Orphans: processed/ without a matching RESPONSE (Drive lag or mistaken move)
+const orphans = processed
+  .filter((q) => !responseExistsForQuestion(q.file, responses))
+  .sort((a, b) => b.modified.localeCompare(a.modified))
+  .slice(0, 15);
+if (orphans.length > 0) {
+  statusLines.push(
+    "",
+    "## Warning: processed without RESPONSE",
+    "",
+    "These were moved to `processed/` but have no matching `RESPONSE-*-LATEST.md` in outbox. Re-queue if still unanswered.",
+    ""
+  );
+  for (const o of orphans) {
+    statusLines.push(`- ${o.file}`);
   }
 }
 
 writeUtf8NoBom(path.join(OUTPUTS_DIR, "CURSOR-HANDOFF-STATUS-LATEST.md"), statusLines.filter(Boolean).join("\n"));
 
-console.log(`handoff manifest updated: pending=${pending.length} responses=${responses.length} latest=${latestResponse?.file || "none"}`);
+console.log(`handoff manifest updated: pending=${pending.length} responses=${responses.length} orphans=${orphans.length} latest=${latestResponse?.file || "none"}`);
