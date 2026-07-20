@@ -322,3 +322,6 @@ WHERE url = 'https://www.alanranger.com/photo-workshops-uk/secrets-of-woodland-p
 - **Date all updates** - Use format "Month YYYY" for tracking changes
 
 **Last Updated**: December 2025 (Location address over-capture fix, time/duration fixes, product card styling updates)
+
+## Update Log
+- 2026-01-16 19:59: Updated with latest ingest image fallback (prefer content over logo), bulk ingest UI watchdog timeout, search tile description expansion and image fallback/proxy, and restore point `restore-20260116-1948`.

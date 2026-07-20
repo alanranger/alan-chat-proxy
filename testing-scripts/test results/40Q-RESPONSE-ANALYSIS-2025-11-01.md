@@ -168,3 +168,6 @@ These should still route to events because they're asking about course logistics
    - May be acceptable as-is (answer quality is better than baseline)
    - If baseline routing must be preserved, adjust isFreeCourseQuery detection
 
+
+## Update Log
+- 2026-01-16 19:59: Updated with latest ingest image fallback (prefer content over logo), bulk ingest UI watchdog timeout, search tile description expansion and image fallback/proxy, and restore point restore-20260116-1948.

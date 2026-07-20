@@ -91,3 +91,6 @@ A fix is only successful when:
 **Created**: 2025-10-26
 **Purpose**: Prevent recurring debugging mistakes
 **Status**: MANDATORY - Follow this protocol for ALL debugging tasks
+
+## Update Log
+- 2026-01-16 19:59: Updated with latest ingest image fallback (prefer content over logo), bulk ingest UI watchdog timeout, search tile description expansion and image fallback/proxy, and restore point `restore-20260116-1948`.

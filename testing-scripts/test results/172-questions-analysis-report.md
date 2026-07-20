@@ -198,3 +198,6 @@ After fixing the evidence-based clarification system:
 **The Supabase data is excellent and comprehensive.** The issue is entirely in the **chat.js evidence-based clarification system** not properly extracting and using this rich data. No database changes are needed - just fix the evidence extraction logic.
 
 This explains why the user has been "around this loop 4 times" - the data was always there, but the system wasn't using it properly.
+
+## Update Log
+- 2026-01-16 19:59: Updated with latest ingest image fallback (prefer content over logo), bulk ingest UI watchdog timeout, search tile description expansion and image fallback/proxy, and restore point restore-20260116-1948.

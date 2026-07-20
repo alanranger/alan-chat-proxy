@@ -3,7 +3,7 @@ title: "AI TODO (Working List)"
 project: "Alan Ranger – Chat AI Bot"
 maintainer: "Alan Ranger"
 category: "Scratchpad / Working Memory"
-last_updated: "2025-10-18 19:00"
+last_updated: "2026-01-16 19:59"
 purpose: >
   Repo-scoped, writable scratchpad used by Cursor AI to persist short-term memory,
   tasks, and next actions between chats. Read at session start and update after each change.
@@ -120,6 +120,7 @@ This is the AI's running TODO list. Keep it short and actionable.
 4. **Restore basic functionality** before continuing refactoring
 
 ## Updates
+- 2026-01-16 19:59 — Updated with latest ingest image fallback (prefer content over logo), bulk ingest UI watchdog timeout, search tile description expansion and image fallback/proxy, and restore point `restore-20260116-1948`.
 - 2025-10-22 21:23 — **CRISIS**: System completely broken after Cursor crash
 - 2025-10-22 21:23 — **DISCOVERED**: All 28 tests failing with network errors
 - 2025-10-22 21:23 — **DISCOVERED**: 174 linter errors (refactoring NOT complete)

@@ -109,4 +109,7 @@
 2. 🔍 **Review chat.js logic**: Other agent should review why advice responses don't generate related info
 3. 📊 **Monitor**: Track related information coverage over time to measure improvements
 
+## Update Log
+- 2026-01-16 19:59: Updated with latest ingest image fallback (prefer content over logo), bulk ingest UI watchdog timeout, search tile description expansion and image fallback/proxy, and restore point `restore-20260116-1948`.
+
 

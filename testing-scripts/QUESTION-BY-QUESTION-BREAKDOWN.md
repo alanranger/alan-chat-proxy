@@ -104,3 +104,6 @@
 3. **Balance assignment-heavy queries**: Ensure "how do I photograph [X]" queries include proper guides alongside assignments
 4. **Create missing content**: Camera buying guides, lens guides, policy articles
 5. **Ready for new baseline**: After addressing critical regressions, Test #935 can serve as new master baseline
+
+## Update Log
+- 2026-01-16 19:59: Updated with latest ingest image fallback (prefer content over logo), bulk ingest UI watchdog timeout, search tile description expansion and image fallback/proxy, and restore point restore-20260116-1948.

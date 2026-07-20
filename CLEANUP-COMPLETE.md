@@ -52,3 +52,6 @@ All tools now use **`public/canonical-64q-questions.json`** as the single source
 - `test-fixed-questions.cjs` was kept (may be useful for future testing)
 - All changes committed and pushed to main branch
 
+## Update Log
+- 2026-01-16 19:59: Updated with latest ingest image fallback (prefer content over logo), bulk ingest UI watchdog timeout, search tile description expansion and image fallback/proxy, and restore point `restore-20260116-1948`.
+

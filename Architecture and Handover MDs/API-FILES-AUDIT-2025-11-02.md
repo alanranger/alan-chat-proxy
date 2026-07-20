@@ -200,3 +200,6 @@ Create a comprehensive API reference document (`Architecture and Handover MDs/AP
 3. Decide on archiving/removing unused files
 4. Create comprehensive API reference document
 
+
+## Update Log
+- 2026-01-16 19:59: Updated with latest ingest image fallback (prefer content over logo), bulk ingest UI watchdog timeout, search tile description expansion and image fallback/proxy, and restore point restore-20260116-1948.

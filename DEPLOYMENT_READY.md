@@ -60,3 +60,6 @@ git push
 - New tests will use `question_set_version = 'canonical-64q'`
 - Regression comparison tool can handle both old (40Q) and new (68Q) tests
 
+## Update Log
+- 2026-01-16 19:59: Updated with latest ingest image fallback (prefer content over logo), bulk ingest UI watchdog timeout, search tile description expansion and image fallback/proxy, and restore point `restore-20260116-1948`.
+

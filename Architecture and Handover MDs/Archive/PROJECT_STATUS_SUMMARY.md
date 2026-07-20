@@ -238,3 +238,6 @@ The next immediate priority is to start the ingestion system analysis to underst
 
 _Changelog:_ 2025-10-16 — Added **Current Risks** and **Next Actions** sections synced from AI_TODO.md (scratchpad).
 
+
+## Update Log
+- 2026-01-16 19:59: Updated with latest ingest image fallback (prefer content over logo), bulk ingest UI watchdog timeout, search tile description expansion and image fallback/proxy, and restore point restore-20260116-1948.

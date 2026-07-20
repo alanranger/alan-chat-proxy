@@ -318,3 +318,6 @@ The formatting and UX improvements will significantly enhance the user experienc
 
 The implementation plan is structured to minimize risk while maximizing impact, focusing first on core functionality improvements before moving to visual enhancements.
 
+
+## Update Log
+- 2026-01-16 19:59: Updated with latest ingest image fallback (prefer content over logo), bulk ingest UI watchdog timeout, search tile description expansion and image fallback/proxy, and restore point restore-20260116-1948.

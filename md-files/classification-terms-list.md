@@ -134,3 +134,6 @@ The classification system runs in this order:
 - Course/workshop queries should find relevant content in the database
 - Service-related queries should now return service tiles
 - Some queries may need additional landing pages added to the CSV
+
+## Update Log
+- 2026-01-16 19:59: Updated with latest ingest image fallback (prefer content over logo), bulk ingest UI watchdog timeout, search tile description expansion and image fallback/proxy, and restore point `restore-20260116-1948`.

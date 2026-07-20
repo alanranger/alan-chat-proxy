@@ -253,3 +253,6 @@ node testing-scripts/test-all-40q-localhost-vs-deployed.cjs
 - Debug logging can be verbose - disable in production if needed
 - Always verify both local and deployed work before closing an issue
 
+## Update Log
+- 2026-01-16 19:59: Updated with latest ingest image fallback (prefer content over logo), bulk ingest UI watchdog timeout, search tile description expansion and image fallback/proxy, and restore point `restore-20260116-1948`.
+

@@ -139,3 +139,6 @@
 3. Start with RAG response logic fixes
 4. Test confidence scoring after each change
 5. Validate improvements against baseline
+
+## Update Log
+- 2026-01-16 19:59: Updated with latest ingest image fallback (prefer content over logo), bulk ingest UI watchdog timeout, search tile description expansion and image fallback/proxy, and restore point restore-20260116-1948.

@@ -158,3 +158,5 @@ git push origin main --force
 **Status:** Ready for content-based refactor  
 **Risk Level:** Medium (with full backup and rollback)  
 **Expected Outcome:** 90%+ success rate with low maintenance
+## Update Log
+- 2026-01-16 19:59: Updated with latest ingest image fallback (prefer content over logo), bulk ingest UI watchdog timeout, search tile description expansion and image fallback/proxy, and restore point restore-20260116-1948.

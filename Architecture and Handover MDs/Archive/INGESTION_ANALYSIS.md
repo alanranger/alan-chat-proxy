@@ -208,3 +208,6 @@ The ingestion system duplication issue is a critical problem that affects the ch
 
 The proposed solutions focus on preventing duplicates at the source (ingestion) rather than just cleaning them up after they occur, which is the most sustainable approach for long-term system maintenance.
 
+
+## Update Log
+- 2026-01-16 19:59: Updated with latest ingest image fallback (prefer content over logo), bulk ingest UI watchdog timeout, search tile description expansion and image fallback/proxy, and restore point restore-20260116-1948.

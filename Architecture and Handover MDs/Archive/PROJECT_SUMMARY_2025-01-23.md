@@ -135,3 +135,6 @@
 - **Incremental Changes** - Test after each modification
 - **Confidence Monitoring** - Ensure scoring system not affected
 - **Baseline Comparison** - Measure improvements against current state
+
+## Update Log
+- 2026-01-16 19:59: Updated with latest ingest image fallback (prefer content over logo), bulk ingest UI watchdog timeout, search tile description expansion and image fallback/proxy, and restore point restore-20260116-1948.

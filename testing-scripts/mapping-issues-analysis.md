@@ -96,3 +96,6 @@ The CSV parser is incorrectly treating HTML content from `Text_Block` column as 
 3. ⏳ Check and clean `event_product_links_auto` table for duplicates
 4. ⏳ Verify all events appear correctly in export after fix
 
+
+## Update Log
+- 2026-01-16 19:59: Updated with latest ingest image fallback (prefer content over logo), bulk ingest UI watchdog timeout, search tile description expansion and image fallback/proxy, and restore point restore-20260116-1948.

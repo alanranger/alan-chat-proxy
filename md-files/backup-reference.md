@@ -30,3 +30,6 @@ cp api/chat-with-classification-backup.js api/chat.js
 - This backup represents the state where service integration was working but classification was still intercepting service queries
 - The service finding logic was working but being blocked by clarification patterns
 - All recent fixes for character encoding, cognitive complexity, and service integration are included
+
+## Update Log
+- 2026-01-16 19:59: Updated with latest ingest image fallback (prefer content over logo), bulk ingest UI watchdog timeout, search tile description expansion and image fallback/proxy, and restore point `restore-20260116-1948`.

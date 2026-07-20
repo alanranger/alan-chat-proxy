@@ -286,3 +286,6 @@ Then say:
 - Do NOT use /chat-backups/ (historical only)
 - All .md files in /Architecture and Handover MDs/ are current
 - Test outputs must save in /testing-scripts/test results/
+
+## Update Log
+- 2026-01-16 19:59: Updated with latest ingest image fallback (prefer content over logo), bulk ingest UI watchdog timeout, search tile description expansion and image fallback/proxy, and restore point `restore-20260116-1948`.

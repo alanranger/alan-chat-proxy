@@ -1,5 +1,5 @@
 # 🧠 AI_TODO_LIST_CURRENT.md  
-_Last updated: 15 Nov 2025_  
+_Last updated: 2026-01-16 19:59_  
 _Alan Ranger — Chat AI Bot / alan-chat-proxy_
 
 ---
@@ -359,3 +359,6 @@ When opening this project in Cursor:
 ## 🧩 Notes
 This scratchpad is intentionally lightweight.  
 Do not delete or rename this file between Cursor syncs — it acts as your working memory anchor.
+
+## Update Log
+- 2026-01-16 19:59: Updated with latest ingest image fallback (prefer content over logo), bulk ingest UI watchdog timeout, search tile description expansion and image fallback/proxy, and restore point `restore-20260116-1948`.

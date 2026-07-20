@@ -48,3 +48,6 @@ Modified `api/ingest.js` to:
 5. Both entities stored in `page_entities` table
 6. Product entity flows through to `v_products_unified_open` view
 
+
+## Update Log
+- 2026-01-16 19:59: Updated with latest ingest image fallback (prefer content over logo), bulk ingest UI watchdog timeout, search tile description expansion and image fallback/proxy, and restore point restore-20260116-1948.

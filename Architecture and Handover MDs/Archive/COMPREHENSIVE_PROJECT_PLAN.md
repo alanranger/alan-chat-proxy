@@ -226,3 +226,6 @@ The critical issue with the "Free online photography course" query has been reso
 **Critical Path**: Ingestion system fixes → Database cleanup → Response formatting
 **Success Criteria**: Clean, accurate, and user-friendly chat bot responses
 
+
+## Update Log
+- 2026-01-16 19:59: Updated with latest ingest image fallback (prefer content over logo), bulk ingest UI watchdog timeout, search tile description expansion and image fallback/proxy, and restore point restore-20260116-1948.

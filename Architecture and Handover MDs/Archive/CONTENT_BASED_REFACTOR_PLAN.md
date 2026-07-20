@@ -158,3 +158,6 @@ function generateGenericClarification(query, intent) {
 2. **No regression** on baseline 20 questions
 3. **Improved user experience** with better clarification
 4. **Reduced maintenance burden** with no pattern management
+
+## Update Log
+- 2026-01-16 19:59: Updated with latest ingest image fallback (prefer content over logo), bulk ingest UI watchdog timeout, search tile description expansion and image fallback/proxy, and restore point restore-20260116-1948.

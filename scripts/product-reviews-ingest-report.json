@@ -1,0 +1,33 @@
+{
+  "catalog_entries": 252,
+  "reviews_in_csv": 657,
+  "reviews_inserted": 651,
+  "mapped_to_slug": 627,
+  "unmapped_slug": 0,
+  "excluded": 24,
+  "exclude_reasons": {
+    "slug_cross_contamination_north_yorkshire": 12,
+    "mis_tagged_beginners_multi_session": 1,
+    "quote_too_short": 3,
+    "mis_tagged_hire_not_workshop": 1,
+    "mis_tagged_photo_walk": 5,
+    "mis_tagged_intentions_course": 2
+  },
+  "by_category": {
+    "workshop (1-day)": 185,
+    "print": 13,
+    "course": 165,
+    "course (Lightroom)": 30,
+    "workshop (residential)": 75,
+    "workshop (half-day)": 103,
+    "1-2-1": 23,
+    "gift voucher": 1,
+    "academy": 17,
+    "subscription/payment-plan": 7,
+    "mentoring": 4,
+    "service": 4
+  },
+  "unmapped_slugs": [],
+  "catalog_csv": "G:\\Dropbox\\alan ranger photography\\Website Code\\alan-shared-resources\\csv processed\\07-page-slug-catalog-and-reviews.csv",
+  "reviews_csv": "G:\\Dropbox\\alan ranger photography\\Website Code\\alan-shared-resources\\csv processed\\06-product-reviews-attributed.csv"
+}

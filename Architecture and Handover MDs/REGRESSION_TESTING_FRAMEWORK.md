@@ -214,3 +214,6 @@ SELECT * FROM analyze_regression_test_run(test_run_id);
 - Article changes are tracked by ID for precise comparison
 - Answer quality metrics go beyond simple pass/fail
 
+## Update Log
+- 2026-01-16 19:59: Updated with latest ingest image fallback (prefer content over logo), bulk ingest UI watchdog timeout, search tile description expansion and image fallback/proxy, and restore point `restore-20260116-1948`.
+

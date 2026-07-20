@@ -107,3 +107,6 @@ Update the baseline when:
 5. **Keep baseline in git** - So it's tracked and shared
 
 
+
+## Update Log
+- 2026-01-16 19:59: Updated with latest ingest image fallback (prefer content over logo), bulk ingest UI watchdog timeout, search tile description expansion and image fallback/proxy, and restore point restore-20260116-1948.

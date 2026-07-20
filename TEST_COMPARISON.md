@@ -55,3 +55,6 @@ The current test shows **100% success rate** matching the baseline. The response
 3. If satisfied, the current baseline (#877) is still valid
 4. If you want to update, run a new regression test via Job 26 and set it as the master baseline
 
+## Update Log
+- 2026-01-16 19:59: Updated with latest ingest image fallback (prefer content over logo), bulk ingest UI watchdog timeout, search tile description expansion and image fallback/proxy, and restore point `restore-20260116-1948`.
+

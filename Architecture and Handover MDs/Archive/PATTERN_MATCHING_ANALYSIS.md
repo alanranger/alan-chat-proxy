@@ -83,3 +83,6 @@ Replace pattern matching with content-based confidence:
 3. Implement and test new approach
 4. Validate against 50 random questions
 5. Deploy with rollback capability
+
+## Update Log
+- 2026-01-16 19:59: Updated with latest ingest image fallback (prefer content over logo), bulk ingest UI watchdog timeout, search tile description expansion and image fallback/proxy, and restore point restore-20260116-1948.
