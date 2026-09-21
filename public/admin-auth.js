@@ -1,6 +1,6 @@
 /**
  * Shared admin UI auth — token stays in localStorage only (never committed).
- * Paste Vercel INGEST_TOKEN (or ADMIN_UI_TOKEN / legacy admin token) once per browser.
+ * Paste Vercel INGEST_TOKEN (or ADMIN_UI_TOKEN) once per browser.
  */
 (function (global) {
   var STORAGE_KEY = 'alan_admin_ui_token';

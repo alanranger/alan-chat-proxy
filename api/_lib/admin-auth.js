@@ -1,10 +1,8 @@
 /**
  * Shared server-side admin bearer check.
- * Accepts INGEST_TOKEN, ADMIN_UI_TOKEN, or legacy shared admin token.
- * Never falls back to a Supabase JWT.
+ * Accepts INGEST_TOKEN or ADMIN_UI_TOKEN from env only.
+ * Never falls back to a hardcoded or Supabase JWT secret.
  */
-const LEGACY_ADMIN = 'b6c3f0c9e6f44cce9e1a4f3f2d3a5c76';
-
 function normalizeBearer(authHeader) {
   const h = String(authHeader || '').trim();
   if (!h) return '';
@@ -17,7 +15,6 @@ function allowedTokens() {
   const adminUi = (process.env.ADMIN_UI_TOKEN || '').trim();
   if (ingest) out.add(ingest);
   if (adminUi) out.add(adminUi);
-  out.add(LEGACY_ADMIN);
   return out;
 }
 

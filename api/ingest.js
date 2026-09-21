@@ -23,6 +23,7 @@ import {
   HTML_TO_TEXT_SKIP_SELECTORS,
   stripKnownSquarespaceNavNoise,
 } from '../helpers/squarespace-nav.js';
+import { isAuthorizedAdmin } from './_lib/admin-auth.js';
 
 // Extract meta description from HTML - updated for deployment
 function extractMetaDescription(html) {
@@ -1656,19 +1657,8 @@ export default async function handler(req, res) {
   // Single URL ingestion
   let stage = 'auth';
   try {
-    const token = req.headers['authorization']?.trim();
-    const ingest = `Bearer ${need('INGEST_TOKEN')}`;
-    const legacyAdmin = 'Bearer b6c3f0c9e6f44cce9e1a4f3f2d3a5c76';
-    
-    // Debug logging for authentication
-    console.log('DEBUG: Incoming token:', token);
-    console.log('DEBUG: Expected ingest token:', ingest);
-    console.log('DEBUG: Expected legacy admin token:', legacyAdmin);
-    console.log('DEBUG: Token matches ingest:', token === ingest);
-    console.log('DEBUG: Token matches legacy admin:', token === legacyAdmin);
-    
-    if (token !== ingest && token !== legacyAdmin) {
-      return sendJSON(res, 401, { error: 'unauthorized', stage, received: token, expected: [ingest, legacyAdmin] });
+    if (!isAuthorizedAdmin(req.headers['authorization'])) {
+      return sendJSON(res, 401, { error: 'unauthorized', stage });
     }
     
     stage = 'parse_body';

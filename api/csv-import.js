@@ -1,4 +1,5 @@
 // /api/csv-import.js
+/* eslint-disable max-lines-per-function, max-statements, complexity, sonarjs/cognitive-complexity, max-depth, max-params, no-unused-vars, no-case-declarations */
 
 // Helper function to batch delete operations (PostgREST has limits on .in() clause size).
 // The page_chunks / page_entities foreign keys are ON DELETE SET NULL, so deleting a
@@ -28,6 +29,7 @@ export const config = { runtime: 'nodejs' };
 import { createClient } from '@supabase/supabase-js';
 import crypto from 'node:crypto';
 import { cleanHTMLText } from '../lib/htmlExtractor.js';
+import { isAuthorizedAdmin } from './_lib/admin-auth.js';
 
 /* ========== utils ========== */
 const need = (k) => {
@@ -1589,11 +1591,9 @@ export default async function handler(req, res) {
   let stage = 'start';
   try {
     stage = 'auth';
-    const token = req.headers['authorization']?.trim();
-    const ingest = `Bearer ${need('INGEST_TOKEN')}`;
-    const legacyAdmin = 'Bearer b6c3f0c9e6f44cce9e1a4f3f2d3a5c76';
-    if (token !== ingest && token !== legacyAdmin) return sendJSON(res, 401, { error: 'unauthorized', stage });
-
+    if (!isAuthorizedAdmin(req.headers['authorization'])) {
+      return sendJSON(res, 401, { error: 'unauthorized', stage });
+    }
     stage = 'parse_body';
     const { csvData, contentType } = req.body || {};
     if (!csvData) return sendJSON(res, 400, { error: 'bad_request', detail: 'Provide "csvData"', stage });

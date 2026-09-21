@@ -95,16 +95,18 @@ pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;backgro
   </div>
 </div></div>
 
+<script src="/admin-auth.js"></script>
 <script>
 const CHAT_ENDPOINT = '/api/chat';
-const HARDCODED = 'b6c3f0c9e6f44cce9e1a4f3f2d3a5c76'; // ingest token
 const urlParams = new URLSearchParams(location.search);
 if (urlParams.get('debug') === '1') requestAnimationFrame(()=>{ document.getElementById('debugPanel').open = true; });
 function getToken(){
   const qp = (urlParams.get('token')||'').trim();
-  if (HARDCODED) return HARDCODED;
-  if (qp) return qp;
-  try { return (localStorage.getItem('ingest_token')||'').trim(); } catch { return ''; }
+  if (qp) {
+    if (window.AdminAuth) window.AdminAuth.setToken(qp);
+    return qp;
+  }
+  return window.AdminAuth ? window.AdminAuth.getToken() : '';
 }
 
 const CATEGORY_LINKS = {
