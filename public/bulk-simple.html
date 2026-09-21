@@ -125,6 +125,7 @@
       font-style: italic;
     }
   </style>
+<script src="/admin-auth.js"></script>
 </head>
 <body>
   <div class="container">
@@ -548,7 +549,7 @@
     <!-- Token Section -->
     <div class="token-section">
       <h3>🔐 Authentication</h3>
-      <div class="status success">✅ Token: b6c3f0c9e6f44cce9e1a4f3f2d3a5c76 (Hardcoded)</div>
+      <div class="status info">Token: enter once when prompted (stored in this browser only)</div>
       <small>Token is automatically configured for this private interface</small>
     </div>
 
@@ -998,8 +999,7 @@
     }
     // Token management - hardcoded for private use
     function getToken() {
-      // Use service role token for authenticated admin operations
-      return 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlnenZ3YnZndm16dnZ6b2NsdWZ4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NzY3NzkyOCwiZXhwIjoyMDczMjUzOTI4fQ.W9tkTSYu6Wml0mUr-gJD6hcLMZDcbaYYaOsyDXuwd8M';
+      return window.AdminAuth.ensureToken();
     }
 
     // Results management
@@ -1163,23 +1163,8 @@
 
     // Supabase REST GET with count=exact helper
     async function restCount(path) {
-      const token = getToken();
-      try {
-        // Use hardcoded Supabase URL since process.env doesn't work in browser
-        const supabaseUrl = 'https://igzvwbvgvmzvvzoclufx.supabase.co';
-        const resp = await fetch(`${supabaseUrl}/rest/v1/${path}`, {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'apikey': token,
-            'Prefer': 'count=exact'
-          }
-        });
-        const total = parseInt(resp.headers.get('content-range')?.split('/')?.[1] || '0', 10);
-        return isNaN(total) ? 0 : total;
-      } catch (e) {
-        return `err:${e.message}`;
-      }
+      console.warn('restCount disabled — use /api/tools (no direct Supabase keys in browser)', path);
+      return 0;
     }
 
     // Fetch total events and mapped events from v_events_for_chat
@@ -3385,7 +3370,7 @@
 
     // Load hardcoded token on page load
     window.onload = async function() {
-      addResult('✅ Hardcoded token ready for use');
+      addResult('Token: paste when prompted (stored in this browser only)');
       updateStats();
       updateParityPill();
       updateCronPill();

@@ -1552,11 +1552,12 @@
   <script>
     // Immediate auto-auth script - runs before DOMContentLoaded
     (function() {
-      const DEFAULT_TOKEN = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlnenZ3YnZndm16dnZ6b2NsdWZ4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NzY3NzkyOCwiZXhwIjoyMDczMjUzOTI4fQ.W9tkTSYu6Wml0mUr-gJD6hcLMZDcbaYYaOsyDXuwd8M';
+      const DEFAULT_TOKEN = '';
       const DEFAULT_AI_GEO_ADMIN_KEY = 'abc123xyz456def789ghi012jkl345mno678pqr901stu234vwx567';
       try {
         if (DEFAULT_TOKEN) {
           localStorage.setItem('cron_dashboard_token', DEFAULT_TOKEN);
+          if (window.AdminAuth) window.AdminAuth.setToken(DEFAULT_TOKEN);
         }
         if (DEFAULT_AI_GEO_ADMIN_KEY) {
           localStorage.setItem('aigeo_admin_key', DEFAULT_AI_GEO_ADMIN_KEY);
@@ -1566,6 +1567,7 @@
       }
     })();
   </script>
+<script src="/admin-auth.js"></script>
 </head>
 <body>
   <div class="container">
@@ -1573,7 +1575,7 @@
 
     <div class="auth-section" id="authSection">
       <h3>Authentication</h3>
-      <input type="password" id="authToken" placeholder="Enter admin token (default: b6c3f0c9e6f44cce9e1a4f3f2d3a5c76)" value="b6c3f0c9e6f44cce9e1a4f3f2d3a5c76" />
+      <input type="password" id="authToken" placeholder="Paste INGEST_TOKEN or admin token" value="" />
       <button onclick="setAuthToken()">Authenticate</button>
       <div style="margin-top: 8px; font-size: 12px; color: #666;">Token: Use INGEST_TOKEN or the default token shown above</div>
     </div>
@@ -1656,9 +1658,9 @@
     const DEFAULT_AI_GEO_ADMIN_KEY = 'abc123xyz456def789ghi012jkl345mno678pqr901stu234vwx567';
     
     // Default admin token (INGEST_TOKEN)
-    const DEFAULT_TOKEN = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlnenZ3YnZndm16dnZ6b2NsdWZ4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NzY3NzkyOCwiZXhwIjoyMDczMjUzOTI4fQ.W9tkTSYu6Wml0mUr-gJD6hcLMZDcbaYYaOsyDXuwd8M';
+    const DEFAULT_TOKEN = '';
     
-    let authToken = localStorage.getItem('cron_dashboard_token') || DEFAULT_TOKEN;
+    let authToken = localStorage.getItem('cron_dashboard_token') || window.AdminAuth.getToken() || DEFAULT_TOKEN;
     let aiGeoState = { jobs: [], error: null, baseUrl: DEFAULT_AI_GEO_BASE, configured: true, adminConfigured: true };
 
     // State for inline log viewer
@@ -1809,6 +1811,7 @@
       if (token) {
         authToken = token;
         localStorage.setItem('cron_dashboard_token', token);
+          if (window.AdminAuth) window.AdminAuth.setToken(token);
         document.getElementById('authSection').style.display = 'none';
         document.getElementById('dashboard').style.display = 'block';
         loadJobs();
@@ -2055,6 +2058,7 @@
         if (DEFAULT_TOKEN) {
           authToken = DEFAULT_TOKEN;
           localStorage.setItem('cron_dashboard_token', DEFAULT_TOKEN);
+          if (window.AdminAuth) window.AdminAuth.setToken(DEFAULT_TOKEN);
           
           // Hide auth section and show dashboard
           const authSection = document.getElementById('authSection');

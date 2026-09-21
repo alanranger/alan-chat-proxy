@@ -3,11 +3,13 @@
 // Handles QA spot checks and data refresh operations
 // Replaces: qa-spot-checks.js, refresh-mappings.js
 // Last updated: 2025-11-20 18:35 - Fixed VACUUM transaction issue for database maintenance
+/* eslint-disable max-lines-per-function, max-statements, complexity, sonarjs/cognitive-complexity, max-depth, max-params, no-unused-vars, no-undef */
 
 import { createClient } from '@supabase/supabase-js';
 import { logJobRun } from '../helpers/logJobRun.js';
 import { disablePgCronJobs } from '../helpers/disablePgCron.js';
 import pg from 'pg';
+import { isAuthorizedAdmin } from './_lib/admin-auth.js';
 
 // Reliable Vercel environment loading
 const SUPABASE_URL =
@@ -433,9 +435,6 @@ function serializeExecutionResult(jobId, executionResult) {
   }
 }
 
-// Match the hardcoded UI token as a fallback so the button works
-const EXPECTED_TOKEN = (process.env.INGEST_TOKEN || '').trim() || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlnenZ3YnZndm16dnZ6b2NsdWZ4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NzY3NzkyOCwiZXhwIjoyMDczMjUzOTI4fQ.W9tkTSYu6Wml0mUr-gJD6hcLMZDcbaYYaOsyDXuwd8M';
-
 // Helper function to execute a job
 async function runJob(supabase, job) {
   const startTime = new Date();
@@ -647,9 +646,7 @@ export default async function handler(req, res) {
 
     // Authentication
     if (!isSchedulerTick) {
-      const authHeader = req.headers.authorization || '';
-      const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
-      if (!token || token !== EXPECTED_TOKEN) {
+      if (!isAuthorizedAdmin(req.headers.authorization)) {
         return res.status(401).json({ error: 'unauthorized' });
       }
     }
@@ -1748,9 +1745,7 @@ export default async function handler(req, res) {
     // Set Fixed Baseline (POST /api/admin?action=set_fixed_baseline)
     if (req.method === 'POST' && action === 'set_fixed_baseline') {
       try {
-        const authHeader = req.headers.authorization || '';
-        const token = authHeader.replace('Bearer ', '').trim();
-        if (token !== process.env.INGEST_TOKEN) {
+        if (!isAuthorizedAdmin(req.headers.authorization)) {
           return res.status(401).json({ error: 'unauthorized' });
         }
 
@@ -1780,9 +1775,7 @@ export default async function handler(req, res) {
     // Unset Fixed Baseline (POST /api/admin?action=unset_fixed_baseline)
     if (req.method === 'POST' && action === 'unset_fixed_baseline') {
       try {
-        const authHeader = req.headers.authorization || '';
-        const token = authHeader.replace('Bearer ', '').trim();
-        if (token !== process.env.INGEST_TOKEN) {
+        if (!isAuthorizedAdmin(req.headers.authorization)) {
           return res.status(401).json({ error: 'unauthorized' });
         }
 

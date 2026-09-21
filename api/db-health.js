@@ -4,6 +4,8 @@
 
 export const config = { runtime: 'nodejs' };
 
+import { isAuthorizedAdmin } from './_lib/admin-auth.js';
+
 /* ========== utils ========== */
 const need = (k) => {
   const v = process.env[k];
@@ -98,9 +100,7 @@ export default async function handler(req, res) {
   let stage = 'start';
   try {
     stage = 'auth';
-    const token = req.headers['authorization']?.trim();
-    const expectedToken = process.env.INGEST_TOKEN || process.env.VERCEL_AUTOMATION_BYPASS_SECRET;
-    if (token !== `Bearer ${expectedToken}`) {
+    if (!isAuthorizedAdmin(req.headers['authorization'])) {
       return sendJSON(res, 401, { error: 'unauthorized', stage });
     }
 

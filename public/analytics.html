@@ -803,6 +803,7 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
     window.__ga4_id = GA4_ID;
   })();
 </script>
+<script src="/admin-auth.js"></script>
 </head>
 <body>
   <div class="container">
@@ -1199,7 +1200,7 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
       
       const response = await fetch(url, {
         headers: {
-          'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlnenZ3YnZndm16dnZ6b2NsdWZ4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NzY3NzkyOCwiZXhwIjoyMDczMjUzOTI4fQ.W9tkTSYu6Wml0mUr-gJD6hcLMZDcbaYYaOsyDXuwd8M'
+          'Authorization': window.AdminAuth.bearer()
         }
       });
       
@@ -1712,7 +1713,7 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
       try {
         const statusResponse = await fetch('/api/chat-improvement?action=improvement_status', {
           headers: {
-            'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlnenZ3YnZndm16dnZ6b2NsdWZ4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NzY3NzkyOCwiZXhwIjoyMDczMjUzOTI4fQ.W9tkTSYu6Wml0mUr-gJD6hcLMZDcbaYYaOsyDXuwd8M'
+            'Authorization': window.AdminAuth.bearer()
           }
         });
         
@@ -1739,7 +1740,7 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
         // Call the new chat improvement API
         const response = await fetch('/api/chat-improvement?action=analyze', {
           headers: {
-            'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlnenZ3YnZndm16dnZ6b2NsdWZ4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NzY3NzkyOCwiZXhwIjoyMDczMjUzOTI4fQ.W9tkTSYu6Wml0mUr-gJD6hcLMZDcbaYYaOsyDXuwd8M'
+            'Authorization': window.AdminAuth.bearer()
           }
         });
         
@@ -1906,7 +1907,7 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
       try {
         const response = await fetch('/api/chat-improvement?action=improvement_plan', {
           headers: {
-            'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlnenZ3YnZndm16dnZ6b2NsdWZ4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NzY3NzkyOCwiZXhwIjoyMDczMjUzOTI4fQ.W9tkTSYu6Wml0mUr-gJD6hcLMZDcbaYYaOsyDXuwd8M'
+            'Authorization': window.AdminAuth.bearer()
           }
         });
         
@@ -1943,7 +1944,7 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
       try {
         const response = await fetch('/api/chat-improvement?action=preview_improvements', {
           headers: {
-            'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlnenZ3YnZndm16dnZ6b2NsdWZ4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NzY3NzkyOCwiZXhwIjoyMDczMjUzOTI4fQ.W9tkTSYu6Wml0mUr-gJD6hcLMZDcbaYYaOsyDXuwd8M'
+            'Authorization': window.AdminAuth.bearer()
           }
         });
         
@@ -2188,7 +2189,7 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
         const response = await fetch('/api/chat-improvement?action=ignore_question', {
           method: 'POST',
           headers: {
-            'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlnenZ3YnZndm16dnZ6b2NsdWZ4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NzY3NzkyOCwiZXhwIjoyMDczMjUzOTI4fQ.W9tkTSYu6Wml0mUr-gJD6hcLMZDcbaYYaOsyDXuwd8M',
+            'Authorization': window.AdminAuth.bearer(),
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({ question })
@@ -2265,7 +2266,7 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
       const response = await fetch('/api/chat-improvement?action=implement_improvement', {
         method: 'POST',
         headers: {
-          'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlnenZ3YnZndm16dnZ6b2NsdWZ4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NzY3NzkyOCwiZXhwIjoyMDczMjUzOTI4fQ.W9tkTSYu6Wml0mUr-gJD6hcLMZDcbaYYaOsyDXuwd8M',
+          'Authorization': window.AdminAuth.bearer(),
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
@@ -2401,7 +2402,7 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
       try {
         const response = await fetch('/api/chat-improvement?action=list_implemented', {
           headers: {
-            'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlnenZ3YnZndm16dnZ6b2NsdWZ4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NzY3NzkyOCwiZXhwIjoyMDczMjUzOTI4fQ.W9tkTSYu6Wml0mUr-gJD6hcLMZDcbaYYaOsyDXuwd8M'
+            'Authorization': window.AdminAuth.bearer()
           }
         });
         

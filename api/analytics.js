@@ -6,6 +6,7 @@
 export const config = { runtime: 'nodejs' };
 
 import { createClient } from '@supabase/supabase-js';
+import { isAuthorizedAdmin } from './_lib/admin-auth.js';
 
 /* ========== utils ========== */
 const need = (k) => {
@@ -65,9 +66,7 @@ export default async function handler(req, res) {
   let stage = 'start';
   try {
     stage = 'auth';
-    const token = req.headers['authorization']?.trim();
-    const expectedToken = process.env.INGEST_TOKEN || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlnenZ3YnZndm16dnZ6b2NsdWZ4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NzY3NzkyOCwiZXhwIjoyMDczMjUzOTI4fQ.W9tkTSYu6Wml0mUr-gJD6hcLMZDcbaYYaOsyDXuwd8M';
-    if (token !== `Bearer ${expectedToken}`) {
+    if (!isAuthorizedAdmin(req.headers['authorization'])) {
       return sendJSON(res, 401, { error: 'unauthorized', stage });
     }
 

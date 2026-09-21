@@ -463,6 +463,7 @@
             background: #0056b3;
         }
     </style>
+<script src="/admin-auth.js"></script>
 </head>
 <body>
     <div class="header">
@@ -484,7 +485,7 @@
             </div>
             <div>
                 <label for="supabaseKey" style="display: block; margin-bottom: 5px; font-weight: 600;">Supabase Anon Key:</label>
-                <input type="text" id="supabaseKey" placeholder="eyJhbGci..." style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                <input type="text" id="supabaseKey" placeholder="paste publishable key if needed" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
             </div>
         </div>
         
@@ -668,10 +669,10 @@
             const keyInput = document.getElementById('supabaseKey');
             
             if (!urlInput.value) {
-                urlInput.value = 'https://igzvwbvgvmzvvzoclufx.supabase.co';
+                urlInput.value = '';
             }
             if (!keyInput.value) {
-                keyInput.value = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlnenZ3YnZndm16dnZ6b2NsdWZ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc2Nzc5MjgsImV4cCI6MjA3MzI1MzkyOH0.A9TCmnXKJhDRYBkrO0mAMPiUQeV9enweeyRWKWQ1SZY';
+                keyInput.value = '';
             }
         }
         

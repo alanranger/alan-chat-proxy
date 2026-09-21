@@ -289,6 +289,7 @@
       }
     }
   </style>
+<script src="/admin-auth.js"></script>
 </head>
 <body>
   <div class="container">
@@ -298,11 +299,11 @@
       <div class="controls-row">
         <div class="field-group">
           <label for="supabaseUrl">Supabase URL</label>
-          <input id="supabaseUrl" type="text" value="https://igzvwbvgvmzvvzoclufx.supabase.co" />
+          <input id="supabaseUrl" type="text" value="" placeholder="https://YOUR_PROJECT.supabase.co" />
         </div>
         <div class="field-group">
           <label for="supabaseKey">Supabase anon key</label>
-          <textarea id="supabaseKey" rows="3" style="resize:vertical;">eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlnenZ3YnZndm16dnZ6b2NsdWZ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc2Nzc5MjgsImV4cCI6MjA3MzI1MzkyOH0.A9TCmnXKJhDRYBkrO0mAMPiUQeV9enweeyRWKWQ1SZY</textarea>
+          <textarea id="supabaseKey" rows="3" style="resize:vertical;" placeholder="Paste publishable/anon key only if needed — prefer /api routes"></textarea>
         </div>
         <div class="field-group">
           <label for="adminToken">Admin API token (Authorization bearer)</label>
@@ -505,10 +506,10 @@
 
         // 0) Hard-coded defaults
         if (!urlInput.value) {
-          urlInput.value = 'https://igzvwbvgvmzvvzoclufx.supabase.co';
+          urlInput.value = localStorage.getItem('regression_supabase_url') || '';
         }
         if (!keyInput.value) {
-          keyInput.value = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlnenZ3YnZndm16dnZ6b2NsdWZ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc2Nzc5MjgsImV4cCI6MjA3MzI1MzkyOH0.A9TCmnXKJhDRYBkrO0mAMPiUQeV9enweeyRWKWQ1SZY';
+          keyInput.value = '';
         }
 
         if (window.__SUPABASE_URL && !urlInput.value) {

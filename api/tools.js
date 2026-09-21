@@ -4,10 +4,12 @@
 // GET /api/tools?action=verify&url=...
 // POST /api/tools?action=search  { query, topK? }
 // Auth: Authorization: Bearer <INGEST_TOKEN>
+/* eslint-disable max-lines-per-function, max-statements, complexity, sonarjs/cognitive-complexity, max-depth, no-unused-vars, no-empty, no-undef */
 
 export const config = { runtime: 'nodejs' };
 
 import { createClient } from '@supabase/supabase-js';
+import { isAuthorizedAdmin } from './_lib/admin-auth.js';
 
 const need = (k) => {
   const v = process.env[k];
@@ -58,13 +60,9 @@ export default async function handler(req, res) {
 
     // Auth (skip when public export is explicitly allowed)
     if (!allowPublicExport) {
-      const token = req.headers['authorization']?.trim();
-      const ingest = `Bearer ${need('INGEST_TOKEN')}`;
-      const adminUi = process.env.ADMIN_UI_TOKEN ? `Bearer ${process.env.ADMIN_UI_TOKEN}` : null;
-      // Temporary compatibility for existing admin UI hardcoded token
-      const legacyAdmin = 'Bearer b6c3f0c9e6f44cce9e1a4f3f2d3a5c76';
-      const ok = token === ingest || (adminUi && token === adminUi) || token === legacyAdmin;
-      if (!ok) return sendJSON(res, 401, { error: 'unauthorized' });
+      if (!isAuthorizedAdmin(req.headers['authorization'])) {
+        return sendJSON(res, 401, { error: 'unauthorized' });
+      }
     }
 
     // DB client

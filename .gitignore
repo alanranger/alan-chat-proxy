@@ -15,3 +15,7 @@ npm-debug.log*
 .env.test.local
 .env.production.local
 .vercel
+
+# Local quarantine of HTML that contained leaked Supabase keys (do not deploy/commit)
+quarantine-leaked-html-*/
+

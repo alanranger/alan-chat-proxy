@@ -6,6 +6,7 @@ export const config = { runtime: 'nodejs' };
 
 import { createClient } from '@supabase/supabase-js';
 import { createHash } from 'crypto';
+import { isAuthorizedAdmin } from './_lib/admin-auth.js';
 
 function supabaseAdmin() {
   const url = process.env.SUPABASE_URL;
@@ -909,11 +910,7 @@ function setCorsHeaders(res) {
 }
 
 function checkAuth(req) {
-  const token = req.headers['authorization']?.trim();
-  const ingest = `Bearer ${process.env.INGEST_TOKEN}`;
-  const adminUi = process.env.ADMIN_UI_TOKEN ? `Bearer ${process.env.ADMIN_UI_TOKEN}` : null;
-  const legacyAdmin = 'Bearer b6c3f0c9e6f44cce9e1a4f3f2d3a5c76';
-  return token === ingest || (adminUi && token === adminUi) || token === legacyAdmin;
+  return isAuthorizedAdmin(req.headers['authorization']);
 }
 
 const ACTION_HANDLERS = {

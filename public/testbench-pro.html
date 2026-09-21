@@ -52,6 +52,7 @@
     .collapse[data-collapsed="false"] .content{max-height:none}
     .collapse .toggle{margin-top:6px;padding:2px 6px;font-size:12px}
   </style>
+<script src="/admin-auth.js"></script>
 </head>
 <body>
   <header class="row">
@@ -149,7 +150,7 @@
     function checksFor(q, data){ const u=urlsOf(data.structured||{}); const s=(q||'').toLowerCase(); const out=[]; const chk=(req)=> req.some(x=>u.some(y=>y.includes(x)) || String(data.answer_markdown||'').includes(x)); if(s.includes('free')&&s.includes('online')&&s.includes('course')){ if(!chk(['free-online-photography-course'])) out.push('missing free-course'); if((data.structured?.events||[]).length) out.push('events>0'); } if(/(terms|refund|cancellation|policy)/.test(s)){ if(!chk(['terms-and-conditions'])) out.push('missing terms'); if((data.structured?.events||[]).length) out.push('events>0'); if((data.structured?.products||[]).length) out.push('products>0'); } if(/(who is alan ranger|about alan)/.test(s)){ if(!chk(['about-alan-ranger'])) out.push('missing about'); } return out; }
 
     async function callChat(query){ const api=$('#api').value.trim(); const r=await fetch(api,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({query,pageContext:null})}); return await r.json(); }
-    async function callRpc(query){ const url='https://igzvwbvgvmzvvzoclufx.supabase.co'; const key='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlnenZ3YnZndm16dnZ6b2NsdWZ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc2Nzc5MjgsImV4cCI6MjA3MzI1MzkyOH0.A9TCmnXKJhDRYBkrO0mAMPiUQeV9enweeyRWKWQ1SZY'; const { createClient } = await import('https://cdn.skypack.dev/@supabase/supabase-js@2'); const supa=createClient(url,key); const keys=kws(query); const [ev]= await Promise.all([supa.rpc('search_events',{keys})]); return { events:ev.data||[] } }
+    async function callRpc(query){ console.warn('Direct Supabase RPC removed from browser'); return { events: [], disabled: true }; }
 
     function renderEvents(tb, arr){ const b=$(tb+' tbody'); b.innerHTML=''; (arr||[]).forEach(e=>{ const tr=document.createElement('tr'); tr.innerHTML=`<td><a href="${e.page_url||e.url||''}" target="_blank">${(e.title||'')}</a></td><td>${e.date_start||e.when||''}</td><td>${e.location||''}</td>`; b.appendChild(tr); }); }
 
