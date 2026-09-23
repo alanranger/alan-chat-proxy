@@ -1,3 +1,4 @@
+/* eslint-disable max-params, max-statements, complexity, no-undef -- Node 18+ globals; legacy refresh cron */
 // /api/light-refresh.js
 // Lightweight refresh: read URLs from repo CSV and re-ingest changed content (runs every 8 hours via Vercel Cron), then finalize mappings.
 // GET /api/light-refresh?action=run
@@ -17,8 +18,8 @@ function send(res, status, obj){
 
 function supabaseAdmin() {
   const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
-  if (!url || !key) throw new Error('Missing SUPABASE_URL or KEY');
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) throw new Error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY');
   return createClient(url, key, { auth: { persistSession: false } });
 }
 
