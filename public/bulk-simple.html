@@ -855,7 +855,7 @@
       <div class="card">
         <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
           <button class="btn" onclick="runQaChecks()">Run QA Spot Checks</button>
-          <small style="color:#bbb">Checks counts via Supabase REST; no new functions needed.</small>
+          <small style="color:#bbb">Counts via /api/tools and /api/admin (service role) — same source as the Warm line after finalize.</small>
         </div>
         <div id="qaResults" style="margin-top:10px; font-family: monospace; white-space: pre-wrap;"></div>
       </div>
@@ -1228,24 +1228,41 @@
       const el = document.getElementById('qaResults');
       el.textContent = 'Running QA checks...';
       try {
-        // Use Supabase REST counts directly (no backend endpoint)
-        const checks = [
-          { name: 'page_entities', path: 'page_entities?select=id' },
-          { name: 'page_chunks', path: 'page_chunks?select=id' },
-          // Raw blog entity count for clarity alongside v_blog_content
-          { name: 'page_entities_articles', path: 'page_entities?select=id&kind=eq.article' },
-          // raw auto table (contains all event-product links)
-          { name: 'event_product_links_auto', path: 'event_product_links_auto?select=event_url' },
-          { name: 'v_events_for_chat', path: 'v_events_for_chat?select=event_url' },
-          { name: 'v_blog_content', path: 'v_blog_content?select=url' },
-          { name: 'v_service_content', path: 'v_service_content?select=url' },
-          { name: 'v_product_content', path: 'v_product_content?select=url' }
-        ];
-        const rows = [];
-        for (const c of checks) {
-          const n = await restCount(c.path);
-          rows.push(`${c.name.padEnd(36)} ${String(n)}`);
+        const token = getToken();
+        if (!token) throw new Error('No ingest token — save your token first');
+
+        const headers = { Authorization: `Bearer ${token}` };
+        const [countsResp, qaResp] = await Promise.all([
+          fetch('/api/tools?action=counts', { headers }),
+          fetch('/api/admin?action=qa', { headers }),
+        ]);
+        const counts = await countsResp.json();
+        const qa = await qaResp.json();
+        if (!countsResp.ok || !counts.ok) {
+          throw new Error(counts.detail || counts.error || `counts HTTP ${countsResp.status}`);
         }
+        if (!qaResp.ok || !qa.ok) {
+          throw new Error(qa.detail || qa.error || `qa HTTP ${qaResp.status}`);
+        }
+
+        const qaCount = (name) => {
+          const row = qa.checks?.[name];
+          if (!row) return '—';
+          if (row.status === 'error') return `err: ${row.detail || 'unknown'}`;
+          return String(row.count ?? 0);
+        };
+
+        const rows = [
+          ['page_entities', counts.page_entities ?? 0],
+          ['page_chunks', counts.page_chunks ?? 0],
+          ['page_entities_articles', counts.page_entities_articles ?? 0],
+          ['event_product_links_auto', counts.event_product_links_auto ?? 0],
+          ['v_events_for_chat', counts.total ?? qaCount('v_events_for_chat')],
+          ['v_blog_content', qaCount('v_blog_content')],
+          ['v_service_content', qaCount('v_service_content')],
+          ['v_product_content', qaCount('v_product_content')],
+        ].map(([name, n]) => `${String(name).padEnd(36)} ${n}`);
+
         el.textContent = rows.join('\n');
       } catch (e) {
         el.textContent = `QA error: ${e.message}`;
