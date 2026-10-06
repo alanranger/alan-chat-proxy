@@ -247,6 +247,25 @@ if (latestStatus) {
     `- **Title:** ${latestStatus.title}`,
     ""
   );
+  // Inline the body so a fresh chat can resume without opening a second file.
+  // Prefer end-of-session / MC session STATUS files when present.
+  try {
+    const prefer = statusUpdates.find((s) => /end-of-session|mc-session|session-state/i.test(s.file))
+      || latestStatus;
+    const body = readUtf8(prefer.path)
+      .replace(/^---[\s\S]*?---\s*/, "")
+      .trim();
+    if (body) {
+      statusLines.push(
+        "## Mission Control session state (inlined)",
+        "",
+        `_Source: \`${prefer.file}\`_`,
+        "",
+        body,
+        ""
+      );
+    }
+  } catch { /* leave pointer-only if read fails */ }
 }
 
 if (pending.length === 0) {

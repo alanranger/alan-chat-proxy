@@ -15,7 +15,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import XLSX from 'xlsx';
-import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
 import { 
   PATH_PRODUCTS, 
@@ -25,20 +24,16 @@ import {
   PATH_PRODUCT_SCHEMA, 
   PATH_EVENT_PRODUCT_MAP 
 } from '../api/chat.js';
+import { runProductReviewsIngest } from './ingest-product-reviews.mjs';
 
 // Load environment variables
 dotenv.config();
 
-// Supabase client
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-if (!supabaseUrl || !supabaseKey) {
+// Env required by product-reviews ingest (it creates its own Supabase client).
+if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
   console.error('❌ Error: SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set in environment');
   process.exit(1);
 }
-
-const supabase = createClient(supabaseUrl, supabaseKey);
 
 /**
  * Read CSV file and return parsed rows
@@ -169,7 +164,14 @@ async function runIngestion() {
     console.log(`   Event-Product Mappings: ${eventProductMap.length}`);
     
     console.log('\n✅ All files loaded successfully!');
-    console.log('💡 Note: This script loads the data. Actual ingestion to Supabase should be done via the /api/csv-import endpoint.');
+
+    console.log('\n⭐ Product reviews → Supabase + shared CSV exports...');
+    const reviewReport = await runProductReviewsIngest();
+    console.log(`   ✓ Catalog CSV: ${reviewReport.catalog_csv}`);
+    console.log(`   ✓ Reviews CSV: ${reviewReport.reviews_csv}`);
+    console.log(`   ✓ Active reviews: ${reviewReport.mapped_to_slug} | Excluded: ${reviewReport.excluded}`);
+
+    console.log('💡 Other CSV types may still use /api/csv-import where applicable.');
     
     return {
       products,
@@ -177,7 +179,8 @@ async function runIngestion() {
       trustpilotReviews,
       googleReviews,
       mergedSchema,
-      eventProductMap
+      eventProductMap,
+      reviewReport
     };
   } catch (error) {
     console.error('\n❌ Ingestion failed:', error);
