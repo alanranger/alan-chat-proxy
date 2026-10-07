@@ -216,8 +216,8 @@
         </div>
         <div class="path-item">
           <div class="path-label">🧾 Product Schema</div>
-          <div class="path-value" onclick="copyToClipboard('shared-resources/csv/07-product-schema-with-review-ratings.csv')">shared-resources/csv/07-product-schema-with-review-ratings.csv</div>
-          <div class="path-desc">csv_type: 'product_schema'</div>
+          <div class="path-value" onclick="copyToClipboard('shared-resources/csv processed/04 – FINAL_WITH_REVIEW_RATINGS.csv')">csv processed/04 … RATINGS.csv (preferred) or csv/07-product-schema…</div>
+          <div class="path-desc">csv_type: 'product_schema' — auto-prepped on upload (no npm run)</div>
         </div>
         <div class="path-item">
           <div class="path-label">📄 Landing & Service Pages</div>
@@ -227,7 +227,7 @@
         <div class="path-item">
           <div class="path-label">📦 Raw Products Export</div>
           <div class="path-value" onclick="copyToClipboard('shared-resources/csv/raw-01-products-sqsp-export.csv')">shared-resources/csv/raw-01-products-sqsp-export.csv</div>
-          <div class="path-desc">Raw product data</div>
+          <div class="path-desc">Optional: upload instead of 05 — hidden/non-workshop rows filtered automatically</div>
         </div>
         <div class="path-item">
           <div class="path-label">⭐ Trustpilot Reviews</div>
@@ -1383,6 +1383,9 @@
           // Use the actual csv_type returned from API (may differ from initial detection due to reclassification)
           const actualCsvType = result.csv_type || csvType;
           addResult(`✅ ${actualCsvType} metadata import successful: ${result.metadata_imported}/${actualRowCount} records`, 'success');
+          if (result.prep && result.prep.source) {
+            addResult(`🔧 Auto prep: ${result.prep.source}${result.prep.skipped != null ? ` (skipped ${result.prep.skipped})` : ''}${result.prep.skipped_hidden != null ? ` · hidden ${result.prep.skipped_hidden}` : ''}${result.prep.skipped_page != null ? ` · other page ${result.prep.skipped_page}` : ''}`, 'info');
+          }
           
           // Track which csv_types were imported in this session for filtering ingestion
           if (!window.__importedCsvTypesInSession) {
@@ -1722,6 +1725,8 @@
     // --- Bulk CSV Upload ---
     function detectTypeFromHeaders(firstLine){
       const h = (firstLine||'').toLowerCase();
+      if (h.includes('product_name') && h.includes('schema_html')) return 'product_schema';
+      if (h.includes('json-ld structured data')) return 'product_schema';
       if (h.includes('event_title') && h.includes('start_date') && h.includes('start_time')) return 'event';
       if (h.includes('title,') && h.includes('url') && h.includes('categories') && h.includes('tags')) return 'blog';
       if (h.includes('product url') || h.includes('price')) return 'product';
@@ -1736,7 +1741,9 @@
       const n = (name||'').toLowerCase();
       // 07 product schema (ratings) — must not be confused with old keyword "07"
       if (n.includes('07-product-schema') || n.includes('product-schema-with-review') ||
-          (n.includes('product_schema') && n.includes('review'))) return 'product_schema';
+          (n.includes('product_schema') && n.includes('review')) ||
+          (n.includes('04') && n.includes('ratings'))) return 'product_schema';
+      if (n.includes('raw-01-products') || n.includes('products-sqsp-export')) return 'product';
       // CRITICAL: Check for File 05 first (before generic 'workshop' check) to ensure correct detection
       // File 05 is workshop_products, not workshop_events - check for standardized filename pattern
       if (n.includes('05-photo-workshops-uk-landscape') || 
@@ -1812,10 +1819,14 @@
           type = 'workshop_products';
         }
         
-        // File 07 (Product Schema) should be product_schema, not workshop_products
+        // File 07 / 04 RATINGS → product_schema (04 auto-prepped server-side)
         if (f.name.includes('alanranger_product_schema_FINAL_WITH_REVIEW_RATINGS.csv') ||
-            f.name.includes('product') && f.name.includes('schema')) {
+            (f.name.includes('product') && f.name.includes('schema')) ||
+            (f.name.includes('04') && /ratings/i.test(f.name))) {
           type = 'product_schema';
+        }
+        if (/raw-01-products|products-sqsp-export/i.test(f.name)) {
+          type = 'product';
         }
         
         // File 08 (Landing and Service Pages) should be landing_service_pages
@@ -3135,7 +3146,7 @@
           warn.style.display = 'block';
           warn.style.background = '#7f1d1d';
           warn.style.color = '#fecaca';
-          warn.textContent = 'RED: 07 product_schema is empty/missing. Run npm run prep:ingest (refresh:07) and re-import 07 — ratings/prices will stay stale until you do.';
+          warn.textContent = 'RED: product_schema is empty. Upload "04 … RATINGS.csv" (or a non-empty 07 product-schema CSV) in the bulk set — prep runs automatically on upload. Do not skip this file.';
         } else {
           warn.style.display = 'none';
         }

@@ -65,6 +65,11 @@ import { createClient } from '@supabase/supabase-js';
 import crypto from 'node:crypto';
 import { cleanHTMLText } from '../lib/htmlExtractor.js';
 import { isAuthorizedAdmin } from './_lib/admin-auth.js';
+import {
+  isProductSchemaSource04,
+  transform04To07Rows,
+  normaliseWorkshopProductRows
+} from '../lib/prep-ingest-transform.js';
 
 /* ========== utils ========== */
 const need = (k) => {
@@ -655,16 +660,21 @@ async function importCourseProductMetadata(rows, supa) {
 
 // Import CSV metadata for workshop products
 async function importWorkshopProductMetadata(rows, supa) {
+  // Auto prep: raw Squarespace export → photo-workshops-uk visible only (was npm run prep:ingest / filter-05)
+  const prep = normaliseWorkshopProductRows(rows);
+  const workRows = prep.rows;
   const fieldStats = {
     total_rows: rows.length,
     fields_expected: ['url', 'title', 'categories', 'tags', 'publish_date', 'image_url'],
     fields_found: {},
     fields_success: {},
-    sample_row: rows[0] || {}
+    sample_row: workRows[0] || rows[0] || {},
+    prep_source: prep.source,
+    skipped_other_page: prep.skipped_page || 0
   };
   
-  const visibleRows = rows.filter((row) => !isHiddenProductRow(row));
-  fieldStats.hidden_skipped = rows.length - visibleRows.length;
+  const visibleRows = workRows.filter((row) => !isHiddenProductRow(row));
+  fieldStats.hidden_skipped = (prep.skipped_hidden || 0) + (workRows.length - visibleRows.length);
   const metadata = visibleRows.map(row => {
     const item = {
       csv_type: 'workshop_products',
@@ -711,9 +721,10 @@ async function importWorkshopProductMetadata(rows, supa) {
   return { 
     count: metadata.length, 
     field_stats: fieldStats,
-    success_rate: metadata.length / rows.length * 100,
+    success_rate: rows.length ? metadata.length / rows.length * 100 : 0,
     prune,
-    hidden_skipped: fieldStats.hidden_skipped
+    hidden_skipped: fieldStats.hidden_skipped,
+    prep
   };
 }
 
@@ -747,48 +758,50 @@ async function importSiteUrlMetadata(rows, supa) {
 
 // Import CSV metadata for product schema
 async function importProductSchemaMetadata(rows, supa) {
-  const metadata = rows.map(row => {
+  // Auto prep: 04 … RATINGS.csv → 07 shape (was npm run prep:ingest / refresh:07)
+  let workRows = rows;
+  let prep = { source: '07', skipped: 0 };
+  if (isProductSchemaSource04(rows)) {
+    const transformed = transform04To07Rows(rows);
+    workRows = transformed.rows;
+    prep = { source: '04_ratings', skipped: transformed.skipped };
+  }
+
+  const metadata = workRows.map(row => {
     let jsonLdData = null;
     try {
-      // Extract JSON-LD from the structured data field
       const jsonLdText = row['JSON-LD Structured Data'] || row['json-ld structured data'];
       if (jsonLdText) {
-        // Remove script tags and extract JSON
         const jsonMatch = jsonLdText.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          jsonLdData = JSON.parse(jsonMatch[0]);
-        }
+        if (jsonMatch) jsonLdData = JSON.parse(jsonMatch[0]);
       }
     } catch (e) {
-      console.warn('Failed to parse JSON-LD for:', row.Title);
+      console.warn('Failed to parse JSON-LD for:', row.Title || row.title);
     }
-
+    const titleRaw = row['﻿title'] || row.Title || row.title;
     return {
       csv_type: 'product_schema',
       url: jsonLdData?.url || null,
-      title: row['﻿title'] || row.title ? cleanHTMLText(row['﻿title'] || row.title) : null,
+      title: titleRaw ? cleanHTMLText(titleRaw) : null,
       categories: [],
       tags: [],
       publish_date: null,
       image_url: jsonLdData?.image ? cleanHTMLText(jsonLdData.image) : null,
       excerpt: jsonLdData?.description ? cleanHTMLText(jsonLdData.description) : null,
       json_ld_data: jsonLdData,
-      import_session: new Date().toISOString() // Track when this was imported
+      import_session: new Date().toISOString()
     };
   }).filter(item => item.url);
 
   let prune = { pruned: 0 };
   if (metadata.length > 0) {
     const urls = metadata.map(m => m.url).filter(Boolean);
-    if (urls.length > 0) {
-      await batchDeleteMetadata(supa, 'product_schema', urls);
-    }
-    
+    if (urls.length > 0) await batchDeleteMetadata(supa, 'product_schema', urls);
     const { error } = await supa.from('csv_metadata').insert(metadata);
     if (error) throw error;
     prune = await pruneStaleMetadata(supa, 'product_schema', urls);
   }
-  return { count: metadata.length, prune };
+  return { count: metadata.length, prune, prep };
 }
 
 /* ========== Landing & Service Pages Metadata Import ========== */
@@ -1699,6 +1712,7 @@ export default async function handler(req, res) {
       let metadataCount = 0;
       let fieldStats = null;
       let successRate = 0;
+      let prepInfo = null;
       switch (csvType) {
         case 'blog':
           const blogResult = await importBlogMetadata(rows, supa);
@@ -1715,13 +1729,13 @@ export default async function handler(req, res) {
         case 'workshop_events':
           // Check if this is actually workshop products (File 05 has same structure as course_products)
           if (rows[0] && (rows[0]['Full Url'] || rows[0]['full url']) && !rows[0]['Event_URL'] && !rows[0]['event_url']) {
-            // This is workshop products, not events
             console.log('DEBUG: Detected workshop_events CSV as workshop_products due to Full Url column');
             const workshopProductResult = await importWorkshopProductMetadata(rows, supa);
             metadataCount = workshopProductResult.count;
             fieldStats = workshopProductResult.field_stats;
             successRate = workshopProductResult.success_rate;
-            csvType = 'workshop_products'; // Update csvType to reflect actual import type
+            prepInfo = workshopProductResult.prep || null;
+            csvType = 'workshop_products';
           } else {
             const workshopResult = await importWorkshopEventMetadata(rows, supa);
             metadataCount = workshopResult.count;
@@ -1735,20 +1749,32 @@ export default async function handler(req, res) {
           fieldStats = courseProductResult.field_stats;
           successRate = courseProductResult.success_rate;
           break;
-        case 'workshop_products':
+        case 'workshop_products': {
           const workshopProductResult = await importWorkshopProductMetadata(rows, supa);
           metadataCount = workshopProductResult.count;
           fieldStats = workshopProductResult.field_stats;
           successRate = workshopProductResult.success_rate;
+          prepInfo = workshopProductResult.prep || null;
           break;
+        }
         case 'site_urls':
           const siteUrlResult = await importSiteUrlMetadata(rows, supa);
           metadataCount = siteUrlResult.count;
           break;
-        case 'product_schema':
+        case 'product_schema': {
           const productSchemaResult = await importProductSchemaMetadata(rows, supa);
           metadataCount = productSchemaResult.count;
+          prepInfo = productSchemaResult.prep || null;
+          if (metadataCount <= 0) {
+            return sendJSON(res, 400, {
+              error: 'prep_missing_source',
+              detail: 'product_schema import produced 0 rows. Upload "04 … RATINGS.csv" (preferred) or a non-empty 07-product-schema CSV — prep runs automatically on upload.',
+              stage: 'product_schema_prep',
+              prep: prepInfo
+            });
+          }
           break;
+        }
         case 'landing_service_pages':
           const landingServiceResult = await importLandingServicePageMetadata(rows, supa);
           metadataCount = landingServiceResult.count;
@@ -1763,7 +1789,8 @@ export default async function handler(req, res) {
         metadata_imported: metadataCount,
         csv_type: csvType,
         field_stats: fieldStats,
-        success_rate: successRate
+        success_rate: successRate,
+        prep: prepInfo
       });
     }
     
