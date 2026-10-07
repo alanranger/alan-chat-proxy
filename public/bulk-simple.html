@@ -1734,6 +1734,9 @@
 
     function detectTypeByName(name){
       const n = (name||'').toLowerCase();
+      // 07 product schema (ratings) — must not be confused with old keyword "07"
+      if (n.includes('07-product-schema') || n.includes('product-schema-with-review') ||
+          (n.includes('product_schema') && n.includes('review'))) return 'product_schema';
       // CRITICAL: Check for File 05 first (before generic 'workshop' check) to ensure correct detection
       // File 05 is workshop_products, not workshop_events - check for standardized filename pattern
       if (n.includes('05-photo-workshops-uk-landscape') || 
@@ -1793,6 +1796,7 @@
           'workshop': 'workshop_events',
           'service': 'course_products',
           'product': 'workshop_products',
+          'product_schema': 'product_schema',
           'site_urls': 'site_urls',
           'landing_service_pages': 'landing_service_pages'
         };
@@ -3114,6 +3118,27 @@
             console.warn(`DEBUG: Element ${id} not found`);
           }
         });
+
+        // Red warning if 07 product_schema is missing/empty — do not silently skip
+        let warn = document.getElementById('product-schema-missing-warn');
+        if (!warn) {
+          warn = document.createElement('div');
+          warn.id = 'product-schema-missing-warn';
+          warn.style.cssText = 'margin:.6rem 0;padding:.55rem .75rem;border-radius:6px;font-weight:700;display:none';
+          const host = document.getElementById('product-schema-count')?.closest('.stat-card')
+            || document.getElementById('product-schema-count')?.parentElement;
+          if (host?.parentElement) host.parentElement.insertAdjacentElement('afterend', warn);
+          else document.body.prepend(warn);
+        }
+        const schemaCount = csvMetadataCounts.product_schema || 0;
+        if (schemaCount <= 0) {
+          warn.style.display = 'block';
+          warn.style.background = '#7f1d1d';
+          warn.style.color = '#fecaca';
+          warn.textContent = 'RED: 07 product_schema is empty/missing. Run npm run prep:ingest (refresh:07) and re-import 07 — ratings/prices will stay stale until you do.';
+        } else {
+          warn.style.display = 'none';
+        }
         
         // Update content processing status
         const contentUpdates = {

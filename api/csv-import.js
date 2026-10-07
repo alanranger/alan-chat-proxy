@@ -20,6 +20,41 @@ async function batchDeleteMetadata(supa, csvType, urls, batchSize = 100) {
     if (error) throw error;
   }
 }
+
+/** Full-replace stale purge: delete URLs of this type missing from the new file. Abort if >30%. */
+async function pruneStaleMetadata(supa, csvType, newUrls, opts = {}) {
+  const maxFrac = opts.maxFrac != null ? opts.maxFrac : 0.3;
+  const newUrlSet = new Set((newUrls || []).filter(Boolean));
+  if (!newUrlSet.size) {
+    return { pruned: 0, skipped: true, reason: 'no_new_urls' };
+  }
+  const { data: existing, error } = await supa
+    .from('csv_metadata')
+    .select('url')
+    .eq('csv_type', csvType)
+    .is('start_date', null);
+  if (error) throw error;
+  const existingUrls = [...new Set((existing || []).map((r) => r.url).filter(Boolean))];
+  const stale = existingUrls.filter((u) => !newUrlSet.has(u));
+  if (!stale.length) return { pruned: 0, existing: existingUrls.length, stale: 0 };
+  const frac = existingUrls.length ? stale.length / existingUrls.length : 0;
+  if (frac > maxFrac) {
+    const err = new Error(
+      `stale_prune_blocked:${csvType}: would delete ${stale.length}/${existingUrls.length} (${Math.round(frac * 100)}%) — over ${Math.round(maxFrac * 100)}% safety cap`
+    );
+    err.code = 'stale_prune_blocked';
+    err.detail = { csvType, stale: stale.length, existing: existingUrls.length, sample: stale.slice(0, 8) };
+    throw err;
+  }
+  await batchDeleteMetadata(supa, csvType, stale);
+  return { pruned: stale.length, existing: existingUrls.length, stale: stale.length };
+}
+
+function isHiddenProductRow(row) {
+  const vis = String(row.visible ?? row.Visible ?? row.visibility ?? row.Visibility ?? '').trim().toLowerCase();
+  if (!vis) return false;
+  return vis === 'no' || vis === 'false' || vis === 'hidden' || vis === '0';
+}
 // Consolidated CSV import for all content types
 // Handles: blog, workshop, service, product, and event imports
 // Replaces: csv-bulk-import.js, csv-multi-import.js, csv-events-import.js
@@ -501,6 +536,10 @@ async function importWorkshopEventMetadata(rows, supa) {
     // For non-events (start_date is NULL), use (csv_type, url) only - partial unique index prevents duplicates
     const { error } = await supa.from('csv_metadata').upsert(metadata, { onConflict: 'csv_type,url,start_date' });
     if (error) throw error;
+
+    // Full-replace: drop event URLs no longer in the CSV (dated rows included)
+    const prune = await pruneStaleEventUrls(supa, 'workshop_events', uniqueUrls);
+    fieldStats.prune = prune;
     
     // Track successful imports
     fieldStats.fields_success = { ...fieldStats.fields_found };
@@ -512,8 +551,43 @@ async function importWorkshopEventMetadata(rows, supa) {
   return { 
     count: metadata.length, 
     field_stats: fieldStats,
-    success_rate: metadata.length / rows.length * 100
+    success_rate: metadata.length / rows.length * 100,
+    prune: fieldStats.prune || { pruned: 0 }
   };
+}
+
+/** Delete event csv_metadata rows whose URL is absent from the new file (incl. dated rows). */
+async function pruneStaleEventUrls(supa, csvType, newUrls, opts = {}) {
+  const maxFrac = opts.maxFrac != null ? opts.maxFrac : 0.3;
+  const newUrlSet = new Set((newUrls || []).filter(Boolean));
+  if (!newUrlSet.size) return { pruned: 0, skipped: true, reason: 'no_new_urls' };
+  const { data: existing, error } = await supa.from('csv_metadata').select('id, url').eq('csv_type', csvType);
+  if (error) throw error;
+  const byUrl = new Map();
+  for (const r of existing || []) {
+    if (!r.url) continue;
+    if (!byUrl.has(r.url)) byUrl.set(r.url, []);
+    byUrl.get(r.url).push(r.id);
+  }
+  const staleUrls = [...byUrl.keys()].filter((u) => !newUrlSet.has(u));
+  if (!staleUrls.length) return { pruned: 0, existing: byUrl.size, stale: 0 };
+  const frac = byUrl.size ? staleUrls.length / byUrl.size : 0;
+  if (frac > maxFrac) {
+    const err = new Error(
+      `stale_prune_blocked:${csvType}: would delete ${staleUrls.length}/${byUrl.size} URLs (${Math.round(frac * 100)}%) — over ${Math.round(maxFrac * 100)}% safety cap`
+    );
+    err.code = 'stale_prune_blocked';
+    err.detail = { csvType, stale: staleUrls.length, existing: byUrl.size, sample: staleUrls.slice(0, 8) };
+    throw err;
+  }
+  const ids = staleUrls.flatMap((u) => byUrl.get(u) || []);
+  for (let i = 0; i < ids.length; i += 100) {
+    const batch = ids.slice(i, i + 100);
+    await supa.from('page_entities').update({ csv_metadata_id: null }).in('csv_metadata_id', batch);
+    const { error: delErr } = await supa.from('csv_metadata').delete().in('id', batch);
+    if (delErr) throw delErr;
+  }
+  return { pruned: ids.length, stale_urls: staleUrls.length, existing: byUrl.size };
 }
 
 // Import CSV metadata for course products
@@ -526,7 +600,9 @@ async function importCourseProductMetadata(rows, supa) {
     sample_row: rows[0] || {}
   };
   
-  const metadata = rows.map(row => {
+  const visibleRows = rows.filter((row) => !isHiddenProductRow(row));
+  fieldStats.hidden_skipped = rows.length - visibleRows.length;
+  const metadata = visibleRows.map(row => {
     const item = {
       csv_type: 'course_products',
       url: row['full url'] || row.url,
@@ -550,9 +626,8 @@ async function importCourseProductMetadata(rows, supa) {
     return item;
   }).filter(item => item.url);
 
+  let prune = { pruned: 0 };
   if (metadata.length > 0) {
-    // For non-events (start_date is NULL), manually handle upsert since PostgREST doesn't support partial indexes in onConflict
-    // Delete existing rows first, then insert new ones (batched for large URL lists)
     const urls = metadata.map(m => m.url).filter(Boolean);
     if (urls.length > 0) {
       await batchDeleteMetadata(supa, 'course_products', urls);
@@ -560,6 +635,7 @@ async function importCourseProductMetadata(rows, supa) {
     
     const { error } = await supa.from('csv_metadata').insert(metadata);
     if (error) throw error;
+    prune = await pruneStaleMetadata(supa, 'course_products', urls);
     
     // Track successful imports
     fieldStats.fields_success = { ...fieldStats.fields_found };
@@ -571,7 +647,9 @@ async function importCourseProductMetadata(rows, supa) {
   return { 
     count: metadata.length, 
     field_stats: fieldStats,
-    success_rate: metadata.length / rows.length * 100
+    success_rate: metadata.length / rows.length * 100,
+    prune,
+    hidden_skipped: fieldStats.hidden_skipped
   };
 }
 
@@ -585,7 +663,9 @@ async function importWorkshopProductMetadata(rows, supa) {
     sample_row: rows[0] || {}
   };
   
-  const metadata = rows.map(row => {
+  const visibleRows = rows.filter((row) => !isHiddenProductRow(row));
+  fieldStats.hidden_skipped = rows.length - visibleRows.length;
+  const metadata = visibleRows.map(row => {
     const item = {
       csv_type: 'workshop_products',
       url: row['full url'] || row.url,
@@ -609,9 +689,8 @@ async function importWorkshopProductMetadata(rows, supa) {
     return item;
   }).filter(item => item.url);
 
+  let prune = { pruned: 0 };
   if (metadata.length > 0) {
-    // For non-events (start_date is NULL), manually handle upsert since PostgREST doesn't support partial indexes in onConflict
-    // Delete existing rows first, then insert new ones (batched for large URL lists)
     const urls = metadata.map(m => m.url).filter(Boolean);
     if (urls.length > 0) {
       await batchDeleteMetadata(supa, 'workshop_products', urls);
@@ -619,6 +698,8 @@ async function importWorkshopProductMetadata(rows, supa) {
     
     const { error } = await supa.from('csv_metadata').insert(metadata);
     if (error) throw error;
+    // Workshop product CSVs shrink when hidden SKUs are filtered out (often >30%)
+    prune = await pruneStaleMetadata(supa, 'workshop_products', urls, { maxFrac: 0.55 });
     
     // Track successful imports
     fieldStats.fields_success = { ...fieldStats.fields_found };
@@ -630,7 +711,9 @@ async function importWorkshopProductMetadata(rows, supa) {
   return { 
     count: metadata.length, 
     field_stats: fieldStats,
-    success_rate: metadata.length / rows.length * 100
+    success_rate: metadata.length / rows.length * 100,
+    prune,
+    hidden_skipped: fieldStats.hidden_skipped
   };
 }
 
@@ -648,9 +731,8 @@ async function importSiteUrlMetadata(rows, supa) {
     import_session: new Date().toISOString() // Track when this was imported
   })).filter(item => item.url);
 
+  let prune = { pruned: 0 };
   if (metadata.length > 0) {
-    // For non-events (start_date is NULL), manually handle upsert since PostgREST doesn't support partial indexes in onConflict
-    // Delete existing rows first, then insert new ones (batched for large URL lists)
     const urls = metadata.map(m => m.url).filter(Boolean);
     if (urls.length > 0) {
       await batchDeleteMetadata(supa, 'site_urls', urls);
@@ -658,8 +740,9 @@ async function importSiteUrlMetadata(rows, supa) {
     
     const { error } = await supa.from('csv_metadata').insert(metadata);
     if (error) throw error;
+    prune = await pruneStaleMetadata(supa, 'site_urls', urls);
   }
-  return { count: metadata.length };
+  return { count: metadata.length, prune };
 }
 
 // Import CSV metadata for product schema
@@ -694,9 +777,8 @@ async function importProductSchemaMetadata(rows, supa) {
     };
   }).filter(item => item.url);
 
+  let prune = { pruned: 0 };
   if (metadata.length > 0) {
-    // For non-events (start_date is NULL), manually handle upsert since PostgREST doesn't support partial indexes in onConflict
-    // Delete existing rows first, then insert new ones (batched for large URL lists)
     const urls = metadata.map(m => m.url).filter(Boolean);
     if (urls.length > 0) {
       await batchDeleteMetadata(supa, 'product_schema', urls);
@@ -704,8 +786,9 @@ async function importProductSchemaMetadata(rows, supa) {
     
     const { error } = await supa.from('csv_metadata').insert(metadata);
     if (error) throw error;
+    prune = await pruneStaleMetadata(supa, 'product_schema', urls);
   }
-  return { count: metadata.length };
+  return { count: metadata.length, prune };
 }
 
 /* ========== Landing & Service Pages Metadata Import ========== */

@@ -17,6 +17,8 @@
     "sync:combined-reviews": "node scripts/sync-combined-reviews-from-supabase.mjs",
     "regenerate:06-reviews": "node scripts/regenerate-06-attributed-csv.mjs",
     "refresh:07-product-schema": "node scripts/refresh-07-product-schema-ingest.mjs",
+    "prep:ingest": "node scripts/refresh-07-product-schema-ingest.mjs && node scripts/filter-05-hidden-products.mjs",
+    "import:07": "node scripts/import-07-product-schema-now.mjs",
     "validate:event": "ajv validate --spec=draft2020 -c ajv-formats --allow-union-types -s schemas/event.schema.json -r schemas/jsonld-shared.defs.json -d \"generated/*.event.json\"",
     "validate:itemlist": "ajv validate --spec=draft2020 -c ajv-formats --allow-union-types -s schemas/itemlist.schema.json -r schemas/jsonld-shared.defs.json -d \"generated/*.itemlist.json\"",
     "validate:all": "npm run validate:event && npm run validate:itemlist",
