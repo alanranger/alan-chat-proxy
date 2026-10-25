@@ -24,6 +24,7 @@ import {
   stripKnownSquarespaceNavNoise,
 } from '../helpers/squarespace-nav.js';
 import { isAuthorizedAdmin } from './_lib/admin-auth.js';
+import { resolveOfferPrice } from '../lib/offerPrice.js';
 
 // Extract meta description from HTML - updated for deployment
 function extractMetaDescription(html) {
@@ -980,7 +981,7 @@ export async function ingestSingleUrl(url, supa, options = {}) {
                 date_start: dateStart,
                 date_end: dateEnd,
                 location: bestJsonLd.location?.name || bestJsonLd.location?.address || meta.location_name || null,
-                price: bestJsonLd.offers?.price || null,
+                price: resolveOfferPrice(bestJsonLd.offers),
                 price_currency: bestJsonLd.offers?.priceCurrency || null,
                 availability: bestJsonLd.offers?.availability || null,
                 sku: bestJsonLd.sku || null,
@@ -1039,7 +1040,7 @@ export async function ingestSingleUrl(url, supa, options = {}) {
             ? `${csvMetadata.end_date}T${csvMetadata.end_time}.000Z`
             : (bestJsonLd.endDate || null),
           location: bestJsonLd.location?.name || bestJsonLd.location?.address || null,
-          price: bestJsonLd.offers?.price || null,
+          price: resolveOfferPrice(bestJsonLd.offers),
           price_currency: bestJsonLd.offers?.priceCurrency || null,
           availability: bestJsonLd.offers?.availability || null,
           sku: bestJsonLd.sku || null,
@@ -1108,7 +1109,7 @@ export async function ingestSingleUrl(url, supa, options = {}) {
             date_start: null, // Products don't have dates
             date_end: null,
             location: null, // Products don't have locations
-            price: productJsonLd.offers?.price || productJsonLd.offers?.[0]?.price || null,
+            price: resolveOfferPrice(productJsonLd.offers),
             price_currency: productJsonLd.offers?.priceCurrency || productJsonLd.offers?.[0]?.priceCurrency || 'GBP',
             availability: productJsonLd.offers?.availability || productJsonLd.offers?.[0]?.availability || null,
             sku: productJsonLd.sku || null,

@@ -64,6 +64,7 @@ export const config = { runtime: 'nodejs' };
 import { createClient } from '@supabase/supabase-js';
 import crypto from 'node:crypto';
 import { cleanHTMLText } from '../lib/htmlExtractor.js';
+import { resolveOfferPrice, effectiveVariantPrice } from '../lib/offerPrice.js';
 import { isAuthorizedAdmin } from './_lib/admin-auth.js';
 import {
   isProductSchemaSource04,
@@ -1151,7 +1152,7 @@ function transformProductData(row) {
     const title = obj.name || row.title || '';
     const url = obj.url || row.url || row['page url'] || row.page_url || '';
     const sku = obj.sku || row.sku || null;
-    const price = Number(offers.price || row.price || row['low price'] || row.low_price || 0) || 0;
+    const price = resolveOfferPrice(offers) ?? (Number(row.price || row['low price'] || row.low_price || 0) || 0);
     const availability = (offers.availability && /InStock/i.test(offers.availability)) ? 'InStock' : 'OutOfStock';
     const images = Array.isArray(obj.image) ? obj.image : (obj.image ? [obj.image] : []);
     const jsonLd = {
@@ -1200,7 +1201,7 @@ function transformProductData(row) {
   if (stock === 'Unlimited' || (parseInt(stock) || 0) > 0) {
     availability = 'InStock';
   }
-  const finalPrice = onSale && salePrice > 0 ? salePrice : price;
+  const finalPrice = effectiveVariantPrice({ price, salePrice, onSale });
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "Product",
@@ -1498,7 +1499,7 @@ async function transformProductDataWithCSV(row, supa) {
     const title = obj.name || row.title || '';
     const url = obj.url || row.url || row['page url'] || row.page_url || '';
     const sku = obj.sku || row.sku || null;
-    const price = Number(offers.price || row.price || row['low price'] || row.low_price || 0) || 0;
+    const price = resolveOfferPrice(offers) ?? (Number(row.price || row['low price'] || row.low_price || 0) || 0);
     const availability = (offers.availability && /InStock/i.test(offers.availability)) ? 'InStock' : 'OutOfStock';
     const images = Array.isArray(obj.image) ? obj.image : (obj.image ? [obj.image] : []);
     const jsonLd = {
@@ -1555,7 +1556,7 @@ async function transformProductDataWithCSV(row, supa) {
   if (stock === 'Unlimited' || (parseInt(stock) || 0) > 0) {
     availability = 'InStock';
   }
-  const finalPrice = onSale && salePrice > 0 ? salePrice : price;
+  const finalPrice = effectiveVariantPrice({ price, salePrice, onSale });
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "Product",
