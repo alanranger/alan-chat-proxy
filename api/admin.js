@@ -1040,6 +1040,9 @@ export default async function handler(req, res) {
 
       console.log('Refresh function completed successfully');
 
+      const { error: pricingError } = await supabase.rpc('refresh_product_pricing');
+      if (pricingError) console.error('refresh_product_pricing failed:', pricingError.message);
+
       // Get count after refresh
       const { data: afterData, error: afterError } = await supabase
         .from('event_product_links_auto')

@@ -421,6 +421,9 @@ async function importCourseEventMetadata(rows, supa) {
     // For non-events (start_date is NULL), use (csv_type, url) only - partial unique index prevents duplicates
     const { error } = await supa.from('csv_metadata').upsert(metadata, { onConflict: 'csv_type,url,start_date' });
     if (error) throw error;
+
+    // Full-replace: drop lesson event URLs no longer in the CSV (same rule as workshops)
+    fieldStats.prune = await pruneStaleEventUrls(supa, 'course_events', uniqueUrls);
     
     // Track successful imports
     fieldStats.fields_success = { ...fieldStats.fields_found };
@@ -432,7 +435,8 @@ async function importCourseEventMetadata(rows, supa) {
   return { 
     count: metadata.length, 
     field_stats: fieldStats,
-    success_rate: metadata.length / rows.length * 100
+    success_rate: metadata.length / rows.length * 100,
+    prune: fieldStats.prune || { pruned: 0 }
   };
 }
 
@@ -562,11 +566,20 @@ async function importWorkshopEventMetadata(rows, supa) {
   };
 }
 
-/** Delete event csv_metadata rows whose URL is absent from the new file (incl. dated rows). */
+/**
+ * Delete event csv_metadata rows whose URL is absent from the new file (incl. dated rows),
+ * then sweep dated event entities that no current events export still lists.
+ */
 async function pruneStaleEventUrls(supa, csvType, newUrls, opts = {}) {
   const maxFrac = opts.maxFrac != null ? opts.maxFrac : 0.3;
   const newUrlSet = new Set((newUrls || []).filter(Boolean));
   if (!newUrlSet.size) return { pruned: 0, skipped: true, reason: 'no_new_urls' };
+  const result = await pruneStaleEventMetadata(supa, csvType, newUrlSet, maxFrac);
+  result.orphan_events_removed = await deleteOrphanEventEntities(supa, maxFrac);
+  return result;
+}
+
+async function pruneStaleEventMetadata(supa, csvType, newUrlSet, maxFrac) {
   const { data: existing, error } = await supa.from('csv_metadata').select('id, url').eq('csv_type', csvType);
   if (error) throw error;
   const byUrl = new Map();
@@ -610,6 +623,27 @@ async function deleteStaleEventEntities(supa, staleUrls) {
     removed += (data || []).length;
   }
   return removed;
+}
+
+const normEventUrl = (u) => String(u || '').toLowerCase().replace(/\/+$/, '');
+
+// Dated event entities whose URL is in neither events export (workshop_events / course_events).
+// Catches events whose csv_metadata was already pruned earlier. Skipped above the safety cap.
+async function deleteOrphanEventEntities(supa, maxFrac) {
+  const { data: meta, error: metaErr } = await supa
+    .from('csv_metadata').select('url').in('csv_type', ['workshop_events', 'course_events']).limit(10000);
+  if (metaErr || !meta?.length) return 0;
+  const { data: events, error: evErr } = await supa
+    .from('page_entities').select('url').eq('kind', 'event').not('date_start', 'is', null).limit(10000);
+  if (evErr || !events?.length) return 0;
+  const current = new Set(meta.map((m) => normEventUrl(m.url)));
+  const orphanUrls = [...new Set(events.map((e) => e.url).filter((u) => !current.has(normEventUrl(u))))];
+  if (!orphanUrls.length) return 0;
+  if (orphanUrls.length / events.length > maxFrac) {
+    console.warn(`[csv-import] orphan event sweep skipped: ${orphanUrls.length}/${events.length} over safety cap`);
+    return 0;
+  }
+  return deleteStaleEventEntities(supa, orphanUrls);
 }
 
 // Import CSV metadata for course products
@@ -1134,6 +1168,19 @@ function transformServiceData(row) {
 }
 
 /* ========== Product data transformation ========== */
+// Product entities must be keyed by the full site URL. Squarespace's products export gives a bare
+// slug in "Product URL" plus the collection in "Product Page"; a bare slug alone is rejected
+// (slug keys duplicated full-URL keys downstream and let stale prices win).
+function canonicalProductUrl(rawUrl, productPage) {
+  const raw = String(rawUrl || '').trim().replace(/\/+$/, '');
+  if (!raw) return null;
+  if (/^https?:\/\//i.test(raw)) return raw;
+  const page = String(productPage || '').trim().replace(/^\/+|\/+$/g, '');
+  const slug = raw.replace(/^\/+/, '');
+  if (slug.includes('/')) return `https://www.alanranger.com/${slug}`;
+  return page ? `https://www.alanranger.com/${page}/${slug}` : null;
+}
+
 function transformProductData(row) {
   // Path A: CSV supplies a JSON-LD blob column (e.g. "JSON-LD Structured Data")
   const jsonLdRaw = row['json-ld structured data'] || row['jsonld'] || row['structured_data'] || row['structured data'];
@@ -1166,7 +1213,8 @@ function transformProductData(row) {
     if (!obj) return null;
     const offers = obj.offers || {};
     const title = obj.name || row.title || '';
-    const url = obj.url || row.url || row['page url'] || row.page_url || '';
+    const url = canonicalProductUrl(obj.url || row.url || row['page url'] || row.page_url, null);
+    if (!url) return null;
     const sku = obj.sku || row.sku || null;
     const price = resolveOfferPrice(offers) ?? (Number(row.price || row['low price'] || row.low_price || 0) || 0);
     const availability = (offers.availability && /InStock/i.test(offers.availability)) ? 'InStock' : 'OutOfStock';
@@ -1202,7 +1250,11 @@ function transformProductData(row) {
 
   // Path B: Column-mapped products
   const title = row.title || row['product title'] || row.name;
-  const url = row['product url'] || row.product_url || row.url || row['page url'] || row.page_url;
+  const url = canonicalProductUrl(
+    row['product url'] || row.product_url || row.url || row['page url'] || row.page_url,
+    row['product page'] || row.product_page
+  );
+  if (!url) return null;
   const description = row.description;
   const sku = row.sku;
   const price = parseFloat(row.price || row['low price'] || row.low_price) || 0;
@@ -1513,7 +1565,8 @@ async function transformProductDataWithCSV(row, supa) {
     if (!obj) return null;
     const offers = obj.offers || {};
     const title = obj.name || row.title || '';
-    const url = obj.url || row.url || row['page url'] || row.page_url || '';
+    const url = canonicalProductUrl(obj.url || row.url || row['page url'] || row.page_url, null);
+    if (!url) return null;
     const sku = obj.sku || row.sku || null;
     const price = resolveOfferPrice(offers) ?? (Number(row.price || row['low price'] || row.low_price || 0) || 0);
     const availability = (offers.availability && /InStock/i.test(offers.availability)) ? 'InStock' : 'OutOfStock';
@@ -1557,7 +1610,11 @@ async function transformProductDataWithCSV(row, supa) {
 
   // Path B: Column-mapped products
   const title = row.title || row['product title'] || row.name;
-  const url = row['product url'] || row.product_url || row.url || row['page url'] || row.page_url;
+  const url = canonicalProductUrl(
+    row['product url'] || row.product_url || row.url || row['page url'] || row.page_url,
+    row['product page'] || row.product_page
+  );
+  if (!url) return null;
   const description = row.description;
   const sku = row.sku;
   const price = parseFloat(row.price || row['low price'] || row.low_price) || 0;

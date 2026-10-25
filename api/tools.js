@@ -592,6 +592,10 @@ export default async function handler(req, res) {
               }
             }
 
+            // Rebuild display prices + products matview so the export never reads stale prices.
+            const pricing = await supa.rpc('refresh_product_pricing');
+            if (pricing.error) console.error('refresh_product_pricing failed before export:', pricing.error.message);
+
             // Try with extended columns first; if the columns don't exist yet, fall back
             let rows = [];
             let header = headerWith;
