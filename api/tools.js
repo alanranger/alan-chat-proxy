@@ -21,6 +21,20 @@ const sendJSON = (res, status, obj) => {
   res.status(status).send(JSON.stringify(obj));
 };
 
+// Mappings export: only events still present in the current Squarespace events
+// exports (csv_metadata workshop_events / course_events). Skipped if that list is empty.
+async function keepCurrentExportEvents(supa, rows) {
+  const { data, error } = await supa
+    .from('csv_metadata')
+    .select('url')
+    .in('csv_type', ['workshop_events', 'course_events'])
+    .limit(5000);
+  if (error || !data?.length) return rows;
+  const norm = (u) => String(u || '').toLowerCase().replace(/\/+$/, '');
+  const current = new Set(data.map((d) => norm(d.url)));
+  return rows.filter((row) => current.has(norm(row.event_url)));
+}
+
 // ---------- OpenAI embedding (same model as ingestion) ----------
 async function embedQuery(text) {
   const key = need('OPENAI_API_KEY');
@@ -599,6 +613,7 @@ export default async function handler(req, res) {
               }
             }
             rows = r.data || [];
+            rows = await keepCurrentExportEvents(supa, rows);
 
         // Helper function to normalize date for deduplication key
         const normalizeDate = (date) => {

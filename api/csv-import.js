@@ -593,7 +593,23 @@ async function pruneStaleEventUrls(supa, csvType, newUrls, opts = {}) {
     const { error: delErr } = await supa.from('csv_metadata').delete().in('id', batch);
     if (delErr) throw delErr;
   }
-  return { pruned: ids.length, stale_urls: staleUrls.length, existing: byUrl.size };
+  const eventsRemoved = await deleteStaleEventEntities(supa, staleUrls);
+  return { pruned: ids.length, stale_urls: staleUrls.length, existing: byUrl.size, events_removed: eventsRemoved };
+}
+
+// Events dropped from the Squarespace export (deleted / 404) must not linger as
+// dated page_entities rows, or they keep flowing into v_events_for_chat and the
+// event-product mappings export.
+async function deleteStaleEventEntities(supa, staleUrls) {
+  let removed = 0;
+  for (let i = 0; i < staleUrls.length; i += 100) {
+    const batch = staleUrls.slice(i, i + 100);
+    await supa.from('event_product_links_auto').delete().in('event_url', batch);
+    const { data, error } = await supa.from('page_entities').delete().eq('kind', 'event').in('url', batch).select('id');
+    if (error) throw error;
+    removed += (data || []).length;
+  }
+  return removed;
 }
 
 // Import CSV metadata for course products
