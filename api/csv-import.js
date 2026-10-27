@@ -275,39 +275,27 @@ async function importBlogMetadata(rows, supa) {
     // CSV (the original reason for delete-all-first), but we only delete the stale rows
     // AFTER a successful insert so a transient failure can never wipe the whole table.
     const newUrls = [...new Set(metadata.map(m => m.url).filter(Boolean))];
-    const newUrlSet = new Set(newUrls);
 
-    // Snapshot existing blog URLs so we know which posts were removed from the CSV
-    const { data: existingBlogs, error: selectError } = await supa
-      .from('csv_metadata')
-      .select('url')
-      .eq('csv_type', 'blog')
-      .is('start_date', null);
-    if (selectError) throw selectError;
-    const existingUrls = (existingBlogs || []).map(b => b.url).filter(Boolean);
-
-    // 1) Clear only the URLs we are about to insert (prevents unique-index conflicts)
     await batchDeleteMetadata(supa, 'blog', newUrls);
 
-    // 2) Insert fresh rows in batches so a transient error has a small blast radius
     for (let i = 0; i < metadata.length; i += 100) {
       const { error } = await supa.from('csv_metadata').insert(metadata.slice(i, i + 100));
       if (error) throw error;
     }
 
-    // 3) Only now (insert succeeded) purge posts that no longer exist in the CSV
-    const staleUrls = existingUrls.filter(u => !newUrlSet.has(u));
-    if (staleUrls.length > 0) {
-      await batchDeleteMetadata(supa, 'blog', staleUrls);
-    }
+    const prune = await pruneStaleMetadata(supa, 'blog', newUrls);
 
-    // Track successful imports
     fieldStats.fields_success = { ...fieldStats.fields_found };
+    logFieldTrackingStats('blog', fieldStats, metadata.length, rows.length);
+    return {
+      count: metadata.length,
+      field_stats: fieldStats,
+      success_rate: metadata.length / rows.length * 100,
+      prune
+    };
   }
   
-  // Debug logging for field tracking
   logFieldTrackingStats('blog', fieldStats, metadata.length, rows.length);
-  
   return { 
     count: metadata.length, 
     field_stats: fieldStats,
@@ -906,6 +894,8 @@ async function importLandingServicePageMetadata(rows, supa) {
         console.log(`[DEBUG importLandingServicePageMetadata] Database error:`, error);
         throw error;
       }
+      const prune = await pruneStaleMetadata(supa, 'landing_service_pages', urls, { maxFrac: 0.45 });
+      return { count: metadata.length, prune };
     }
     return { count: metadata.length };
   } catch (err) {

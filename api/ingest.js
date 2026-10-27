@@ -102,12 +102,36 @@ function normalizeImageUrl(imageUrl, pageUrl) {
   return addSquarespaceFormat(httpsUrl);
 }
 
+function jsonLdImageUrl(image) {
+  if (!image) return null;
+  if (typeof image === 'string') return image;
+  if (Array.isArray(image)) return jsonLdImageUrl(image[0]);
+  if (typeof image === 'object') return jsonLdImageUrl(image.url || image.contentUrl || null);
+  return null;
+}
+
 function getJsonLdImage(jsonLd) {
   if (!jsonLd || typeof jsonLd !== 'object') return null;
-  const image = jsonLd.image || jsonLd.thumbnailUrl || jsonLd.logo || null;
-  if (Array.isArray(image)) return image[0];
-  if (typeof image === 'object' && image.url) return image.url;
-  return image;
+  return jsonLdImageUrl(jsonLd.image || jsonLd.thumbnailUrl || jsonLd.logo || null);
+}
+
+function jsonLdTypes(node) {
+  const t = node && node['@type'];
+  if (Array.isArray(t)) return t.map((x) => String(x).toLowerCase());
+  return [String(t || '').toLowerCase()];
+}
+
+function pickEntityImage(nodes, fallbackNode) {
+  const article = (nodes || []).find((n) => {
+    const types = jsonLdTypes(n);
+    return types.includes('article') || types.includes('blogposting') || types.includes('newsarticle');
+  });
+  return getJsonLdImage(article) || getJsonLdImage(fallbackNode);
+}
+
+function isIngest404(err) {
+  const msg = String((err && err.message) || err || '');
+  return msg.includes('404') || msg.includes('HEAD 404') || msg.includes('GET 404');
 }
 
 function isLogoImageUrl(url) {
@@ -164,7 +188,7 @@ function extractMetaImage(html, pageUrl) {
   }
 }
 
-const INGEST_VERSION = "2026-06-12-mobile-menu-strip-v1";
+const INGEST_VERSION = "2026-10-27-p1-null-safe-landing";
 const SELF_BASE = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : `http://localhost:3000`;
 const EXPECTED_TOKEN = process.env.INGEST_TOKEN || "";
 
@@ -532,6 +556,12 @@ function normalizeKind(item, url) {
 export async function ingestSingleUrl(url, supa, options = {}) {
   const startTime = Date.now();
   let stage = 'fetch';
+  let htmlStoreError = null;
+  let chunkStoreError = null;
+  let csvMetaError = null;
+  let storeEntitiesError = null;
+  let titleSafeguardError = null;
+  let priceRpcError = null;
   try {
     const fetchStart = Date.now();
     const res = await fetchPage(url);
@@ -560,14 +590,14 @@ export async function ingestSingleUrl(url, supa, options = {}) {
       });
       
       if (error) {
+        htmlStoreError = error;
         console.error('Failed to store raw HTML:', error);
-        // Continue processing even if raw HTML storage fails
       } else {
         console.log(`✅ Stored raw HTML for ${url} (${html.length} chars, hash: ${contentHash})`);
       }
     } catch (e) {
+      htmlStoreError = e;
       console.error('Exception storing raw HTML:', e);
-      // Continue processing even if raw HTML storage fails
     }
     console.log(`[TIMING] ${url}: store_raw_html took ${Date.now() - storeHtmlStart}ms`);
     
@@ -589,26 +619,15 @@ export async function ingestSingleUrl(url, supa, options = {}) {
         // For blog articles, prioritize FAQPage over Organization
         if (urlLower.includes('/blog') || urlLower.includes('/blog-on-photography')) {
           jsonLd.sort((a, b) => {
-            const aType = (a['@type'] || '').toLowerCase();
-            const bType = (b['@type'] || '').toLowerCase();
-            
-            // FAQPage gets highest priority for blog articles
-            if (aType === 'faqpage' && bType !== 'faqpage') return -1;
-            if (bType === 'faqpage' && aType !== 'faqpage') return 1;
-            
-            // Article gets second priority
-            if (aType === 'article' && bType !== 'article') return -1;
-            if (bType === 'article' && aType !== 'article') return 1;
-            
-            // WebSite gets third priority
-            if (aType === 'website' && bType !== 'website') return -1;
-            if (bType === 'website' && aType !== 'website') return 1;
-            
-            // Organization gets lowest priority for blog articles
-            if (aType === 'organization' && bType !== 'organization') return 1;
-            if (bType === 'organization' && aType !== 'organization') return -1;
-            
-            return 0;
+            const rank = (n) => {
+              const types = jsonLdTypes(n);
+              if (types.includes('article') || types.includes('blogposting') || types.includes('newsarticle')) return 0;
+              if (types.includes('faqpage')) return 1;
+              if (types.includes('website')) return 2;
+              if (types.includes('organization')) return 3;
+              return 4;
+            };
+            return rank(a) - rank(b);
           });
         }
         
@@ -668,12 +687,13 @@ export async function ingestSingleUrl(url, supa, options = {}) {
     let csvMetadata = null;
     let csvMetadataList = []; // Store all metadata entries for multi-date event handling
     try {
-      const { data: metadataList } = await supa
+      const { data: metadataList, error: csvMetaQueryError } = await supa
         .from('csv_metadata')
         .select('*')
         .eq('url', url);
+      if (csvMetaQueryError) csvMetaError = csvMetaQueryError;
       
-      if (metadataList && metadataList.length > 0) {
+      if (!csvMetaQueryError && metadataList && metadataList.length > 0) {
         csvMetadataList = metadataList; // Store all entries
         // Prefer landing_service_pages over older sources, then prefer rows with kind
         const preferred = [...metadataList].sort((a,b)=>{
@@ -710,21 +730,9 @@ export async function ingestSingleUrl(url, supa, options = {}) {
         };
       }
     } catch (e) {
-      // No CSV metadata found for this URL - that's okay
+      csvMetaError = e;
     }
     console.log(`[TIMING] ${url}: fetch_csv_metadata took ${Date.now() - csvMetaStart}ms`);
-    
-    // Debug: Log if Equipment Needed is in the text (fire and forget - don't block)
-    supa.from('debug_logs').insert({
-      url: url,
-      stage: 'text_analysis',
-      data: { 
-        textLength: text.length, 
-        hasEquipmentNeeded: text.includes('EQUIPMENT NEEDED'),
-        textSample: text.substring(0, 1000),
-        hasCsvMetadata: !!csvMetadata
-      }
-    }).then(() => {}).catch(() => {}); // Fire and forget
     
     stage = 'store_chunks';
     const storeChunksStart = Date.now();
@@ -772,86 +780,49 @@ export async function ingestSingleUrl(url, supa, options = {}) {
               .from('page_chunks')
               .insert(chunkInserts);
             if (chunkError) {
-              // If it's a duplicate key error, that's OK - chunks already exist or delete didn't complete
               if (chunkError.code === '23505') {
                 console.log(`⚠️ Chunks already exist for ${url} (duplicate hash), skipping insert`);
               } else {
+                chunkStoreError = chunkError;
                 console.error(`Chunk insert failed for ${url}:`, chunkError);
               }
             } else {
               console.log(`✅ Stored ${chunkInserts.length} chunks for ${url}`);
             }
           } catch (insertErr) {
-            // Catch any other errors (like duplicate key violations)
             if (insertErr.code === '23505' || (insertErr.message && insertErr.message.includes('duplicate key'))) {
               console.log(`⚠️ Chunks already exist for ${url}, skipping insert`);
             } else {
+              chunkStoreError = insertErr;
               console.error(`Exception during chunk insert for ${url}:`, insertErr);
             }
           }
         }
       } catch (e) {
+        chunkStoreError = e;
         console.error(`Exception during chunk processing for ${url}:`, e);
-        // Continue processing even if chunk insertion fails
       }
     }
     
     stage = 'store_entities';
     const storeEntitiesStart = Date.now();
-    let storeEntitiesError = null;
     if (jsonLd) {
       try {
-      // Log JSON-LD objects found directly to database (fire and forget - don't block)
-      supa.from('debug_logs').insert({
-        url: url,
-        stage: 'jsonld_objects',
-        data: { count: jsonLd.length, objects: jsonLd.map((item, idx) => ({ idx, type: item['@type'], kind: normalizeKind(item, url) })) }
-      }).then(() => {}).catch(() => {}); // Fire and forget
-      
-      // Extract structured information from raw HTML for products
       let enhancedDescriptions = {};
       const structuredData = extractStructuredDataFromHTML(html);
-      
-      // Log structured data extraction (fire and forget - don't block)
-      supa.from('debug_logs').insert({
-        url: url,
-        stage: 'structured_data_extracted',
-        data: structuredData
-      }).then(() => {}).catch(() => {}); // Fire and forget
 
-      // Store enhanced descriptions for ALL entity types
       for (let idx = 0; idx < jsonLd.length; idx++) {
         const item = jsonLd[idx];
         const entityKind = normalizeKind(item, url);
-        
-        // Clean descriptions for all entity types, but enhance with structured data only for products
         if (entityKind === 'product') {
-          const enhancedDescription = enhanceDescriptionWithStructuredData(item.description || '', structuredData);
-          enhancedDescriptions[idx] = enhancedDescription;
+          enhancedDescriptions[idx] = enhanceDescriptionWithStructuredData(item.description || '', structuredData);
         } else {
-          // For non-products, just clean the HTML without adding structured data
-          const cleanedDescription = cleanHTMLText(item.description || '');
-          enhancedDescriptions[idx] = cleanedDescription;
+          enhancedDescriptions[idx] = cleanHTMLText(item.description || '');
         }
-        
-        // Log enhanced description creation directly to database (fire and forget - don't block)
-        supa.from('debug_logs').insert({
-          url: url,
-          stage: 'enhanced_description',
-          data: { idx: idx, kind: entityKind, description: enhancedDescriptions[idx].substring(0, 300) }
-        }).then(() => {}).catch(() => {}); // Fire and forget
       }
       
-      // Log enhanced descriptions object directly to database (fire and forget - don't block)
-      supa.from('debug_logs').insert({
-        url: url,
-        stage: 'enhanced_descriptions',
-        data: enhancedDescriptions
-      }).then(() => {}).catch(() => {}); // Fire and forget
-      
-      // Select the best JSON-LD object for this URL (prioritized by the sort above)
-      const bestJsonLd = jsonLd[0]; // First item after prioritization
-      const bestJsonLdImage = getJsonLdImage(bestJsonLd);
+      const bestJsonLd = jsonLd[0];
+      const bestJsonLdImage = pickEntityImage(jsonLd, bestJsonLd);
       const bestIdx = 0;
       
       // PRIORITY: Use meta_description as primary source for description field (for ALL entity types)
@@ -915,13 +886,6 @@ export async function ingestSingleUrl(url, supa, options = {}) {
           console.warn('Failed to extract description from HTML:', error.message);
         }
       }
-      
-      // Log entity creation directly to database (fire and forget)
-      supa.from('debug_logs').insert({
-        url: url,
-        stage: 'entity_creation',
-        data: { idx: bestIdx, kind: normalizeKind(bestJsonLd, url), hasEnhanced: !!enhancedDescriptions[bestIdx], descriptionLength: enhancedDescription ? enhancedDescription.length : 0, hasCsvMetadata: !!csvMetadata, structuredData: structuredData }
-      }).then(() => {}).catch(() => {}); // Ignore errors
       
       // Prefer CSV-provided kind when present and valid
       const allowedKinds = new Set(['article','event','product','service','landing']);
@@ -1345,8 +1309,9 @@ export async function ingestSingleUrl(url, supa, options = {}) {
               }
             }
             merged.last_seen = e.last_seen;
-            const { error: updErr } = await supa.from('page_entities').update(merged).eq('id', existing.id);
+            const { data: updated, error: updErr } = await supa.from('page_entities').update(merged).eq('id', existing.id).select('id');
             if (updErr) throw new Error(`Entity update failed: ${updErr.message}`);
+            if (!updated || !updated.length) throw new Error(`entity update matched 0 rows for ${e.url} kind=${e.kind}`);
             return { success: true, action: 'updated' };
           } else {
             // Try insert; if unique constraint blocks, fallback to update existing natural key
@@ -1415,13 +1380,14 @@ export async function ingestSingleUrl(url, supa, options = {}) {
                   .eq('page_url', pageUrl) // CRITICAL: Use page_url to match constraint
                   .eq('start_date', startDate); // CRITICAL: Use start_date (date only) to match constraint
                 
-                const { error: updErr } = await updateQuery;
+                const { data: dateUpdated, error: updErr } = await updateQuery.select('id');
                 if (updErr) throw new Error(`Entity upsert failed: ${updErr.message}`);
+                if (!dateUpdated || !dateUpdated.length) throw new Error(`entity date-upsert matched 0 rows for ${pageUrl}`);
                 return { success: true, action: 'upserted' };
               } else {
                 // For non-events or events without dates, fallback to update by (url, kind)
                 console.log(`DEBUG: Updating entity for ${e.url} with meta_description:`, e.meta_description ? `"${e.meta_description.substring(0, 50)}..."` : 'null');
-                const { error: updErr } = await supa
+                const { data: updatedRows, error: updErr } = await supa
                   .from('page_entities')
                   .update({
                     title: e.title,
@@ -1467,8 +1433,10 @@ export async function ingestSingleUrl(url, supa, options = {}) {
                     availability_status: e.availability_status
                   })
                   .eq('url', e.url)
-                  .eq('kind', e.kind);
+                  .eq('kind', e.kind)
+                  .select('id');
                 if (updErr) throw new Error(`Entity upsert failed: ${updErr.message}`);
+                if (!updatedRows || !updatedRows.length) throw new Error(`entity fallback update matched 0 rows for ${e.url} kind=${e.kind}`);
                 return { success: true, action: 'upserted' };
               }
             }
@@ -1480,45 +1448,50 @@ export async function ingestSingleUrl(url, supa, options = {}) {
         await Promise.all(entityPromises);
       }
       
-      // Sync pricing to display table after entity updates (fire and forget - don't block)
-      supa.rpc('upsert_display_price_all').then(() => {}).catch(() => {});
+      try {
+        const { error: priceErr } = await supa.rpc('upsert_display_price_all');
+        if (priceErr) priceRpcError = priceErr;
+      } catch (priceErr) {
+        priceRpcError = priceErr;
+      }
       } catch (err) {
         storeEntitiesError = err;
         console.error(`store_entities failed for ${url}:`, err);
       }
     }
     
-    // Final safeguard: ensure service/landing titles are set to meta/HTML title when generic
     try {
       const finalPageTitle = metaTitle || htmlTitle || h1Title || null;
       if (finalPageTitle) {
-        await supa
+        const { error } = await supa
           .from('page_entities')
           .update({ title: finalPageTitle })
           .eq('page_url', url)
           .in('kind', ['service','landing']);
+        if (error) titleSafeguardError = error;
       }
-    } catch (_) {}
+    } catch (e) {
+      titleSafeguardError = e;
+    }
 
-    // Final safeguard: ensure meta_description matches on-page meta for ALL entity types
-    // Also update description field to use meta_description when available
     try {
       const finalMetaDesc = extractMetaDescription(html);
       if (finalMetaDesc) {
-        // Update meta_description for all entity types
-        await supa
+        const { error: metaErr } = await supa
           .from('page_entities')
           .update({ meta_description: finalMetaDesc })
           .eq('page_url', url);
-        
-        // Update description field to use meta_description when available (for all types)
-        await supa
+        if (metaErr) titleSafeguardError = metaErr;
+        const { error: descErr } = await supa
           .from('page_entities')
           .update({ description: finalMetaDesc })
           .eq('page_url', url)
-          .is('description', null); // Only update if description is currently null
+          .is('description', null);
+        if (descErr) titleSafeguardError = descErr;
       }
-    } catch (_) {}
+    } catch (e) {
+      titleSafeguardError = e;
+    }
 
     // Extract meta description for debugging
     const metaDesc = extractMetaDescription(html);
@@ -1530,13 +1503,28 @@ export async function ingestSingleUrl(url, supa, options = {}) {
     // Debug: Log meta description extraction
     console.log(`DEBUG: Meta description for ${url}:`, metaDesc ? `"${metaDesc.substring(0, 100)}..."` : 'null');
     
+    const failReasons = [];
+    if (!jsonLd) failReasons.push('no JSON-LD to store');
+    if (htmlStoreError) failReasons.push('page_html: ' + asString(htmlStoreError));
+    if (chunkStoreError) failReasons.push('page_chunks: ' + asString(chunkStoreError));
+    if (csvMetaError) failReasons.push('csv_metadata: ' + asString(csvMetaError));
+    if (storeEntitiesError) failReasons.push('store_entities: ' + asString(storeEntitiesError));
+    if (titleSafeguardError) failReasons.push('title_safeguard: ' + asString(titleSafeguardError));
+    if (priceRpcError) failReasons.push('display_price: ' + asString(priceRpcError));
+    const failed = failReasons.length > 0;
     return {
       url,
+      success: !failed,
+      ok: !failed,
       chunks: chunkInserts.length,
       entities: jsonLd ? jsonLd.length : 0,
       jsonLdFound: !!jsonLd,
       meta_description: metaDesc,
       store_entities_error: storeEntitiesError ? asString(storeEntitiesError) : null,
+      html_store_error: htmlStoreError ? asString(htmlStoreError) : null,
+      chunk_store_error: chunkStoreError ? asString(chunkStoreError) : null,
+      csv_metadata_error: csvMetaError ? asString(csvMetaError) : null,
+      fail_reason: failed ? failReasons.join('; ') : null,
       ingest_version: INGEST_VERSION
     };
     
@@ -1599,20 +1587,12 @@ async function processBulkUpload(req, res) {
       const batchPromises = batch.map(async (url) => {
         try {
           const result = await ingestSingleUrl(url, supa);
-          return { url, success: true, ...result };
+          return { url, ...result, success: result.success !== false };
         } catch (err) {
-          // Check if this is a 404 error (hidden/unpublished product)
-          const is404 = err.message && (
-            err.message.includes('404') || 
-            err.message.includes('HEAD 404') ||
-            err.message.includes('GET 404')
-          );
-          
-          if (is404) {
-            return { url, success: true, skipped: true, reason: 'Product hidden/unpublished (404)', error: err.message };
-          } else {
-            return { url, success: false, error: err.message };
+          if (isIngest404(err)) {
+            return { url, success: false, ok: false, skipped: true, reason: 'Product hidden/unpublished (404)', error: err.message };
           }
+          return { url, success: false, ok: false, error: err.message };
         }
       });
       
@@ -1683,11 +1663,11 @@ export default async function handler(req, res) {
         const u = csvUrls[i];
         try {
           const r = await ingestSingleUrl(u, supa, { dryRun: !!dryRun });
-          results.push({ url: u, ok: true, ...r });
-          // small delay to be polite
+          results.push({ url: u, ...r, ok: r.success !== false, success: r.success !== false });
           await sleep(500);
         } catch (e) {
-          results.push({ url: u, ok: false, error: asString(e) });
+          const skipped = isIngest404(e);
+          results.push({ url: u, ok: false, success: false, skipped, error: asString(e), reason: skipped ? 'Product hidden/unpublished (404)' : undefined });
         }
       }
       const ok = results.filter(r=>r.ok).length;
@@ -1696,18 +1676,19 @@ export default async function handler(req, res) {
     
     stage = 'ingest_single';
     const result = await ingestSingleUrl(url, supa, { dryRun: !!dryRun });
-    return sendJSON(res, 200, { ok: true, ...result });
+    return sendJSON(res, 200, { ...result, ok: result.success !== false });
     
   } catch (err) {
-    // Handle specific error types more gracefully
     if (err.message && err.message.includes('timeout')) {
-      return sendJSON(res, 408, { error: 'timeout', detail: 'Request timed out after 30 seconds', stage });
+      return sendJSON(res, 408, { error: 'timeout', detail: 'Request timed out after 30 seconds', stage, success: false, ok: false });
     } else if (err.message && err.message.includes('aborted')) {
-      return sendJSON(res, 408, { error: 'timeout', detail: 'Request was aborted due to timeout', stage });
-    } else if (err.message && (err.message.includes('404') || err.message.includes('HEAD 404') || err.message.includes('GET 404'))) {
-      return sendJSON(res, 200, { ok: true, skipped: true, reason: 'Product hidden/unpublished (404)', detail: asString(err), stage });
+      return sendJSON(res, 408, { error: 'timeout', detail: 'Request was aborted due to timeout', stage, success: false, ok: false });
+    } else if (isIngest404(err)) {
+      return sendJSON(res, 200, { ok: false, success: false, skipped: true, reason: 'Product hidden/unpublished (404)', detail: asString(err), stage });
     } else {
-    return sendJSON(res, 500, { error: 'server_error', detail: asString(err), stage });
+    return sendJSON(res, 500, { error: 'server_error', detail: asString(err), stage, success: false, ok: false });
     }
   }
 }
+
+export { getJsonLdImage, pickEntityImage, jsonLdImageUrl };

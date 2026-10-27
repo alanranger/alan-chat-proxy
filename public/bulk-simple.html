@@ -1961,21 +1961,29 @@
       return { flow, startedAt: new Date().toISOString(), ok: new Set(), failed: new Map() };
     }
 
+    function ingestUiSuccess(result) {
+      if (!result) return false;
+      if (result.success === false || result.ok === false) return false;
+      if (result.skipped || result.store_entities_error || result.fail_reason) return false;
+      return result.ok === true || (result.ok === undefined && result.status >= 200 && result.status < 300);
+    }
+
     function ingestFailureReason(result, okish) {
+      if (result?.fail_reason) return String(result.fail_reason);
+      if (result?.skipped) return `skipped: ${result.reason || 'hidden/unpublished'}`;
+      if (result?.store_entities_error) return `store_entities_error: ${result.store_entities_error}`;
       if (!okish) return `${result?.error || ''} ${result?.detail || ''}`.trim() || 'failed';
-      if (result.skipped) return `skipped: ${result.reason || 'hidden/unpublished'}`;
-      return `store_entities_error: ${result.store_entities_error}`;
+      return 'failed';
     }
 
     function recordIngestOutcome(report, url, result) {
-      const okish = !!(result && (result.ok === true || (result.ok === undefined && result.status >= 200 && result.status < 300)));
-      if (okish && !result.skipped && !result.store_entities_error) {
+      if (ingestUiSuccess(result)) {
         report.failed.delete(url);
         report.ok.add(url);
         return;
       }
       report.ok.delete(url);
-      report.failed.set(url, ingestFailureReason(result, okish).slice(0, 280));
+      report.failed.set(url, ingestFailureReason(result, false).slice(0, 280));
     }
 
     async function postIngestRunReport(report, total) {
@@ -2293,12 +2301,13 @@
             window.urlScrapingStats[category] = { success: 0, failed: 0, skipped: 0 };
           }
           
-          if (result && (result.ok === true || (result.ok === undefined && result.status >= 200 && result.status < 300))) {
-            if (result.skipped === true) {
-              addResult(`⏭️ Skipped (hidden product): ${url}  (source: batch ${batchIndex + 1}) — ${result.reason || 'Product not currently published'}`, 'skipped');
-              window.urlScrapingStats[category].skipped++;
-              stats.skippedCount++;
-            } else if (result.message && result.message.includes('duplicates')) {
+          if (result && result.skipped === true) {
+            addResult(`⏭️ Skipped (hidden product): ${url}  (source: batch ${batchIndex + 1}) — ${result.reason || 'Product not currently published'}`, 'skipped');
+            window.urlScrapingStats[category].skipped++;
+            stats.skippedCount++;
+            failedUrlSet.add(url);
+          } else if (ingestUiSuccess(result)) {
+            if (result.message && result.message.includes('duplicates')) {
               addResult(`✅ Content already exists: ${url}  (source: batch ${batchIndex + 1}) — ${result.message}`, 'success');
               window.urlScrapingStats[category].skipped++;
               stats.skippedCount++;
@@ -2404,21 +2413,22 @@
           if (!window.urlScrapingStats[category]) {
             window.urlScrapingStats[category] = { success: 0, failed: 0, skipped: 0 };
           }
-          const okNow = result && (result.ok === true || (result.ok === undefined && result.status >= 200 && result.status < 300));
-          if (okNow) {
+          const okNow = ingestUiSuccess(result);
+          if (result && result.skipped === true) {
+            failedUrlSet.delete(url);
+            stats.failedCount = Math.max(0, stats.failedCount - 1);
+            window.urlScrapingStats[category].failed = Math.max(0, window.urlScrapingStats[category].failed - 1);
+            stats.skippedCount++;
+            window.urlScrapingStats[category].skipped++;
+            addResult(`⏭️ Recovered on retry (skipped): ${url}`, 'skipped');
+          } else if (okNow) {
             // Recovered — move it out of the failed bucket
             failedUrlSet.delete(url);
             stats.failedCount = Math.max(0, stats.failedCount - 1);
             window.urlScrapingStats[category].failed = Math.max(0, window.urlScrapingStats[category].failed - 1);
-            if (result.skipped === true) {
-              stats.skippedCount++;
-              window.urlScrapingStats[category].skipped++;
-              addResult(`⏭️ Recovered on retry (skipped): ${url}`, 'skipped');
-            } else {
-              stats.successCount++;
-              window.urlScrapingStats[category].success++;
-              addResult(`✅ Recovered on retry: ${url}`, 'success');
-            }
+            stats.successCount++;
+            window.urlScrapingStats[category].success++;
+            addResult(`✅ Recovered on retry: ${url}`, 'success');
           } else {
             const reason = result && (result.error || result.detail) ? `${result.error || ''} ${result.detail || ''}`.trim() : 'still failing';
             addResult(`❌ Retry failed (left as failed): ${url} — ${reason}`, 'error');
@@ -2500,7 +2510,7 @@
         let result = null, success = false;
         for (let attempt = 1; attempt <= MAX_ATTEMPTS && !success; attempt++) {
           result = await apiCall('/api/ingest', { url }, { timeoutMs: TIMEOUT_MS });
-          success = !!(result && (result.ok === true || (result.ok === undefined && result.status >= 200 && result.status < 300)));
+          success = ingestUiSuccess(result);
           if (!success && attempt < MAX_ATTEMPTS) {
             addResult(`… attempt ${attempt} failed for ${url}, retrying once more`, 'warning');
             await new Promise(r => setTimeout(r, 1500));
