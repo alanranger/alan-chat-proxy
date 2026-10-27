@@ -1952,6 +1952,54 @@
     }
 
     // Website scraping
+    // ---- Run report for the AI GEO silent fault monitor (D6) ----
+    // Any URL that failed, was skipped, or returned store_entities_error counts as failed.
+    // The endpoint also checks every "ok" URL really got a page_entities row this run.
+    const INGEST_RUN_REPORT_URL = 'https://ai-geo-audit.vercel.app/api/aigeo/tool-run-report';
+
+    function newIngestRunReport(flow) {
+      return { flow, startedAt: new Date().toISOString(), ok: new Set(), failed: new Map() };
+    }
+
+    function ingestFailureReason(result, okish) {
+      if (!okish) return `${result?.error || ''} ${result?.detail || ''}`.trim() || 'failed';
+      if (result.skipped) return `skipped: ${result.reason || 'hidden/unpublished'}`;
+      return `store_entities_error: ${result.store_entities_error}`;
+    }
+
+    function recordIngestOutcome(report, url, result) {
+      const okish = !!(result && (result.ok === true || (result.ok === undefined && result.status >= 200 && result.status < 300)));
+      if (okish && !result.skipped && !result.store_entities_error) {
+        report.failed.delete(url);
+        report.ok.add(url);
+        return;
+      }
+      report.ok.delete(url);
+      report.failed.set(url, ingestFailureReason(result, okish).slice(0, 280));
+    }
+
+    async function postIngestRunReport(report, total) {
+      const body = {
+        tool: 'chat-ingest',
+        flow: report.flow,
+        run_id: report.startedAt,
+        started_at: report.startedAt,
+        version: document.getElementById('gitVersion')?.textContent?.trim()?.slice(0, 80) || null,
+        items_processed: total,
+        failed: [...report.failed].map(([url, reason]) => ({ url, reason })),
+        ok_urls: [...report.ok],
+        summary: { ok: report.ok.size, failed: report.failed.size }
+      };
+      try {
+        const resp = await fetch(INGEST_RUN_REPORT_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+        const j = await resp.json().catch(() => ({}));
+        if (!resp.ok) throw new Error(j.error || `HTTP ${resp.status}`);
+        addResult(`📮 Run report sent to the silent fault monitor: ${j.failed} failed / skipped / not written (of ${total}).`, j.failed ? 'warning' : 'success');
+      } catch (e) {
+        addResult(`⚠️ Could not send the run report to the silent fault monitor: ${e.message}`, 'warning');
+      }
+    }
+
     async function scrapeWebsite(dryRun=false) {
       // Collect URLs from csv_metadata table (metadata-driven system)
       /** @type {{ url: string, source: string }[]} */
@@ -2218,6 +2266,7 @@
       let completed = 0;
       const timedOutEntries = []; // URLs that timed out — re-fetched once in a retry pass at the end
       const failedUrlSet = new Set(); // every URL still failing — persisted so "Load last failed" can recover them
+      const runReport = newIngestRunReport('bulk');
 
       async function processBatch(batchEntries, batchIndex) {
         addResult(`📦 Processing batch ${batchIndex + 1}: ${batchEntries.length} URLs`, 'info');
@@ -2229,6 +2278,7 @@
           updateProgress((completed / entries.length) * 100, `Scraping ${url}...`);
           
           const result = await apiCall('/api/ingest', { url, dryRun }, { timeoutMs: TIMEOUT_MS });
+          recordIngestOutcome(runReport, url, result);
           const category = categorize(url, result, source);
           
           // Debug: Log meta description extraction results
@@ -2349,6 +2399,7 @@
           const { url, source } = entry;
           updateProgress(100, `Retrying ${url}...`);
           const result = await apiCall('/api/ingest', { url, dryRun }, { timeoutMs: TIMEOUT_MS });
+          recordIngestOutcome(runReport, url, result);
           const category = categorize(url, result, source);
           if (!window.urlScrapingStats[category]) {
             window.urlScrapingStats[category] = { success: 0, failed: 0, skipped: 0 };
@@ -2385,6 +2436,7 @@
         stats.stoppedCount = entries.length - completed;
         updateStats();
       }
+      if (!dryRun) await postIngestRunReport(runReport, completed);
 
       updateProgress(100, 'Content ingestion complete');
       addResult('🎉 Content ingestion complete!', 'success');
@@ -2437,6 +2489,7 @@
       const MAX_ATTEMPTS = 2; // these already failed once — give each two tries
       let ok = 0, failed = 0;
       const stillFailing = [];
+      const runReport = newIngestRunReport('reingest');
       if (btn) btn.disabled = true;
       addResult(`♻️ Re‑ingesting ${urls.length} URL(s), one at a time...`, 'info');
 
@@ -2453,6 +2506,7 @@
             await new Promise(r => setTimeout(r, 1500));
           }
         }
+        recordIngestOutcome(runReport, url, result);
         if (success) {
           ok++;
           const skipped = result && result.skipped === true;
@@ -2471,6 +2525,7 @@
       if (statusEl) statusEl.textContent = `Done: ${ok} recovered, ${failed} still failing`;
       if (btn) btn.disabled = false;
       addResult(`🏁 Re‑ingest complete — ${ok} recovered, ${failed} still failing.`, failed === 0 ? 'success' : 'warning');
+      await postIngestRunReport(runReport, urls.length);
       try { await updateDebugControlDashboard(); } catch {}
     }
 
