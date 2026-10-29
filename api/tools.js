@@ -51,7 +51,7 @@ async function fetchAllRows(supa, table, columns) {
   return rows;
 }
 
-const SCREEN_BUILD = '2026-10-29-stale-modal';
+const SCREEN_BUILD = '2026-10-29-stale-modal-2';
 
 async function checkLiveHttp(url) {
   try {
@@ -179,6 +179,10 @@ async function pruneStaleEntities(supa, ids, screenBuild) {
   }
   const rows = [];
   for (const r of stale.filter((x) => want.includes(x.id))) {
+    if (r.reason === 'trailing_slash_duplicate') {
+      rows.push(r);
+      continue;
+    }
     const live = await checkLiveHttp(r.url);
     if (live.status === 200) {
       refused.push({ id: r.id, detail: 'That page is live and cannot be deleted' });

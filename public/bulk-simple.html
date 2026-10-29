@@ -144,7 +144,7 @@
       <p>Metadata-Driven Content Pipeline</p>
       <small>v1.0.9 - Metadata-Driven System</small>
       <p style="font-size: 12px; margin-top: 8px; background: rgba(0,0,0,0.3); padding: 4px 8px; border-radius: 4px; display: inline-block;">
-        <strong>Version: <span id="gitVersion">Loading...</span></strong> | Screen: <span id="screenBuild">2026-10-29-stale-modal</span> | Built: <span id="buildDate">Loading...</span> |
+        <strong>Version: <span id="gitVersion">Loading...</span></strong> | Screen: <span id="screenBuild">2026-10-29-stale-modal-2</span> | Built: <span id="buildDate">Loading...</span> |
         <span style="color: #4f4;">Loaded: <span id="loadTimeValue"></span></span>
       </p>
     </div>
@@ -2891,7 +2891,7 @@
     }
 
     // Export mappings CSV
-    window.SCREEN_BUILD = '2026-10-29-stale-modal';
+    window.SCREEN_BUILD = '2026-10-29-stale-modal-2';
     window._stalePreviewIds = [];
     window._staleServerBuild = '';
     window._staleConfirming = false;
@@ -2953,7 +2953,7 @@
       };
     }
 
-    async function previewStaleEntities() {
+    async function previewStaleEntities(keepResult) {
       if (!getToken()) { addResult('❌ No token found. Save your token first.', 'error'); return; }
       const modal = document.getElementById('staleModal');
       modal.classList.remove('hidden');
@@ -2972,6 +2972,7 @@
         document.getElementById('staleWait').classList.add('hidden');
         document.getElementById('staleBody').classList.remove('hidden');
         renderStaleModal(j);
+        if (keepResult) document.getElementById('staleResult').textContent = keepResult;
       } catch (e) {
         document.getElementById('staleWait').textContent = 'Could not check: ' + e.message;
       }
@@ -2990,23 +2991,25 @@
         document.getElementById('staleResult').textContent = 'Click Delete again to confirm. A backup is saved first.';
         return;
       }
+      document.getElementById('staleBody').classList.add('hidden');
+      document.getElementById('staleWait').classList.remove('hidden');
+      document.getElementById('staleWait').textContent = 'Deleting…';
       const result = await apiCall('/api/tools?action=prune_stale_entities', {
         confirm: true,
         ids,
         screen_build: window.SCREEN_BUILD
       });
+      window._staleConfirming = false;
       if (!result || result.ok !== true) {
+        document.getElementById('staleWait').classList.add('hidden');
+        document.getElementById('staleBody').classList.remove('hidden');
         document.getElementById('staleResult').textContent = result?.detail || result?.error || 'Delete failed';
-        window._staleConfirming = false;
         updateStaleDeleteBtn();
         return;
       }
-      const refused = (result.refused || []).length;
-      document.getElementById('staleResult').textContent =
-        'Deleted ' + (result.pruned || 0) + ' · backup saved (ID ' + (result.backup_id || 'n/a') + ')' +
-        (refused ? ' · ' + refused + ' live pages were refused' : '');
+      const line = 'Deleted ' + (result.pruned || 0) + ' · backup saved (ID ' + (result.backup_id || 'n/a') + ')';
       window._stalePreviewIds = [];
-      window._staleConfirming = false;
+      await previewStaleEntities(line);
     }
 
     async function exportMappings(){
