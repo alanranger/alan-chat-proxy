@@ -35,6 +35,69 @@ async function keepCurrentExportEvents(supa, rows) {
   return rows.filter((row) => current.has(norm(row.event_url)));
 }
 
+function normEntityUrl(u) {
+  return String(u || '').trim().replace(/\/+$/, '').toLowerCase();
+}
+
+async function fetchAllRows(supa, table, columns) {
+  const rows = [];
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await supa.from(table).select(columns).range(from, from + 999);
+    if (error) throw error;
+    if (!data || !data.length) break;
+    rows.push(...data);
+    if (data.length < 1000) break;
+  }
+  return rows;
+}
+
+async function listStaleEntities(supa) {
+  const csv = await fetchAllRows(supa, 'csv_metadata', 'url');
+  const live = new Set(csv.map((r) => normEntityUrl(r.url)).filter(Boolean));
+  const ents = await fetchAllRows(supa, 'page_entities', 'id,kind,url,page_url,title,last_seen,csv_type');
+  const byNorm = new Map();
+  for (const e of ents) {
+    const n = normEntityUrl(e.url);
+    if (!byNorm.has(n)) byNorm.set(n, []);
+    byNorm.get(n).push(e);
+  }
+  const stale = [];
+  for (const e of ents) {
+    const n = normEntityUrl(e.url);
+    if (!live.has(n)) {
+      stale.push({ ...e, reason: 'not_in_csv' });
+      continue;
+    }
+    if (!String(e.url || '').endsWith('/')) continue;
+    const twins = byNorm.get(n) || [];
+    if (twins.some((t) => !String(t.url || '').endsWith('/'))) {
+      stale.push({ ...e, reason: 'trailing_slash_duplicate' });
+    }
+  }
+  return stale;
+}
+
+async function pruneStaleEntities(supa, ids) {
+  const stale = await listStaleEntities(supa);
+  const allow = new Set(stale.map((r) => r.id));
+  const chosen = (ids || []).filter((id) => allow.has(id));
+  if (!chosen.length) return { pruned: 0, backup_id: null, listed: stale.length };
+  const rows = stale.filter((r) => chosen.includes(r.id));
+  const { data: backup, error: bErr } = await supa.from('tool_run_reports').insert({
+    tool: 'prune-stale-entities',
+    flow: 'backup',
+    run_id: new Date().toISOString(),
+    state: 'backed_up',
+    items_processed: rows.length,
+    summary: { rows },
+    failed: []
+  }).select('id').single();
+  if (bErr) throw bErr;
+  const { error: dErr } = await supa.from('page_entities').delete().in('id', chosen);
+  if (dErr) throw dErr;
+  return { pruned: chosen.length, backup_id: backup.id, rows };
+}
+
 // ---------- OpenAI embedding (same model as ingestion) ----------
 async function embedQuery(text) {
   const key = need('OPENAI_API_KEY');
@@ -1003,8 +1066,28 @@ export default async function handler(req, res) {
       }
     }
 
+    if (req.method === 'GET' && action === 'stale_entities') {
+      try {
+        const rows = await listStaleEntities(supa);
+        return sendJSON(res, 200, { ok: true, count: rows.length, rows });
+      } catch (e) {
+        return sendJSON(res, 500, { error: 'stale_entities_failed', detail: String(e?.message || e) });
+      }
+    }
+
+    if (req.method === 'POST' && action === 'prune_stale_entities') {
+      try {
+        const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {});
+        if (!body.confirm) return sendJSON(res, 400, { error: 'confirm_required' });
+        const result = await pruneStaleEntities(supa, body.ids || []);
+        return sendJSON(res, 200, { ok: true, ...result });
+      } catch (e) {
+        return sendJSON(res, 500, { error: 'prune_failed', detail: String(e?.message || e) });
+      }
+    }
+
     // Unknown/unsupported
-    return sendJSON(res, 404, { error: 'not_found', detail: 'Use action=health|verify|get_urls|counts|diagnose_chunks|parity|cron_status|export|export_unmapped|export_reconcile|reconcile_services (GET) or action=search|finalize|aggregate_analytics|reconcile_services (POST)' });
+    return sendJSON(res, 404, { error: 'not_found', detail: 'Use action=health|verify|get_urls|counts|diagnose_chunks|parity|cron_status|stale_entities|export|export_unmapped|export_reconcile|reconcile_services (GET) or action=search|finalize|aggregate_analytics|reconcile_services|prune_stale_entities (POST)' });
   } catch (e) {
     return sendJSON(res, 500, { error: 'server_error', detail: String(e?.message || e) });
   }

@@ -188,7 +188,7 @@ function extractMetaImage(html, pageUrl) {
   }
 }
 
-const INGEST_VERSION = "2026-10-27-p1-null-safe-landing";
+const INGEST_VERSION = "2026-10-29-kind-slash-event-json";
 const SELF_BASE = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : `http://localhost:3000`;
 const EXPECTED_TOKEN = process.env.INGEST_TOKEN || "";
 
@@ -199,6 +199,43 @@ const need = (k) => {
   return v;
 };
 const sha1 = (s) => crypto.createHash('sha1').update(s).digest('hex');
+
+function normalizePageUrl(raw) {
+  try {
+    const x = new URL(String(raw || '').trim());
+    x.hash = '';
+    x.pathname = x.pathname.replace(/\/+$/, '') || '/';
+    return x.toString();
+  } catch (err) {
+    return String(raw || '').trim().replace(/\/+$/, '');
+  }
+}
+
+function slashTwinUrl(raw) {
+  const s = String(raw || '').trim();
+  if (!s) return s;
+  return s.endsWith('/') ? s.replace(/\/+$/, '') : `${s}/`;
+}
+
+function eventDateOnly(row) {
+  if (row?.start_date) return String(row.start_date).slice(0, 10);
+  if (row?.date_start) return String(row.date_start).split('T')[0];
+  return '';
+}
+
+function repairInvalidUnicodeEscapes(s) {
+  return String(s).replace(/\\u(?![0-9a-fA-F]{4})/g, 'u');
+}
+
+function asJsonb(value) {
+  if (value == null || value === '') return null;
+  if (typeof value === 'object') return value;
+  try {
+    return JSON.parse(repairInvalidUnicodeEscapes(String(value)));
+  } catch {
+    return null;
+  }
+}
 
 const asString = (e) => {
   if (!e) return '(unknown)';
@@ -422,6 +459,7 @@ async function fetchPage(url) {
 
 /* ========== JSON-LD extraction ========== */
 function extractJSONLD(html) {
+  try {
   // Find all script tags with type="application/ld+json"
   const scriptTagRegex = /<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gis;
   const jsonLdMatches = html.match(scriptTagRegex);
@@ -474,7 +512,7 @@ function extractJSONLD(html) {
       try {
         // JSON.parse is synchronous and can block for large objects
         // We've already filtered out very large blocks above
-        const parsed = JSON.parse(candidate);
+        const parsed = JSON.parse(repairInvalidUnicodeEscapes(candidate));
         if (Array.isArray(parsed)) {
           jsonLdObjects.push(...parsed);
         } else {
@@ -498,6 +536,10 @@ function extractJSONLD(html) {
   }
   
   return jsonLdObjects.length > 0 ? jsonLdObjects : null;
+  } catch (err) {
+    console.warn('extractJSONLD failed:', err && err.message ? err.message : err);
+    return null;
+  }
 }
 
 // Extract structured information from page text
@@ -554,6 +596,7 @@ function normalizeKind(item, url) {
 
 /* ========== single URL ingestion ========== */
 export async function ingestSingleUrl(url, supa, options = {}) {
+  url = normalizePageUrl(url);
   const startTime = Date.now();
   let stage = 'fetch';
   let htmlStoreError = null;
@@ -721,7 +764,7 @@ export async function ingestSingleUrl(url, supa, options = {}) {
           location_city_state_zip: preferred.find(m => m.location_city_state_zip && m.location_city_state_zip.trim())?.location_city_state_zip || null,
           excerpt: preferred.find(m => m.excerpt && m.excerpt.trim())?.excerpt || null,
           image_url: preferred.find(m => m.image_url && m.image_url.trim())?.image_url || null,
-          json_ld_data: preferred.find(m => m.json_ld_data)?.json_ld_data || null,
+          json_ld_data: asJsonb(preferred.find(m => m.json_ld_data)?.json_ld_data),
           workflow_state: preferred.find(m => m.workflow_state && m.workflow_state.trim())?.workflow_state || null,
           created_at: preferred.find(m => m.created_at)?.created_at || null,
           updated_at: preferred.find(m => m.updated_at)?.updated_at || null,
@@ -969,7 +1012,7 @@ export async function ingestSingleUrl(url, supa, options = {}) {
                 location_city_state_zip: meta.location_city_state_zip ? cleanHTMLText(meta.location_city_state_zip) : null,
                 excerpt: meta.excerpt ? cleanHTMLText(meta.excerpt) : null,
                 image_url: imageUrl,
-                json_ld_data: meta.json_ld_data || null,
+                json_ld_data: asJsonb(meta.json_ld_data),
                 workflow_state: meta.workflow_state ? cleanHTMLText(meta.workflow_state) : null,
                 // NEW STRUCTURED DATA FIELDS - Extract from page content
                 participants: structuredData?.participants || null,
@@ -1028,7 +1071,7 @@ export async function ingestSingleUrl(url, supa, options = {}) {
             location_city_state_zip: csvMetadata?.location_city_state_zip ? cleanHTMLText(csvMetadata.location_city_state_zip) : null,
             excerpt: csvMetadata?.excerpt ? cleanHTMLText(csvMetadata.excerpt) : null,
             image_url: imageUrl,
-            json_ld_data: csvMetadata?.json_ld_data || null,
+            json_ld_data: asJsonb(csvMetadata?.json_ld_data),
             workflow_state: csvMetadata?.workflow_state ? cleanHTMLText(csvMetadata.workflow_state) : null,
             // NEW STRUCTURED DATA FIELDS - Extract from page content
             participants: structuredData?.participants || null,
@@ -1097,7 +1140,7 @@ export async function ingestSingleUrl(url, supa, options = {}) {
             location_city_state_zip: null,
             excerpt: csvMetadata?.excerpt ? cleanHTMLText(csvMetadata.excerpt) : null,
             image_url: productImageUrl,
-            json_ld_data: csvMetadata?.json_ld_data || null,
+            json_ld_data: asJsonb(csvMetadata?.json_ld_data),
             workflow_state: csvMetadata?.workflow_state ? cleanHTMLText(csvMetadata.workflow_state) : null,
             // Structured data fields
             participants: null,
@@ -1139,7 +1182,7 @@ export async function ingestSingleUrl(url, supa, options = {}) {
             const { data: allExistingEvents, error: fetchAllErr } = await supa
               .from('page_entities')
               .select('*')
-              .eq('url', primaryUrl)
+              .in('url', [primaryUrl, slashTwinUrl(primaryUrl)])
               .eq('kind', 'event');
             
             if (fetchAllErr) {
@@ -1184,15 +1227,18 @@ export async function ingestSingleUrl(url, supa, options = {}) {
                 const { data: matchingEvents } = await supa
                   .from('page_entities')
                   .select('*')
-                  .eq('url', primaryUrl)
+                  .in('url', [primaryUrl, slashTwinUrl(primaryUrl)])
                   .eq('kind', 'event')
                   .in('date_start', eventDates);
                 
                 if (matchingEvents) {
                   matchingEvents.filter(Boolean).forEach(ex => {
                     if (!ex || !ex.url) return;
-                    const key = `${ex.url}|${ex.kind}|${ex.date_start}`;
-                    existingEntitiesMap.set(key, ex);
+                    const d = eventDateOnly(ex);
+                    const t = String(ex.title || '').trim().toLowerCase();
+                    existingEntitiesMap.set(`${ex.url}|${ex.kind}|${d}|${t}`, ex);
+                    const dateKey = `${ex.url}|${ex.kind}|${d}`;
+                    if (!existingEntitiesMap.has(dateKey)) existingEntitiesMap.set(dateKey, ex);
                   });
                 }
               }
@@ -1200,21 +1246,21 @@ export async function ingestSingleUrl(url, supa, options = {}) {
           }
           
           if (nonEventEntities.length > 0) {
-            // Fetch non-event entities (or events without dates)
-            const kinds = [...new Set(nonEventEntities.map(e => e.kind))];
-            const { data: nonEventData } = await supa
+            const { data: byUrl } = await supa
               .from('page_entities')
               .select('*')
-              .eq('url', primaryUrl)
-              .in('kind', kinds);
-            
-            if (nonEventData) {
-              nonEventData.filter(Boolean).forEach(ex => {
-                if (!ex || !ex.url) return;
-                const key = `${ex.url}|${ex.kind}`;
-                existingEntitiesMap.set(key, ex);
-              });
-            }
+              .eq('url', primaryUrl);
+            const { data: bySlash } = await supa
+              .from('page_entities')
+              .select('*')
+              .eq('url', slashTwinUrl(primaryUrl));
+            [...(byUrl || []), ...(bySlash || [])].filter(Boolean).forEach(ex => {
+              if (!ex || !ex.url) return;
+              existingEntitiesMap.set(`${ex.url}|${ex.kind}`, ex);
+              if (ex.kind !== 'event') {
+                existingEntitiesMap.set(`${normalizePageUrl(ex.url)}|any`, ex);
+              }
+            });
           }
         } catch (err) {
           console.error('Error fetching existing entities:', err);
@@ -1225,11 +1271,15 @@ export async function ingestSingleUrl(url, supa, options = {}) {
           if (!e || !e.url || !e.kind) {
             return { success: false, action: 'skipped', reason: 'invalid_entity' };
           }
-          // For events, check by (url, kind, date_start) to allow multiple events per URL
-          const key = (e.kind === 'event' && e.date_start)
-            ? `${e.url}|${e.kind}|${e.date_start}`
-            : `${e.url}|${e.kind}`;
-          const existing = existingEntitiesMap.get(key) || null;
+          const dateOnly = eventDateOnly(e);
+          const titleLc = String(e.title || '').trim().toLowerCase();
+          const titleKey = `${e.url}|${e.kind}|${dateOnly}|${titleLc}`;
+          const dateKey = `${e.url}|${e.kind}|${dateOnly}`;
+          const kindKey = `${e.url}|${e.kind}`;
+          const anyKey = `${normalizePageUrl(e.url)}|any`;
+          const existing = (e.kind === 'event' && dateOnly)
+            ? (existingEntitiesMap.get(titleKey) || existingEntitiesMap.get(dateKey) || null)
+            : (existingEntitiesMap.get(kindKey) || existingEntitiesMap.get(anyKey) || null);
 
           if (existing) {
             const merged = { ...existing };
@@ -1309,6 +1359,9 @@ export async function ingestSingleUrl(url, supa, options = {}) {
               }
             }
             merged.last_seen = e.last_seen;
+            merged.kind = e.kind;
+            merged.url = normalizePageUrl(e.url);
+            merged.page_url = normalizePageUrl(e.page_url || e.url);
             const { data: updated, error: updErr } = await supa.from('page_entities').update(merged).eq('id', existing.id).select('id');
             if (updErr) throw new Error(`Entity update failed: ${updErr.message}`);
             if (!updated || !updated.length) throw new Error(`entity update matched 0 rows for ${e.url} kind=${e.kind}`);
@@ -1331,9 +1384,7 @@ export async function ingestSingleUrl(url, supa, options = {}) {
                 const startDate = e.start_date || (e.date_start ? e.date_start.split('T')[0] : null); // Extract date part from date_start
                 
                 console.log(`DEBUG: Duplicate event with date detected for ${pageUrl} on ${startDate}, updating existing entity`);
-                const updateQuery = supa
-                  .from('page_entities')
-                  .update({
+                const eventPatch = {
                     title: e.title,
                     description: e.description,
                     meta_description: e.meta_description,
@@ -1347,7 +1398,6 @@ export async function ingestSingleUrl(url, supa, options = {}) {
                     provider: e.provider,
                     raw: e.raw,
                     last_seen: e.last_seen,
-                    // CSV metadata fields - ALL FIELDS NOW EXIST IN PAGE_ENTITIES
                     csv_type: e.csv_type,
                     csv_metadata_id: e.csv_metadata_id,
                     categories: e.categories,
@@ -1364,32 +1414,43 @@ export async function ingestSingleUrl(url, supa, options = {}) {
                     image_url: e.image_url,
                     json_ld_data: e.json_ld_data,
                     workflow_state: e.workflow_state,
-                    // NEW STRUCTURED DATA FIELDS
                     participants: e.participants,
                     experience_level: e.experience_level,
                     equipment_needed: e.equipment_needed,
-                    location_address: e.location_address,
                     time_schedule: e.time_schedule,
                     fitness_level: e.fitness_level,
                     what_to_bring: e.what_to_bring,
                     course_duration: e.course_duration,
                     instructor_info: e.instructor_info,
                     availability_status: e.availability_status
-                  })
+                };
+                const { data: dups, error: dupErr } = await supa
+                  .from('page_entities')
+                  .select('id,last_seen,title')
                   .eq('kind', e.kind)
-                  .eq('page_url', pageUrl) // CRITICAL: Use page_url to match constraint
-                  .eq('start_date', startDate); // CRITICAL: Use start_date (date only) to match constraint
-                
-                const { data: dateUpdated, error: updErr } = await updateQuery.select('id');
+                  .eq('page_url', pageUrl)
+                  .eq('start_date', startDate)
+                  .order('last_seen', { ascending: false });
+                if (dupErr) throw new Error(`Entity upsert failed: ${dupErr.message}`);
+                const wantTitle = String(e.title || '').trim().toLowerCase();
+                const titleHit = (dups || []).find(r => String(r.title || '').trim().toLowerCase() === wantTitle);
+                const keepId = (titleHit && titleHit.id) || (dups && dups[0] && dups[0].id);
+                if (!keepId) throw new Error(`entity date-upsert matched 0 rows for ${pageUrl}`);
+                const { data: dateUpdated, error: updErr } = await supa
+                  .from('page_entities')
+                  .update(eventPatch)
+                  .eq('id', keepId)
+                  .select('id');
                 if (updErr) throw new Error(`Entity upsert failed: ${updErr.message}`);
                 if (!dateUpdated || !dateUpdated.length) throw new Error(`entity date-upsert matched 0 rows for ${pageUrl}`);
                 return { success: true, action: 'upserted' };
               } else {
                 // For non-events or events without dates, fallback to update by (url, kind)
                 console.log(`DEBUG: Updating entity for ${e.url} with meta_description:`, e.meta_description ? `"${e.meta_description.substring(0, 50)}..."` : 'null');
-                const { data: updatedRows, error: updErr } = await supa
-                  .from('page_entities')
-                  .update({
+                const fallbackPatch = {
+                    kind: e.kind,
+                    url: normalizePageUrl(e.url),
+                    page_url: normalizePageUrl(e.page_url || e.url),
                     title: e.title,
                     description: e.description,
                     meta_description: e.meta_description,
@@ -1403,7 +1464,6 @@ export async function ingestSingleUrl(url, supa, options = {}) {
                     provider: e.provider,
                     raw: e.raw,
                     last_seen: e.last_seen,
-                    // CSV metadata fields - ALL FIELDS NOW EXIST IN PAGE_ENTITIES
                     csv_type: e.csv_type,
                     csv_metadata_id: e.csv_metadata_id,
                     categories: e.categories,
@@ -1420,21 +1480,30 @@ export async function ingestSingleUrl(url, supa, options = {}) {
                     image_url: e.image_url,
                     json_ld_data: e.json_ld_data,
                     workflow_state: e.workflow_state,
-                    // NEW STRUCTURED DATA FIELDS
                     participants: e.participants,
                     experience_level: e.experience_level,
                     equipment_needed: e.equipment_needed,
-                    location_address: e.location_address,
                     time_schedule: e.time_schedule,
                     fitness_level: e.fitness_level,
                     what_to_bring: e.what_to_bring,
                     course_duration: e.course_duration,
                     instructor_info: e.instructor_info,
                     availability_status: e.availability_status
-                  })
+                };
+                let { data: updatedRows, error: updErr } = await supa
+                  .from('page_entities')
+                  .update(fallbackPatch)
                   .eq('url', e.url)
-                  .eq('kind', e.kind)
                   .select('id');
+                if ((!updatedRows || !updatedRows.length) && !updErr) {
+                  const slashTry = await supa
+                    .from('page_entities')
+                    .update(fallbackPatch)
+                    .eq('url', slashTwinUrl(e.url))
+                    .select('id');
+                  updatedRows = slashTry.data;
+                  updErr = slashTry.error;
+                }
                 if (updErr) throw new Error(`Entity upsert failed: ${updErr.message}`);
                 if (!updatedRows || !updatedRows.length) throw new Error(`entity fallback update matched 0 rows for ${e.url} kind=${e.kind}`);
                 return { success: true, action: 'upserted' };

@@ -747,6 +747,8 @@
             <button class="btn" onclick="viewLightRefresh()" style="font-size:12px;padding:6px 10px;">🕒 View Light Refresh Logs</button>
             <button class="btn" onclick="copyLightRefresh()" style="font-size:12px;padding:6px 10px;">📋 Copy Logs</button>
             <button class="btn" onclick="runTestQuestions()" style="font-size:12px;padding:6px 10px;">🤖 Test Questions</button>
+            <button class="btn" onclick="previewStaleEntities()" style="font-size:12px;padding:6px 10px;">🧹 Preview stale entities</button>
+            <button class="btn btn-danger" onclick="pruneListedEntities()" style="font-size:12px;padding:6px 10px;">🧹 Prune listed entities</button>
             <button class="btn btn-danger" onclick="clearResults()" style="font-size:12px;padding:6px 10px;">🗑️ Clear Log</button>
           </div>
           <div style="margin-top: 12px;">
@@ -2149,6 +2151,26 @@
         uniqueEntries.push(e);
       }
 
+      function normalizeIngestUrl(raw) {
+        try {
+          const x = new URL(String(raw || '').trim());
+          x.hash = '';
+          x.pathname = x.pathname.replace(/\/+$/, '') || '/';
+          return x.toString();
+        } catch (err) {
+          return String(raw || '').replace(/\/+$/, '');
+        }
+      }
+      const ownerRank = (src) => (src === 'product_schema' ? 0 : src === 'landing_service_pages' ? 1 : 2);
+      const byNorm = new Map();
+      uniqueEntries.forEach((e) => {
+        const key = normalizeIngestUrl(e.url);
+        const prev = byNorm.get(key);
+        if (!prev || ownerRank(e.source) > ownerRank(prev.source)) byNorm.set(key, { ...e, url: key });
+      });
+      uniqueEntries.length = 0;
+      byNorm.forEach((e) => uniqueEntries.push(e));
+
       // Map per-source duplicates to dashboard categories for display
       withinSourceDupByCategory = {
         'blog_articles': 0,
@@ -2317,13 +2339,9 @@
               window.urlScrapingStats[category].success++;
             }
           } else {
-            const reason = result && (result.error || result.detail || result.text) ? `${result.error || ''} ${result.detail || ''} ${result.text || ''}`.trim() : 'unknown';
+            const reason = ingestFailureReason(result, ingestUiSuccess(result));
             const reasonLc = reason.toLowerCase();
-            if (reasonLc.includes('uniq_events_with_date') || reasonLc.includes('duplicate key value')) {
-              addResult(`✅ Skipped duplicate: ${url}  (source: batch ${batchIndex + 1}) — ${reason}`, 'success');
-              window.urlScrapingStats[category].skipped++;
-              stats.skippedCount++;
-            } else if (reasonLc.includes('aborted') || reasonLc.includes('timeout')) {
+            if (reasonLc.includes('aborted') || reasonLc.includes('timeout')) {
               addResult(`❌ Timeout: ${url}  (source: batch ${batchIndex + 1})`, 'error');
               stats.failedCount++;
               window.urlScrapingStats[category].failed++;
@@ -2430,13 +2448,30 @@
             window.urlScrapingStats[category].success++;
             addResult(`✅ Recovered on retry: ${url}`, 'success');
           } else {
-            const reason = result && (result.error || result.detail) ? `${result.error || ''} ${result.detail || ''}`.trim() : 'still failing';
+            const reason = ingestFailureReason(result, false);
             addResult(`❌ Retry failed (left as failed): ${url} — ${reason}`, 'error');
           }
           updateStats();
           await new Promise(resolve => setTimeout(resolve, 750)); // gentle spacing
         }
         await updateDebugControlDashboard();
+      }
+
+      if (!stopRequested && !dryRun) {
+        const accounted = new Set();
+        runReport.ok.forEach((u) => accounted.add(normalizeIngestUrl(u)));
+        runReport.failed.forEach((_, u) => accounted.add(normalizeIngestUrl(u)));
+        for (const e of allEntries) {
+          const n = normalizeIngestUrl(e.url);
+          if (accounted.has(n)) continue;
+          accounted.add(n);
+          const reason = 'not scraped this run';
+          runReport.failed.set(e.url, reason);
+          failedUrlSet.add(e.url);
+          stats.failedCount++;
+          addResult(`❌ Failed to ingest: ${e.url} — ${reason}`, 'error');
+        }
+        updateStats();
       }
 
       // Persist whatever is still failing so the "Load last failed" button can recover them later
@@ -2524,7 +2559,7 @@
         } else {
           failed++;
           stillFailing.push(url);
-          const reason = result && (result.error || result.detail) ? `${result.error || ''} ${result.detail || ''}`.trim() : 'unknown';
+          const reason = ingestFailureReason(result, false);
           addResult(`❌ Still failing: ${url} — ${reason}`, 'error');
         }
         await new Promise(r => setTimeout(r, 750)); // gentle spacing between requests
@@ -2677,7 +2712,7 @@
                 return { url, ok: true };
               } else {
                 failCount++;
-                return { url, ok: false, error: ingestResp?.error || 'unknown' };
+                return { url, ok: false, error: ingestFailureReason(ingestResp, false) };
               }
             } catch (e) {
               failCount++;
@@ -2847,6 +2882,43 @@
     }
 
     // Export mappings CSV
+    window._stalePreviewIds = [];
+
+    async function previewStaleEntities() {
+      if (!getToken()) { addResult('❌ No token found. Save your token first.', 'error'); return; }
+      try {
+        const resp = await fetch('/api/tools?action=stale_entities', { headers: { Authorization: `Bearer ${getToken()}` } });
+        const j = await resp.json().catch(() => ({}));
+        if (!resp.ok) {
+          addResult(`❌ Stale preview failed: ${j.detail || resp.status}`, 'error');
+          return;
+        }
+        window._stalePreviewIds = (j.rows || []).map((r) => r.id);
+        addResult(`🧹 Stale entities: ${j.count || 0}. Review the list, then Prune listed. Backup is stored in tool_run_reports first.`, 'info');
+        (j.rows || []).forEach((r) => {
+          addResult(`• ${r.reason} | ${r.kind} | ${r.url} | last_seen ${r.last_seen || ''} | id ${r.id}`, 'warning');
+        });
+      } catch (e) {
+        addResult(`❌ Stale preview error: ${e.message}`, 'error');
+      }
+    }
+
+    async function pruneListedEntities() {
+      const ids = window._stalePreviewIds || [];
+      if (!ids.length) {
+        addResult('⚠️ Preview stale entities first so the list is shown.', 'warning');
+        return;
+      }
+      if (!window.confirm(`Prune ${ids.length} listed entit${ids.length === 1 ? 'y' : 'ies'}? A backup is stored first.`)) return;
+      const result = await apiCall('/api/tools?action=prune_stale_entities', { confirm: true, ids });
+      if (!result || result.ok === false) {
+        addResult(`❌ Prune failed: ${result?.detail || result?.error || 'unknown'}`, 'error');
+        return;
+      }
+      addResult(`🧹 Pruned ${result.pruned || 0}. Backup id: ${result.backup_id || 'n/a'}`, 'success');
+      window._stalePreviewIds = [];
+    }
+
     async function exportMappings(){
       try{
         const resp = await fetch('/api/tools?action=export', { headers: { 'Authorization': `Bearer ${getToken()}` } });
@@ -3398,7 +3470,7 @@
           // workshop_products etc.), so urlScrapingStats stays 0 for them. Without this they
           // showed all-zeros and looked like a total failure. Their imported rows are entirely
           // "covered by other type" (fields merged in via the owning URL), so report them as such.
-          const METADATA_ONLY = new Set(['product_schema', 'landing_service_pages']);
+          const METADATA_ONLY = new Set(['product_schema']);
           const accountedFor = successCount + failedCount + skippedCount;
           const coveredElsewhere = (METADATA_ONLY.has(cat.key) || accountedFor > 0)
             ? Math.max(0, currentSessionCount - accountedFor)
