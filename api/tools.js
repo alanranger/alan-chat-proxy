@@ -94,6 +94,10 @@ function decoratePruneRow(e, http) {
   } else if (bucket === 'gone') {
     group = 'gone';
     reason_plain = 'Page no longer exists (' + status + ')';
+  } else if (bucket === 'live') {
+    reason_plain = 'Still a live page — add it to a CSV list';
+  } else {
+    reason_plain = 'Could not check this page';
   }
   return {
     ...e,
@@ -186,13 +190,18 @@ async function pruneStaleEntities(supa, ids, screenBuild) {
     return { pruned: 0, backup_id: null, listed: stale.length, refused };
   }
   const chosen = rows.map((r) => r.id);
+  const { data: tracking, error: tErr } = await supa
+    .from('content_improvement_tracking')
+    .select('id,question,implemented_content_id,improvement_status')
+    .in('implemented_content_id', chosen);
+  if (tErr) throw tErr;
   const { data: backup, error: bErr } = await supa.from('tool_run_reports').insert({
     tool: 'prune-stale-entities',
     flow: 'backup',
     run_id: new Date().toISOString(),
     state: 'backed_up',
     items_processed: rows.length,
-    summary: { rows },
+    summary: { rows, tracking: tracking || [] },
     failed: []
   }).select('id').single();
   if (bErr) throw bErr;
@@ -1199,7 +1208,14 @@ export default async function handler(req, res) {
             detail: 'Refresh the page — this screen is out of date'
           });
         }
-        return sendJSON(res, 500, { error: 'prune_failed', detail: String(e?.message || e) });
+        const msg = String(e?.message || e);
+        if (msg.includes('foreign key constraint')) {
+          return sendJSON(res, 409, {
+            error: 'linked_records',
+            detail: 'Those records are still linked to old improvement notes. Refresh and try again.'
+          });
+        }
+        return sendJSON(res, 500, { error: 'prune_failed', detail: msg });
       }
     }
 
