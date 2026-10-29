@@ -51,6 +51,8 @@ async function fetchAllRows(supa, table, columns) {
   return rows;
 }
 
+const SCREEN_BUILD = '2026-10-29-stale-modal';
+
 async function checkLiveHttp(url) {
   try {
     const ac = new AbortController();
@@ -62,10 +64,46 @@ async function checkLiveHttp(url) {
       headers: { 'User-Agent': 'Mozilla/5.0 (compatible; alan-stale-check/1.0)', Accept: 'text/html' }
     });
     clearTimeout(timer);
-    return res.status;
+    return { status: res.status, location: res.headers.get('location') || '' };
   } catch {
-    return 0;
+    return { status: 0, location: '' };
   }
+}
+
+function pathLabel(u) {
+  try {
+    const p = new URL(u, 'https://www.alanranger.com').pathname;
+    return p || u;
+  } catch {
+    return String(u || '');
+  }
+}
+
+function decoratePruneRow(e, http) {
+  const status = http.status || 0;
+  const bucket = httpBucket(status);
+  const redirectTo = http.location || '';
+  let group = 'gone';
+  let reason_plain = 'Page no longer exists (' + (status || '404') + ')';
+  if (e.reason === 'trailing_slash_duplicate') {
+    group = 'duplicate';
+    reason_plain = 'Duplicate of ' + pathLabel(String(e.url || '').replace(/\/+$/, ''));
+  } else if (bucket === 'redirect') {
+    group = 'redirected';
+    reason_plain = 'Now redirects to ' + (redirectTo ? pathLabel(redirectTo) : 'another page');
+  } else if (bucket === 'gone') {
+    group = 'gone';
+    reason_plain = 'Page no longer exists (' + status + ')';
+  }
+  return {
+    ...e,
+    http_status: status,
+    http_class: bucket,
+    redirect_to: redirectTo,
+    group,
+    reason_plain,
+    path: pathLabel(e.url)
+  };
 }
 
 function httpBucket(status) {
@@ -105,24 +143,49 @@ export async function listStaleEntities(supa) {
     if (!u || statusByUrl.has(u)) continue;
     statusByUrl.set(u, await checkLiveHttp(u));
   }
-  const prune = [...slashDupes];
+  const prune = slashDupes.map((e) => decoratePruneRow(e, { status: 200, location: '' }));
   const live_not_in_csv = [];
   for (const e of notInCsv) {
-    const status = statusByUrl.get(e.url) || 0;
-    const bucket = httpBucket(status);
-    const row = { ...e, http_status: status, http_class: bucket };
+    const http = statusByUrl.get(e.url) || { status: 0, location: '' };
+    const bucket = httpBucket(http.status);
+    const row = decoratePruneRow(e, http);
     if (bucket === 'gone' || bucket === 'redirect') prune.push(row);
-    else live_not_in_csv.push(row);
+    else live_not_in_csv.push({ ...row, path: pathLabel(e.url) });
   }
   return { prune, live_not_in_csv };
 }
 
-async function pruneStaleEntities(supa, ids) {
-  const { prune: stale } = await listStaleEntities(supa);
+async function pruneStaleEntities(supa, ids, screenBuild) {
+  if (screenBuild !== SCREEN_BUILD) {
+    const err = new Error('screen_outdated');
+    err.code = 'screen_outdated';
+    throw err;
+  }
+  const { prune: stale, live_not_in_csv } = await listStaleEntities(supa);
   const allow = new Set(stale.map((r) => r.id));
-  const chosen = (ids || []).filter((id) => allow.has(id));
-  if (!chosen.length) return { pruned: 0, backup_id: null, listed: stale.length };
-  const rows = stale.filter((r) => chosen.includes(r.id));
+  const liveIds = new Set(live_not_in_csv.map((r) => r.id));
+  const refused = [];
+  const want = [];
+  for (const id of ids || []) {
+    if (liveIds.has(id)) {
+      refused.push({ id, detail: 'That page is live and cannot be deleted' });
+      continue;
+    }
+    if (allow.has(id)) want.push(id);
+  }
+  const rows = [];
+  for (const r of stale.filter((x) => want.includes(x.id))) {
+    const live = await checkLiveHttp(r.url);
+    if (live.status === 200) {
+      refused.push({ id: r.id, detail: 'That page is live and cannot be deleted' });
+    } else {
+      rows.push(r);
+    }
+  }
+  if (!rows.length) {
+    return { pruned: 0, backup_id: null, listed: stale.length, refused };
+  }
+  const chosen = rows.map((r) => r.id);
   const { data: backup, error: bErr } = await supa.from('tool_run_reports').insert({
     tool: 'prune-stale-entities',
     flow: 'backup',
@@ -135,7 +198,7 @@ async function pruneStaleEntities(supa, ids) {
   if (bErr) throw bErr;
   const { error: dErr } = await supa.from('page_entities').delete().in('id', chosen);
   if (dErr) throw dErr;
-  return { pruned: chosen.length, backup_id: backup.id, rows };
+  return { pruned: chosen.length, backup_id: backup.id, rows, refused };
 }
 
 // ---------- OpenAI embedding (same model as ingestion) ----------
@@ -202,7 +265,7 @@ export default async function handler(req, res) {
           .select('id', { head: true, count: 'exact' });
         if (!error) page_chunks_count = count ?? null;
       } catch {}
-      return sendJSON(res, 200, { ok: true, env, db: { page_chunks_count } });
+      return sendJSON(res, 200, { ok: true, screen_build: SCREEN_BUILD, env, db: { page_chunks_count } });
     }
 
     // --- verify: count chunks and sum lengths for URL ---
@@ -1111,6 +1174,7 @@ export default async function handler(req, res) {
         const { prune, live_not_in_csv } = await listStaleEntities(supa);
         return sendJSON(res, 200, {
           ok: true,
+          screen_build: SCREEN_BUILD,
           count: prune.length,
           rows: prune,
           prune,
@@ -1126,9 +1190,15 @@ export default async function handler(req, res) {
       try {
         const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {});
         if (!body.confirm) return sendJSON(res, 400, { error: 'confirm_required' });
-        const result = await pruneStaleEntities(supa, body.ids || []);
-        return sendJSON(res, 200, { ok: true, ...result });
+        const result = await pruneStaleEntities(supa, body.ids || [], body.screen_build);
+        return sendJSON(res, 200, { ok: true, screen_build: SCREEN_BUILD, ...result });
       } catch (e) {
+        if (e && e.code === 'screen_outdated') {
+          return sendJSON(res, 409, {
+            error: 'screen_outdated',
+            detail: 'Refresh the page — this screen is out of date'
+          });
+        }
         return sendJSON(res, 500, { error: 'prune_failed', detail: String(e?.message || e) });
       }
     }

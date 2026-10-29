@@ -2,6 +2,7 @@
 <html>
 <head>
   <title>Alan Ranger Photography - Data Pipeline v2.1</title>
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate">
   <style>
     body { font-family: Arial, sans-serif; margin: 20px; background: #1a1a1a; color: #fff; }
     .container { max-width: 1200px; margin: 0 auto; }
@@ -34,6 +35,15 @@
     .hidden { display: none; }
     .token-section { background: #333; padding: 15px; border-radius: 5px; margin-bottom: 20px; }
     .token-section input { width: 100%; padding: 8px; margin: 5px 0; background: #444; color: white; border: 1px solid #666; border-radius: 3px; }
+    .stale-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.72); z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 24px; }
+    .stale-overlay.hidden { display: none; }
+    .stale-card { background: #2a2a2a; border: 1px solid #444; border-radius: 8px; max-width: 740px; width: 100%; max-height: 90vh; overflow: auto; padding: 20px 22px; color: #fff; font-family: Arial, sans-serif; }
+    .stale-card h3 { margin: 0 0 10px 0; font-size: 18px; }
+    .stale-row { display: flex; gap: 10px; align-items: flex-start; padding: 8px 0; border-bottom: 1px solid #333; font-size: 14px; line-height: 1.4; }
+    .stale-row input { margin-top: 3px; }
+    .stale-keep { opacity: .9; }
+    .stale-keep input { pointer-events: none; }
+    .stale-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
     
     .stat-box {
       text-align: center;
@@ -134,7 +144,7 @@
       <p>Metadata-Driven Content Pipeline</p>
       <small>v1.0.9 - Metadata-Driven System</small>
       <p style="font-size: 12px; margin-top: 8px; background: rgba(0,0,0,0.3); padding: 4px 8px; border-radius: 4px; display: inline-block;">
-        <strong>Version: <span id="gitVersion">Loading...</span></strong> | Built: <span id="buildDate">Loading...</span> |
+        <strong>Version: <span id="gitVersion">Loading...</span></strong> | Screen: <span id="screenBuild">2026-10-29-stale-modal</span> | Built: <span id="buildDate">Loading...</span> |
         <span style="color: #4f4;">Loaded: <span id="loadTimeValue"></span></span>
       </p>
     </div>
@@ -747,8 +757,7 @@
             <button class="btn" onclick="viewLightRefresh()" style="font-size:12px;padding:6px 10px;">🕒 View Light Refresh Logs</button>
             <button class="btn" onclick="copyLightRefresh()" style="font-size:12px;padding:6px 10px;">📋 Copy Logs</button>
             <button class="btn" onclick="runTestQuestions()" style="font-size:12px;padding:6px 10px;">🤖 Test Questions</button>
-            <button class="btn" onclick="previewStaleEntities()" style="font-size:12px;padding:6px 10px;">🧹 Preview stale entities</button>
-            <button class="btn btn-danger" onclick="pruneListedEntities()" style="font-size:12px;padding:6px 10px;">🧹 Prune listed entities</button>
+            <button class="btn" onclick="previewStaleEntities()" style="font-size:12px;padding:6px 10px;">🧹 Clean up old chat-bot records</button>
             <button class="btn btn-danger" onclick="clearResults()" style="font-size:12px;padding:6px 10px;">🗑️ Clear Log</button>
           </div>
           <div style="margin-top: 12px;">
@@ -2882,46 +2891,122 @@
     }
 
     // Export mappings CSV
+    window.SCREEN_BUILD = '2026-10-29-stale-modal';
     window._stalePreviewIds = [];
+    window._staleServerBuild = '';
+    window._staleConfirming = false;
+
+    function staleEscape(s) {
+      return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    function staleRowHtml(r, canTick) {
+      const id = r.id;
+      const path = staleEscape(r.path || r.url || '');
+      const why = staleEscape(r.reason_plain || '');
+      const disabled = canTick ? '' : 'disabled';
+      const cls = canTick ? '' : 'stale-keep';
+      return `<label class="stale-row ${cls}"><input type="checkbox" data-stale-id="${id}" ${canTick ? 'checked' : ''} ${disabled}> <span><strong>${path}</strong><br>${why}</span></label>`;
+    }
+
+    function staleTickCount() {
+      return document.querySelectorAll('#staleDeleteList input[type=checkbox]:checked').length;
+    }
+
+    function updateStaleDeleteBtn() {
+      const n = staleTickCount();
+      const btn = document.getElementById('staleDeleteBtn');
+      if (!btn) return;
+      btn.textContent = window._staleConfirming
+        ? ('Yes, delete ' + n + ' ticked record' + (n === 1 ? '' : 's'))
+        : ('Delete ' + n + ' ticked records');
+      btn.disabled = n === 0;
+    }
+
+    function closeStaleModal() {
+      document.getElementById('staleModal').classList.add('hidden');
+      window._staleConfirming = false;
+    }
+
+    function renderStaleModal(j) {
+      const prune = j.prune || [];
+      const liveKeep = j.live_not_in_csv || [];
+      const groups = { gone: [], redirected: [], duplicate: [] };
+      prune.forEach((r) => { (groups[r.group] || groups.gone).push(r); });
+      const parts = [];
+      [['gone', 'Page gone'], ['redirected', 'Redirected'], ['duplicate', 'Duplicate']].forEach(([k, label]) => {
+        if (!groups[k].length) return;
+        parts.push('<p style="color:#888;margin:12px 0 4px;">' + label + '</p>');
+        groups[k].forEach((r) => parts.push(staleRowHtml(r, true)));
+      });
+      document.getElementById('staleSummary').textContent =
+        prune.length + ' records can be deleted safely · ' + liveKeep.length + ' live pages are kept';
+      document.getElementById('staleDeleteList').innerHTML = parts.join('') || '<p>Nothing to delete.</p>';
+      document.getElementById('staleKeepList').innerHTML = liveKeep.map((r) => staleRowHtml(r, false)).join('') || '<p>None.</p>';
+      document.getElementById('staleResult').textContent = '';
+      window._staleConfirming = false;
+      updateStaleDeleteBtn();
+      document.getElementById('staleDeleteList').onchange = updateStaleDeleteBtn;
+      document.getElementById('staleTickAll').onclick = function () {
+        document.querySelectorAll('#staleDeleteList input[type=checkbox]').forEach((c) => { c.checked = true; });
+        updateStaleDeleteBtn();
+      };
+    }
 
     async function previewStaleEntities() {
       if (!getToken()) { addResult('❌ No token found. Save your token first.', 'error'); return; }
+      const modal = document.getElementById('staleModal');
+      modal.classList.remove('hidden');
+      document.getElementById('staleBody').classList.add('hidden');
+      document.getElementById('staleWait').classList.remove('hidden');
+      document.getElementById('staleWait').textContent = 'Checking pages on the live site…';
       try {
         const resp = await fetch('/api/tools?action=stale_entities', { headers: { Authorization: `Bearer ${getToken()}` } });
         const j = await resp.json().catch(() => ({}));
         if (!resp.ok) {
-          addResult(`❌ Stale preview failed: ${j.detail || resp.status}`, 'error');
+          document.getElementById('staleWait').textContent = 'Could not check: ' + (j.detail || resp.status);
           return;
         }
-        const prune = j.prune || j.rows || [];
-        const liveKeep = j.live_not_in_csv || [];
-        window._stalePreviewIds = prune.map((r) => r.id);
-        addResult(`🧹 Prune list: ${prune.length} (404/410, redirects, trailing-slash dupes). Live-not-in-CSV: ${liveKeep.length} (not pruned). Backup is stored first if you prune.`, 'info');
-        prune.forEach((r) => {
-          addResult(`• PRUNE ${r.reason} | ${r.http_class || ''} ${r.http_status || ''} | ${r.kind} | ${r.url} | last_seen ${r.last_seen || ''} | id ${r.id}`, 'warning');
-        });
-        liveKeep.forEach((r) => {
-          addResult(`• LIVE not in CSV ${r.http_class || ''} ${r.http_status || ''} | ${r.kind} | ${r.url} | last_seen ${r.last_seen || ''} | id ${r.id}`, 'info');
-        });
+        window._staleServerBuild = j.screen_build || '';
+        window._stalePreviewIds = (j.prune || []).map((r) => r.id);
+        document.getElementById('staleWait').classList.add('hidden');
+        document.getElementById('staleBody').classList.remove('hidden');
+        renderStaleModal(j);
       } catch (e) {
-        addResult(`❌ Stale preview error: ${e.message}`, 'error');
+        document.getElementById('staleWait').textContent = 'Could not check: ' + e.message;
       }
     }
 
     async function pruneListedEntities() {
-      const ids = window._stalePreviewIds || [];
-      if (!ids.length) {
-        addResult('⚠️ Preview stale entities first so the list is shown.', 'warning');
+      if (window._staleServerBuild && window._staleServerBuild !== window.SCREEN_BUILD) {
+        document.getElementById('staleResult').textContent = 'Refresh the page — this screen is out of date';
         return;
       }
-      if (!window.confirm(`Prune ${ids.length} listed entit${ids.length === 1 ? 'y' : 'ies'}? A backup is stored first.`)) return;
-      const result = await apiCall('/api/tools?action=prune_stale_entities', { confirm: true, ids });
-      if (!result || result.ok === false) {
-        addResult(`❌ Prune failed: ${result?.detail || result?.error || 'unknown'}`, 'error');
+      const ids = Array.from(document.querySelectorAll('#staleDeleteList input[type=checkbox]:checked')).map((c) => Number(c.getAttribute('data-stale-id')));
+      if (!ids.length) return;
+      if (!window._staleConfirming) {
+        window._staleConfirming = true;
+        updateStaleDeleteBtn();
+        document.getElementById('staleResult').textContent = 'Click Delete again to confirm. A backup is saved first.';
         return;
       }
-      addResult(`🧹 Pruned ${result.pruned || 0}. Backup id: ${result.backup_id || 'n/a'}`, 'success');
+      const result = await apiCall('/api/tools?action=prune_stale_entities', {
+        confirm: true,
+        ids,
+        screen_build: window.SCREEN_BUILD
+      });
+      if (!result || result.ok !== true) {
+        document.getElementById('staleResult').textContent = result?.detail || result?.error || 'Delete failed';
+        window._staleConfirming = false;
+        updateStaleDeleteBtn();
+        return;
+      }
+      const refused = (result.refused || []).length;
+      document.getElementById('staleResult').textContent =
+        'Deleted ' + (result.pruned || 0) + ' · backup saved (ID ' + (result.backup_id || 'n/a') + ')' +
+        (refused ? ' · ' + refused + ' live pages were refused' : '');
       window._stalePreviewIds = [];
+      window._staleConfirming = false;
     }
 
     async function exportMappings(){
@@ -3573,5 +3658,31 @@
       await updateDebugControlDashboard(); // Load initial Debug & Control dashboard
     };
   </script>
+  <div id="staleModal" class="stale-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="staleModalTitle">
+    <div class="stale-card">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
+        <h3 id="staleModalTitle">Clean up old chat-bot records</h3>
+        <button class="btn" type="button" onclick="closeStaleModal()" aria-label="Close">✕</button>
+      </div>
+      <p id="staleWait" class="hidden">Checking pages on the live site…</p>
+      <div id="staleBody">
+        <p id="staleSummary"></p>
+        <p style="color:#aaa;font-size:13px;">A backup is saved before anything is deleted.</p>
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <strong>TO DELETE</strong>
+          <button class="btn" type="button" id="staleTickAll" style="font-size:12px;padding:4px 8px;">✓ all</button>
+        </div>
+        <div id="staleDeleteList"></div>
+        <p style="margin:16px 0 6px;"><strong>KEPT — LIVE PAGES NOT IN ANY LIST</strong> (cannot be deleted)</p>
+        <p style="color:#aaa;font-size:13px;">These need adding to a CSV list — Claude will advise which.</p>
+        <div id="staleKeepList"></div>
+        <p id="staleResult" style="margin-top:12px;"></p>
+        <div class="stale-actions">
+          <button class="btn" type="button" onclick="closeStaleModal()">Cancel</button>
+          <button class="btn btn-danger" type="button" id="staleDeleteBtn" onclick="pruneListedEntities()">Delete ticked records</button>
+        </div>
+      </div>
+    </div>
+  </div>
 </body>
 </html>
