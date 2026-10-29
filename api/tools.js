@@ -51,9 +51,33 @@ async function fetchAllRows(supa, table, columns) {
   return rows;
 }
 
-async function listStaleEntities(supa) {
+async function checkLiveHttp(url) {
+  try {
+    const ac = new AbortController();
+    const timer = setTimeout(() => ac.abort(), 12000);
+    const res = await fetch(url, {
+      method: 'GET',
+      redirect: 'manual',
+      signal: ac.signal,
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; alan-stale-check/1.0)', Accept: 'text/html' }
+    });
+    clearTimeout(timer);
+    return res.status;
+  } catch {
+    return 0;
+  }
+}
+
+function httpBucket(status) {
+  if (status === 404 || status === 410) return 'gone';
+  if (status >= 300 && status < 400) return 'redirect';
+  if (status === 200) return 'live';
+  return 'unknown';
+}
+
+export async function listStaleEntities(supa) {
   const csv = await fetchAllRows(supa, 'csv_metadata', 'url');
-  const live = new Set(csv.map((r) => normEntityUrl(r.url)).filter(Boolean));
+  const inCsv = new Set(csv.map((r) => normEntityUrl(r.url)).filter(Boolean));
   const ents = await fetchAllRows(supa, 'page_entities', 'id,kind,url,page_url,title,last_seen,csv_type');
   const byNorm = new Map();
   for (const e of ents) {
@@ -61,24 +85,40 @@ async function listStaleEntities(supa) {
     if (!byNorm.has(n)) byNorm.set(n, []);
     byNorm.get(n).push(e);
   }
-  const stale = [];
+  const notInCsv = [];
+  const slashDupes = [];
   for (const e of ents) {
     const n = normEntityUrl(e.url);
-    if (!live.has(n)) {
-      stale.push({ ...e, reason: 'not_in_csv' });
+    if (!inCsv.has(n)) {
+      notInCsv.push({ ...e, reason: 'not_in_csv' });
       continue;
     }
     if (!String(e.url || '').endsWith('/')) continue;
     const twins = byNorm.get(n) || [];
     if (twins.some((t) => !String(t.url || '').endsWith('/'))) {
-      stale.push({ ...e, reason: 'trailing_slash_duplicate' });
+      slashDupes.push({ ...e, reason: 'trailing_slash_duplicate' });
     }
   }
-  return stale;
+  const statusByUrl = new Map();
+  for (const e of notInCsv) {
+    const u = e.url;
+    if (!u || statusByUrl.has(u)) continue;
+    statusByUrl.set(u, await checkLiveHttp(u));
+  }
+  const prune = [...slashDupes];
+  const live_not_in_csv = [];
+  for (const e of notInCsv) {
+    const status = statusByUrl.get(e.url) || 0;
+    const bucket = httpBucket(status);
+    const row = { ...e, http_status: status, http_class: bucket };
+    if (bucket === 'gone' || bucket === 'redirect') prune.push(row);
+    else live_not_in_csv.push(row);
+  }
+  return { prune, live_not_in_csv };
 }
 
 async function pruneStaleEntities(supa, ids) {
-  const stale = await listStaleEntities(supa);
+  const { prune: stale } = await listStaleEntities(supa);
   const allow = new Set(stale.map((r) => r.id));
   const chosen = (ids || []).filter((id) => allow.has(id));
   if (!chosen.length) return { pruned: 0, backup_id: null, listed: stale.length };
@@ -1068,8 +1108,15 @@ export default async function handler(req, res) {
 
     if (req.method === 'GET' && action === 'stale_entities') {
       try {
-        const rows = await listStaleEntities(supa);
-        return sendJSON(res, 200, { ok: true, count: rows.length, rows });
+        const { prune, live_not_in_csv } = await listStaleEntities(supa);
+        return sendJSON(res, 200, {
+          ok: true,
+          count: prune.length,
+          rows: prune,
+          prune,
+          live_not_in_csv,
+          live_count: live_not_in_csv.length
+        });
       } catch (e) {
         return sendJSON(res, 500, { error: 'stale_entities_failed', detail: String(e?.message || e) });
       }

@@ -2893,10 +2893,15 @@
           addResult(`❌ Stale preview failed: ${j.detail || resp.status}`, 'error');
           return;
         }
-        window._stalePreviewIds = (j.rows || []).map((r) => r.id);
-        addResult(`🧹 Stale entities: ${j.count || 0}. Review the list, then Prune listed. Backup is stored in tool_run_reports first.`, 'info');
-        (j.rows || []).forEach((r) => {
-          addResult(`• ${r.reason} | ${r.kind} | ${r.url} | last_seen ${r.last_seen || ''} | id ${r.id}`, 'warning');
+        const prune = j.prune || j.rows || [];
+        const liveKeep = j.live_not_in_csv || [];
+        window._stalePreviewIds = prune.map((r) => r.id);
+        addResult(`🧹 Prune list: ${prune.length} (404/410, redirects, trailing-slash dupes). Live-not-in-CSV: ${liveKeep.length} (not pruned). Backup is stored first if you prune.`, 'info');
+        prune.forEach((r) => {
+          addResult(`• PRUNE ${r.reason} | ${r.http_class || ''} ${r.http_status || ''} | ${r.kind} | ${r.url} | last_seen ${r.last_seen || ''} | id ${r.id}`, 'warning');
+        });
+        liveKeep.forEach((r) => {
+          addResult(`• LIVE not in CSV ${r.http_class || ''} ${r.http_status || ''} | ${r.kind} | ${r.url} | last_seen ${r.last_seen || ''} | id ${r.id}`, 'info');
         });
       } catch (e) {
         addResult(`❌ Stale preview error: ${e.message}`, 'error');

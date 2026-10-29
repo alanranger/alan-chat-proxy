@@ -188,7 +188,7 @@ function extractMetaImage(html, pageUrl) {
   }
 }
 
-const INGEST_VERSION = "2026-10-29-kind-slash-event-json";
+const INGEST_VERSION = "2026-10-29-one-event-per-url-date";
 const SELF_BASE = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : `http://localhost:3000`;
 const EXPECTED_TOKEN = process.env.INGEST_TOKEN || "";
 
@@ -1199,12 +1199,22 @@ export async function ingestSingleUrl(url, supa, options = {}) {
                 }
               });
               
-              // Find old event dates that are no longer in the source data
-              const oldEventsToDelete = safeExistingEvents.filter(ex => {
-                if (!ex || !ex.url) return false;
-                const exStartDate = ex.start_date || (ex.date_start ? ex.date_start.split('T')[0] : null);
-                return exStartDate && !newEventDates.has(exStartDate);
-              });
+              const byDate = new Map();
+              for (const ex of safeExistingEvents) {
+                const d = eventDateOnly(ex);
+                if (!d) continue;
+                if (!byDate.has(d)) byDate.set(d, []);
+                byDate.get(d).push(ex);
+              }
+              const oldEventsToDelete = [];
+              for (const [d, rows] of byDate) {
+                if (!newEventDates.has(d)) {
+                  oldEventsToDelete.push(...rows);
+                  continue;
+                }
+                const ranked = rows.slice().sort((a, b) => String(b.last_seen || '').localeCompare(String(a.last_seen || '')));
+                oldEventsToDelete.push(...ranked.slice(1));
+              }
               
               // Delete old event dates that are no longer in source
               if (oldEventsToDelete.length > 0) {
