@@ -5,6 +5,7 @@
 /* eslint-env node */
 import fs from "fs";
 import path from "path";
+import { writeGptClaudeHandoffIndex } from "./index-gpt-claude-handoff.mjs";
 
 const QUESTIONS_DIR =
   "C:/Users/alan/Google Drive/Claude shared resources/Claude Questions for Cursor";
@@ -297,4 +298,5 @@ if (orphans.length > 0) {
 
 writeUtf8NoBom(path.join(OUTPUTS_DIR, "CURSOR-HANDOFF-STATUS-LATEST.md"), statusLines.filter(Boolean).join("\n"));
 
+writeGptClaudeHandoffIndex();
 console.log(`handoff manifest updated: pending=${pending.length} responses=${responses.length} orphans=${orphans.length} latest=${latestResponse?.file || "none"}`);
