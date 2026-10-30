@@ -1,6 +1,7 @@
 ﻿/**
  * Rebuild 05 from Squarespace raw export, excluding Visible=No.
  * Keeps only photo-workshops-uk product pages.
+ * Live 404 / non-page-redirect prune is scripts/prune-catalog-dead.mjs in alan-shared-resources (auto-push).
  * node scripts/filter-05-hidden-products.mjs
  */
 import { readFileSync, writeFileSync } from 'fs';

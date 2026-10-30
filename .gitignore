@@ -19,3 +19,6 @@ npm-debug.log*
 # Local quarantine of HTML that contained leaked Supabase keys (do not deploy/commit)
 quarantine-leaked-html-*/
 
+# csv_metadata prune backups (written on import)
+backups/csv-metadata-prune-*.json
+

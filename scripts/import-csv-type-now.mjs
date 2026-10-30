@@ -9,10 +9,13 @@ import { fileURLToPath } from 'url';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const csvType = process.argv[2] || 'workshop_products';
 const map = {
+  blog: '../alan-shared-resources/csv/01-blog-posts.csv',
+  course_products: '../alan-shared-resources/csv/04-photography-services-courses-mentoring.csv',
   workshop_products: '../alan-shared-resources/csv/05-photo-workshops-uk-landscape.csv',
   site_urls: '../alan-shared-resources/csv/06-site-urls.csv',
   product_schema: '../alan-shared-resources/csv/07-product-schema-with-review-ratings.csv',
-  workshop_events: '../alan-shared-resources/csv/03-photographic-workshops-near-me.csv'
+  workshop_events: '../alan-shared-resources/csv/03-photographic-workshops-near-me.csv',
+  landing_service_pages: '../alan-shared-resources/csv/08-landing-and-service-pages.csv'
 };
 for (const file of [
   resolve(root, '../AI GEO Audit/.env.vercel.prod'),
@@ -28,6 +31,8 @@ for (const file of [
     if (!process.env[m[1]] || val.startsWith('sb_') || m[1] === 'INGEST_TOKEN') process.env[m[1]] = val;
   }
 }
+process.env.CSV_METADATA_BACKUP_DIR = process.env.CSV_METADATA_BACKUP_DIR
+  || resolve(root, 'backups');
 const csvPath = resolve(root, map[csvType]);
 const csvData = readFileSync(csvPath, 'utf8');
 const token = process.env.INGEST_TOKEN || '';

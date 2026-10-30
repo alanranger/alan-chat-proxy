@@ -21,6 +21,22 @@ async function batchDeleteMetadata(supa, csvType, urls, batchSize = 100) {
   }
 }
 
+async function writeMetadataBackup(csvType, rows) {
+  const { writeFileSync, mkdirSync } = await import('node:fs');
+  const { join } = await import('node:path');
+  const { tmpdir } = await import('node:os');
+  const dir = process.env.CSV_METADATA_BACKUP_DIR || join(tmpdir(), 'csv-metadata-backups');
+  mkdirSync(dir, { recursive: true });
+  const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const file = join(dir, `csv-metadata-prune-${csvType}-${stamp}.json`);
+  writeFileSync(file, JSON.stringify({
+    csv_type: csvType,
+    pruned_at: new Date().toISOString(),
+    rows: rows || []
+  }, null, 2));
+  return file;
+}
+
 /** Full-replace stale purge: delete URLs of this type missing from the new file. Abort if >30%. */
 async function pruneStaleMetadata(supa, csvType, newUrls, opts = {}) {
   const maxFrac = opts.maxFrac != null ? opts.maxFrac : 0.3;
@@ -30,12 +46,13 @@ async function pruneStaleMetadata(supa, csvType, newUrls, opts = {}) {
   }
   const { data: existing, error } = await supa
     .from('csv_metadata')
-    .select('url')
+    .select('*')
     .eq('csv_type', csvType)
     .is('start_date', null);
   if (error) throw error;
   const existingUrls = [...new Set((existing || []).map((r) => r.url).filter(Boolean))];
-  const stale = existingUrls.filter((u) => !newUrlSet.has(u));
+  const staleRows = (existing || []).filter((r) => r.url && !newUrlSet.has(r.url));
+  const stale = [...new Set(staleRows.map((r) => r.url))];
   if (!stale.length) return { pruned: 0, existing: existingUrls.length, stale: 0 };
   const frac = existingUrls.length ? stale.length / existingUrls.length : 0;
   if (frac > maxFrac) {
@@ -46,8 +63,9 @@ async function pruneStaleMetadata(supa, csvType, newUrls, opts = {}) {
     err.detail = { csvType, stale: stale.length, existing: existingUrls.length, sample: stale.slice(0, 8) };
     throw err;
   }
+  const backup_file = await writeMetadataBackup(csvType, staleRows);
   await batchDeleteMetadata(supa, csvType, stale);
-  return { pruned: stale.length, existing: existingUrls.length, stale: stale.length };
+  return { pruned: stale.length, existing: existingUrls.length, stale: stale.length, backup_file, sample: stale.slice(0, 8) };
 }
 
 function isHiddenProductRow(row) {
@@ -679,7 +697,8 @@ async function importCourseProductMetadata(rows, supa) {
     
     const { error } = await supa.from('csv_metadata').insert(metadata);
     if (error) throw error;
-    prune = await pruneStaleMetadata(supa, 'course_products', urls);
+    // Course CSVs shrink when dead/hidden SKUs are pruned (often >30%).
+    prune = await pruneStaleMetadata(supa, 'course_products', urls, { maxFrac: 0.65 });
     
     // Track successful imports
     fieldStats.fields_success = { ...fieldStats.fields_found };
@@ -838,7 +857,7 @@ async function importProductSchemaMetadata(rows, supa) {
     if (urls.length > 0) await batchDeleteMetadata(supa, 'product_schema', urls);
     const { error } = await supa.from('csv_metadata').insert(metadata);
     if (error) throw error;
-    prune = await pruneStaleMetadata(supa, 'product_schema', urls);
+    prune = await pruneStaleMetadata(supa, 'product_schema', urls, { maxFrac: 0.45 });
   }
   return { count: metadata.length, prune, prep };
 }
@@ -1777,12 +1796,14 @@ export default async function handler(req, res) {
       let fieldStats = null;
       let successRate = 0;
       let prepInfo = null;
+      let pruneInfo = null;
       switch (csvType) {
         case 'blog':
           const blogResult = await importBlogMetadata(rows, supa);
           metadataCount = blogResult.count;
           fieldStats = blogResult.field_stats;
           successRate = blogResult.success_rate;
+          pruneInfo = blogResult.prune || null;
           break;
         case 'course_events':
           const courseResult = await importCourseEventMetadata(rows, supa);
@@ -1799,12 +1820,14 @@ export default async function handler(req, res) {
             fieldStats = workshopProductResult.field_stats;
             successRate = workshopProductResult.success_rate;
             prepInfo = workshopProductResult.prep || null;
+            pruneInfo = workshopProductResult.prune || null;
             csvType = 'workshop_products';
           } else {
             const workshopResult = await importWorkshopEventMetadata(rows, supa);
             metadataCount = workshopResult.count;
             fieldStats = workshopResult.field_stats;
             successRate = workshopResult.success_rate;
+            pruneInfo = workshopResult.prune || null;
           }
           break;
         case 'course_products':
@@ -1812,6 +1835,7 @@ export default async function handler(req, res) {
           metadataCount = courseProductResult.count;
           fieldStats = courseProductResult.field_stats;
           successRate = courseProductResult.success_rate;
+          pruneInfo = courseProductResult.prune || null;
           break;
         case 'workshop_products': {
           const workshopProductResult = await importWorkshopProductMetadata(rows, supa);
@@ -1819,16 +1843,19 @@ export default async function handler(req, res) {
           fieldStats = workshopProductResult.field_stats;
           successRate = workshopProductResult.success_rate;
           prepInfo = workshopProductResult.prep || null;
+          pruneInfo = workshopProductResult.prune || null;
           break;
         }
         case 'site_urls':
           const siteUrlResult = await importSiteUrlMetadata(rows, supa);
           metadataCount = siteUrlResult.count;
+          pruneInfo = siteUrlResult.prune || null;
           break;
         case 'product_schema': {
           const productSchemaResult = await importProductSchemaMetadata(rows, supa);
           metadataCount = productSchemaResult.count;
           prepInfo = productSchemaResult.prep || null;
+          pruneInfo = productSchemaResult.prune || null;
           if (metadataCount <= 0) {
             return sendJSON(res, 400, {
               error: 'prep_missing_source',
@@ -1842,6 +1869,7 @@ export default async function handler(req, res) {
         case 'landing_service_pages':
           const landingServiceResult = await importLandingServicePageMetadata(rows, supa);
           metadataCount = landingServiceResult.count;
+          pruneInfo = landingServiceResult.prune || null;
           break;
         default:
           return sendJSON(res, 400, { error: 'bad_request', detail: 'Invalid csvType for metadata import', stage });
@@ -1854,7 +1882,8 @@ export default async function handler(req, res) {
         csv_type: csvType,
         field_stats: fieldStats,
         success_rate: successRate,
-        prep: prepInfo
+        prep: prepInfo,
+        prune: pruneInfo
       });
     }
     
