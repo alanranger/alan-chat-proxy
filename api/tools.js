@@ -51,7 +51,7 @@ async function fetchAllRows(supa, table, columns) {
   return rows;
 }
 
-const SCREEN_BUILD = '2026-10-30-hidden-dupes-2';
+const SCREEN_BUILD = '2026-10-30-pace-429';
 const SAFE_PRUNE = new Set([
   'trailing_slash_duplicate',
   'older_copy',
@@ -86,8 +86,19 @@ function htmlIsNoindex(html) {
   });
 }
 
+function sleep(ms) {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
+function retryWaitMs(res, attempt) {
+  const raw = res && res.headers ? Number(res.headers.get('retry-after')) : NaN;
+  if (Number.isFinite(raw) && raw >= 0) return Math.min(raw > 100 ? raw : raw * 1000, 12000);
+  return Math.min(3000 * (attempt + 1), 12000);
+}
+
 async function checkLivePage(url) {
-  for (let attempt = 0; attempt < 3; attempt += 1) {
+  let last = { status: 0, location: '', noindex: false };
+  for (let attempt = 0; attempt < 5; attempt += 1) {
     try {
       const ac = new AbortController();
       const timer = setTimeout(() => ac.abort(), 12000);
@@ -101,22 +112,24 @@ async function checkLivePage(url) {
         }
       });
       clearTimeout(timer);
+      last = {
+        status: res.status,
+        location: res.headers.get('location') || '',
+        noindex: false
+      };
       if (res.status === 429) {
-        await new Promise((r) => setTimeout(r, 1500 * (attempt + 1)));
+        await sleep(retryWaitMs(res, attempt));
         continue;
       }
       let html = '';
       if (res.status === 200) html = (await res.text()).slice(0, 80000);
-      return {
-        status: res.status,
-        location: res.headers.get('location') || '',
-        noindex: htmlIsNoindex(html)
-      };
+      last.noindex = htmlIsNoindex(html);
+      return last;
     } catch {
-      await new Promise((r) => setTimeout(r, 800));
+      await sleep(1000 * (attempt + 1));
     }
   }
-  return { status: 0, location: '', noindex: false };
+  return last;
 }
 
 function httpBucket(status) {
@@ -145,6 +158,9 @@ function decoratePruneRow(e, extra) {
   } else if (e.reason === 'hidden') {
     group = 'hidden';
     reason_plain = 'Hidden from Google, not in any list';
+  } else if (e.reason === 'blocked') {
+    group = 'blocked';
+    reason_plain = "Couldn't check — Squarespace blocked the request, try again later";
   } else if (bucket === 'redirect') {
     group = 'redirected';
     reason_plain = 'Now redirects to ' + (redirectTo ? pathLabel(redirectTo) : 'another page');
@@ -222,9 +238,16 @@ export async function listStaleEntities(supa) {
   const live_not_in_csv = [];
   const pageCache = new Map();
   for (const e of leftovers) {
-    if (!pageCache.has(e.url)) pageCache.set(e.url, await checkLivePage(e.url));
+    if (!pageCache.has(e.url)) {
+      if (pageCache.size) await sleep(2500);
+      pageCache.set(e.url, await checkLivePage(e.url));
+    }
     const http = pageCache.get(e.url);
     const bucket = httpBucket(http.status);
+    if (http.status === 429 || http.status === 0) {
+      live_not_in_csv.push(decoratePruneRow({ ...e, reason: 'blocked' }, http));
+      continue;
+    }
     if (http.noindex && !keepNewest.has(e.id)) {
       prune.push(decoratePruneRow({ ...e, reason: 'hidden' }, http));
       continue;

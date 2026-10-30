@@ -21,6 +21,9 @@
     "api/ingest.js": {
       "maxDuration": 60
     },
+    "api/tools.js": {
+      "maxDuration": 60
+    },
     "api/admin.js": {
       "maxDuration": 300
     },
