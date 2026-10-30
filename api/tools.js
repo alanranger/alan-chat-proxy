@@ -87,29 +87,36 @@ function htmlIsNoindex(html) {
 }
 
 async function checkLivePage(url) {
-  try {
-    const ac = new AbortController();
-    const timer = setTimeout(() => ac.abort(), 12000);
-    const res = await fetch(url, {
-      method: 'GET',
-      redirect: 'manual',
-      signal: ac.signal,
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)',
-        Accept: 'text/html'
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      const ac = new AbortController();
+      const timer = setTimeout(() => ac.abort(), 12000);
+      const res = await fetch(url, {
+        method: 'GET',
+        redirect: 'manual',
+        signal: ac.signal,
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)',
+          Accept: 'text/html'
+        }
+      });
+      clearTimeout(timer);
+      if (res.status === 429) {
+        await new Promise((r) => setTimeout(r, 1500 * (attempt + 1)));
+        continue;
       }
-    });
-    clearTimeout(timer);
-    let html = '';
-    if (res.status === 200) html = (await res.text()).slice(0, 80000);
-    return {
-      status: res.status,
-      location: res.headers.get('location') || '',
-      noindex: htmlIsNoindex(html)
-    };
-  } catch {
-    return { status: 0, location: '', noindex: false };
+      let html = '';
+      if (res.status === 200) html = (await res.text()).slice(0, 80000);
+      return {
+        status: res.status,
+        location: res.headers.get('location') || '',
+        noindex: htmlIsNoindex(html)
+      };
+    } catch {
+      await new Promise((r) => setTimeout(r, 800));
+    }
   }
+  return { status: 0, location: '', noindex: false };
 }
 
 function httpBucket(status) {
@@ -180,6 +187,8 @@ export async function listStaleEntities(supa) {
   const keepNewest = new Set();
   for (const group of byNorm.values()) {
     if (group.length < 2) continue;
+    const kinds = new Set(group.map((e) => e.kind));
+    if (kinds.has('product')) continue;
     const sorted = group.slice().sort((a, b) => String(b.last_seen || '').localeCompare(String(a.last_seen || '')));
     keepNewest.add(sorted[0].id);
     for (const e of sorted.slice(1)) {
