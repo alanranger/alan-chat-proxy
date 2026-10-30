@@ -51,9 +51,42 @@ async function fetchAllRows(supa, table, columns) {
   return rows;
 }
 
-const SCREEN_BUILD = '2026-10-29-stale-modal-2';
+const SCREEN_BUILD = '2026-10-30-hidden-dupes';
+const SAFE_PRUNE = new Set([
+  'trailing_slash_duplicate',
+  'older_copy',
+  'same_page',
+  'hidden'
+]);
 
-async function checkLiveHttp(url) {
+function pageKey(u) {
+  try {
+    const p = new URL(u, 'https://www.alanranger.com').pathname.replace(/\/+$/, '') || '/';
+    if (p === '/' || p === '/home') return 'home';
+    return p.toLowerCase();
+  } catch {
+    return normEntityUrl(u);
+  }
+}
+
+function pathLabel(u) {
+  try {
+    const p = new URL(u, 'https://www.alanranger.com').pathname || '/';
+    if (p === '/' || p === '') return 'Homepage';
+    return p;
+  } catch {
+    return String(u || '');
+  }
+}
+
+function htmlIsNoindex(html) {
+  const tags = String(html || '').match(/<meta\b[^>]*>/gi) || [];
+  return tags.some((tag) => {
+    return /name\s*=\s*["']robots["']/i.test(tag) && /content\s*=\s*["'][^"']*noindex/i.test(tag);
+  });
+}
+
+async function checkLivePage(url) {
   try {
     const ac = new AbortController();
     const timer = setTimeout(() => ac.abort(), 12000);
@@ -61,33 +94,50 @@ async function checkLiveHttp(url) {
       method: 'GET',
       redirect: 'manual',
       signal: ac.signal,
-      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; alan-stale-check/1.0)', Accept: 'text/html' }
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)',
+        Accept: 'text/html'
+      }
     });
     clearTimeout(timer);
-    return { status: res.status, location: res.headers.get('location') || '' };
+    let html = '';
+    if (res.status === 200) html = (await res.text()).slice(0, 80000);
+    return {
+      status: res.status,
+      location: res.headers.get('location') || '',
+      noindex: htmlIsNoindex(html)
+    };
   } catch {
-    return { status: 0, location: '' };
+    return { status: 0, location: '', noindex: false };
   }
 }
 
-function pathLabel(u) {
-  try {
-    const p = new URL(u, 'https://www.alanranger.com').pathname;
-    return p || u;
-  } catch {
-    return String(u || '');
-  }
+function httpBucket(status) {
+  if (status === 404 || status === 410) return 'gone';
+  if (status >= 300 && status < 400) return 'redirect';
+  if (status === 200) return 'live';
+  return 'unknown';
 }
 
-function decoratePruneRow(e, http) {
+function decoratePruneRow(e, extra) {
+  const http = extra || {};
   const status = http.status || 0;
   const bucket = httpBucket(status);
   const redirectTo = http.location || '';
   let group = 'gone';
   let reason_plain = 'Page no longer exists (' + (status || '404') + ')';
-  if (e.reason === 'trailing_slash_duplicate') {
+  if (e.reason === 'older_copy') {
+    group = 'duplicate';
+    reason_plain = 'Older copy of the same page';
+  } else if (e.reason === 'same_page') {
+    group = 'duplicate';
+    reason_plain = 'Same page as ' + (e.listed_path || pathLabel(e.url));
+  } else if (e.reason === 'trailing_slash_duplicate') {
     group = 'duplicate';
     reason_plain = 'Duplicate of ' + pathLabel(String(e.url || '').replace(/\/+$/, ''));
+  } else if (e.reason === 'hidden') {
+    group = 'hidden';
+    reason_plain = 'Hidden from Google, not in any list';
   } else if (bucket === 'redirect') {
     group = 'redirected';
     reason_plain = 'Now redirects to ' + (redirectTo ? pathLabel(redirectTo) : 'another page');
@@ -110,16 +160,14 @@ function decoratePruneRow(e, http) {
   };
 }
 
-function httpBucket(status) {
-  if (status === 404 || status === 410) return 'gone';
-  if (status >= 300 && status < 400) return 'redirect';
-  if (status === 200) return 'live';
-  return 'unknown';
-}
-
 export async function listStaleEntities(supa) {
   const csv = await fetchAllRows(supa, 'csv_metadata', 'url');
   const inCsv = new Set(csv.map((r) => normEntityUrl(r.url)).filter(Boolean));
+  const csvByKey = new Map();
+  for (const r of csv) {
+    const k = pageKey(r.url);
+    if (k && !csvByKey.has(k)) csvByKey.set(k, r.url);
+  }
   const ents = await fetchAllRows(supa, 'page_entities', 'id,kind,url,page_url,title,last_seen,csv_type');
   const byNorm = new Map();
   for (const e of ents) {
@@ -127,34 +175,54 @@ export async function listStaleEntities(supa) {
     if (!byNorm.has(n)) byNorm.set(n, []);
     byNorm.get(n).push(e);
   }
-  const notInCsv = [];
-  const slashDupes = [];
+  const prune = [];
+  const pruneIds = new Set();
+  const keepNewest = new Set();
+  for (const group of byNorm.values()) {
+    if (group.length < 2) continue;
+    const sorted = group.slice().sort((a, b) => String(b.last_seen || '').localeCompare(String(a.last_seen || '')));
+    keepNewest.add(sorted[0].id);
+    for (const e of sorted.slice(1)) {
+      pruneIds.add(e.id);
+      prune.push(decoratePruneRow({ ...e, reason: 'older_copy' }, { status: 200 }));
+    }
+  }
   for (const e of ents) {
+    if (pruneIds.has(e.id)) continue;
     const n = normEntityUrl(e.url);
-    if (!inCsv.has(n)) {
-      notInCsv.push({ ...e, reason: 'not_in_csv' });
+    if (inCsv.has(n)) {
+      if (!String(e.url || '').endsWith('/')) continue;
+      const twins = byNorm.get(n) || [];
+      if (twins.some((t) => !String(t.url || '').endsWith('/'))) {
+        pruneIds.add(e.id);
+        prune.push(decoratePruneRow({ ...e, reason: 'trailing_slash_duplicate' }, { status: 200 }));
+      }
       continue;
     }
-    if (!String(e.url || '').endsWith('/')) continue;
-    const twins = byNorm.get(n) || [];
-    if (twins.some((t) => !String(t.url || '').endsWith('/'))) {
-      slashDupes.push({ ...e, reason: 'trailing_slash_duplicate' });
+    const listed = csvByKey.get(pageKey(e.url));
+    if (listed && normEntityUrl(listed) !== n) {
+      pruneIds.add(e.id);
+      prune.push(decoratePruneRow({
+        ...e,
+        reason: 'same_page',
+        listed_path: pathLabel(listed)
+      }, { status: 200 }));
     }
   }
-  const statusByUrl = new Map();
-  for (const e of notInCsv) {
-    const u = e.url;
-    if (!u || statusByUrl.has(u)) continue;
-    statusByUrl.set(u, await checkLiveHttp(u));
-  }
-  const prune = slashDupes.map((e) => decoratePruneRow(e, { status: 200, location: '' }));
+  const leftovers = ents.filter((e) => !pruneIds.has(e.id) && !inCsv.has(normEntityUrl(e.url)) && !csvByKey.has(pageKey(e.url)));
   const live_not_in_csv = [];
-  for (const e of notInCsv) {
-    const http = statusByUrl.get(e.url) || { status: 0, location: '' };
+  const pageCache = new Map();
+  for (const e of leftovers) {
+    if (!pageCache.has(e.url)) pageCache.set(e.url, await checkLivePage(e.url));
+    const http = pageCache.get(e.url);
     const bucket = httpBucket(http.status);
-    const row = decoratePruneRow(e, http);
+    if (http.noindex && !keepNewest.has(e.id)) {
+      prune.push(decoratePruneRow({ ...e, reason: 'hidden' }, http));
+      continue;
+    }
+    const row = decoratePruneRow({ ...e, reason: 'not_in_csv' }, http);
     if (bucket === 'gone' || bucket === 'redirect') prune.push(row);
-    else live_not_in_csv.push({ ...row, path: pathLabel(e.url) });
+    else live_not_in_csv.push(row);
   }
   return { prune, live_not_in_csv };
 }
@@ -179,12 +247,12 @@ async function pruneStaleEntities(supa, ids, screenBuild) {
   }
   const rows = [];
   for (const r of stale.filter((x) => want.includes(x.id))) {
-    if (r.reason === 'trailing_slash_duplicate') {
+    if (SAFE_PRUNE.has(r.reason)) {
       rows.push(r);
       continue;
     }
-    const live = await checkLiveHttp(r.url);
-    if (live.status === 200) {
+    const live = await checkLivePage(r.url);
+    if (live.status === 200 && !live.noindex) {
       refused.push({ id: r.id, detail: 'That page is live and cannot be deleted' });
     } else {
       rows.push(r);
@@ -199,18 +267,27 @@ async function pruneStaleEntities(supa, ids, screenBuild) {
     .select('id,question,implemented_content_id,improvement_status')
     .in('implemented_content_id', chosen);
   if (tErr) throw tErr;
+  const chunkUrls = [...new Set(rows.map((r) => r.url).filter(Boolean))];
+  const { data: chunkRows } = await supa.from('page_chunks').select('id,url').in('url', chunkUrls);
   const { data: backup, error: bErr } = await supa.from('tool_run_reports').insert({
     tool: 'prune-stale-entities',
     flow: 'backup',
     run_id: new Date().toISOString(),
     state: 'backed_up',
     items_processed: rows.length,
-    summary: { rows, tracking: tracking || [] },
+    summary: { rows, tracking: tracking || [], chunks: chunkRows || [] },
     failed: []
   }).select('id').single();
   if (bErr) throw bErr;
   const { error: dErr } = await supa.from('page_entities').delete().in('id', chosen);
   if (dErr) throw dErr;
+  for (const url of chunkUrls) {
+    const { count } = await supa.from('page_entities').select('id', { count: 'exact', head: true }).eq('url', url);
+    if (count === 0) {
+      const { error: cErr } = await supa.from('page_chunks').delete().eq('url', url);
+      if (cErr) throw cErr;
+    }
+  }
   return { pruned: chosen.length, backup_id: backup.id, rows, refused };
 }
 

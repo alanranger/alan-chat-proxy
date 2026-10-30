@@ -144,7 +144,7 @@
       <p>Metadata-Driven Content Pipeline</p>
       <small>v1.0.9 - Metadata-Driven System</small>
       <p style="font-size: 12px; margin-top: 8px; background: rgba(0,0,0,0.3); padding: 4px 8px; border-radius: 4px; display: inline-block;">
-        <strong>Version: <span id="gitVersion">Loading...</span></strong> | Screen: <span id="screenBuild">2026-10-29-stale-modal-2</span> | Built: <span id="buildDate">Loading...</span> |
+        <strong>Version: <span id="gitVersion">Loading...</span></strong> | Screen: <span id="screenBuild">2026-10-30-hidden-dupes</span> | Built: <span id="buildDate">Loading...</span> |
         <span style="color: #4f4;">Loaded: <span id="loadTimeValue"></span></span>
       </p>
     </div>
@@ -2891,7 +2891,7 @@
     }
 
     // Export mappings CSV
-    window.SCREEN_BUILD = '2026-10-29-stale-modal-2';
+    window.SCREEN_BUILD = '2026-10-30-hidden-dupes';
     window._stalePreviewIds = [];
     window._staleServerBuild = '';
     window._staleConfirming = false;
@@ -2904,9 +2904,10 @@
       const id = r.id;
       const path = staleEscape(r.path || r.url || '');
       const why = staleEscape(r.reason_plain || '');
-      const disabled = canTick ? '' : 'disabled';
-      const cls = canTick ? '' : 'stale-keep';
-      return `<label class="stale-row ${cls}"><input type="checkbox" data-stale-id="${id}" ${canTick ? 'checked' : ''} ${disabled}> <span><strong>${path}</strong><br>${why}</span></label>`;
+      if (!canTick) {
+        return `<div class="stale-row stale-keep"><span><strong>${path}</strong><br>${why}</span></div>`;
+      }
+      return `<label class="stale-row"><input type="checkbox" data-stale-id="${id}" checked> <span><strong>${path}</strong><br>${why}</span></label>`;
     }
 
     function staleTickCount() {
@@ -2931,10 +2932,10 @@
     function renderStaleModal(j) {
       const prune = j.prune || [];
       const liveKeep = j.live_not_in_csv || [];
-      const groups = { gone: [], redirected: [], duplicate: [] };
+      const groups = { gone: [], redirected: [], duplicate: [], hidden: [] };
       prune.forEach((r) => { (groups[r.group] || groups.gone).push(r); });
       const parts = [];
-      [['gone', 'Page gone'], ['redirected', 'Redirected'], ['duplicate', 'Duplicate']].forEach(([k, label]) => {
+      [['gone', 'Page gone'], ['redirected', 'Redirected'], ['duplicate', 'Duplicate'], ['hidden', 'Hidden from Google']].forEach(([k, label]) => {
         if (!groups[k].length) return;
         parts.push('<p style="color:#888;margin:12px 0 4px;">' + label + '</p>');
         groups[k].forEach((r) => parts.push(staleRowHtml(r, true)));
@@ -2943,6 +2944,7 @@
         prune.length + ' records can be deleted safely · ' + liveKeep.length + ' live pages are kept';
       document.getElementById('staleDeleteList').innerHTML = parts.join('') || '<p>Nothing to delete.</p>';
       document.getElementById('staleKeepList').innerHTML = liveKeep.map((r) => staleRowHtml(r, false)).join('') || '<p>None.</p>';
+      document.getElementById('staleTickAll').style.display = prune.length ? '' : 'none';
       document.getElementById('staleResult').textContent = '';
       window._staleConfirming = false;
       updateStaleDeleteBtn();
