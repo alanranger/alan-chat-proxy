@@ -51,7 +51,7 @@ async function fetchAllRows(supa, table, columns) {
   return rows;
 }
 
-const SCREEN_BUILD = '2026-10-30-pace-429-2';
+const SCREEN_BUILD = '2026-10-30-pace-429-3';
 const SAFE_PRUNE = new Set([
   'trailing_slash_duplicate',
   'older_copy',
@@ -192,7 +192,11 @@ function decoratePruneRow(e, extra) {
     redirect_to: redirectTo,
     group,
     reason_plain,
-    path: pathLabel(e.url)
+    path: pathLabel(e.url),
+    html_len: http.html_len || 0,
+    check_title: http.title || '',
+    robots_metas: http.robots_metas || [],
+    xrobots: http.xrobots || ''
   };
 }
 
