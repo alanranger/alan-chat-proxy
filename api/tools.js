@@ -51,7 +51,7 @@ async function fetchAllRows(supa, table, columns) {
   return rows;
 }
 
-const SCREEN_BUILD = '2026-10-30-pace-429';
+const SCREEN_BUILD = '2026-10-30-pace-429-2';
 const SAFE_PRUNE = new Set([
   'trailing_slash_duplicate',
   'older_copy',
@@ -81,9 +81,16 @@ function pathLabel(u) {
 
 function htmlIsNoindex(html) {
   const tags = String(html || '').match(/<meta\b[^>]*>/gi) || [];
-  return tags.some((tag) => {
-    return /name\s*=\s*["']robots["']/i.test(tag) && /content\s*=\s*["'][^"']*noindex/i.test(tag);
-  });
+  return tags.some((tag) => /robots/i.test(tag) && /noindex/i.test(tag));
+}
+
+function htmlTitle(html) {
+  const m = String(html || '').match(/<title[^>]*>([^<]*)/i);
+  return m ? m[1].trim() : '';
+}
+
+function robotsMetas(html) {
+  return (String(html || '').match(/<meta\b[^>]*>/gi) || []).filter((tag) => /robots/i.test(tag)).slice(0, 4);
 }
 
 function sleep(ms) {
@@ -115,7 +122,10 @@ async function checkLivePage(url) {
       last = {
         status: res.status,
         location: res.headers.get('location') || '',
-        noindex: false
+        noindex: false,
+        html_len: 0,
+        title: '',
+        xrobots: res.headers.get('x-robots-tag') || ''
       };
       if (res.status === 429) {
         await sleep(retryWaitMs(res, attempt));
@@ -123,7 +133,10 @@ async function checkLivePage(url) {
       }
       let html = '';
       if (res.status === 200) html = (await res.text()).slice(0, 80000);
-      last.noindex = htmlIsNoindex(html);
+      last.html_len = html.length;
+      last.title = htmlTitle(html);
+      last.noindex = htmlIsNoindex(html) || /noindex/i.test(last.xrobots);
+      last.robots_metas = robotsMetas(html);
       return last;
     } catch {
       await sleep(1000 * (attempt + 1));
@@ -244,7 +257,7 @@ export async function listStaleEntities(supa) {
     }
     const http = pageCache.get(e.url);
     const bucket = httpBucket(http.status);
-    if (http.status === 429 || http.status === 0) {
+    if (http.status === 429 || http.status === 0 || (http.status === 200 && http.html_len < 1500 && !http.noindex)) {
       live_not_in_csv.push(decoratePruneRow({ ...e, reason: 'blocked' }, http));
       continue;
     }
