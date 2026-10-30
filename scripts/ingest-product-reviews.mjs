@@ -12,12 +12,11 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
 import { createClient } from '@supabase/supabase-js';
-import dotenv from 'dotenv';
+import { loadSupabaseEnv } from '../lib/load-supabase-env.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
-dotenv.config({ path: path.join(ROOT, '.env.local') });
-dotenv.config({ path: path.join(ROOT, '.env') });
+loadSupabaseEnv();
 
 const SHARED_CSV =
   'G:/Dropbox/alan ranger photography/Website Code/alan-shared-resources/csv processed';
