@@ -51,7 +51,7 @@ async function fetchAllRows(supa, table, columns) {
   return rows;
 }
 
-const SCREEN_BUILD = '2026-10-30-hidden-dupes';
+const SCREEN_BUILD = '2026-10-30-hidden-dupes-2';
 const SAFE_PRUNE = new Set([
   'trailing_slash_duplicate',
   'older_copy',
