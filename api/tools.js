@@ -51,7 +51,7 @@ async function fetchAllRows(supa, table, columns) {
   return rows;
 }
 
-const SCREEN_BUILD = '2026-10-30-pace-429-3';
+const SCREEN_BUILD = '2026-10-30-pace-429-4';
 const SAFE_PRUNE = new Set([
   'trailing_slash_duplicate',
   'older_copy',
@@ -132,7 +132,7 @@ async function checkLivePage(url) {
         continue;
       }
       let html = '';
-      if (res.status === 200) html = (await res.text()).slice(0, 80000);
+      if (res.status === 200) html = await res.text();
       last.html_len = html.length;
       last.title = htmlTitle(html);
       last.noindex = htmlIsNoindex(html) || /noindex/i.test(last.xrobots);
