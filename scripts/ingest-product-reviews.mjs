@@ -4,6 +4,10 @@
  * Ingest combined_product_reviews.csv into public.product_reviews
  * and build public.page_slug_catalog from canonical_products + landing-pages + events.
  *
+ * Never deletes reviews. Existing rows (Trustpilot by review id, Google by reviewer + quote) keep
+ * their exclusion; only slug-derived fields change when the slug changes, and null rating/date
+ * are backfilled. New rows are inserted. Writes product-reviews-db-snapshot.csv for the merge.
+ *
  * Usage: node scripts/ingest-product-reviews.mjs [--dry-run]
  * Requires: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY in .env.local
  */
@@ -119,6 +123,9 @@ function pageTypeFromCategory(category) {
 function parseReviewDate(row) {
   const parsed = (row.date_parsed || '').trim();
   if (/^\d{4}-\d{2}-\d{2}/.test(parsed)) return parsed.slice(0, 10);
+  const isTrustpilot = /trustpilot/i.test(row.source || '');
+  const plain = (row.date || '').trim();
+  if (!isTrustpilot && /^\d{4}-\d{2}-\d{2}/.test(plain)) return plain.slice(0, 10);
   const created = (row['review_created_(utc)'] || '').trim();
   const uk = created.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
   if (uk) {
@@ -134,8 +141,12 @@ function reviewQuote(row) {
   return (row.review_content || row.reviewBody || row.review || '').trim();
 }
 
+const WORD_RATINGS = { ONE: 1, TWO: 2, THREE: 3, FOUR: 4, FIVE: 5 };
+
 function parseRating(row) {
   const raw = row.rating_numeric || row.review_stars || row.rating || row.ratingValue || '';
+  const word = WORD_RATINGS[String(raw).trim().toUpperCase()];
+  if (word) return word;
   const n = Math.round(parseFloat(String(raw).replace(/[^0-9.]/g, '')));
   if (Number.isNaN(n) || n < 1 || n > 5) return null;
   return n;
@@ -335,6 +346,113 @@ function summarizeReviewsBySlug(reviewRows) {
   return map;
 }
 
+const keyText = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+
+/** Stable identity: Trustpilot review id; otherwise source + reviewer + quote text. */
+export function reviewKey(r) {
+  if (r.source_review_id) return `id:${r.source_review_id}`;
+  return `${keyText(r.source)}|${keyText(r.reviewer_name)}|${keyText(r.quote)}`;
+}
+
+const SLUG_FIELDS = ['product_slug', 'url', 'category', 'page_type', 'target_keyword'];
+
+/**
+ * A review with no product in this run (business level, pending, Alan exclude) can still backfill
+ * rating/date on a row that already exists. It never inserts and never changes the product.
+ */
+function backfillOnlyRow(row, quote) {
+  return {
+    backfill_only: true,
+    source_review_id: row.review_id || null,
+    reviewer_name: (row.review_username || row.reviewer || 'Anonymous').trim(),
+    quote,
+    source: parseSource(row),
+    rating: parseRating(row),
+    review_date: parseReviewDate(row)
+  };
+}
+
+/** Fields to change on an existing row. Exclusion is never touched. */
+export function reviewChanges(old, next) {
+  const changes = {};
+  if (!next.backfill_only && next.product_slug !== old.product_slug) {
+    for (const f of SLUG_FIELDS) changes[f] = next[f] ?? null;
+  }
+  if (old.rating == null && next.rating != null) changes.rating = next.rating;
+  if (!old.review_date && next.review_date) changes.review_date = next.review_date;
+  return changes;
+}
+
+export function planReviewUpsert(existing, incoming) {
+  const byKey = new Map(existing.map((r) => [reviewKey(r), r]));
+  const seen = new Set();
+  const plan = { updates: [], inserts: [], unchanged: 0, duplicate_incoming: 0 };
+  for (const next of incoming) {
+    const key = reviewKey(next);
+    if (seen.has(key)) { plan.duplicate_incoming += 1; continue; }
+    seen.add(key);
+    const old = byKey.get(key);
+    if (!old) {
+      if (!next.backfill_only) plan.inserts.push(next);
+      continue;
+    }
+    const changes = reviewChanges(old, next);
+    if (Object.keys(changes).length) {
+      plan.updates.push({ id: old.id, source: old.source, reviewer_name: old.reviewer_name, before_slug: old.product_slug, changes });
+    } else plan.unchanged += 1;
+  }
+  return plan;
+}
+
+function summarisePlan(plan, existingCount) {
+  const fieldCounts = {};
+  for (const u of plan.updates) for (const f of Object.keys(u.changes)) fieldCounts[f] = (fieldCounts[f] || 0) + 1;
+  return {
+    existing_rows: existingCount,
+    updates: plan.updates.length,
+    inserts: plan.inserts.length,
+    unchanged: plan.unchanged,
+    deletes: 0,
+    duplicate_incoming: plan.duplicate_incoming,
+    updated_fields: fieldCounts,
+    slug_moves: plan.updates.filter((u) => u.changes.product_slug !== undefined)
+      .map((u) => `${u.source} ${u.reviewer_name}: ${u.before_slug} -> ${u.changes.product_slug}`)
+  };
+}
+
+async function loadExistingReviews() {
+  const out = [];
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await supabase.from('product_reviews')
+      .select('id, source, source_review_id, reviewer_name, quote, product_slug, rating, review_date, is_excluded')
+      .order('id').range(from, from + 999);
+    if (error) throw error;
+    out.push(...(data || []));
+    if (!data || data.length < 1000) break;
+  }
+  return out;
+}
+
+async function applyReviewPlan(plan) {
+  for (const u of plan.updates) {
+    const { error } = await supabase.from('product_reviews').update(u.changes).eq('id', u.id);
+    if (error) throw error;
+  }
+  for (let i = 0; i < plan.inserts.length; i += 100) {
+    const { error } = await supabase.from('product_reviews').insert(plan.inserts.slice(i, i + 100));
+    if (error) throw error;
+  }
+}
+
+/** DB truth for the review merge (Google append-only lock). */
+async function writeDbSnapshot() {
+  const rows = await loadExistingReviews();
+  const file = path.join(SHARED_CSV, 'product-reviews-db-snapshot.csv');
+  const cols = ['source', 'source_review_id', 'reviewer_name', 'quote', 'product_slug', 'rating', 'review_date', 'is_excluded'];
+  writeCsv(file, cols, rows.map((r) => ({ ...r, is_excluded: r.is_excluded ? 'yes' : 'no' })));
+  return file;
+}
+
 /**
  * Ingest reviews + catalog into Supabase and write shared-resources CSV exports.
  * @param {{ dryRun?: boolean }} opts
@@ -366,10 +484,15 @@ export async function runProductReviewsIngest(opts = {}) {
     unmapped_slugs: [],
   };
 
+  const backfillRows = [];
   for (const row of reviews) {
     const slug = (row.product_slug || '').trim();
     const quote = reviewQuote(row);
-    if (!slug || !quote) continue;
+    if (!quote) continue;
+    if (!slug) {
+      backfillRows.push(backfillOnlyRow(row, quote));
+      continue;
+    }
 
     const cat = resolveCatalog(catalog, slug);
     const reason = resolveExclusion(row, quote, slug);
@@ -494,27 +617,23 @@ export async function runProductReviewsIngest(opts = {}) {
   report.catalog_csv = catalogCsvPath;
   report.reviews_csv = reviewsCsvPath;
 
+  const existing = await loadExistingReviews();
+  const plan = planReviewUpsert(existing, [...reviewRows, ...backfillRows]);
+  report.upsert = summarisePlan(plan, existing.length);
+  fs.writeFileSync(path.join(ROOT, 'scripts', 'product-reviews-upsert-plan.json'), JSON.stringify(plan, null, 2));
+
   if (dryRun) {
     console.log(JSON.stringify(report, null, 2));
     return report;
   }
 
-  const { error: delCat } = await supabase.from('page_slug_catalog').delete().neq('id', 0);
-  if (delCat) throw delCat;
-
   for (let i = 0; i < catalogRows.length; i += 200) {
-    const { error } = await supabase.from('page_slug_catalog').insert(catalogRows.slice(i, i + 200));
+    const { error } = await supabase.from('page_slug_catalog')
+      .upsert(catalogRows.slice(i, i + 200), { onConflict: 'slug_key' });
     if (error) throw error;
   }
-
-  const { error: delRev } = await supabase.from('product_reviews').delete().neq('id', 0);
-  if (delRev) throw delRev;
-
-  for (let i = 0; i < reviewRows.length; i += 100) {
-    const batch = reviewRows.slice(i, i + 100);
-    const { error } = await supabase.from('product_reviews').insert(batch);
-    if (error) throw error;
-  }
+  await applyReviewPlan(plan);
+  report.snapshot_csv = await writeDbSnapshot();
 
   const reportPath = path.join(ROOT, 'scripts', 'product-reviews-ingest-report.json');
   fs.writeFileSync(reportPath, JSON.stringify(report, null, 2));
@@ -528,7 +647,12 @@ export async function runProductReviewsIngest(opts = {}) {
 
 const isMain =
   process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href;
-if (isMain) {
+if (isMain && process.argv.includes('--snapshot-only')) {
+  writeDbSnapshot().then((f) => console.log(`DB snapshot: ${f}`)).catch((e) => {
+    console.error(e);
+    process.exit(1);
+  });
+} else if (isMain) {
   runProductReviewsIngest().catch((e) => {
     console.error(e);
     process.exit(1);
