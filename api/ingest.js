@@ -25,6 +25,7 @@ import {
 } from '../helpers/squarespace-nav.js';
 import { isAuthorizedAdmin } from './_lib/admin-auth.js';
 import { resolveOfferPrice } from '../lib/offerPrice.js';
+import { splitNonEventDuplicates } from '../lib/entity-dedupe.js';
 
 // Extract meta description from HTML - updated for deployment
 function extractMetaDescription(html) {
@@ -209,6 +210,20 @@ function normalizePageUrl(raw) {
   } catch (err) {
     return String(raw || '').trim().replace(/\/+$/, '');
   }
+}
+
+/** Deletes extra non-event rows for this page (same URL + kind) and returns the rows that remain. */
+async function pruneDuplicateNonEvents(supa, rows, url) {
+  const { extras } = splitNonEventDuplicates(rows, normalizePageUrl);
+  if (extras.length === 0) return rows;
+  const ids = extras.map(e => e.id);
+  const { error } = await supa.from('page_entities').delete().in('id', ids);
+  if (error) {
+    console.error(`Error pruning duplicate entities for ${url}:`, error);
+    return rows;
+  }
+  console.log(`Pruned ${ids.length} duplicate non-event entity row(s) for ${url}: ${ids.join(', ')}`);
+  return rows.filter(r => !ids.includes(r.id));
 }
 
 function slashTwinUrl(raw) {
@@ -1264,8 +1279,8 @@ export async function ingestSingleUrl(url, supa, options = {}) {
               .from('page_entities')
               .select('*')
               .eq('url', slashTwinUrl(primaryUrl));
-            [...(byUrl || []), ...(bySlash || [])].filter(Boolean).forEach(ex => {
-              if (!ex || !ex.url) return;
+            const found = await pruneDuplicateNonEvents(supa, [...(byUrl || []), ...(bySlash || [])].filter(Boolean), url);
+            found.filter(ex => ex.url).forEach(ex => {
               existingEntitiesMap.set(`${ex.url}|${ex.kind}`, ex);
               if (ex.kind !== 'event') {
                 existingEntitiesMap.set(`${normalizePageUrl(ex.url)}|any`, ex);
