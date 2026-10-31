@@ -25,7 +25,7 @@ const CORRECTIONS = [
     .map((id) => ({ id, slug: 'beginners-photography-classes-coventry', reason: `Invited for "Beginners Photography Classes - Coventry - Get Off Auto" (hidden product); ${INVITE}` })),
   ...['5bf5499c9d3780035820ba98', '5bf53d029d3780035820b404']
     .map((id) => ({ id, slug: 'landscape-photography-workshops-glencoe', reason: 'Invited for Glencoe and text says Glencoe; was on Snowdonia (both hidden)' })),
-  { id: '5d700e89f01869060ceb566b', slug: 'woodland-photography-walk-warwickshire', reason: 'Invited for Woodland Photography Walks; text names no other product' },
+  { id: '5d700e89f01869060ceb566b', slug: 'poppy-fields-photography-workshops', reason: 'Alan confirmed 31 Oct 11:34: same 4 Sep 2019 sunflower evening and invitation batch as KP; the Woodland Walks invitation reference was wrong' },
   { id: '5d6fffe0f0186907108c36f4', slug: 'poppy-fields-photography-workshops', reason: 'Text is about the 4 Sep 2019 sunflower shoot; same home as the other sunflower reviews; was on 4 x private classes' },
   { id: '575c00990000ff000964e312', slug: 'beginners-photography-course', reason: 'Alan-approved override 7 Oct (15-review-attribution-overrides.csv), made after the 6 Oct DB load' },
   { id: '5df215e4c8454509e478f3cb', slug: 'beginners-photography-course', reason: 'Alan-approved override 7 Oct (15-review-attribution-overrides.csv), made after the 6 Oct DB load' }
