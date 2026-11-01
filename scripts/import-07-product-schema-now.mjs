@@ -1,5 +1,5 @@
 /**
- * Refresh 07 CSV then import product_schema into Supabase (full-replace).
+ * Import product_schema from csv/07 into Supabase (full-replace). 07 comes from the product schema generator.
  * Prefer AI GEO Audit .env.vercel.prod secret key (same project) when local legacy keys are disabled.
  * node scripts/import-07-product-schema-now.mjs
  */
@@ -7,7 +7,6 @@ import { readFileSync, existsSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { createClient } from '@supabase/supabase-js';
-import { spawnSync } from 'child_process';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const envCandidates = [
@@ -30,8 +29,7 @@ for (const file of envCandidates) {
   }
 }
 
-spawnSync(process.execPath, [resolve(root, 'scripts/refresh-07-product-schema-ingest.mjs')], { stdio: 'inherit' });
-
+// 07 is written by the Schema Tools product schema generator (BAU Monthly stage D); this script only imports it.
 const csvPath = resolve(root, '../alan-shared-resources/csv/07-product-schema-with-review-ratings.csv');
 const csvData = readFileSync(csvPath, 'utf8');
 
