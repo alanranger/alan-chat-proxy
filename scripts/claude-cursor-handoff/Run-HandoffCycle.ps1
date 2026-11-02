@@ -28,6 +28,12 @@ if (Test-Path $LockPath) {
 $pollScript = Join-Path $HandoffRoot "Poll-ClaudeQuestions.ps1"
 & $pollScript | Out-Null
 
+try {
+    node (Join-Path $HandoffRoot "export-ceo-brief-holds.mjs") 2>&1 | ForEach-Object { Write-HandoffLog "$_" }
+} catch {
+    Write-HandoffLog "ceo brief holds: $($_.Exception.Message)"
+}
+
 $flagPath = "C:\Users\alan\Google Drive\Claude shared resources\Cursor Outputs for Claude\.inbox-has-pending"
 if (-not (Test-Path $flagPath)) {
     Write-HandoffLog "ok: no pending questions"
