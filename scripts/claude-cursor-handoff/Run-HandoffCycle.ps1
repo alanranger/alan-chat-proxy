@@ -34,6 +34,12 @@ try {
     Write-HandoffLog "ceo brief holds: $($_.Exception.Message)"
 }
 
+try {
+    node (Join-Path $HandoffRoot "report-autosync-status.mjs") 2>&1 | ForEach-Object { Write-HandoffLog "$_" }
+} catch {
+    Write-HandoffLog "autosync status: $($_.Exception.Message)"
+}
+
 $flagPath = "C:\Users\alan\Google Drive\Claude shared resources\Cursor Outputs for Claude\.inbox-has-pending"
 if (-not (Test-Path $flagPath)) {
     Write-HandoffLog "ok: no pending questions"
