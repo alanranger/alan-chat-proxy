@@ -238,6 +238,18 @@ function logFieldTrackingStats(csvType, fieldStats, metadataLength, totalRows) {
   });
 }
 
+/**
+ * An image cell → one http(s) URL, or null. Not cleanHTMLText: its noise filter drops any line containing
+ * squarespace-cdn.com, which wiped every image URL (stored as '' since Oct 2025).
+ */
+export function cleanImageUrl(v) {
+  let value = v;
+  if (Array.isArray(value)) value = value[0];
+  if (value && typeof value === 'object') value = value.url ?? value.contentUrl ?? null;
+  const first = String(value ?? '').trim().split(/\s+/)[0] || '';
+  return /^https?:\/\//i.test(first) ? first : null;
+}
+
 /* ========== CSV Metadata Import Functions ========== */
 
 // Import CSV metadata for blog articles (BOM fix applied)
@@ -264,7 +276,7 @@ async function importBlogMetadata(rows, supa) {
       categories: (row.categories && row.categories.trim()) ? row.categories.split(';').map(c => c.trim()).filter(Boolean) : [],
       tags: (row.tags && row.tags.trim()) ? row.tags.split(',').map(t => cleanHTMLText(t.trim())).filter(Boolean) : [],
       publish_date: normalizeDateDayFirst(row['publish on']),
-      image_url: row.image ? cleanHTMLText(row.image) : null,
+      image_url: cleanImageUrl(row.image),
       excerpt: null,
       import_session: new Date().toISOString()
     };
@@ -346,7 +358,7 @@ async function importCourseEventMetadata(rows, supa) {
       location_address: row.location_address ? cleanHTMLText(row.location_address) : null,
       location_city_state_zip: row.location_city_state_zip ? cleanHTMLText(row.location_city_state_zip) : null,
       excerpt: row.excerpt ? cleanHTMLText(row.excerpt) : null,
-      image_url: row.event_image ? cleanHTMLText(row.event_image) : null,
+      image_url: cleanImageUrl(row.event_image),
       workflow_state: row.workflow_state ? cleanHTMLText(row.workflow_state) : null,
       import_session: new Date().toISOString()
     };
@@ -471,7 +483,7 @@ async function importWorkshopEventMetadata(rows, supa) {
       location_address: row.location_address ? cleanHTMLText(row.location_address) : null,
       location_city_state_zip: row.location_city_state_zip ? cleanHTMLText(row.location_city_state_zip) : null,
       excerpt: row.excerpt ? cleanHTMLText(row.excerpt) : null,
-      image_url: row.event_image ? cleanHTMLText(row.event_image) : null,
+      image_url: cleanImageUrl(row.event_image),
       workflow_state: row.workflow_state ? cleanHTMLText(row.workflow_state) : null,
       import_session: new Date().toISOString()
     };
@@ -672,7 +684,7 @@ async function importCourseProductMetadata(rows, supa) {
       categories: row.categories ? row.categories.split(';').map(c => c.trim()).filter(Boolean) : [],
       tags: row.tags ? row.tags.split(',').map(t => cleanHTMLText(t.trim())).filter(Boolean) : [],
       publish_date: normalizeDateDayFirst(row['publish on']),
-      image_url: row.image ? cleanHTMLText(row.image) : null,
+      image_url: cleanImageUrl(row.image),
       excerpt: null,
       import_session: new Date().toISOString()
     };
@@ -741,7 +753,7 @@ async function importWorkshopProductMetadata(rows, supa) {
       categories: row.categories ? row.categories.split(';').map(c => c.trim()).filter(Boolean) : [],
       tags: row.tags ? row.tags.split(',').map(t => cleanHTMLText(t.trim())).filter(Boolean) : [],
       publish_date: normalizeDateDayFirst(row['publish on']),
-      image_url: row.image ? cleanHTMLText(row.image) : null,
+      image_url: cleanImageUrl(row.image),
       excerpt: null,
       import_session: new Date().toISOString()
     };
@@ -844,7 +856,7 @@ async function importProductSchemaMetadata(rows, supa) {
       categories: [],
       tags: [],
       publish_date: null,
-      image_url: jsonLdData?.image ? cleanHTMLText(jsonLdData.image) : null,
+      image_url: cleanImageUrl(jsonLdData?.image),
       excerpt: jsonLdData?.description ? cleanHTMLText(jsonLdData.description) : null,
       json_ld_data: jsonLdData,
       import_session: new Date().toISOString()
@@ -1979,3 +1991,6 @@ export default async function handler(req, res) {
     return sendJSON(res, 500, { error: 'server_error', detail: asString(err), stage });
   }
 }
+
+/** For testing-scripts/csv-import-image-url.test.mjs only. */
+export const __test = { parseCSV, importBlogMetadata, importCourseEventMetadata, importWorkshopEventMetadata, importCourseProductMetadata, importWorkshopProductMetadata, importProductSchemaMetadata };
