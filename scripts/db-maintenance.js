@@ -87,11 +87,24 @@ async function purgeOldRows(pgClient, table, intervalText) {
   return totalDeleted;
 }
 
+// page_html keeps exactly one row per page (unique url); never delete by age — that could remove a page's only copy.
+async function pruneOlderPageHtmlVersions(pgClient, results) {
+  try {
+    const r = await pgClient.query(`DELETE FROM page_html p WHERE EXISTS (
+      SELECT 1 FROM page_html q WHERE q.url = p.url AND (q.updated_at, q.id) > (p.updated_at, p.id))`);
+    results.page_html_deleted = r.rowCount || 0;
+    log(`page_html: removed ${results.page_html_deleted} older versions (newest row per page kept)`);
+  } catch (e) {
+    const errorMsg = `Error pruning page_html older versions: ${e.message}`;
+    log(errorMsg, 'ERROR');
+    results.errors.push(errorMsg);
+  }
+}
+
 async function purgeTimeBasedTables(pgClient, results) {
   const targets = [
     { table: 'chat_sessions', key: 'chat_sessions_deleted' },
     { table: 'chat_interactions', key: 'chat_interactions_deleted' },
-    { table: 'page_html', key: 'page_html_deleted' },
   ];
   for (const target of targets) {
     log(`Purging old ${target.table} (older than 30 days)...`);
@@ -138,8 +151,9 @@ async function runMaintenance() {
     await pgClient.connect();
     log('Connected to database');
 
-    // 1-3. Purge old chat_sessions / chat_interactions / page_html (batched)
+    // 1-2. Purge old chat_sessions / chat_interactions (batched); 3. page_html: keep each page's newest row
     await purgeTimeBasedTables(pgClient, results);
+    await pruneOlderPageHtmlVersions(pgClient, results);
 
     // 4. Drop backup tables
     log('Dropping backup tables (page_entities_backup_*)...');

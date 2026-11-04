@@ -638,13 +638,15 @@ export async function ingestSingleUrl(url, supa, options = {}) {
     const storeHtmlStart = Date.now();
     const contentHash = generateContentHash(html);
     try {
+      // One row per page (unique url): a re-ingest updates it in place. Keying on (url, content_hash) added a new
+      // ~110 KB row whenever Squarespace's ever-changing raw HTML differed — about 520 rows per full re-read.
       const { error } = await supa.from('page_html').upsert({
         url: url,
         html_content: html,
         content_hash: contentHash,
         updated_at: new Date().toISOString()
       }, {
-        onConflict: 'url,content_hash'
+        onConflict: 'url'
       });
       
       if (error) {
