@@ -10,6 +10,7 @@ export const config = { runtime: 'nodejs' };
 
 import { createClient } from '@supabase/supabase-js';
 import { isAuthorizedAdmin } from './_lib/admin-auth.js';
+import { selectAllPaged } from '../lib/supabase-paged.js';
 
 const need = (k) => {
   const v = process.env[k];
@@ -40,15 +41,7 @@ function normEntityUrl(u) {
 }
 
 async function fetchAllRows(supa, table, columns) {
-  const rows = [];
-  for (let from = 0; ; from += 1000) {
-    const { data, error } = await supa.from(table).select(columns).range(from, from + 999);
-    if (error) throw error;
-    if (!data || !data.length) break;
-    rows.push(...data);
-    if (data.length < 1000) break;
-  }
-  return rows;
+  return selectAllPaged(() => supa.from(table).select(columns), ['id']);
 }
 
 const SCREEN_BUILD = '2026-10-30-pace-429-4';
@@ -484,6 +477,7 @@ export default async function handler(req, res) {
               const { data: page, error: pageErr } = await supa
                 .from('csv_metadata')
                 .select('csv_type')
+                .order('id')
                 .range(from, from + pageSize - 1);
               if (pageErr) { lastErr = pageErr; break; }
               if (!page || page.length === 0) break;
