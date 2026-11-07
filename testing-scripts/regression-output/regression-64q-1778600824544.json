@@ -1,0 +1,1042 @@
+{
+  "sessionId": "regression-64q-1778600824544",
+  "apiUrl": "https://alan-chat-proxy.vercel.app/api/chat",
+  "createdAt": "2026-05-12T15:48:28.441Z",
+  "results": [
+    {
+      "canonicalId": 1,
+      "category": "Event Queries",
+      "question": "whens the next bluebell workshops and whats the cost",
+      "api": {
+        "ok": true,
+        "type": "events",
+        "confidence": 0.96
+      },
+      "evaluation": {
+        "pass": true,
+        "reasons": [],
+        "plainLen": 236
+      }
+    },
+    {
+      "canonicalId": 2,
+      "category": "Event Queries",
+      "question": "when is the next devon workshop",
+      "api": {
+        "ok": true,
+        "type": "events",
+        "confidence": 0.96
+      },
+      "evaluation": {
+        "pass": true,
+        "reasons": [],
+        "plainLen": 695
+      }
+    },
+    {
+      "canonicalId": 3,
+      "category": "Event Queries",
+      "question": "what is your next workshop date and where is it",
+      "api": {
+        "ok": true,
+        "type": "events",
+        "confidence": 0.96
+      },
+      "evaluation": {
+        "pass": true,
+        "reasons": [],
+        "plainLen": 238
+      }
+    },
+    {
+      "canonicalId": 4,
+      "category": "Event Queries",
+      "question": "when are your next Autumn workshops and where are they?",
+      "api": {
+        "ok": true,
+        "type": "events",
+        "confidence": 0.96
+      },
+      "evaluation": {
+        "pass": true,
+        "reasons": [],
+        "plainLen": 257
+      }
+    },
+    {
+      "canonicalId": 5,
+      "category": "Event Queries",
+      "question": "How long are your workshops?",
+      "api": {
+        "ok": true,
+        "type": "events",
+        "confidence": 0.96
+      },
+      "evaluation": {
+        "pass": true,
+        "reasons": [],
+        "plainLen": 279
+      }
+    },
+    {
+      "canonicalId": 6,
+      "category": "Course/Workshop Logistics",
+      "question": "How much is a residential photography course and does it include B&B",
+      "api": {
+        "ok": true,
+        "type": "events",
+        "confidence": 0.53
+      },
+      "evaluation": {
+        "pass": true,
+        "reasons": [],
+        "plainLen": 367
+      }
+    },
+    {
+      "canonicalId": 7,
+      "category": "Equipment Recommendations",
+      "question": "What is the difference between prime and zoom lenses?",
+      "api": {
+        "ok": true,
+        "type": "advice",
+        "confidence": 0.8
+      },
+      "evaluation": {
+        "pass": true,
+        "reasons": [],
+        "plainLen": 471
+      }
+    },
+    {
+      "canonicalId": 8,
+      "category": "Equipment Recommendations",
+      "question": "What memory card should I buy?",
+      "api": {
+        "ok": true,
+        "type": "advice",
+        "confidence": 0.7
+      },
+      "evaluation": {
+        "pass": true,
+        "reasons": [],
+        "plainLen": 462
+      }
+    },
+    {
+      "canonicalId": 9,
+      "category": "Business Information",
+      "question": "Do you offer gift vouchers?",
+      "api": {
+        "ok": true,
+        "type": "advice",
+        "confidence": 0.8
+      },
+      "evaluation": {
+        "pass": true,
+        "reasons": [],
+        "plainLen": 374
+      }
+    },
+    {
+      "canonicalId": 10,
+      "category": "Technical Photography Concepts",
+      "question": "What is HDR photography?",
+      "api": {
+        "ok": true,
+        "type": "advice",
+        "confidence": 0.8
+      },
+      "evaluation": {
+        "pass": true,
+        "reasons": [],
+        "plainLen": 565
+      }
+    },
+    {
+      "canonicalId": 11,
+      "category": "Equipment Recommendations",
+      "question": "What tripod do you recommend",
+      "api": {
+        "ok": true,
+        "type": "advice",
+        "confidence": 0.8
+      },
+      "evaluation": {
+        "pass": true,
+        "reasons": [],
+        "plainLen": 249
+      }
+    },
+    {
+      "canonicalId": 12,
+      "category": "Technical Photography Concepts",
+      "question": "What is long exposure and how can I find out more about it",
+      "api": {
+        "ok": true,
+        "type": "advice",
+        "confidence": 0.8
+      },
+      "evaluation": {
+        "pass": true,
+        "reasons": [],
+        "plainLen": 590
+      }
+    },
+    {
+      "canonicalId": 13,
+      "category": "Technical Advice",
+      "question": "How do I improve my composition and storytelling in photos?",
+      "api": {
+        "ok": true,
+        "type": "advice",
+        "confidence": 0.8
+      },
+      "evaluation": {
+        "pass": true,
+        "reasons": [],
+        "plainLen": 244
+      }
+    },
+    {
+      "canonicalId": 14,
+      "category": "Technical Photography Concepts",
+      "question": "\"What is the exposure triangle (aperture, shutter, ISO)?\"",
+      "api": {
+        "ok": true,
+        "type": "advice",
+        "confidence": 0.8
+      },
+      "evaluation": {
+        "pass": true,
+        "reasons": [],
+        "plainLen": 364
+      }
+    },
+    {
+      "canonicalId": 15,
+      "category": "Technical Advice",
+      "question": "How do I improve my photography skills?",
+      "api": {
+        "ok": true,
+        "type": "advice",
+        "confidence": 0.8
+      },
+      "evaluation": {
+        "pass": true,
+        "reasons": [],
+        "plainLen": 967
+      }
+    },
+    {
+      "canonicalId": 16,
+      "category": "Business Information",
+      "question": "What is your cancellation or refund policy for courses/workshops?",
+      "api": {
+        "ok": true,
+        "type": "advice",
+        "confidence": 0.8
+      },
+      "evaluation": {
+        "pass": true,
+        "reasons": [],
+        "plainLen": 425
+      }
+    },
+    {
+      "canonicalId": 17,
+      "category": "General Queries",
+      "question": "Do you do astrophotography workshops",
+      "api": {
+        "ok": true,
+        "type": "advice",
+        "confidence": 0.8
+      },
+      "evaluation": {
+        "pass": true,
+        "reasons": [],
+        "plainLen": 328
+      }
+    },
+    {
+      "canonicalId": 18,
+      "category": "General Queries",
+      "question": "Can my 14yr old attend your workshop",
+      "api": {
+        "ok": true,
+        "type": "advice",
+        "confidence": 0.8
+      },
+      "evaluation": {
+        "pass": true,
+        "reasons": [],
+        "plainLen": 287
+      }
+    },
+    {
+      "canonicalId": 19,
+      "category": "General Queries",
+      "question": "My pictures never seem sharp.  Can you advise on what I am doing wrong",
+      "api": {
+        "ok": true,
+        "type": "advice",
+        "confidence": 0.9
+      },
+      "evaluation": {
+        "pass": true,
+        "reasons": [],
+        "plainLen": 496
+      }
+    },
+    {
+      "canonicalId": 20,
+      "category": "General Queries",
+      "question": "What types of photography services do you offer?",
+      "api": {
+        "ok": true,
+        "type": "services",
+        "confidence": 0.8
+      },
+      "evaluation": {
+        "pass": false,
+        "reasons": [
+          "below_150_substantive",
+          "fallback_template"
+        ],
+        "plainLen": 98
+      }
+    },
+    {
+      "canonicalId": 21,
+      "category": "Equipment Recommendations",
+      "question": "What sort of camera do I need for your camera course",
+      "api": {
+        "ok": true,
+        "type": "advice",
+        "confidence": 0.8
+      },
+      "evaluation": {
+        "pass": true,
+        "reasons": [],
+        "plainLen": 478
+      }
+    },
+    {
+      "canonicalId": 22,
+      "category": "Equipment Recommendations",
+      "question": "What gear or equipment do I need to bring to a workshop?",
+      "api": {
+        "ok": true,
+        "type": "advice",
+        "confidence": 0.8
+      },
+      "evaluation": {
+        "pass": true,
+        "reasons": [],
+        "plainLen": 288
+      }
+    },
+    {
+      "canonicalId": 23,
+      "category": "Course/Workshop Logistics",
+      "question": "Do you I get a certificate with the photography course",
+      "api": {
+        "ok": true,
+        "type": "advice",
+        "confidence": 0.8
+      },
+      "evaluation": {
+        "pass": true,
+        "reasons": [],
+        "plainLen": 391
+      }
+    },
+    {
+      "canonicalId": 24,
+      "category": "Course/Workshop Logistics",
+      "question": "Do I need a laptop for the lightroom course",
+      "api": {
+        "ok": true,
+        "type": "advice",
+        "confidence": 0.8
+      },
+      "evaluation": {
+        "pass": true,
+        "reasons": [],
+        "plainLen": 427
+      }
+    },
+    {
+      "canonicalId": 25,
+      "category": "Course/Workshop Logistics",
+      "question": "Is the online photography course really free",
+      "api": {
+        "ok": true,
+        "type": "advice",
+        "confidence": 0.8
+      },
+      "evaluation": {
+        "pass": true,
+        "reasons": [],
+        "plainLen": 278
+      }
+    },
+    {
+      "canonicalId": 26,
+      "category": "Course/Workshop Logistics",
+      "question": "What courses do you offer for complete beginners?",
+      "api": {
+        "ok": true,
+        "type": "advice",
+        "confidence": 0.8
+      },
+      "evaluation": {
+        "pass": true,
+        "reasons": [],
+        "plainLen": 634
+      }
+    },
+    {
+      "canonicalId": 27,
+      "category": "Course/Workshop Logistics",
+      "question": "How many weeks is the beginners' photography course?",
+      "api": {
+        "ok": true,
+        "type": "advice",
+        "confidence": 0.8
+      },
+      "evaluation": {
+        "pass": true,
+        "reasons": [],
+        "plainLen": 362
+      }
+    },
+    {
+      "canonicalId": 28,
+      "category": "Business Information",
+      "question": "How do I get personalised feedback on my images",
+      "api": {
+        "ok": true,
+        "type": "advice",
+        "confidence": 0.8
+      },
+      "evaluation": {
+        "pass": true,
+        "reasons": [],
+        "plainLen": 295
+      }
+    },
+    {
+      "canonicalId": 29,
+      "category": "Business Information",
+      "question": "How can I contact you or book a discovery call?",
+      "api": {
+        "ok": true,
+        "type": "advice",
+        "confidence": 0.8
+      },
+      "evaluation": {
+        "pass": true,
+        "reasons": [],
+        "plainLen": 152
+      }
+    },
+    {
+      "canonicalId": 30,
+      "category": "Business Information",
+      "question": "Where is your gallery and can I submit my images for feedback?",
+      "api": {
+        "ok": true,
+        "type": "advice",
+        "confidence": 0.8
+      },
+      "evaluation": {
+        "pass": true,
+        "reasons": [],
+        "plainLen": 345
+      }
+    },
+    {
+      "canonicalId": 31,
+      "category": "Technical Photography Concepts",
+      "question": "\"What is depth of field, and how do I control it?\"",
+      "api": {
+        "ok": true,
+        "type": "advice",
+        "confidence": 0.8
+      },
+      "evaluation": {
+        "pass": true,
+        "reasons": [],
+        "plainLen": 221
+      }
+    },
+    {
+      "canonicalId": 32,
+      "category": "Technical Photography Concepts",
+      "question": "What is white balance and how do I use it?",
+      "api": {
+        "ok": true,
+        "type": "advice",
+        "confidence": 0.8
+      },
+      "evaluation": {
+        "pass": true,
+        "reasons": [],
+        "plainLen": 520
+      }
+    },
+    {
+      "canonicalId": 33,
+      "category": "Person Queries",
+      "question": "Who is Alan Ranger and what is his photographic background?",
+      "api": {
+        "ok": true,
+        "type": "advice",
+        "confidence": 0.8
+      },
+      "evaluation": {
+        "pass": true,
+        "reasons": [],
+        "plainLen": 714
+      }
+    },
+    {
+      "canonicalId": 34,
+      "category": "Person Queries",
+      "question": "Where is Alan Ranger based?",
+      "api": {
+        "ok": true,
+        "type": "advice",
+        "confidence": 0.8
+      },
+      "evaluation": {
+        "pass": true,
+        "reasons": [],
+        "plainLen": 363
+      }
+    },
+    {
+      "canonicalId": 35,
+      "category": "Person Queries",
+      "question": "Can I hire you as a professional photographer in Coventry?",
+      "api": {
+        "ok": true,
+        "type": "advice",
+        "confidence": 0.8
+      },
+      "evaluation": {
+        "pass": true,
+        "reasons": [],
+        "plainLen": 743
+      }
+    },
+    {
+      "canonicalId": 36,
+      "category": "Person Queries",
+      "question": "peter orton",
+      "api": {
+        "ok": true,
+        "type": "advice",
+        "confidence": 0.8
+      },
+      "evaluation": {
+        "pass": true,
+        "reasons": [],
+        "plainLen": 367
+      }
+    },
+    {
+      "canonicalId": 37,
+      "category": "Person Queries",
+      "question": "who is alan ranger",
+      "api": {
+        "ok": true,
+        "type": "advice",
+        "confidence": 0.8
+      },
+      "evaluation": {
+        "pass": true,
+        "reasons": [],
+        "plainLen": 714
+      }
+    },
+    {
+      "canonicalId": 38,
+      "category": "Technical Advice",
+      "question": "How do I subscribe to the free online photography course?",
+      "api": {
+        "ok": true,
+        "type": "advice",
+        "confidence": 0.8
+      },
+      "evaluation": {
+        "pass": true,
+        "reasons": [],
+        "plainLen": 290
+      }
+    },
+    {
+      "canonicalId": 39,
+      "category": "Technical Advice",
+      "question": "How do I use flash photography?",
+      "api": {
+        "ok": true,
+        "type": "advice",
+        "confidence": 0.8
+      },
+      "evaluation": {
+        "pass": true,
+        "reasons": [],
+        "plainLen": 628
+      }
+    },
+    {
+      "canonicalId": 40,
+      "category": "Technical Advice",
+      "question": "How do I edit RAW files?",
+      "api": {
+        "ok": true,
+        "type": "advice",
+        "confidence": 0.8
+      },
+      "evaluation": {
+        "pass": true,
+        "reasons": [],
+        "plainLen": 558
+      }
+    },
+    {
+      "canonicalId": 41,
+      "category": "Technical Advice",
+      "question": "how do I focus in landscape photography",
+      "api": {
+        "ok": true,
+        "type": "advice",
+        "confidence": 0.8
+      },
+      "evaluation": {
+        "pass": true,
+        "reasons": [],
+        "plainLen": 362
+      }
+    },
+    {
+      "canonicalId": 42,
+      "category": "Technical Advice",
+      "question": "how do I improve my photography",
+      "api": {
+        "ok": true,
+        "type": "advice",
+        "confidence": 0.8
+      },
+      "evaluation": {
+        "pass": false,
+        "reasons": [
+          "fallback_template"
+        ],
+        "plainLen": 230
+      }
+    },
+    {
+      "canonicalId": 43,
+      "category": "Technical Advice",
+      "question": "how do I photograph autumn colours",
+      "api": {
+        "ok": true,
+        "type": "advice",
+        "confidence": 0.8
+      },
+      "evaluation": {
+        "pass": false,
+        "reasons": [
+          "fallback_template"
+        ],
+        "plainLen": 230
+      }
+    },
+    {
+      "canonicalId": 44,
+      "category": "Technical Advice",
+      "question": "how do I photograph bluebells",
+      "api": {
+        "ok": true,
+        "type": "advice",
+        "confidence": 0.8
+      },
+      "evaluation": {
+        "pass": true,
+        "reasons": [],
+        "plainLen": 419
+      }
+    },
+    {
+      "canonicalId": 45,
+      "category": "Technical Advice",
+      "question": "how do I photograph flowers",
+      "api": {
+        "ok": true,
+        "type": "advice",
+        "confidence": 0.8
+      },
+      "evaluation": {
+        "pass": false,
+        "reasons": [
+          "fallback_template"
+        ],
+        "plainLen": 230
+      }
+    },
+    {
+      "canonicalId": 46,
+      "category": "Technical Advice",
+      "question": "how do I photograph people",
+      "api": {
+        "ok": true,
+        "type": "advice",
+        "confidence": 0.8
+      },
+      "evaluation": {
+        "pass": true,
+        "reasons": [],
+        "plainLen": 347
+      }
+    },
+    {
+      "canonicalId": 47,
+      "category": "Technical Advice",
+      "question": "how do I photograph seascapes",
+      "api": {
+        "ok": true,
+        "type": "advice",
+        "confidence": 0.8
+      },
+      "evaluation": {
+        "pass": false,
+        "reasons": [
+          "fallback_template"
+        ],
+        "plainLen": 230
+      }
+    },
+    {
+      "canonicalId": 48,
+      "category": "Technical Advice",
+      "question": "how do I photograph sunsets",
+      "api": {
+        "ok": true,
+        "type": "advice",
+        "confidence": 0.8
+      },
+      "evaluation": {
+        "pass": false,
+        "reasons": [
+          "fallback_template"
+        ],
+        "plainLen": 230
+      }
+    },
+    {
+      "canonicalId": 49,
+      "category": "Technical Advice",
+      "question": "how do I photograph waterfalls",
+      "api": {
+        "ok": true,
+        "type": "advice",
+        "confidence": 0.8
+      },
+      "evaluation": {
+        "pass": false,
+        "reasons": [
+          "fallback_template"
+        ],
+        "plainLen": 230
+      }
+    },
+    {
+      "canonicalId": 50,
+      "category": "Technical Advice",
+      "question": "how do I photograph wildlife",
+      "api": {
+        "ok": true,
+        "type": "advice",
+        "confidence": 0.8
+      },
+      "evaluation": {
+        "pass": true,
+        "reasons": [],
+        "plainLen": 348
+      }
+    },
+    {
+      "canonicalId": 51,
+      "category": "Technical Advice",
+      "question": "how do I take better landscape photos",
+      "api": {
+        "ok": true,
+        "type": "advice",
+        "confidence": 0.8
+      },
+      "evaluation": {
+        "pass": true,
+        "reasons": [],
+        "plainLen": 377
+      }
+    },
+    {
+      "canonicalId": 52,
+      "category": "Technical Advice",
+      "question": "how do I use a tripod",
+      "api": {
+        "ok": true,
+        "type": "advice",
+        "confidence": 0.8
+      },
+      "evaluation": {
+        "pass": true,
+        "reasons": [],
+        "plainLen": 473
+      }
+    },
+    {
+      "canonicalId": 53,
+      "category": "Equipment Recommendations",
+      "question": "what camera should I buy",
+      "api": {
+        "ok": true,
+        "type": "advice",
+        "confidence": 0.8
+      },
+      "evaluation": {
+        "pass": true,
+        "reasons": [],
+        "plainLen": 277
+      }
+    },
+    {
+      "canonicalId": 54,
+      "category": "Technical Photography Concepts",
+      "question": "what is a histogram",
+      "api": {
+        "ok": true,
+        "type": "advice",
+        "confidence": 0.8
+      },
+      "evaluation": {
+        "pass": true,
+        "reasons": [],
+        "plainLen": 999
+      }
+    },
+    {
+      "canonicalId": 55,
+      "category": "Technical Photography Concepts",
+      "question": "what is aperture",
+      "api": {
+        "ok": true,
+        "type": "advice",
+        "confidence": 0.8
+      },
+      "evaluation": {
+        "pass": true,
+        "reasons": [],
+        "plainLen": 422
+      }
+    },
+    {
+      "canonicalId": 56,
+      "category": "Technical Photography Concepts",
+      "question": "what is composition in photography",
+      "api": {
+        "ok": true,
+        "type": "advice",
+        "confidence": 0.8
+      },
+      "evaluation": {
+        "pass": true,
+        "reasons": [],
+        "plainLen": 481
+      }
+    },
+    {
+      "canonicalId": 57,
+      "category": "Technical Photography Concepts",
+      "question": "what is depth of field",
+      "api": {
+        "ok": true,
+        "type": "advice",
+        "confidence": 0.8
+      },
+      "evaluation": {
+        "pass": true,
+        "reasons": [],
+        "plainLen": 221
+      }
+    },
+    {
+      "canonicalId": 58,
+      "category": "Technical Photography Concepts",
+      "question": "what is golden hour",
+      "api": {
+        "ok": true,
+        "type": "advice",
+        "confidence": 0.8
+      },
+      "evaluation": {
+        "pass": true,
+        "reasons": [],
+        "plainLen": 1036
+      }
+    },
+    {
+      "canonicalId": 59,
+      "category": "Technical Photography Concepts",
+      "question": "what is ISO",
+      "api": {
+        "ok": true,
+        "type": "advice",
+        "confidence": 0.8
+      },
+      "evaluation": {
+        "pass": true,
+        "reasons": [],
+        "plainLen": 577
+      }
+    },
+    {
+      "canonicalId": 60,
+      "category": "Technical Photography Concepts",
+      "question": "what is long exposure photography",
+      "api": {
+        "ok": true,
+        "type": "advice",
+        "confidence": 0.8
+      },
+      "evaluation": {
+        "pass": true,
+        "reasons": [],
+        "plainLen": 590
+      }
+    },
+    {
+      "canonicalId": 61,
+      "category": "Technical Photography Concepts",
+      "question": "what is macro photography",
+      "api": {
+        "ok": true,
+        "type": "advice",
+        "confidence": 0.8
+      },
+      "evaluation": {
+        "pass": true,
+        "reasons": [],
+        "plainLen": 239
+      }
+    },
+    {
+      "canonicalId": 62,
+      "category": "Technical Photography Concepts",
+      "question": "what is portrait photography",
+      "api": {
+        "ok": true,
+        "type": "advice",
+        "confidence": 0.8
+      },
+      "evaluation": {
+        "pass": true,
+        "reasons": [],
+        "plainLen": 175
+      }
+    },
+    {
+      "canonicalId": 63,
+      "category": "Technical Photography Concepts",
+      "question": "what is shutter speed",
+      "api": {
+        "ok": true,
+        "type": "advice",
+        "confidence": 0.8
+      },
+      "evaluation": {
+        "pass": true,
+        "reasons": [],
+        "plainLen": 454
+      }
+    },
+    {
+      "canonicalId": 64,
+      "category": "Equipment Recommendations",
+      "question": "what is the best camera for beginners",
+      "api": {
+        "ok": true,
+        "type": "advice",
+        "confidence": 0.8
+      },
+      "evaluation": {
+        "pass": true,
+        "reasons": [],
+        "plainLen": 575
+      }
+    },
+    {
+      "canonicalId": 65,
+      "category": "Equipment Recommendations",
+      "question": "what is the best lens for landscape photography",
+      "api": {
+        "ok": true,
+        "type": "advice",
+        "confidence": 0.8
+      },
+      "evaluation": {
+        "pass": true,
+        "reasons": [],
+        "plainLen": 492
+      }
+    },
+    {
+      "canonicalId": 66,
+      "category": "Technical Photography Concepts",
+      "question": "what is the best time of day for landscape photography",
+      "api": {
+        "ok": true,
+        "type": "advice",
+        "confidence": 0.8
+      },
+      "evaluation": {
+        "pass": true,
+        "reasons": [],
+        "plainLen": 677
+      }
+    },
+    {
+      "canonicalId": 67,
+      "category": "Technical Photography Concepts",
+      "question": "what is the rule of thirds",
+      "api": {
+        "ok": true,
+        "type": "advice",
+        "confidence": 0.8
+      },
+      "evaluation": {
+        "pass": true,
+        "reasons": [],
+        "plainLen": 298
+      }
+    },
+    {
+      "canonicalId": 68,
+      "category": "Technical Advice",
+      "question": "what settings should i use for landscape photography",
+      "api": {
+        "ok": true,
+        "type": "advice",
+        "confidence": 0.8
+      },
+      "evaluation": {
+        "pass": true,
+        "reasons": [],
+        "plainLen": 617
+      }
+    }
+  ]
+}

@@ -1,0 +1,281 @@
+{
+  "label": "after",
+  "at": "2026-09-23T10:29:54.584Z",
+  "results": [
+    {
+      "name": "chat POST /api/chat",
+      "pass": true,
+      "detail": "200 1581ms"
+    },
+    {
+      "name": "aigeo dashboard HTML",
+      "pass": true,
+      "detail": "200 191ms"
+    },
+    {
+      "name": "aigeo job-history",
+      "pass": true,
+      "detail": "401 (auth gate ok if 401/403)"
+    },
+    {
+      "name": "aigeo revenue-truth-findings",
+      "pass": true,
+      "detail": "200"
+    },
+    {
+      "name": "apps page apps-dashboard-lilac.vercel.app/",
+      "pass": true,
+      "detail": "200 81ms"
+    },
+    {
+      "name": "apps page apps-dashboard-lilac.vercel.app/mission-control",
+      "pass": true,
+      "detail": "200 20ms"
+    },
+    {
+      "name": "apps page apps-dashboard-lilac.vercel.app/handoff",
+      "pass": true,
+      "detail": "200 33ms"
+    },
+    {
+      "name": "apps page apps-dashboard-lilac.vercel.app/bau-workflow.html",
+      "pass": true,
+      "detail": "200 30ms"
+    },
+    {
+      "name": "apps page alan-chat-proxy.vercel.app/chat.html",
+      "pass": true,
+      "detail": "200 33ms"
+    },
+    {
+      "name": "apps page alan-chat-proxy.vercel.app/interactive-testing.html",
+      "pass": true,
+      "detail": "200 35ms"
+    },
+    {
+      "name": "apps page alan-chat-proxy.vercel.app/regression-comparison.html",
+      "pass": true,
+      "detail": "200 32ms"
+    },
+    {
+      "name": "apps page alan-chat-proxy.vercel.app/bulk-simple.html",
+      "pass": true,
+      "detail": "200 28ms"
+    },
+    {
+      "name": "apps page alan-chat-proxy.vercel.app/analytics.html",
+      "pass": true,
+      "detail": "200 28ms"
+    },
+    {
+      "name": "apps page alan-chat-proxy.vercel.app/cron-dashboard.html",
+      "pass": true,
+      "detail": "200 31ms"
+    },
+    {
+      "name": "apps page alanranger.github.io/exposure-calculator/",
+      "pass": true,
+      "detail": "200 125ms"
+    },
+    {
+      "name": "apps page alanranger.github.io/photo-print-size-calculator/",
+      "pass": true,
+      "detail": "200 168ms"
+    },
+    {
+      "name": "apps page github.com/alanranger/practice-pack-generator",
+      "pass": false,
+      "detail": "404 306ms"
+    },
+    {
+      "name": "apps page v0-workshops-optimiser.vercel.app/",
+      "pass": true,
+      "detail": "200 86ms"
+    },
+    {
+      "name": "apps page schema-tools-six.vercel.app/",
+      "pass": true,
+      "detail": "200 163ms"
+    },
+    {
+      "name": "apps page blog-snippet-tools.vercel.app/AR-Blog-Optimization-Template-",
+      "pass": true,
+      "detail": "200 87ms"
+    },
+    {
+      "name": "apps page blog-snippet-tools.vercel.app/AR-Blog-Snippet-Skeletons.html",
+      "pass": true,
+      "detail": "200 32ms"
+    },
+    {
+      "name": "apps page blog-snippet-tools.vercel.app/ar_cta_generator_v3_3.html",
+      "pass": true,
+      "detail": "200 51ms"
+    },
+    {
+      "name": "apps page blog-snippet-tools.vercel.app/ar-checklist-generator-v1.6.3-",
+      "pass": true,
+      "detail": "200 61ms"
+    },
+    {
+      "name": "apps page alanranger-modules.vercel.app/academy/admin",
+      "pass": false,
+      "detail": "429 92ms"
+    },
+    {
+      "name": "apps page ai-geo-audit.vercel.app/audit-dashboard.html",
+      "pass": true,
+      "detail": "200 144ms"
+    },
+    {
+      "name": "apps page upload-sites.vercel.app/",
+      "pass": true,
+      "detail": "200 206ms"
+    },
+    {
+      "name": "apps page alanranger.github.io/gardening-measurement-calculator/",
+      "pass": true,
+      "detail": "200 183ms"
+    },
+    {
+      "name": "apps page football-predictor-self.vercel.app/",
+      "pass": true,
+      "detail": "200 277ms"
+    },
+    {
+      "name": "apps page ruby-ranger.vercel.app/",
+      "pass": true,
+      "detail": "200 284ms"
+    },
+    {
+      "name": "apps /api/cron/diary-drift?probe=1 no-auth",
+      "pass": true,
+      "detail": "401"
+    },
+    {
+      "name": "apps /api/cron/diary-drift?probe=1 authed",
+      "pass": true,
+      "detail": "200 {\"ok\":true,\"probe\":true,\"route\":\"diary-drift\"}"
+    },
+    {
+      "name": "apps /api/cron/gcal-auto-sync?probe=1 no-auth",
+      "pass": true,
+      "detail": "401"
+    },
+    {
+      "name": "apps /api/cron/gcal-auto-sync?probe=1 authed",
+      "pass": true,
+      "detail": "200 {\"ok\":true,\"probe\":true,\"route\":\"gcal-auto-sync\"}"
+    },
+    {
+      "name": "apps /api/cron/hotel-source-reconcile?probe=1 no-auth",
+      "pass": true,
+      "detail": "401"
+    },
+    {
+      "name": "apps /api/cron/hotel-source-reconcile?probe=1 authed",
+      "pass": true,
+      "detail": "200 {\"ok\":true,\"inserted\":0,\"ids\":[],\"counts\":{\"messages\":120,\"parsed\":120,\"unregist"
+    },
+    {
+      "name": "site product page",
+      "pass": false,
+      "detail": "404 len=464424"
+    },
+    {
+      "name": "site product reviews markup present",
+      "pass": true,
+      "detail": "yes"
+    },
+    {
+      "name": "site courses page",
+      "pass": true,
+      "detail": "200"
+    },
+    {
+      "name": "site workshops page",
+      "pass": true,
+      "detail": "200"
+    },
+    {
+      "name": "academy dashboard",
+      "pass": true,
+      "detail": "200 len=853330"
+    },
+    {
+      "name": "academy exams page load",
+      "pass": true,
+      "detail": "200 hasClient=true"
+    },
+    {
+      "name": "academy login",
+      "pass": true,
+      "detail": "200"
+    },
+    {
+      "name": "ruby-ranger github",
+      "pass": true,
+      "detail": "404"
+    },
+    {
+      "name": "football-tracker github",
+      "pass": true,
+      "detail": "404"
+    },
+    {
+      "name": "practice-pack github",
+      "pass": true,
+      "detail": "404"
+    },
+    {
+      "name": "football ft_teams via public key",
+      "pass": false,
+      "detail": "400"
+    },
+    {
+      "name": "public-key probe booking_sheet_transactions",
+      "pass": true,
+      "detail": "200 blockedish=true body=[]"
+    },
+    {
+      "name": "public-key probe page_html",
+      "pass": true,
+      "detail": "200 blockedish=true body=[]"
+    },
+    {
+      "name": "public-key probe page_entities",
+      "pass": true,
+      "detail": "200 blockedish=true body=[]"
+    },
+    {
+      "name": "public-key probe pages_master",
+      "pass": true,
+      "detail": "200 blockedish=true body=[]"
+    },
+    {
+      "name": "public-key probe product_reviews",
+      "pass": true,
+      "detail": "200 blockedish=true body=[]"
+    },
+    {
+      "name": "public-key probe v_events_for_chat",
+      "pass": true,
+      "detail": "401 blockedish=true body={\"code\":\"42501\",\"details\":null,\"hint\":null,\"message\":\"permis"
+    },
+    {
+      "name": "public-key probe system_maintenance_state",
+      "pass": true,
+      "detail": "200 blockedish=true body=[]"
+    },
+    {
+      "name": "chat cron-dashboard",
+      "pass": true,
+      "detail": "200"
+    },
+    {
+      "name": "chat admin.html",
+      "pass": true,
+      "detail": "200"
+    }
+  ]
+}
