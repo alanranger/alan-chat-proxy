@@ -154,7 +154,29 @@ export default [
       "dist/**",
       "build/**",
       ".next/**",
-      "generated/**"
+      "generated/**",
+      // One-off review / booking data-fix scripts, already run; kept for history, not maintained.
+      "scripts/apply-exam-content-batch.mjs",
+      "scripts/apply-gap-workshop-attributions-csv.mjs",
+      "scripts/apply-gap-workshop-attributions-supabase.mjs",
+      "scripts/apply-two-review-slug-fixes-supabase.mjs",
+      "scripts/apply-two-review-slug-fixes.mjs",
+      "scripts/audit-gap-slug-reviews.mjs",
+      "scripts/compare-06-to-supabase.mjs",
+      "scripts/e2e-apps-and-crons.mjs",
+      "scripts/export-reviewer-quotes.mjs",
+      "scripts/export-site-sitemap.mjs",
+      "scripts/find-reviews-by-name.mjs",
+      "scripts/match-booking-reviews-gap-locations.mjs",
+      "scripts/regenerate-06-attributed-csv.mjs",
+      "scripts/scan-trustpilot-names.mjs",
+      "scripts/search-review-quotes-locations.mjs",
+      "scripts/smoke-all-apps.mjs",
+      "scripts/sync-03b-from-combined.mjs",
+      "scripts/sync-combined-reviews-from-supabase.mjs",
+      "scripts/tmp-parse-scrape.mjs",
+      "scripts/verify-combined-gap-slugs.mjs",
+      "testing-scripts/verify-ai-health-overview-render.mjs"
     ]
   }
 ];
